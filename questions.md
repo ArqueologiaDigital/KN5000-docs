@@ -47,10 +47,10 @@ Things we don't know yet and need to investigate.
 - [ ] What data passes through the latches at 0x120000?
 - [ ] Are there handshaking signals?
 
-### Audio Processor (HDAE5000)
-- [ ] What is the command interface via PPI?
-- [ ] How is audio data transferred?
-- [ ] What synthesis capabilities does it have?
+### HDAE5000 Hard Disk Expansion
+- [ ] What is the command interface via PPI at `0x160000`?
+- [ ] How does it communicate file data to the keyboard?
+- [ ] What is the protocol for directory listing and file loading?
 
 ## ROM Reconstruction
 

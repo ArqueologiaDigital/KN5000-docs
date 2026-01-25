@@ -17,7 +17,7 @@ Goal: Rebuild all firmware ROMs from disassembled source with 100% byte accuracy
 | Sub CPU Boot | 128KB | - | - | No source yet |
 | Table Data | 2MB | 32.42% | 1,417,294 | `table_data/kn5000_table_data.asm` |
 | Custom Data | 1MB | - | - | No source yet |
-| HDAE5000 | 512KB | - | - | No source yet |
+| HDAE5000 (HD Expansion) | 512KB | - | - | No source yet |
 
 ## Assembler
 

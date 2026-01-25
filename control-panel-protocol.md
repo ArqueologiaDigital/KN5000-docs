@@ -42,15 +42,24 @@ send 1e 80 / wait
 
 ### Memory Locations
 
-| Address/Name | Purpose |
-|--------------|---------|
-| `STATE_OF_CPANEL_BUTTONS` | Button state array |
-| `CPANEL_INDEX_FOR_LEDS` | Current LED index |
-| `CPANEL_STATE_0_TO_17` | Protocol state machine |
-| `CPANEL_BACKUP_RX_INDEX` | RX buffer position |
-| `RX_INDEX` | Current receive index |
+| Address | Name | Size | Purpose |
+|---------|------|------|---------|
+| `0x8D8B` | `CPANEL_STATE_0_TO_17` | byte | Protocol state machine (values 0-17) |
+| `0x8D9D` | `CPANEL_BACKUP_RX_INDEX` | word | Backup of RX buffer position |
+| `0x8D9F` | `CPANEL_RX_INDEX` | word | Current receive buffer index |
+| `0x8DFD` | `CPANEL_INDEX_FOR_LEDS` | word | Current LED addressing index |
+| `0x8E4A` | `STATE_OF_CPANEL_BUTTONS` | array | Button state array (Right panel) |
+| `0x8E5A` | `STATE_OF_CPANEL_BUTTONS_LEFT` | array | Button state array (Left panel) |
 
 ### Status Flags
+
+| Address | Name | Bits Used |
+|---------|------|-----------|
+| `0x8D8C` | `CPANEL_SERIAL_FLAGS_A` (CP_Flags_A) | bits 0,1,2,4,6,7 |
+| `0x8D92` | `CPANEL_SERIAL_FLAGS_B` (CP_Flags_B) | bits 0,1,2,3,6,7 |
+| `0x8D93` | `CPANEL_SERIAL_FLAGS_C` (CP_Flags_C) | bits 0,4 |
+
+### Flag Usage
 
 | Flag | Used By |
 |------|---------|
