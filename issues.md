@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 101 (96 open, 5 closed)
+**Total Issues:** 92 (90 open, 2 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (16) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (7) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (13) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (6) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (10)
+[Boot Sequence](#boot-sequence) (11) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (13) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (6) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (10)
 
 ---
 
@@ -51,57 +51,46 @@ Trace main CPU code that initializes sub CPU communication. Document: when sub C
 
 ---
 
-#### 🟠 SubCPU Boot: Document command handler jump table {#issue-kn5000-x3n}
+#### 🟠 SubCPU Boot: Disassemble DMA transfer routines (0xFF8604-0xFF8955) {#issue-kn5000-ii4}
 
-**ID:** `kn5000-x3n` | **Priority:** High | **Created:** 2026-01-25
+**ID:** `kn5000-ii4` | **Priority:** High | **Created:** 2026-01-25
 
-INT_HANDLER_35 dispatches commands 0x00-0x1F using a jump table at 0xFF8000.
+About 850 bytes of code from 0xFF8604 to 0xFF8955 need to be disassembled.
 
-The command byte encodes:
-- Bits 7-5: Handler index (0-7) 
-- Bits 4-0: Data length - 1 (1-32 bytes)
+This section contains DMA transfer and inter-CPU communication routines:
+- Multiple timeout loops with 0xEA60 counter
+- DMA channel 2 configuration (DMAS2, DMAC2)
+- Latch communication at 0x120000
+- Status flag handling at 0x0516
+- Memory buffer operations at 0x0502
 
-Tasks:
-1. Extract all 8 handler addresses from jump table
-2. Disassemble each handler routine
-3. Document what each handler does
-4. Create symbolic names for handlers (e.g., CMD_HANDLER_0 through CMD_HANDLER_7)
+From unidasm analysis, routines include:
+- SUB_8604: DMA transfer setup with timeout
+- SUB_8649: Channel setup helper
+- SUB_86AC: Status polling routine
+- SUB_86DC: Alternate transfer handler
+- Several more helper routines
 
-This is essential for understanding the main CPU to sub CPU protocol.
-
----
-
-#### 🟠 SubCPU Boot: Document tone generator registers at 0x130000 {#issue-kn5000-n9g}
-
-**ID:** `kn5000-n9g` | **Priority:** High | **Created:** 2026-01-25
-
-The boot ROM initializes tone generator registers at 0x130000. INIT_TONE_GEN (0xFF8628) writes initialization patterns from ROM. Tasks:
-1. Trace INIT_TONE_GEN routine completely
-2. Document register layout - appears to use 32-byte blocks per voice
-3. Identify initialization values and their purposes
-4. Cross-reference with any tone generator documentation
-
-This is critical for understanding the sound hardware architecture.
+Cross-reference with kn5000_subcpu_boot.ic30.unidasm for disassembly.
 
 ---
 
-#### 🟠 SubCPU Boot: Fix remaining 2,303 byte divergences {#issue-kn5000-ogy}
+#### 🟠 SubCPU Boot: Fix remaining 1,981 byte divergences {#issue-kn5000-b21}
 
-**ID:** `kn5000-ogy` | **Priority:** High | **Created:** 2026-01-25
+**ID:** `kn5000-b21` | **Priority:** High | **Created:** 2026-01-25
 
-The subcpu_boot ROM builds successfully but has 2,303 divergent bytes (98.24% match).
+The subcpu_boot ROM is at 98.48% match with 1,981 divergent bytes remaining.
 
-Root causes identified:
-1. ASL chooses different instruction encodings (4-byte vs 5-byte lda, 4-byte call vs 3-byte calr)
-2. Some instructions need macros to force specific byte sequences
+Progress so far:
+- Started at 2,303 bytes (98.24%)
+- Created macros: JRL_T, LDIR_94, CALL_ABS24, LD_A, LD_D
+- Added routines: SUB_8437, SUB_850E, SUB_853A, COPY_WORDS, FILL_WORDS, CHECKSUM_CALC
 
-First divergence starts at ROM address 0xFF840A. Need systematic analysis:
-1. Compare rebuilt vs original at each divergent location
-2. Identify the instruction encoding mismatch
-3. Create macro if ASL doesn't support the needed encoding
-4. Replace instruction with macro call
+Remaining work:
+- ~850 bytes of DMA transfer routines at 0xFF8604-0xFF8955
+- Additional encoding fixes as discovered
 
-Goal: Achieve 100% byte match like subcpu payload.
+Goal: Achieve 100% byte match.
 
 ---
 
@@ -134,76 +123,6 @@ Trace initialization of tone generator and audio path. Document: sub CPU command
 **ID:** `kn5000-bq4` | **Priority:** Medium | **Created:** 2026-01-25
 
 Trace initialization of control panel serial communication. Document: when serial channel to CPL/CPR MCUs is configured, initial command sequence sent to panels, LED initialization pattern, how main CPU confirms panel MCUs are responding.
-
----
-
-#### 🟡 SubCPU Boot: Analyze data table structure at 0xFF8000 {#issue-kn5000-edn}
-
-**ID:** `kn5000-edn` | **Priority:** Medium | **Created:** 2026-01-25
-
-The first 656 bytes of boot ROM code area (0xFF8000-0xFF828F) contain data tables.
-Currently extracted as subcpu_boot_data_8000.bin.
-
-Known structure:
-- Interrupt vector trampolines are at 0xFF8F6C (NOT 0xFF8000) per boot sequence
-- Data at 0xFF8000 appears to be a jump table for command handlers (8 entries x 4 bytes)
-- Additional lookup tables follow
-
-Tasks:
-1. Verify jump table at 0xFF8000 for command dispatch
-2. Identify tone generator initialization data
-3. Document any checksum or validation data
-4. Create symbolic labels for table entries
-
----
-
-#### 🟡 SubCPU Boot: Analyze data tables at 0xFF8000 {#issue-kn5000-e12}
-
-**ID:** `kn5000-e12` | **Priority:** Medium | **Created:** 2026-01-25
-
-Analyze the 656-byte data section at the beginning of the boot ROM code area (0xFF8000-0xFF8290). Currently extracted to subcpu_boot/subcpu_boot_data_8000.bin. Contents include:
-- Interrupt vector trampoline data (45 entries x 5 bytes = 225 bytes at 0xFF8000)
-- Tone generator initialization patterns (starting after trampolines)
-- Possible SFR initialization values
-
-Document the structure and purpose of each data region.
-
----
-
-#### 🟡 SubCPU Boot: Disassemble SUB_8B37, SUB_8B89, SUB_8C80 helpers {#issue-kn5000-03a}
-
-**ID:** `kn5000-03a` | **Priority:** Medium | **Created:** 2026-01-25
-
-Three helper routines in the boot ROM are still stubs:
-
-- SUB_8B37 (0xFF8B37): Called by SERIAL_INIT, appears to initialize serial subsystem
-- SUB_8B89 (0xFF8B89): Called by SUB_8B37, secondary serial helper  
-- SUB_8C80 (0xFF8C80): Called by INIT_MEMORY_TEST, returns 0xFFFF on error
-
-These routines need complete disassembly to understand the full boot ROM behavior.
-Cross-reference with original ROM bytes in kn5000_subcpu_boot.ic30.unidasm.
-
----
-
-#### 🟡 SubCPU Boot: Disassemble remaining routines {#issue-kn5000-ucj}
-
-**ID:** `kn5000-ucj` | **Priority:** Medium | **Created:** 2026-01-25
-
-Complete disassembly of these routines discovered in the boot ROM:
-- MEM_TEST_ROUTINE (0xFF89FC) - Memory test at boot
-- DELAY_ROUTINE (0xFF89A9) - Timing delay loop
-- SERIAL_INIT (0xFF8B07) - Serial channel initialization
-- LOOP_UNTIL_PAYLOAD_READY (0xFF8950) - Waits for payload flag at 0x04FE
-
-These routines are referenced from BOOT_INIT but only have placeholder labels currently. The disassembly framework is in subcpu_boot/kn5000_subcpu_boot.asm.
-
-**Notes:** Significant progress made:
-- MEM_TEST_ROUTINE (0xFF89FC): Fully disassembled - tests RAM with 0x5A5A5A5A/0xA5A5A5A5 patterns
-- DELAY_ROUTINE (0xFF89A9): Fully disassembled - variable delay based on bit pattern
-- SERIAL_INIT (0xFF8B07): Partially disassembled - checks status bytes
-- ROM_CHECKSUM (0xFF8AB4): Fully disassembled - checksums 0x800 words from 0xFE0000
-
-Remaining stubs: SUB_8B37, SUB_8B89, SUB_8C80 helper routines.
 
 ---
 
@@ -491,16 +410,6 @@ Create extraction script to dump all identified images as individual binary file
 
 ---
 
-#### 🟡 Images: Investigate second palette at 0xEEFAF0 {#issue-kn5000-pal2}
-
-**ID:** `kn5000-pal2` | **Priority:** Medium | **Created:** 2026-01-25
-
-A second color palette was discovered at ROM address 0xEEFAF0 (offset 0xEFAF0) during analysis of the main palette at 0xEB37DE. Tasks: 1) Determine which images use this palette, 2) Extract the palette data as a binary asset, 3) Document differences between the two palettes, 4) Update convert_images.py if needed to use correct palette per image.
-
-**Notes:** Second palette extracted as Palette_8bit_RGBA_2.bin and used as binclude in assembly. Palettes differ starting at color index 7 (first: 0x888888, second: 0xA0A0A0). Still need to determine which images use which palette.
-
----
-
 #### 🟡 Images: Reverse engineer image format {#issue-kn5000-36g}
 
 **ID:** `kn5000-36g` | **Priority:** Medium | **Created:** 2026-01-25
@@ -583,22 +492,27 @@ Trace execution flow through all CPANEL_SERIAL_ROUTINE_0 through CPANEL_SERIAL_R
 
 ---
 
-#### 🟡 ASL Macros: Document TLCS-900/H2 instruction encoding patterns {#issue-kn5000-5a8}
+#### 🟡 ASL Macros: Document new TMP94C241 instruction encodings {#issue-kn5000-3o6}
 
-**ID:** `kn5000-5a8` | **Priority:** Medium | **Created:** 2026-01-25
+**ID:** `kn5000-3o6` | **Priority:** Medium | **Created:** 2026-01-25
 
-Create comprehensive documentation of TLCS-900/H2 instruction encodings that differ from TMP96C141.
+Several new macros were added to tmp94c241.inc during subcpu_boot disassembly:
 
-Patterns discovered so far:
-- LDC for DMA registers: [reg] 2E [dma_addr] 
-- LDA with 24-bit immediate: F2 LL MM HH 30
-- CALR relative call: 1E LL HH
-- INC 0, reg: [reg] 60
-- CP (reg), imm16: 90 3F LL HH
-- PUSH word: 0B LL HH
+Jump/Call macros:
+- JRL_T target: Jump relative long (78 LL HH) - 3 bytes vs jp's 4 bytes
+- CALR target: Call relative (1e LL HH) - 3 bytes vs call's 4 bytes  
+- CALL_ABS24 target: Call absolute 24-bit (1d LL MM HH)
 
-Document the general encoding patterns so future macros can be created systematically.
-Reference TMP94C241 datasheet if available.
+Block transfer macros:
+- LDIR_94: Block copy with TMP94C241 encoding (83 11 vs ASL's 85 11)
+
+Register load macros (for correct immediate encoding):
+- LD_A value: Load A with immediate (21 nn)
+- LD_D value: Load D with immediate (24 nn)
+
+These address encoding differences between TMP94C241 and TMP96C141 (which ASL targets).
+
+TODO: Document general encoding patterns for creating future macros.
 
 ---
 
@@ -768,8 +682,6 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 Document the latch-based communication mechanism at 0x120000. Determine: latch register layout (command, status, data bytes), handshaking signals, how main CPU signals 'payload ready', how sub CPU acknowledges receipt, and any checksumming or verification.
 
-**Notes:** Boot ROM confirms latch address 0x120000. INIT_DMA_SERIAL (0xFF86EA) sets up DMA for bidirectional communication. Sub CPU uses serial channel with DMA for transfers. Need to trace actual protocol commands/responses.
-
 ---
 
 #### 🟠 SubCPU: Document MicroDMA registers on TMP94C241F {#issue-kn5000-fmq}
@@ -778,15 +690,18 @@ Document the latch-based communication mechanism at 0x120000. Determine: latch r
 
 Document the MicroDMA controller registers on the TMP94C241F. Include DMAS (source), DMAD (destination), DMAC (count), DMAM (mode) registers. Reference TMP94C241F datasheet for register addresses and bit definitions. Identify which DMA channel is used for sub CPU payload transfer.
 
-**Notes:** DMA register encoding documented in tmp94c241.inc and website:
+**Notes:** Additional macros created for DMA register access:
 
-LDC instruction format: [reg_opcode] 2E [dma_reg]
-- DMAS0=00h, DMAS2=08h, DMAS3=0Ch (source)
-- DMAD0=20h, DMAD2=28h, DMAD3=2Ch (destination)  
-- DMAM0=40h, DMAM2=48h, DMAM3=4Ch (mode)
-- DMAC0=42h, DMAC2=4Ah, DMAC3=4Eh (count)
+New macros in tmp94c241.inc:
+- LDIR_94: Block copy with TMP94C241 encoding (83 11 vs ASL's 85 11)
+- JRL_T: Relative long jump (78 LL HH)
+- CALL_ABS24: Absolute call with 24-bit address (1d LL MM HH)
 
-Sub CPU boot ROM uses channels 0 and 2 for inter-CPU communication.
+Boot ROM uses DMA channels 0 and 2:
+- Channel 0: Inter-CPU latch source (DMAS0, DMAC0)
+- Channel 2: Inter-CPU latch destination (DMAS2, DMAD2, DMAC2)
+
+DMA transfer routines at 0xFF8604-0xFF8955 use these extensively.
 
 ---
 
@@ -804,16 +719,6 @@ Find and document the main CPU code that initializes the sub CPU payload transfe
 
 Trace the complete boot sequence: 1) Main CPU reset/init, 2) Sub CPU held in reset?, 3) Payload transfer trigger, 4) DMA transfer execution, 5) Sub CPU release from reset?, 6) Sub CPU boot ROM hands off to payload, 7) Sub CPU signals ready to main CPU. Document timing requirements.
 
-**Notes:** Boot ROM analysis reveals sub CPU side of handshake:
-1. Boot ROM copies interrupt trampolines to RAM 0x0400
-2. Initializes SFRs (ports, serial, watchdog)
-3. Initializes tone generator at 0x130000
-4. Sets up DMA for inter-CPU latch at 0x120000
-5. Enters LOOP_UNTIL_PAYLOAD_READY checking flag at 0x04FE
-6. After payload loaded, jumps to 0x0400 (payload entry)
-
-Still need to trace main CPU side of handshake.
-
 ---
 
 #### 🟡 SubCPU: Document payload memory layout {#issue-kn5000-1ru}
@@ -829,18 +734,6 @@ Analyze the 192KB sub CPU payload structure. Document: entry point address, inte
 **ID:** `kn5000-ayt` | **Priority:** Medium | **Created:** 2026-01-25
 
 Determine the sub CPU chip type (IC27 on main board). Document its memory map: where the 128KB boot ROM resides, where the 192KB payload is loaded, RAM areas, and any memory-mapped I/O for tone generator control. Check service manual schematics.
-
-**Notes:** Boot ROM analysis confirms Sub CPU memory map:
-- 0x0000-0x00FF: SFR (documented 20+ registers in memory-map.md)
-- 0x0100-0x01FF: Extended SFR / Memory Controller
-- 0x0400-0x04E0: Interrupt vector trampolines (copied from boot ROM)
-- 0x04FE: Payload ready flag
-- 0x0500-0x05A2: RAM/Stack (stack init = 0x05A2)
-- 0x120000: Inter-CPU Communication Latch
-- 0x130000: Tone Generator Registers
-- 0xFE0000-0xFFFFFF: 128KB Boot ROM
-
-Sub CPU type still needs confirmation from service manual - likely TMP94C241 variant.
 
 ---
 
@@ -940,9 +833,6 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
-| `kn5000-x1i` | SubCPU Boot: Disassemble interrupt handlers | 2026-01-25 |
-| `kn5000-vf0` | SubCPU Boot: Add build system support | 2026-01-25 |
-| `kn5000-prgr` | maincpu: Fix palette binclude regression (716 new incorre... | 2026-01-25 |
 | `kn5000-cfe` | subcpu: Get payload build working | 2026-01-25 |
 | `kn5000-bcn` | Identify control panel MCU chip type from schematics | 2026-01-25 |
 
@@ -955,20 +845,20 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 34 |
-| Medium | 49 |
+| High | 33 |
+| Medium | 44 |
 | Low | 12 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Boot Sequence | 16 |
+| Boot Sequence | 11 |
 | Control Panel | 1 |
 | Feature Demo | 11 |
 | Firmware Update | 12 |
 | HD-AE5000 Expansion | 6 |
-| Image Extraction | 7 |
+| Image Extraction | 6 |
 | Main CPU ROM | 1 |
 | Other | 13 |
 | Sound & Audio | 12 |
@@ -978,4 +868,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-25 19:52*
+*Last updated: 2026-01-25 20:47*
