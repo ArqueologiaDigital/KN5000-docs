@@ -88,17 +88,17 @@ The sub CPU (tone generator controller) has its own memory map, documented from 
 | `0x0000 - 0x00FF` | 256B | Special Function Registers (SFR) |
 | `0x0100 - 0x01FF` | 256B | Extended SFR / Memory Controller |
 | `0x0400 - 0x04E0` | 225B | Interrupt vector trampolines (copied from boot ROM) |
-| `0x04FE` | 1B | Payload ready flag (bit 6=ready, bit 7=complete) |
+| `0x04FE` | 1B | `SUBCPU_STATUS_FLAGS` - Status flags (bit 6=payload ready, bit 7=xfer complete) |
 | `0x0500 - 0x05A2` | ~160B | RAM / Stack area (stack init = 0x05A2) |
-| `0x0512` | 4B | DMA transfer address storage |
-| `0x0516` | 2B | DMA state machine (0=idle, 1=pending, 2=in progress) |
-| `0x0518` | 2B | Command processing state (0-4) |
-| `0x051A` | 1B | Last received command byte |
-| `0x051E` | 32B | Variable-length command data buffer |
-| `0x0544` | 6B | E1 command data buffer |
-| `0x054A` | 10B | E2 command data buffer |
-| `0x0556` | 1B | Memory test result flags |
-| `0x0558` | 8B | Serial status bytes |
+| `0x0512` | 4B | `DMA_TARGET_ADDR` - Current DMA destination address |
+| `0x0516` | 2B | `DMA_STATE` - DMA state machine (0=idle, 1=pending, 2=in progress) |
+| `0x0518` | 2B | `CMD_PROCESSING_STATE` - Command processing state (0-4) |
+| `0x051A` | 1B | `LAST_CMD_BYTE` - Last received command byte from main CPU |
+| `0x051E` | 32B | `CMD_DATA_BUFFER` - Variable-length command data buffer |
+| `0x0544` | 6B | `CMD_E1_BUFFER` - E1 command data buffer |
+| `0x054A` | 10B | `CMD_E2_BUFFER` - E2 command data buffer |
+| `0x0556` | 1B | `MEMTEST_RESULT` - Memory test result flags |
+| `0x0558` | 8B | `SERIAL_STATUS` - Serial communication status bytes |
 | `0x120000` | - | Inter-CPU Communication Latch (shared with main CPU) |
 | `0x130000` | - | Tone Generator Registers |
 | `0xFE0000 - 0xFFFFFF` | 128KB | Boot ROM |
@@ -187,13 +187,18 @@ Example: Command `0x45` = handler 2 (`0x45 >> 5 = 2`), 6 bytes (`(0x45 & 0x1F) +
 
 ### Sub CPU State Variables
 
-| Address | Variable | Description |
-|---------|----------|-------------|
-| `0x04FE` | Payload/Ready flags | Bit 6: payload ready, Bit 7: transfer complete |
-| `0x0512` | DMA address | Current DMA target address (4 bytes) |
-| `0x0516` | DMA state | 0=idle, 1=pending, 2=in-progress |
-| `0x0518` | Command state | 0-4, tracks command processing phase |
-| `0x051A` | Last command | Most recent command byte received |
+| Address | Symbol | Description |
+|---------|--------|-------------|
+| `0x04FE` | `SUBCPU_STATUS_FLAGS` | Bit 6: payload ready, Bit 7: transfer complete |
+| `0x0512` | `DMA_TARGET_ADDR` | Current DMA destination address (4 bytes) |
+| `0x0516` | `DMA_STATE` | 0=idle, 1=pending, 2=in-progress |
+| `0x0518` | `CMD_PROCESSING_STATE` | 0-4, tracks command processing phase |
+| `0x051A` | `LAST_CMD_BYTE` | Most recent command byte received |
+| `0x051E` | `CMD_DATA_BUFFER` | Variable-length command data (32 bytes) |
+| `0x0544` | `CMD_E1_BUFFER` | E1 command data buffer (6 bytes) |
+| `0x054A` | `CMD_E2_BUFFER` | E2 command data buffer (10 bytes) |
+| `0x0556` | `MEMTEST_RESULT` | Memory test result flags |
+| `0x0558` | `SERIAL_STATUS` | Serial status bytes (8 bytes) |
 
 ### DMA Configuration
 

@@ -231,10 +231,10 @@ The sub CPU boot ROM handles commands from the main CPU via the latch at `0x1200
 
 | Command | Action | DMA Buffer | DMA Size |
 |---------|--------|------------|----------|
-| `E1` | Set up DMA transfer | 0x0544 | 6 bytes |
-| `E2` | Set up DMA transfer | 0x054A | 10 bytes |
+| `E1` | Set up DMA transfer | `CMD_E1_BUFFER` (0x0544) | 6 bytes |
+| `E2` | Set up DMA transfer | `CMD_E2_BUFFER` (0x054A) | 10 bytes |
 | `E3` | Signal payload ready | - | - |
-| `00-1F` | Variable-length data | 0x051E | low 5 bits + 1 (1-32 bytes) |
+| `00-1F` | Variable-length data | `CMD_DATA_BUFFER` (0x051E) | low 5 bits + 1 (1-32 bytes) |
 
 For commands `00-1F`, the command byte encodes both the handler index and data length:
 - **Bits 7-5**: Handler index (0-7), selects function from jump table at 0xFF8000
@@ -250,12 +250,12 @@ Triggered when data arrives from the main CPU via the inter-CPU latch.
 1. Check if bit 2 of SC0BUF is set (busy flag)
    - If set: exit immediately (another transfer in progress)
 2. Read command byte from latch (0x120000)
-3. Store command in VAR_051A
+3. Store command in LAST_CMD_BYTE (0x051A)
 4. Decode command:
-   - E1: Set VAR_0518=2, DMA 6 bytes to 0x0544
-   - E2: Set VAR_0518=3, DMA 10 bytes to 0x054A
-   - E3: Set bit 6 of VAR_04FE (payload ready), skip DMA
-   - Other: Set VAR_0518=1, DMA (cmd & 0x1F)+1 bytes to 0x051E
+   - E1: Set CMD_PROCESSING_STATE=2, DMA 6 bytes to CMD_E1_BUFFER (0x0544)
+   - E2: Set CMD_PROCESSING_STATE=3, DMA 10 bytes to CMD_E2_BUFFER (0x054A)
+   - E3: Set bit 6 of SUBCPU_STATUS_FLAGS (0x04FE), skip DMA
+   - Other: Set CMD_PROCESSING_STATE=1, DMA (cmd & 0x1F)+1 bytes to CMD_DATA_BUFFER (0x051E)
 5. Trigger DMA by writing 0x0A to address 0x0100
 6. Clear bit 1 of SC0BUF
 ```
@@ -266,22 +266,22 @@ Main processing interrupt that handles received data after DMA completes.
 
 ```
 1. Save all registers (XWA, XBC, XDE, XHL, XIX, XIY, XIZ)
-2. Read VAR_0518 state:
+2. Read CMD_PROCESSING_STATE (0x0518):
    - State 1: Process received command data
      - Push parameters to stack
-     - Calculate handler index from high 3 bits of command
+     - Calculate handler index from high 3 bits of LAST_CMD_BYTE
      - Call handler from jump table at 0xFF8000 + (index * 4)
-     - Clean up stack, set VAR_0518=0
+     - Clean up stack, set CMD_PROCESSING_STATE=0
    - State 2: Set up secondary DMA transfer
-     - Load parameters from buffer at 0x0544
-     - Trigger DMA, set VAR_0518=4
+     - Load parameters from CMD_E1_BUFFER (0x0544)
+     - Trigger DMA, set CMD_PROCESSING_STATE=4
    - State 3: Set completion flags
      - Write 0xFF to 0x051C
      - Set bit 7 of 0x0554
-     - Set VAR_0518=0
+     - Set CMD_PROCESSING_STATE=0
    - State 4: Finalize transfer
-     - Clear bit 7 of VAR_04FE
-     - Set VAR_0518=0
+     - Clear bit 7 of SUBCPU_STATUS_FLAGS (0x04FE)
+     - Set CMD_PROCESSING_STATE=0
 3. Manage watchdog (toggle bit 2 of WDMOD if set)
 4. Restore all registers
 ```
@@ -292,7 +292,7 @@ Handles DMA transfer completion by advancing the state machine.
 
 ```
 1. Clear bit 2 of WDMOD (watchdog)
-2. Check VAR_0516:
+2. Check DMA_STATE (0x0516):
    - If 1: Set to 0 (transfer complete)
    - If 2: Set to 1 (first phase complete)
 3. Return from interrupt
@@ -308,7 +308,7 @@ Handles DMA transfer completion by advancing the state machine.
          E1/E2 cmd               Other cmd (00-1F)
               │                         │
               ▼                         ▼
-       VAR_0518 = 2/3            VAR_0518 = 1
+  CMD_PROCESSING_STATE = 2/3    CMD_PROCESSING_STATE = 1
               │                         │
               │    ┌────────────────────┘
               │    │
@@ -326,10 +326,10 @@ from table  transfer           flag
     └─────────┴─────────┴─────────┘
                     │
                     ▼
-             VAR_0518 = 0 (Idle)
+       CMD_PROCESSING_STATE = 0 (Idle)
 ```
 
-#### DMA State Machine (VAR_0516)
+#### DMA State Machine - `DMA_STATE` (0x0516)
 
 Separate from the command state machine, tracks DMA transfer phases:
 
@@ -341,7 +341,7 @@ Separate from the command state machine, tracks DMA transfer phases:
 
 ### Memory Test Routine (0xFF89FC)
 
-At boot, the sub CPU tests RAM integrity using complementary bit patterns.
+At boot, the sub CPU tests RAM integrity using complementary bit patterns. Results are stored in `MEMTEST_RESULT` (0x0556).
 
 **Test Patterns:**
 - Pattern 1: `0x5A5A5A5A` (alternating bits: 01011010...)
@@ -353,13 +353,13 @@ At boot, the sub CPU tests RAM integrity using complementary bit patterns.
    a. Read original value
    b. Write pattern 1 (0x5A5A5A5A)
    c. Read back and verify both 16-bit halves
-   d. If mismatch: OR error code from table into result
+   d. If mismatch: OR error code from table into MEMTEST_RESULT
    e. Restore original, advance to next location
    f. Write pattern 2 (0xA5A5A5A5)
    g. Read back and verify
-   h. If mismatch: OR error code into result
+   h. If mismatch: OR error code into MEMTEST_RESULT
    i. Restore original, advance
-2. Return error flags in L register
+2. Return error flags in L register (also stored in MEMTEST_RESULT)
 ```
 
 The test configuration table at 0xFF8020 contains:
