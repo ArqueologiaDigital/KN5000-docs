@@ -43,9 +43,9 @@ Things we don't know yet and need to investigate.
 - [x] Is it UART, SPI, or custom protocol? **UART** (M37471 has built-in serial interface)
 
 ### Inter-CPU Communication
-- [ ] How do main CPU and sub CPU coordinate?
-- [ ] What data passes through the latches at 0x120000?
-- [ ] Are there handshaking signals?
+- [x] How do main CPU and sub CPU coordinate? **Command/response via latch at 0x120000, DMA for bulk transfers**
+- [x] What data passes through the latches at 0x120000? **Commands (E1/E2/E3/00-1F), response bytes, status flags**
+- [x] Are there handshaking signals? **Yes: status flags at 0x04FE (bit 6=payload ready, bit 7=xfer complete)**
 
 ### HDAE5000 Hard Disk Expansion
 - [ ] What is the command interface via PPI at `0x160000`?

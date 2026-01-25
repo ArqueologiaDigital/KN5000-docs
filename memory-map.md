@@ -208,6 +208,38 @@ The boot ROM configures DMA for the inter-CPU latch:
 - **Mode:** Controlled via undocumented LDC opcodes
 - **Trigger:** Write `0x0A` to address `0x0100`
 
+## Sub CPU Boot ROM Routines
+
+Key routines identified in the boot ROM at 0xFF8000+:
+
+| Address | Routine | Description |
+|---------|---------|-------------|
+| `0xFF8290` | `BOOT_INIT` | Hardware initialization entry point |
+| `0xFF8432` | `DEFAULT_HANDLER` | Default interrupt handler (RETI) |
+| `0xFF8433` | `RESET_ENTRY` | Alternative reset/NMI handler |
+| `0xFF8437` | `SUB_8437` | Tone generator channel init loop |
+| `0xFF846D` | `COPY_VECTORS` | Copy interrupt trampolines to RAM |
+| `0xFF8490` | `HALT_LOOP` | Error handler (halt and loop) |
+| `0xFF84A8` | `INIT_TONE_GEN` | Tone generator initialization |
+| `0xFF84F1` | `TONE_GEN_WRITE` | Write data to tone generator |
+| `0xFF850E` | `SUB_850E` | Multi-register push/call wrapper |
+| `0xFF853A` | `SUB_853A` | Write register pairs to tone generator |
+| `0xFF858B` | `COPY_WORDS` | Word block copy (ldirw) |
+| `0xFF8594` | `FILL_WORDS` | Memory fill with word values |
+| `0xFF859B` | `CHECKSUM_CALC` | Calculate checksum over memory range |
+| `0xFF85AE` | `INIT_DMA_SERIAL` | DMA and serial initialization |
+| `0xFF8604-0xFF8955` | *DMA routines* | ~850 bytes, not yet disassembled |
+| `0xFF8956` | `INIT_MEMORY_TEST` | Memory test initialization |
+| `0xFF881F` | `INT_HANDLER_9` | Serial receive interrupt |
+| `0xFF889A` | `INT_HANDLER_37` | DMA complete interrupt |
+| `0xFF88B8` | `INT_HANDLER_35` | Timer/processing interrupt |
+| `0xFF89A9` | `DELAY_ROUTINE` | Variable delay loop |
+| `0xFF89FC` | `MEM_TEST_ROUTINE` | RAM test routine |
+| `0xFF8AB4` | `ROM_CHECKSUM` | Boot ROM integrity check |
+| `0xFF8B07` | `SERIAL_INIT` | Serial communication init |
+| `0xFF8F6C` | *Trampolines* | 45 interrupt vector trampolines (225 bytes) |
+| `0xFFFF00` | *Vector Table* | Hardware interrupt vector table |
+
 ## Tone Generator
 
 The tone generator hardware is accessed at `0x130000`.

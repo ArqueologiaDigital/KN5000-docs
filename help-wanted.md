@@ -8,7 +8,7 @@ permalink: /help-wanted/
 
 This is a community reverse engineering project. Here's how you can contribute:
 
-**Current Progress:** Main CPU ROM reconstruction is at 99.99% (177 bytes divergent). See the [Project Issues]({{ site.baseurl }}/issues/) page for many open tasks organized by category.
+**Current Progress:** Main CPU ROM at 99.99% (177 bytes), Sub CPU Boot at 98.48% (1,981 bytes), Sub CPU Payload at 100%. See the [Project Issues]({{ site.baseurl }}/issues/) page for many open tasks organized by category.
 
 ## High Priority
 
@@ -16,10 +16,17 @@ This is a community reverse engineering project. Here's how you can contribute:
 
 We're missing ROM dumps for several chips:
 - **Control Panel MCUs** (Mitsubishi M37471M2196S) - Custom-masked ROMs handling buttons, LEDs, and rotary encoders. These would require decapping to dump.
-- **Sub CPU Boot ROM** (`kn5000_subcpu_boot.ic30`) - Need to verify/update source
 - **Any other undumped chips** on the KN5000 board
 
 If you have a KN5000 and can dump ROMs, please reach out!
+
+### Sub CPU Boot ROM (98.48% match)
+
+The Sub CPU Boot ROM disassembly is progressing well. Remaining work:
+- ~850 bytes of DMA transfer routines at 0xFF8604-0xFF8955
+- Additional instruction encoding fixes as needed
+
+See issues `kn5000-b21` and `kn5000-ii4` for details.
 
 ### Assembly Analysis
 
