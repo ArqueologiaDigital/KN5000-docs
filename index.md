@@ -3,6 +3,8 @@ layout: home
 title: Home
 ---
 
+![Technics KN5000]({{ "/assets/images/hero-banner.png" | relative_url }}){: .hero-banner }
+
 # Technics KN5000 Reverse Engineering Project
 
 > **A Digital Archaeology Project**

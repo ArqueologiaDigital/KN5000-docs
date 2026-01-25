@@ -1,0 +1,27 @@
+---
+---
+
+@import "minima";
+
+/* Hero banner styling */
+.hero-banner {
+  display: block;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto 1.5rem auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Center the hero banner on the homepage */
+.home .hero-banner {
+  margin-top: 1rem;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 600px) {
+  .hero-banner {
+    border-radius: 4px;
+    margin-bottom: 1rem;
+  }
+}
