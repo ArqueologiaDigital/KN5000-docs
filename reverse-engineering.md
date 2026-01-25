@@ -375,6 +375,146 @@ Transition effects found in extracted images:
 
 ---
 
+## Feature Demo Extraction
+
+The Feature Demo is an interactive presentation showcasing keyboard features. Extracting its data structures enables documentation, modification, and source code simplification.
+
+### Components
+
+- **Slides** - Background images with overlaid UI widgets
+- **Widgets** - Text, images, shapes, interactive elements
+- **MIDI files** - Demo music embedded in ROM
+- **Timing data** - Slide duration and transitions
+
+### Known Demo Images
+
+Already extracted to `table_data/images/`:
+
+| File | Size | Description |
+|------|------|-------------|
+| FTBMP01.BMP | 320x240 | Demo screen 1 |
+| FTBMP02.BMP | 320x130 | Demo screen 2 |
+| FTBMP03.BMP | 320x120 | Demo screen 3 |
+| FTBMP04.BMP | corrupted | Demo screen 4 |
+| FTBMP05.BMP | 320x125 | Demo screen 5 |
+| FTBMP06.BMP | 320x240 | Demo screen 6 |
+
+See [Image Gallery]({{ site.baseurl }}/image-gallery/) for viewable versions.
+
+### Slide Data Structure
+
+**Tasks:**
+1. Locate slide table/index in ROM
+2. Document per-slide record format:
+   - Slide type/ID
+   - Duration/timing
+   - Background image reference
+   - Widget list pointer
+   - MIDI file pointer
+   - Transition effects
+
+### UI Widget Types
+
+Expected widget types based on typical presentation systems:
+
+| Widget | Parameters |
+|--------|------------|
+| TEXT | x, y, font_id, color, string |
+| IMAGE | x, y, image_id |
+| RECT | x, y, width, height, fill_color, border_color |
+| LINE | x1, y1, x2, y2, color |
+| ICON | x, y, icon_id |
+| BUTTON | x, y, width, height, label, action |
+| PIANO | x, y, width, height, highlighted_keys |
+| METER | x, y, width, height, value, max |
+
+**Tasks:**
+1. Trace slide rendering code
+2. Identify all widget types
+3. Document parameter format for each
+4. Create widget type reference
+
+### ASL Macro Design
+
+Goal: Replace raw data bytes with human-readable macros.
+
+**Slide macros:**
+```asm
+SLIDE_BEGIN id, background_image, duration_ms, midi_ptr
+    ; widgets defined here
+SLIDE_END
+```
+
+**Widget macros:**
+```asm
+TEXT x, y, font, color, "string"
+IMAGE x, y, image_id
+RECT x, y, w, h, fill_color, border_color
+LINE x1, y1, x2, y2, color
+```
+
+**Example slide definition:**
+```asm
+SLIDE_BEGIN 1, FTBMP01, 5000, DemoMidi1
+    TEXT 10, 20, FONT_LARGE, COLOR_WHITE, "Welcome to KN5000"
+    IMAGE 100, 80, ICON_KEYBOARD
+    RECT 50, 150, 200, 30, COLOR_BLUE, COLOR_WHITE
+SLIDE_END
+```
+
+**Tasks:**
+1. Design macro syntax for each structure
+2. Implement macros in ASL format
+3. Ensure macros emit correct binary
+4. Add to `feature_demo.inc`
+
+### Embedded MIDI Extraction
+
+MIDI files are embedded for demo music playback.
+
+**Detection:**
+- Search for MIDI header: `4D 54 68 64` ("MThd")
+- Track chunks start with: `4D 54 72 6B` ("MTrk")
+
+**Tasks:**
+1. Scan ROMs for MIDI headers
+2. Parse MIDI structure to find boundaries
+3. Extract as standalone `.mid` files
+4. Verify playback in standard MIDI player
+5. Document each file's purpose
+
+**Output directory:**
+```
+maincpu/midi/
+├── demo_song_1.mid
+├── demo_song_2.mid
+└── ...
+```
+
+### Source Code Refactoring
+
+After macros are defined:
+
+1. Identify raw data sections for slides
+2. Replace `db`/`dw` sequences with macros
+3. Rebuild ROM: `make all`
+4. Verify byte-match: `python compare_roms.py`
+5. Measure source line reduction
+
+**Goal:** Significantly reduce assembly source length while improving readability.
+
+### Slide Viewer Tool
+
+Optional Python tool for visualizing extracted slides:
+
+**Features:**
+- Parse slide data structures
+- Render widgets using PIL/Pillow
+- Export as PNG or HTML
+- Enable slide editing for custom demos
+
+---
+
 ## Sound Hardware
 
 The KN5000 has a sophisticated sound generation system with dedicated processors for synthesis and effects.
