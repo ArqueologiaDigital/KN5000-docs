@@ -10,13 +10,16 @@ This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) 
 
 **Total Issues:** 91 (88 open, 3 closed)
 
+**Quick Links:** 
+[Boot Sequence](#boot-sequence) (9) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (7) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (12) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (6) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (10)
+
 ---
 
 ## Open Issues
 
-### Boot Sequence
+### Boot Sequence {#boot-sequence}
 
-#### 🟠 Boot: Document memory initialization sequence
+#### 🟠 Boot: Document memory initialization sequence {#issue-kn5000-cav}
 
 **ID:** `kn5000-cav` | **Priority:** High | **Created:** 2026-01-25
 
@@ -24,7 +27,7 @@ Trace RAM initialization: DRAM refresh setup (IC9/IC10), SRAM initialization (IC
 
 ---
 
-#### 🟠 Boot: Document peripheral initialization order
+#### 🟠 Boot: Document peripheral initialization order {#issue-kn5000-52e}
 
 **ID:** `kn5000-52e` | **Priority:** High | **Created:** 2026-01-25
 
@@ -32,7 +35,7 @@ Trace initialization of all peripherals in boot sequence order: serial channels 
 
 ---
 
-#### 🟠 Boot: Document reset vector and early initialization
+#### 🟠 Boot: Document reset vector and early initialization {#issue-kn5000-24m}
 
 **ID:** `kn5000-24m` | **Priority:** High | **Created:** 2026-01-25
 
@@ -40,7 +43,7 @@ Trace main CPU behavior from reset vector (0xE00000 area). Document: initial sta
 
 ---
 
-#### 🟠 Boot: Document sub CPU startup handshake
+#### 🟠 Boot: Document sub CPU startup handshake {#issue-kn5000-595}
 
 **ID:** `kn5000-595` | **Priority:** High | **Created:** 2026-01-25
 
@@ -48,7 +51,7 @@ Trace main CPU code that initializes sub CPU communication. Document: when sub C
 
 ---
 
-#### 🟡 Boot: Document HDAE5000 detection and init
+#### 🟡 Boot: Document HDAE5000 detection and init {#issue-kn5000-izk}
 
 **ID:** `kn5000-izk` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -56,7 +59,7 @@ Trace how main CPU detects presence of HD-AE5000 expansion at boot. Document: PP
 
 ---
 
-#### 🟡 Boot: Document LCD splash screen sequence
+#### 🟡 Boot: Document LCD splash screen sequence {#issue-kn5000-vql}
 
 **ID:** `kn5000-vql` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -64,7 +67,7 @@ Trace LCD initialization and splash screen display. Document: LCD controller (MN
 
 ---
 
-#### 🟡 Boot: Document audio subsystem initialization
+#### 🟡 Boot: Document audio subsystem initialization {#issue-kn5000-9bd}
 
 **ID:** `kn5000-9bd` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -72,7 +75,7 @@ Trace initialization of tone generator and audio path. Document: sub CPU command
 
 ---
 
-#### 🟡 Boot: Document control panel initialization
+#### 🟡 Boot: Document control panel initialization {#issue-kn5000-bq4}
 
 **ID:** `kn5000-bq4` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -80,7 +83,7 @@ Trace initialization of control panel serial communication. Document: when seria
 
 ---
 
-#### ⚪ Boot: Create complete boot sequence timeline
+#### ⚪ Boot: Create complete boot sequence timeline {#issue-kn5000-mhj}
 
 **ID:** `kn5000-mhj` | **Priority:** Low | **Created:** 2026-01-25
 
@@ -88,21 +91,21 @@ Compile all boot documentation into a comprehensive timeline. Create diagram sho
 
 ---
 
-### Control Panel
+### Control Panel {#control-panel}
 
-#### 🟠 Control Panel Protocol: Reverse engineer serial communication for HLE
+#### 🟠 Control Panel Protocol: Reverse engineer serial communication for HLE {#issue-kn5000-9ye}
 
 **ID:** `kn5000-9ye` | **Priority:** High | **Created:** 2026-01-25
 
 Reverse engineer the serial protocol between maincpu and control panel MCUs (LEDs, buttons, rotary encoders). The MCUs lack ROM dumps, so MAME emulation requires HLE based on protocol understanding. Analyze maincpu-side code to document all commands, responses, and state machines.
 
-**Blocked by:** `kn5000-p2c`, `kn5000-j3c`, `kn5000-ljl`, `kn5000-unb`, `kn5000-32b`, `kn5000-qhm`
+**Depends on:** [`kn5000-p2c`](#issue-kn5000-p2c), [`kn5000-j3c`](#issue-kn5000-j3c), [`kn5000-ljl`](#issue-kn5000-ljl), [`kn5000-unb`](#issue-kn5000-unb), [`kn5000-32b`](#issue-kn5000-32b), [`kn5000-qhm`](#issue-kn5000-qhm)
 
 ---
 
-### Feature Demo
+### Feature Demo {#feature-demo}
 
-#### 🟠 FeatureDemo: Identify and catalog UI widget types
+#### 🟠 FeatureDemo: Identify and catalog UI widget types {#issue-kn5000-x13}
 
 **ID:** `kn5000-x13` | **Priority:** High | **Created:** 2026-01-25
 
@@ -110,7 +113,7 @@ Analyze slide rendering code to identify all widget types: static text, styled t
 
 ---
 
-#### 🟠 FeatureDemo: Locate slide data structures in ROM
+#### 🟠 FeatureDemo: Locate slide data structures in ROM {#issue-kn5000-h7o}
 
 **ID:** `kn5000-h7o` | **Priority:** High | **Created:** 2026-01-25
 
@@ -118,7 +121,7 @@ Find where Feature Demo presentation data is stored. Search for references to FT
 
 ---
 
-#### 🟠 FeatureDemo: Reverse engineer slide record format
+#### 🟠 FeatureDemo: Reverse engineer slide record format {#issue-kn5000-bds}
 
 **ID:** `kn5000-bds` | **Priority:** High | **Created:** 2026-01-25
 
@@ -126,7 +129,7 @@ Document the binary format of each slide record. Identify fields: slide type, du
 
 ---
 
-#### 🟡 FeatureDemo: Create ASL macros for slide definitions
+#### 🟡 FeatureDemo: Create ASL macros for slide definitions {#issue-kn5000-4q0}
 
 **ID:** `kn5000-4q0` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -134,7 +137,7 @@ Design and implement ASL assembler macros for concise slide definitions: SLIDE_B
 
 ---
 
-#### 🟡 FeatureDemo: Create ASL macros for widget definitions
+#### 🟡 FeatureDemo: Create ASL macros for widget definitions {#issue-kn5000-br1}
 
 **ID:** `kn5000-br1` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -142,7 +145,7 @@ Implement widget-specific macros: TEXT x,y,font,color,"string" / IMAGE x,y,id / 
 
 ---
 
-#### 🟡 FeatureDemo: Document widget parameter formats
+#### 🟡 FeatureDemo: Document widget parameter formats {#issue-kn5000-dqi}
 
 **ID:** `kn5000-dqi` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -150,7 +153,7 @@ For each widget type, document all parameters: position (x,y), size (w,h), color
 
 ---
 
-#### 🟡 FeatureDemo: Extract MIDI files as standalone files
+#### 🟡 FeatureDemo: Extract MIDI files as standalone files {#issue-kn5000-kxw}
 
 **ID:** `kn5000-kxw` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -158,7 +161,7 @@ Extract all embedded MIDI data as playable .mid files. Parse MIDI structure to f
 
 ---
 
-#### 🟡 FeatureDemo: Locate embedded MIDI data
+#### 🟡 FeatureDemo: Locate embedded MIDI data {#issue-kn5000-qjx}
 
 **ID:** `kn5000-qjx` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -166,7 +169,7 @@ Find all embedded MIDI files in the ROM. Search for MIDI headers (4D 54 68 64 = 
 
 ---
 
-#### 🟡 FeatureDemo: Refactor assembly to use slide macros
+#### 🟡 FeatureDemo: Refactor assembly to use slide macros {#issue-kn5000-21e}
 
 **ID:** `kn5000-21e` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -174,7 +177,7 @@ Replace raw data definitions in assembly source with new macros. Convert existin
 
 ---
 
-#### ⚪ FeatureDemo: Create slide viewer/editor tool
+#### ⚪ FeatureDemo: Create slide viewer/editor tool {#issue-kn5000-waa}
 
 **ID:** `kn5000-waa` | **Priority:** Low | **Created:** 2026-01-25
 
@@ -182,7 +185,7 @@ Build a tool to parse and display Feature Demo slides outside the keyboard. Coul
 
 ---
 
-#### ⚪ FeatureDemo: Document demo sequence and timing
+#### ⚪ FeatureDemo: Document demo sequence and timing {#issue-kn5000-0bq}
 
 **ID:** `kn5000-0bq` | **Priority:** Low | **Created:** 2026-01-25
 
@@ -190,9 +193,9 @@ Create complete documentation of the Feature Demo: slide order, timing between s
 
 ---
 
-### Firmware Update
+### Firmware Update {#firmware-update}
 
-#### 🟠 Update: Document floppy disk file formats
+#### 🟠 Update: Document floppy disk file formats {#issue-kn5000-psz}
 
 **ID:** `kn5000-psz` | **Priority:** High | **Created:** 2026-01-25
 
@@ -200,7 +203,7 @@ Analyze the system update floppy disk structure. Document: file naming conventio
 
 ---
 
-#### 🟠 Update: Document key combinations for update mode
+#### 🟠 Update: Document key combinations for update mode {#issue-kn5000-qtl}
 
 **ID:** `kn5000-qtl` | **Priority:** High | **Created:** 2026-01-25
 
@@ -208,7 +211,7 @@ Find and document the key press combinations needed to enter system update mode.
 
 ---
 
-#### 🟠 Update: Identify Flash ROM chip types
+#### 🟠 Update: Identify Flash ROM chip types {#issue-kn5000-7vw}
 
 **ID:** `kn5000-7vw` | **Priority:** High | **Created:** 2026-01-25
 
@@ -216,7 +219,7 @@ Document the Flash ROM chips used for updatable storage. From service manual: id
 
 ---
 
-#### 🟠 Update: Map file types to system components
+#### 🟠 Update: Map file types to system components {#issue-kn5000-3cm}
 
 **ID:** `kn5000-3cm` | **Priority:** High | **Created:** 2026-01-25
 
@@ -224,7 +227,7 @@ Document which file types update which system components: main CPU program ROM, 
 
 ---
 
-#### 🟡 Update: Document FDC interaction during update
+#### 🟡 Update: Document FDC interaction during update {#issue-kn5000-70b}
 
 **ID:** `kn5000-70b` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -232,7 +235,7 @@ Trace how the Floppy Disk Controller (0x110000) is used during updates. Document
 
 ---
 
-#### 🟡 Update: Document HDAE5000 update procedure
+#### 🟡 Update: Document HDAE5000 update procedure {#issue-kn5000-e7f}
 
 **ID:** `kn5000-e7f` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -240,7 +243,7 @@ Analyze how HD-AE5000 firmware is updated. Document: separate update disk format
 
 ---
 
-#### 🟡 Update: Document update progress display
+#### 🟡 Update: Document update progress display {#issue-kn5000-6f7}
 
 **ID:** `kn5000-6f7` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -248,7 +251,7 @@ Analyze LCD messages during update process. Correlate extracted 1-bit bitmaps wi
 
 ---
 
-#### 🟡 Update: Document validation and error handling
+#### 🟡 Update: Document validation and error handling {#issue-kn5000-acu}
 
 **ID:** `kn5000-acu` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -256,7 +259,7 @@ Trace update validation routines. Document: file header validation, checksum alg
 
 ---
 
-#### 🟡 Update: Reverse engineer Flash erase algorithm
+#### 🟡 Update: Reverse engineer Flash erase algorithm {#issue-kn5000-dkx}
 
 **ID:** `kn5000-dkx` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -264,7 +267,7 @@ Trace the Flash ROM erase routine in firmware. Document: chip unlock sequence, s
 
 ---
 
-#### 🟡 Update: Reverse engineer Flash program algorithm
+#### 🟡 Update: Reverse engineer Flash program algorithm {#issue-kn5000-1tn}
 
 **ID:** `kn5000-1tn` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -272,7 +275,7 @@ Trace the Flash ROM programming routine. Document: byte/word program commands, u
 
 ---
 
-#### ⚪ Update: Create update file parser tool
+#### ⚪ Update: Create update file parser tool {#issue-kn5000-87m}
 
 **ID:** `kn5000-87m` | **Priority:** Low | **Created:** 2026-01-25
 
@@ -280,7 +283,7 @@ Build Python tool to parse and analyze update floppy files. Extract: header info
 
 ---
 
-#### ⚪ Update: Document complete update procedure for users
+#### ⚪ Update: Document complete update procedure for users {#issue-kn5000-7v8}
 
 **ID:** `kn5000-7v8` | **Priority:** Low | **Created:** 2026-01-25
 
@@ -288,9 +291,9 @@ Write end-user documentation for performing system updates. Include: required ma
 
 ---
 
-### HD-AE5000 Expansion
+### HD-AE5000 Expansion {#hd-ae5000-expansion}
 
-#### 🟠 HDAE5000: Analyze PPI interface at 0x160000
+#### 🟠 HDAE5000: Analyze PPI interface at 0x160000 {#issue-kn5000-618}
 
 **ID:** `kn5000-618` | **Priority:** High | **Created:** 2026-01-25
 
@@ -298,7 +301,7 @@ Reverse engineer the 8255 PPI interface used to communicate with HD-AE5000. Docu
 
 ---
 
-#### 🟠 HDAE5000: Disassemble ROM at 0x280000
+#### 🟠 HDAE5000: Disassemble ROM at 0x280000 {#issue-kn5000-kuu}
 
 **ID:** `kn5000-kuu` | **Priority:** High | **Created:** 2026-01-25
 
@@ -306,7 +309,7 @@ Disassemble and analyze the 512KB HDAE5000 ROM mapped at 0x280000. Identify entr
 
 ---
 
-#### 🟡 HDAE5000: Document filesystem structure
+#### 🟡 HDAE5000: Document filesystem structure {#issue-kn5000-44c}
 
 **ID:** `kn5000-44c` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -314,7 +317,7 @@ Analyze how files are organized on the 1.08GB hard disk. Document directory stru
 
 ---
 
-#### 🟡 HDAE5000: Document interface cable pinout
+#### 🟡 HDAE5000: Document interface cable pinout {#issue-kn5000-mzz}
 
 **ID:** `kn5000-mzz` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -322,7 +325,7 @@ Determine the pinout of the cable connecting HD-AE5000 to KN5000. Identify conne
 
 ---
 
-#### 🟡 HDAE5000: Reverse engineer parallel port protocol
+#### 🟡 HDAE5000: Reverse engineer parallel port protocol {#issue-kn5000-t8n}
 
 **ID:** `kn5000-t8n` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -330,7 +333,7 @@ Document the parallel port communication protocol used by HD-TechManager5000 PC 
 
 ---
 
-#### ⚪ HDAE5000: Analyze HD-TechManager5000 software
+#### ⚪ HDAE5000: Analyze HD-TechManager5000 software {#issue-kn5000-qnf}
 
 **ID:** `kn5000-qnf` | **Priority:** Low | **Created:** 2026-01-25
 
@@ -338,9 +341,9 @@ Reverse engineer the Windows HD-TechManager5000 software to understand the PC si
 
 ---
 
-### Image Extraction
+### Image Extraction {#image-extraction}
 
-#### 🟠 Images: Find embedded image locations in main CPU ROM
+#### 🟠 Images: Find embedded image locations in main CPU ROM {#issue-kn5000-87u}
 
 **ID:** `kn5000-87u` | **Priority:** High | **Created:** 2026-01-25
 
@@ -348,7 +351,7 @@ Scan the main CPU ROM for embedded images. Look for: BMP headers (0x42 0x4D), co
 
 ---
 
-#### 🟠 Images: Find embedded image locations in table data ROM
+#### 🟠 Images: Find embedded image locations in table data ROM {#issue-kn5000-16s}
 
 **ID:** `kn5000-16s` | **Priority:** High | **Created:** 2026-01-25
 
@@ -356,7 +359,7 @@ Scan the 2MB table data ROM for embedded images. This ROM likely contains most g
 
 ---
 
-#### 🟡 Images: Extract all images as binary files
+#### 🟡 Images: Extract all images as binary files {#issue-kn5000-pcq}
 
 **ID:** `kn5000-pcq` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -364,7 +367,7 @@ Create extraction script to dump all identified images as individual binary file
 
 ---
 
-#### 🟡 Images: Investigate second palette at 0xEEFAF0
+#### 🟡 Images: Investigate second palette at 0xEEFAF0 {#issue-kn5000-pal2}
 
 **ID:** `kn5000-pal2` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -374,7 +377,7 @@ A second color palette was discovered at ROM address 0xEEFAF0 (offset 0xEFAF0) d
 
 ---
 
-#### 🟡 Images: Reverse engineer image format
+#### 🟡 Images: Reverse engineer image format {#issue-kn5000-36g}
 
 **ID:** `kn5000-36g` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -382,7 +385,7 @@ Document the image format(s) used. Determine: pixel format (1bpp, 4bpp, 8bpp, RG
 
 ---
 
-#### 🟡 Images: Update assembly sources to include binary images
+#### 🟡 Images: Update assembly sources to include binary images {#issue-kn5000-4rr}
 
 **ID:** `kn5000-4rr` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -390,7 +393,7 @@ Modify assembly sources to include extracted image binaries using ASL incbin dir
 
 ---
 
-#### ⚪ Images: Convert images to viewable formats
+#### ⚪ Images: Convert images to viewable formats {#issue-kn5000-pkx}
 
 **ID:** `kn5000-pkx` | **Priority:** Low | **Created:** 2026-01-25
 
@@ -398,9 +401,9 @@ Create conversion tools to export extracted images as PNG/BMP for documentation.
 
 ---
 
-### Main CPU ROM
+### Main CPU ROM {#main-cpu-rom}
 
-#### 🟠 maincpu: Fix 177 divergent bytes
+#### 🟠 maincpu: Fix 177 divergent bytes {#issue-kn5000-kqy}
 
 **ID:** `kn5000-kqy` | **Priority:** High | **Created:** 2026-01-25
 
@@ -408,17 +411,17 @@ Main CPU ROM (kn5000_v10_program.rebuilt.rom) is at 99.99% match with 177 incorr
 
 ---
 
-### Other
+### Other {#other}
 
-#### 🔴 ROM Reconstruction: Achieve 100% byte-matching for all ROMs
+#### 🔴 ROM Reconstruction: Achieve 100% byte-matching for all ROMs {#issue-kn5000-99f}
 
 **ID:** `kn5000-99f` | **Priority:** Critical | **Created:** 2026-01-25
 
-**Blocked by:** `kn5000-cfe`, `kn5000-kqy`, `kn5000-hlw`
+**Depends on:** [`kn5000-cfe`](#issue-kn5000-cfe), [`kn5000-kqy`](#issue-kn5000-kqy), [`kn5000-hlw`](#issue-kn5000-hlw)
 
 ---
 
-#### 🟠 Document DATA/BCK serial interface pinout
+#### 🟠 Document DATA/BCK serial interface pinout {#issue-kn5000-jwk}
 
 **ID:** `kn5000-jwk` | **Priority:** High | **Created:** 2026-01-25
 
@@ -428,7 +431,7 @@ From the block diagram, control panel MCUs connect to main CPU via DATA and BCK 
 
 ---
 
-#### 🟠 Document all serial command bytes and their purposes
+#### 🟠 Document all serial command bytes and their purposes {#issue-kn5000-p2c}
 
 **ID:** `kn5000-p2c` | **Priority:** High | **Created:** 2026-01-25
 
@@ -436,7 +439,7 @@ Analyze maincpu code to catalog all 2-byte command sequences sent to control pan
 
 ---
 
-#### 🟠 Extract hardware info from service manual schematics
+#### 🟠 Extract hardware info from service manual schematics {#issue-kn5000-z9k}
 
 **ID:** `kn5000-z9k` | **Priority:** High | **Created:** 2026-01-25
 
@@ -444,11 +447,11 @@ Analyze the KN5000 service manual (59 pages) to extract hardware architecture de
 
 **Notes:** Significant progress: Analyzed schematic pages II-9 to II-38. Documented main CPU (TMP94C241F), all memory ICs, control panel MCUs (M37471M2196S), button mappings, serial signals. Created hardware-architecture.md page.
 
-**Blocked by:** `kn5000-bcn`, `kn5000-jwk`, `kn5000-xhi`
+**Depends on:** [`kn5000-bcn`](#issue-kn5000-bcn), [`kn5000-jwk`](#issue-kn5000-jwk), [`kn5000-xhi`](#issue-kn5000-xhi)
 
 ---
 
-#### 🟠 Trace CPANEL_SERIAL_ROUTINE_* handlers
+#### 🟠 Trace CPANEL_SERIAL_ROUTINE_* handlers {#issue-kn5000-32b}
 
 **ID:** `kn5000-32b` | **Priority:** High | **Created:** 2026-01-25
 
@@ -456,7 +459,7 @@ Trace execution flow through all CPANEL_SERIAL_ROUTINE_0 through CPANEL_SERIAL_R
 
 ---
 
-#### 🟡 Analyze ROTA/ROTB rotary encoder circuit
+#### 🟡 Analyze ROTA/ROTB rotary encoder circuit {#issue-kn5000-xhi}
 
 **ID:** `kn5000-xhi` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -464,17 +467,17 @@ Block diagram shows ROTA and ROTB signals from control panel. Find the encoder c
 
 ---
 
-#### 🟡 Design MAME HLE device for control panel
+#### 🟡 Design MAME HLE device for control panel {#issue-kn5000-qhm}
 
 **ID:** `kn5000-qhm` | **Priority:** Medium | **Created:** 2026-01-25
 
 Based on protocol documentation, design the C++ interface for a MAME HLE device that emulates control panel MCU behavior. Define state machine, command handlers, and input/output bindings.
 
-**Blocked by:** `kn5000-p2c`, `kn5000-j3c`, `kn5000-ljl`, `kn5000-unb`
+**Depends on:** [`kn5000-p2c`](#issue-kn5000-p2c), [`kn5000-j3c`](#issue-kn5000-j3c), [`kn5000-ljl`](#issue-kn5000-ljl), [`kn5000-unb`](#issue-kn5000-unb)
 
 ---
 
-#### 🟡 Map LED indices to physical panel LEDs
+#### 🟡 Map LED indices to physical panel LEDs {#issue-kn5000-ljl}
 
 **ID:** `kn5000-ljl` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -482,7 +485,7 @@ Analyze CPANEL_INDEX_FOR_LEDS and LED command handling to understand LED address
 
 ---
 
-#### 🟡 Map button indices to physical panel buttons
+#### 🟡 Map button indices to physical panel buttons {#issue-kn5000-j3c}
 
 **ID:** `kn5000-j3c` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -490,7 +493,7 @@ Analyze STATE_OF_CPANEL_BUTTONS array and related code to understand how button 
 
 ---
 
-#### 🟡 Understand rotary encoder data format
+#### 🟡 Understand rotary encoder data format {#issue-kn5000-unb}
 
 **ID:** `kn5000-unb` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -498,17 +501,17 @@ Analyze how rotary encoder values are transmitted. Determine: absolute vs relati
 
 ---
 
-#### 🟡 Update website with service manual findings
+#### 🟡 Update website with service manual findings {#issue-kn5000-8q2}
 
 **ID:** `kn5000-8q2` | **Priority:** Medium | **Created:** 2026-01-25
 
 After extracting info from service manual schematics, update kn5000-docs website: add hardware architecture page, update control-panel-protocol.md with confirmed signals (DATA/BCK/ROTA/ROTB), add IC reference table, include block diagram description.
 
-**Blocked by:** `kn5000-z9k`
+**Depends on:** [`kn5000-z9k`](#issue-kn5000-z9k)
 
 ---
 
-#### ⚪ Maintain documentation website
+#### ⚪ Maintain documentation website {#issue-kn5000-9a0}
 
 **ID:** `kn5000-9a0` | **Priority:** Low | **Created:** 2026-01-25
 
@@ -516,9 +519,9 @@ Keep the kn5000-docs Jekyll website in sync with reverse engineering progress. U
 
 ---
 
-### Sound & Audio
+### Sound & Audio {#sound-audio}
 
-#### 🟠 Sound: Document DAC IC310
+#### 🟠 Sound: Document DAC IC310 {#issue-kn5000-xel}
 
 **ID:** `kn5000-xel` | **Priority:** High | **Created:** 2026-01-25
 
@@ -526,7 +529,7 @@ Identify and document the DAC chip (IC310). Find datasheet. Document: resolution
 
 ---
 
-#### 🟠 Sound: Document DSP IC311
+#### 🟠 Sound: Document DSP IC311 {#issue-kn5000-xv2}
 
 **ID:** `kn5000-xv2` | **Priority:** High | **Created:** 2026-01-25
 
@@ -534,7 +537,7 @@ Identify and document the DSP chip (IC311). Find datasheet. Document: DSP archit
 
 ---
 
-#### 🟠 Sound: Document Waveform ROM (IC306-307)
+#### 🟠 Sound: Document Waveform ROM (IC306-307) {#issue-kn5000-d38}
 
 **ID:** `kn5000-d38` | **Priority:** High | **Created:** 2026-01-25
 
@@ -542,7 +545,7 @@ Analyze the waveform ROM chips. Document: total size, data format, sample encodi
 
 ---
 
-#### 🟠 Sound: Identify and document Sub CPU (IC27)
+#### 🟠 Sound: Identify and document Sub CPU (IC27) {#issue-kn5000-toq}
 
 **ID:** `kn5000-toq` | **Priority:** High | **Created:** 2026-01-25
 
@@ -550,7 +553,7 @@ Determine the exact chip type of IC27 (Sub CPU) from service manual schematics. 
 
 ---
 
-#### 🟡 Sound: Document MIDI implementation
+#### 🟡 Sound: Document MIDI implementation {#issue-kn5000-ake}
 
 **ID:** `kn5000-ake` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -558,7 +561,7 @@ Fully document MIDI capabilities. Trace: MIDI IN/OUT/THRU handling, channel assi
 
 ---
 
-#### 🟡 Sound: Document audio output path
+#### 🟡 Sound: Document audio output path {#issue-kn5000-jy9}
 
 **ID:** `kn5000-jy9` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -566,7 +569,7 @@ Trace complete audio signal path from DAC to output jacks. Document: analog circ
 
 ---
 
-#### 🟡 Sound: Document effects processing chain
+#### 🟡 Sound: Document effects processing chain {#issue-kn5000-si0}
 
 **ID:** `kn5000-si0` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -574,7 +577,7 @@ Trace the audio effects signal path. Document: reverb types and parameters, chor
 
 ---
 
-#### 🟡 Sound: Document rhythm/accompaniment engine
+#### 🟡 Sound: Document rhythm/accompaniment engine {#issue-kn5000-98j}
 
 **ID:** `kn5000-98j` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -582,7 +585,7 @@ Analyze how auto-accompaniment works. Document: rhythm pattern format, chord det
 
 ---
 
-#### 🟡 Sound: Document synthesis architecture
+#### 🟡 Sound: Document synthesis architecture {#issue-kn5000-tvq}
 
 **ID:** `kn5000-tvq` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -590,7 +593,7 @@ Understand how sounds are generated. Document: oscillator count (polyphony), syn
 
 ---
 
-#### 🟡 Sound: Trace main CPU to Sub CPU command protocol
+#### 🟡 Sound: Trace main CPU to Sub CPU command protocol {#issue-kn5000-061}
 
 **ID:** `kn5000-061` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -598,7 +601,7 @@ Document how main CPU sends commands to sub CPU for sound generation. Trace latc
 
 ---
 
-#### ⚪ Sound: Extract and catalog all instrument patches
+#### ⚪ Sound: Extract and catalog all instrument patches {#issue-kn5000-cox}
 
 **ID:** `kn5000-cox` | **Priority:** Low | **Created:** 2026-01-25
 
@@ -606,7 +609,7 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 ---
 
-#### ⚪ Sound: Extract and convert waveform samples
+#### ⚪ Sound: Extract and convert waveform samples {#issue-kn5000-mrx}
 
 **ID:** `kn5000-mrx` | **Priority:** Low | **Created:** 2026-01-25
 
@@ -614,9 +617,9 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 ---
 
-### Sub CPU
+### Sub CPU {#sub-cpu}
 
-#### 🟠 SubCPU: Analyze inter-CPU latch protocol at 0x120000
+#### 🟠 SubCPU: Analyze inter-CPU latch protocol at 0x120000 {#issue-kn5000-dui}
 
 **ID:** `kn5000-dui` | **Priority:** High | **Created:** 2026-01-25
 
@@ -624,7 +627,7 @@ Document the latch-based communication mechanism at 0x120000. Determine: latch r
 
 ---
 
-#### 🟠 SubCPU: Document MicroDMA registers on TMP94C241F
+#### 🟠 SubCPU: Document MicroDMA registers on TMP94C241F {#issue-kn5000-fmq}
 
 **ID:** `kn5000-fmq` | **Priority:** High | **Created:** 2026-01-25
 
@@ -632,7 +635,7 @@ Document the MicroDMA controller registers on the TMP94C241F. Include DMAS (sour
 
 ---
 
-#### 🟠 SubCPU: Trace payload transfer initialization
+#### 🟠 SubCPU: Trace payload transfer initialization {#issue-kn5000-c3p}
 
 **ID:** `kn5000-c3p` | **Priority:** High | **Created:** 2026-01-25
 
@@ -640,7 +643,7 @@ Find and document the main CPU code that initializes the sub CPU payload transfe
 
 ---
 
-#### 🟡 SubCPU: Document boot sequence handshake
+#### 🟡 SubCPU: Document boot sequence handshake {#issue-kn5000-51z}
 
 **ID:** `kn5000-51z` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -648,7 +651,7 @@ Trace the complete boot sequence: 1) Main CPU reset/init, 2) Sub CPU held in res
 
 ---
 
-#### 🟡 SubCPU: Document payload memory layout
+#### 🟡 SubCPU: Document payload memory layout {#issue-kn5000-1ru}
 
 **ID:** `kn5000-1ru` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -656,7 +659,7 @@ Analyze the 192KB sub CPU payload structure. Document: entry point address, inte
 
 ---
 
-#### 🟡 SubCPU: Identify sub CPU type and memory map
+#### 🟡 SubCPU: Identify sub CPU type and memory map {#issue-kn5000-ayt}
 
 **ID:** `kn5000-ayt` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -664,9 +667,9 @@ Determine the sub CPU chip type (IC27 on main board). Document its memory map: w
 
 ---
 
-### Table Data ROM
+### Table Data ROM {#table-data-rom}
 
-#### 🟡 table_data: Improve from 32.42% match
+#### 🟡 table_data: Improve from 32.42% match {#issue-kn5000-hlw}
 
 **ID:** `kn5000-hlw` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -674,9 +677,9 @@ Table data ROM (kn5000_table_data.rebuilt.rom) is at 32.42% match with 1,417,294
 
 ---
 
-### Video & Display
+### Video & Display {#video-display}
 
-#### 🟠 Video: Document LCD controller IC206 (MN89304)
+#### 🟠 Video: Document LCD controller IC206 (MN89304) {#issue-kn5000-6qi}
 
 **ID:** `kn5000-6qi` | **Priority:** High | **Created:** 2026-01-25
 
@@ -684,7 +687,7 @@ Research and document the MN89304 LCD controller. Find datasheet if available. D
 
 ---
 
-#### 🟠 Video: Document Video RAM IC207 (M5M44265CJ8S)
+#### 🟠 Video: Document Video RAM IC207 (M5M44265CJ8S) {#issue-kn5000-m91}
 
 **ID:** `kn5000-m91` | **Priority:** High | **Created:** 2026-01-25
 
@@ -692,7 +695,7 @@ Document the 4Mbit Video RAM. Determine: memory organization, how it maps to scr
 
 ---
 
-#### 🟠 Video: Trace LCD initialization in firmware
+#### 🟠 Video: Trace LCD initialization in firmware {#issue-kn5000-t75}
 
 **ID:** `kn5000-t75` | **Priority:** High | **Created:** 2026-01-25
 
@@ -700,7 +703,7 @@ Find and document LCD controller initialization code in main CPU firmware. Docum
 
 ---
 
-#### 🟡 Video: Document UI widget rendering
+#### 🟡 Video: Document UI widget rendering {#issue-kn5000-5dc}
 
 **ID:** `kn5000-5dc` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -708,7 +711,7 @@ Analyze how UI elements are drawn: buttons, sliders, menus, piano keyboard displ
 
 ---
 
-#### 🟡 Video: Document font system and text rendering
+#### 🟡 Video: Document font system and text rendering {#issue-kn5000-kev}
 
 **ID:** `kn5000-kev` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -716,7 +719,7 @@ Analyze how text is rendered on the LCD. Document: font data location in ROM, fo
 
 ---
 
-#### 🟡 Video: Document pixel format and color palette
+#### 🟡 Video: Document pixel format and color palette {#issue-kn5000-hy8}
 
 **ID:** `kn5000-hy8` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -724,7 +727,7 @@ Determine exact pixel format used by the display. Document: bits per pixel (like
 
 ---
 
-#### 🟡 Video: Document screen layout and regions
+#### 🟡 Video: Document screen layout and regions {#issue-kn5000-rq0}
 
 **ID:** `kn5000-rq0` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -732,7 +735,7 @@ Map the LCD screen layout: header area, main content area, status bar, any fixed
 
 ---
 
-#### 🟡 Video: Reverse engineer drawing primitives
+#### 🟡 Video: Reverse engineer drawing primitives {#issue-kn5000-gln}
 
 **ID:** `kn5000-gln` | **Priority:** Medium | **Created:** 2026-01-25
 
@@ -740,7 +743,7 @@ Find and document graphics drawing routines in firmware: pixel plotting, line dr
 
 ---
 
-#### ⚪ Video: Document animation and transition effects
+#### ⚪ Video: Document animation and transition effects {#issue-kn5000-nmg}
 
 **ID:** `kn5000-nmg` | **Priority:** Low | **Created:** 2026-01-25
 
@@ -748,7 +751,7 @@ Analyze fade-in/fade-out effects, screen transitions, any animated elements. Doc
 
 ---
 
-#### ⚪ Video: Extract and document all fonts
+#### ⚪ Video: Extract and document all fonts {#issue-kn5000-dj3}
 
 **ID:** `kn5000-dj3` | **Priority:** Low | **Created:** 2026-01-25
 
@@ -796,4 +799,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-25 17:58*
+*Last updated: 2026-01-25 18:31*
