@@ -142,14 +142,66 @@ The main CPU and sub CPU communicate via latches at `0x120000`.
 
 The sub CPU boot ROM configures DMA to use this address for bidirectional communication with the main CPU.
 
-### Communication Protocol
+### Command Protocol (Boot ROM)
 
-1. Main CPU writes command/data to latch
-2. Sub CPU reads from latch
-3. Sub CPU writes response/status to latch
-4. Main CPU reads response
+The sub CPU boot ROM implements this command protocol:
 
-*Full protocol documentation in progress.*
+| Command Byte | Action | Data Size | Buffer Address |
+|--------------|--------|-----------|----------------|
+| `0x00 - 0x1F` | Handler dispatch + data | 1-32 bytes | `0x051E` |
+| `0xE1` | DMA transfer type 1 | 6 bytes | `0x0544` |
+| `0xE2` | DMA transfer type 2 | 10 bytes | `0x054A` |
+| `0xE3` | Signal payload ready | 0 bytes | - |
+
+**Command Encoding (0x00-0x1F):**
+
+For general commands, the byte encodes both handler and length:
+
+```
+Bits 7-5: Handler index (0-7) → selects from jump table at 0xFF8000
+Bits 4-0: Data length minus 1 (0-31 → 1-32 bytes)
+```
+
+Example: Command `0x45` = handler 2 (`0x45 >> 5 = 2`), 6 bytes (`(0x45 & 0x1F) + 1 = 6`)
+
+### Communication Flow
+
+**Main CPU → Sub CPU (Command):**
+
+```
+1. Main CPU writes command byte to 0x120000
+2. Sub CPU INT_HANDLER_9 triggered
+3. Sub CPU reads command, initiates DMA for data bytes
+4. DMA transfers remaining data to RAM buffer
+5. INT_HANDLER_35 processes command based on state machine
+```
+
+**Sub CPU → Main CPU (Response):**
+
+```
+1. Sub CPU writes response to 0x120000
+2. Sub CPU sets appropriate flag bits in VAR_04FE
+3. Main CPU polls or receives interrupt
+4. Main CPU reads response from latch
+```
+
+### Sub CPU State Variables
+
+| Address | Variable | Description |
+|---------|----------|-------------|
+| `0x04FE` | Payload/Ready flags | Bit 6: payload ready, Bit 7: transfer complete |
+| `0x0512` | DMA address | Current DMA target address (4 bytes) |
+| `0x0516` | DMA state | 0=idle, 1=pending, 2=in-progress |
+| `0x0518` | Command state | 0-4, tracks command processing phase |
+| `0x051A` | Last command | Most recent command byte received |
+
+### DMA Configuration
+
+The boot ROM configures DMA for the inter-CPU latch:
+
+- **Source:** `0x120000` (latch)
+- **Mode:** Controlled via undocumented LDC opcodes
+- **Trigger:** Write `0x0A` to address `0x0100`
 
 ## Tone Generator
 

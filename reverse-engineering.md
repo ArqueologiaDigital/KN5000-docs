@@ -225,21 +225,183 @@ The `INIT_TONE_GEN` routine writes initialization patterns to registers at 0x130
 
 ### Inter-CPU Protocol (Boot ROM Side)
 
-The sub CPU boot ROM handles these commands from the main CPU via the latch at `0x120000`:
+The sub CPU boot ROM handles commands from the main CPU via the latch at `0x120000`. The protocol uses a command byte followed by optional data bytes transferred via DMA.
 
-| Command | Action | DMA Size |
-|---------|--------|----------|
-| `E1` | Set up DMA transfer to 0x0544 | 6 bytes |
-| `E2` | Set up DMA transfer to 0x054A | 10 bytes |
-| `E3` | Signal payload ready (sets bit 6 of 0x04FE) | - |
-| `00-1F` | Variable-length DMA to 0x051E | 1-32 bytes |
+#### Command Format
 
-**State Machine (VAR_0518):**
-- State 0: Idle
-- State 1: Processing received data, call handler from table
-- State 2: Set up secondary DMA transfer
-- State 3: Set completion flags
-- State 4: Clear ready flag, return to idle
+| Command | Action | DMA Buffer | DMA Size |
+|---------|--------|------------|----------|
+| `E1` | Set up DMA transfer | 0x0544 | 6 bytes |
+| `E2` | Set up DMA transfer | 0x054A | 10 bytes |
+| `E3` | Signal payload ready | - | - |
+| `00-1F` | Variable-length data | 0x051E | low 5 bits + 1 (1-32 bytes) |
+
+For commands `00-1F`, the command byte encodes both the handler index and data length:
+- **Bits 7-5**: Handler index (0-7), selects function from jump table at 0xFF8000
+- **Bits 4-0**: Data length - 1 (0-31 = 1-32 bytes)
+
+#### Interrupt Handler Details
+
+**INT_HANDLER_9 (0xFF881F) - Serial Receive Interrupt**
+
+Triggered when data arrives from the main CPU via the inter-CPU latch.
+
+```
+1. Check if bit 2 of SC0BUF is set (busy flag)
+   - If set: exit immediately (another transfer in progress)
+2. Read command byte from latch (0x120000)
+3. Store command in VAR_051A
+4. Decode command:
+   - E1: Set VAR_0518=2, DMA 6 bytes to 0x0544
+   - E2: Set VAR_0518=3, DMA 10 bytes to 0x054A
+   - E3: Set bit 6 of VAR_04FE (payload ready), skip DMA
+   - Other: Set VAR_0518=1, DMA (cmd & 0x1F)+1 bytes to 0x051E
+5. Trigger DMA by writing 0x0A to address 0x0100
+6. Clear bit 1 of SC0BUF
+```
+
+**INT_HANDLER_35 (0xFF88B8) - Timer/Processing Interrupt**
+
+Main processing interrupt that handles received data after DMA completes.
+
+```
+1. Save all registers (XWA, XBC, XDE, XHL, XIX, XIY, XIZ)
+2. Read VAR_0518 state:
+   - State 1: Process received command data
+     - Push parameters to stack
+     - Calculate handler index from high 3 bits of command
+     - Call handler from jump table at 0xFF8000 + (index * 4)
+     - Clean up stack, set VAR_0518=0
+   - State 2: Set up secondary DMA transfer
+     - Load parameters from buffer at 0x0544
+     - Trigger DMA, set VAR_0518=4
+   - State 3: Set completion flags
+     - Write 0xFF to 0x051C
+     - Set bit 7 of 0x0554
+     - Set VAR_0518=0
+   - State 4: Finalize transfer
+     - Clear bit 7 of VAR_04FE
+     - Set VAR_0518=0
+3. Manage watchdog (toggle bit 2 of WDMOD if set)
+4. Restore all registers
+```
+
+**INT_HANDLER_37 (0xFF889A) - DMA Complete Interrupt**
+
+Handles DMA transfer completion by advancing the state machine.
+
+```
+1. Clear bit 2 of WDMOD (watchdog)
+2. Check VAR_0516:
+   - If 1: Set to 0 (transfer complete)
+   - If 2: Set to 1 (first phase complete)
+3. Return from interrupt
+```
+
+#### State Machine Diagram
+
+```
+                     Command Received
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+         E1/E2 cmd               Other cmd (00-1F)
+              │                         │
+              ▼                         ▼
+       VAR_0518 = 2/3            VAR_0518 = 1
+              │                         │
+              │    ┌────────────────────┘
+              │    │
+              ▼    ▼
+       INT_HANDLER_35 processes
+              │
+    ┌─────────┼─────────┬─────────┐
+    │         │         │         │
+ State 1   State 2   State 3   State 4
+    │         │         │         │
+    ▼         ▼         ▼         ▼
+Call handler  DMA    Set flags  Clear ready
+from table  transfer           flag
+    │         │         │         │
+    └─────────┴─────────┴─────────┘
+                    │
+                    ▼
+             VAR_0518 = 0 (Idle)
+```
+
+#### DMA State Machine (VAR_0516)
+
+Separate from the command state machine, tracks DMA transfer phases:
+
+| Value | State | Description |
+|-------|-------|-------------|
+| 0 | Idle | No transfer in progress |
+| 1 | Pending | Transfer initiated, waiting for completion |
+| 2 | In Progress | Multi-phase transfer, first phase complete |
+
+### Memory Test Routine (0xFF89FC)
+
+At boot, the sub CPU tests RAM integrity using complementary bit patterns.
+
+**Test Patterns:**
+- Pattern 1: `0x5A5A5A5A` (alternating bits: 01011010...)
+- Pattern 2: `0xA5A5A5A5` (inverted: 10100101...)
+
+**Algorithm:**
+```
+1. For each test region (configured in table at 0xFF8020):
+   a. Read original value
+   b. Write pattern 1 (0x5A5A5A5A)
+   c. Read back and verify both 16-bit halves
+   d. If mismatch: OR error code from table into result
+   e. Restore original, advance to next location
+   f. Write pattern 2 (0xA5A5A5A5)
+   g. Read back and verify
+   h. If mismatch: OR error code into result
+   i. Restore original, advance
+2. Return error flags in L register
+```
+
+The test configuration table at 0xFF8020 contains:
+- Start address (4 bytes)
+- Size in dwords (4 bytes)
+- Error code for low word failure (1 byte)
+- Error code for high word failure (1 byte)
+
+### ROM Checksum Routine (0xFF8AB4)
+
+Verifies boot ROM integrity by checksumming 0x800 words from 0xFE0000.
+
+**Algorithm:**
+```
+1. Initialize two 16-bit accumulators to 0
+2. For each of 0x800 words starting at 0xFE0000:
+   a. Add word to accumulator (alternating between two)
+3. Compare the two checksums
+4. If mismatch: Set bit 2 in error flags
+5. Return error flags in L register
+```
+
+### Delay Routine (0xFF89A9)
+
+Provides variable timing delays based on a bit pattern.
+
+**Parameters:**
+- A register: 3-bit delay selector (bits 0-2 checked)
+
+**Algorithm:**
+```
+1. For each of 3 bits in A (starting from bit 0):
+   a. Disable timer interrupt (res bit 1 of INTTC01)
+   b. If current bit set: delay count = 0xC000, else 0x4000
+   c. Execute nested delay loops (outer: BC count, inner: 32 iterations)
+   d. Enable timer interrupt (set bit 1 of INTTC01)
+   e. Execute another nested delay with count 0x4000
+   f. Shift A right, increment loop counter
+   g. Repeat until 3 bits processed
+```
+
+This allows 8 different delay combinations based on which bits are set.
 
 ### Source File
 
