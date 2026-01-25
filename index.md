@@ -5,6 +5,10 @@ title: Home
 
 # Technics KN5000 Reverse Engineering Project
 
+> **About This Documentation**
+>
+> This documentation is being developed with the assistance of [Claude Code](https://claude.ai/code) AI agents, guided by Felipe Sanches. While every effort is made to ensure accuracy, some information may be incomplete or contain errors as the reverse engineering work progresses. All content is under continuous review and verification against actual hardware behavior. Contributions and corrections are welcome.
+
 This project aims to fully document and emulate the Technics KN5000 music keyboard through:
 
 - **ROM Reconstruction** - Achieving 100% byte-matching rebuilds from disassembled source
@@ -51,4 +55,6 @@ See [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) for detai
 
 ## Contact
 
-Felipe Sanches - Project Lead
+**Felipe Sanches** - Project Lead
+
+This project uses AI-assisted reverse engineering with Claude Code agents to accelerate documentation and analysis. Human oversight ensures accuracy and guides the research direction. If you find errors or have corrections, please open an issue on GitHub.
