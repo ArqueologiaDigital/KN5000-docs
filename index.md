@@ -5,6 +5,10 @@ title: Home
 
 # Technics KN5000 Reverse Engineering Project
 
+> **A Digital Archaeology Project**
+>
+> This project is a labor of love for the Technics KN5000 instrument and a commitment to historical preservation of computer hardware through emulation. As physical hardware ages and becomes scarce, emulation ensures these remarkable instruments remain accessible to future generations of musicians, researchers, and enthusiasts.
+>
 > **About This Documentation**
 >
 > This documentation is being developed with the assistance of [Claude Code](https://claude.ai/code) AI agents, guided by Felipe Sanches. While every effort is made to ensure accuracy, some information may be incomplete or contain errors as the reverse engineering work progresses. All content is under continuous review and verification against actual hardware behavior. Contributions and corrections are welcome.
@@ -55,6 +59,8 @@ See [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) for detai
 
 ## Contact
 
-**Felipe Sanches** - Project Lead
+**Felipe Sanches** - Project Lead | [Arqueologia Digital](https://github.com/ArqueologiaDigital)
 
-This project uses AI-assisted reverse engineering with Claude Code agents to accelerate documentation and analysis. Human oversight ensures accuracy and guides the research direction. If you find errors or have corrections, please open an issue on GitHub.
+This digital archaeology project uses AI-assisted reverse engineering with Claude Code agents to accelerate documentation and analysis. Human oversight ensures accuracy and guides the research direction.
+
+We believe that preserving the technical knowledge of instruments like the KN5000 is essential for cultural heritage. If you share this passion and find errors or have corrections, please open an issue on GitHub.
