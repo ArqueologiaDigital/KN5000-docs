@@ -12,6 +12,7 @@ header_pages:
   - index.md
   - hardware-architecture.md
   - rom-reconstruction.md
+  - reverse-engineering.md
   - control-panel-protocol.md
   - memory-map.md
   - help-wanted.md

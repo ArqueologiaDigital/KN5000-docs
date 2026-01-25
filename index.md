@@ -33,6 +33,7 @@ See [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) for detai
 
 - [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) - Detailed hardware documentation from service manual
 - [ROM Reconstruction Status]({{ site.baseurl }}/rom-reconstruction/)
+- [Reverse Engineering Strategies]({{ site.baseurl }}/reverse-engineering/) - HDAE5000, SubCPU/MicroDMA, embedded images
 - [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/)
 - [Memory Map]({{ site.baseurl }}/memory-map/)
 - [How You Can Help]({{ site.baseurl }}/help-wanted/)
