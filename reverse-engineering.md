@@ -211,17 +211,39 @@ The `INIT_TONE_GEN` routine writes initialization patterns to registers at 0x130
 - HALT_LOOP (0xFF8490) - Error handler
 - Vector trampolines (0xFF8F6C) - All 45 handlers
 - Interrupt vector table (0xFFFF00)
+- INT_HANDLER_9 (0xFF881F) - Serial receive interrupt
+- INT_HANDLER_35 (0xFF88B8) - Timer/processing interrupt
+- INT_HANDLER_37 (0xFF889A) - DMA complete interrupt
+- DELAY_ROUTINE (0xFF89A9) - Variable delay routine
+- MEM_TEST_ROUTINE (0xFF89FC) - RAM test
+- ROM_CHECKSUM (0xFF8AB4) - Boot ROM integrity check
+- SERIAL_INIT (0xFF8B07) - Serial communication init
 
 **TODO:**
-- Memory test routine (0xFF89FC)
-- Delay routines
-- Serial initialization
-- Specific interrupt handlers (9, 35, 37)
 - Data tables analysis (0xFF8000)
+- SUB_8B37, SUB_8B89, SUB_8C80 helper routines
+
+### Inter-CPU Protocol (Boot ROM Side)
+
+The sub CPU boot ROM handles these commands from the main CPU via the latch at `0x120000`:
+
+| Command | Action | DMA Size |
+|---------|--------|----------|
+| `E1` | Set up DMA transfer to 0x0544 | 6 bytes |
+| `E2` | Set up DMA transfer to 0x054A | 10 bytes |
+| `E3` | Signal payload ready (sets bit 6 of 0x04FE) | - |
+| `00-1F` | Variable-length DMA to 0x051E | 1-32 bytes |
+
+**State Machine (VAR_0518):**
+- State 0: Idle
+- State 1: Processing received data, call handler from table
+- State 2: Set up secondary DMA transfer
+- State 3: Set completion flags
+- State 4: Clear ready flag, return to idle
 
 ### Source File
 
-`subcpu_boot/kn5000_subcpu_boot.asm` - Initial disassembly with documented structure
+`subcpu_boot/kn5000_subcpu_boot.asm` - 1098 lines of disassembled code
 
 ---
 

@@ -88,8 +88,17 @@ The sub CPU (tone generator controller) has its own memory map, documented from 
 | `0x0000 - 0x00FF` | 256B | Special Function Registers (SFR) |
 | `0x0100 - 0x01FF` | 256B | Extended SFR / Memory Controller |
 | `0x0400 - 0x04E0` | 225B | Interrupt vector trampolines (copied from boot ROM) |
-| `0x04FE` | 1B | Payload ready flag |
+| `0x04FE` | 1B | Payload ready flag (bit 6=ready, bit 7=complete) |
 | `0x0500 - 0x05A2` | ~160B | RAM / Stack area (stack init = 0x05A2) |
+| `0x0512` | 4B | DMA transfer address storage |
+| `0x0516` | 2B | DMA state machine (0=idle, 1=pending, 2=in progress) |
+| `0x0518` | 2B | Command processing state (0-4) |
+| `0x051A` | 1B | Last received command byte |
+| `0x051E` | 32B | Variable-length command data buffer |
+| `0x0544` | 6B | E1 command data buffer |
+| `0x054A` | 10B | E2 command data buffer |
+| `0x0556` | 1B | Memory test result flags |
+| `0x0558` | 8B | Serial status bytes |
 | `0x120000` | - | Inter-CPU Communication Latch (shared with main CPU) |
 | `0x130000` | - | Tone Generator Registers |
 | `0xFE0000 - 0xFFFFFF` | 128KB | Boot ROM |
