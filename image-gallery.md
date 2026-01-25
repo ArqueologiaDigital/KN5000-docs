@@ -67,8 +67,8 @@ These images were extracted from raw bitmap data in the main CPU ROM and convert
 
 | Image | Filename | Dimensions | Description |
 |-------|----------|------------|-------------|
-| ![Technics Logo]({{ "/assets/images/gallery/BitmapTechnicsLogo.png" | relative_url }}) | `BitmapTechnicsLogo.bin` | 234x60, 8-bit | Technics brand logo |
-| ![KN5000 Logo]({{ "/assets/images/gallery/BitmapKN5000Logo.png" | relative_url }}) | `BitmapKN5000Logo.bin` | 150x48, 8-bit | KN5000 model logo |
+| ![Technics Logo]({{ "/assets/images/gallery/BitmapTechnicsLogo.png" | relative_url }}) | `BitmapTechnicsLogo.bin` | 312x45, 8-bit | Technics brand logo |
+| ![KN5000 Logo]({{ "/assets/images/gallery/BitmapKN5000Logo.png" | relative_url }}) | `BitmapKN5000Logo.bin` | 200x36, 8-bit | KN5000 model logo |
 
 ### Split Point Indicators (58x52 pixels, 8-bit)
 
@@ -90,7 +90,7 @@ These images show keyboard split point notes displayed when configuring the keyb
 | ![Split B]({{ "/assets/images/gallery/BitmapSplitPoint_B.png" | relative_url }}) | B |
 | ![No Split]({{ "/assets/images/gallery/BitmapSplitPoint_no_split.png" | relative_url }}) | No Split |
 
-### Drawbar Sliders (111x44 pixels, 8-bit)
+### Drawbar Sliders (22x222 pixels, 8-bit)
 
 | Image | Filename | Description |
 |-------|----------|-------------|
@@ -111,27 +111,27 @@ These images show keyboard split point notes displayed when configuring the keyb
 | Image | Filename | Dimensions | Description |
 |-------|----------|------------|-------------|
 | ![Worm]({{ "/assets/images/gallery/BitmapWormWearingHat.png" | relative_url }}) | `BitmapWormWearingHat.bin` | 24x24, 8-bit | Easter egg - worm wearing hat |
-| ![Arrows]({{ "/assets/images/gallery/BitmapSomeArrows.png" | relative_url }}) | `BitmapSomeArrows.bin` | 42x42, 8-bit | Arrow icons |
+| ![Arrows]({{ "/assets/images/gallery/BitmapSomeArrows.png" | relative_url }}) | `BitmapSomeArrows.bin` | 294x6, 8-bit | Arrow icons strip |
 
 ### Transition Effects
 
 | Image | Filename | Dimensions | Description |
 |-------|----------|------------|-------------|
-| ![Fade In Picture]({{ "/assets/images/gallery/BitmapFadeInPicture.png" | relative_url }}) | `BitmapFadeInPicture.bin` | 70x40, 8-bit | Fade in picture effect |
-| ![Fade Out Picture]({{ "/assets/images/gallery/BitmapFadeOutPicture.png" | relative_url }}) | `BitmapFadeOutPicture.bin` | 70x40, 8-bit | Fade out picture effect |
-| ![Fade In Text]({{ "/assets/images/gallery/BitmapFadeInText.png" | relative_url }}) | `BitmapFadeInText.bin` | 60x24, 8-bit | Fade in text effect |
-| ![Fade Out Text]({{ "/assets/images/gallery/BitmapFadeOutText.png" | relative_url }}) | `BitmapFadeOutText.bin` | 60x36, 8-bit | Fade out text effect |
+| ![Fade In Picture]({{ "/assets/images/gallery/BitmapFadeInPicture.png" | relative_url }}) | `BitmapFadeInPicture.bin` | 112x25, 8-bit | Fade in picture effect |
+| ![Fade Out Picture]({{ "/assets/images/gallery/BitmapFadeOutPicture.png" | relative_url }}) | `BitmapFadeOutPicture.bin` | 114x25, 8-bit | Fade out picture effect |
+| ![Fade In Text]({{ "/assets/images/gallery/BitmapFadeInText.png" | relative_url }}) | `BitmapFadeInText.bin` | 80x18, 8-bit | Fade in text effect |
+| ![Fade Out Text]({{ "/assets/images/gallery/BitmapFadeOutText.png" | relative_url }}) | `BitmapFadeOutText.bin` | 108x20, 8-bit | Fade out text effect |
 
 ### Accompaniment & Edit Graphics
 
 | Image | Filename | Dimensions | Description |
 |-------|----------|------------|-------------|
-| ![Accger16]({{ "/assets/images/gallery/BitmapAccger16.png" | relative_url }}) | `BitmapAccger16.bin` | 150x76, 8-bit | Accompaniment graphic (German) |
-| ![Accita16]({{ "/assets/images/gallery/BitmapAccita16.png" | relative_url }}) | `BitmapAccita16.bin` | 150x76, 8-bit | Accompaniment graphic (Italian) |
-| ![Bmphk]({{ "/assets/images/gallery/BitmapBmphk.png" | relative_url }}) | `BitmapBmphk.bin` | 150x80, 8-bit | Unknown graphic |
-| ![Dredt0d]({{ "/assets/images/gallery/BitmapDredt0d.png" | relative_url }}) | `BitmapDredt0d.bin` | 222x90, 8-bit | Unknown graphic |
-| ![Dredt0k]({{ "/assets/images/gallery/BitmapDredt0k.png" | relative_url }}) | `BitmapDredt0k.bin` | 131x80, 8-bit | Unknown graphic |
-| ![Ntedt0d]({{ "/assets/images/gallery/BitmapNtedt0d.png" | relative_url }}) | `BitmapNtedt0d.bin` | 254x120, 8-bit | Note edit graphic |
+| ![Accger16]({{ "/assets/images/gallery/BitmapAccger16.png" | relative_url }}) | `BitmapAccger16.bin` | 120x95, 8-bit | Accompaniment graphic (German) |
+| ![Accita16]({{ "/assets/images/gallery/BitmapAccita16.png" | relative_url }}) | `BitmapAccita16.bin` | 120x95, 8-bit | Accompaniment graphic (Italian) |
+| ![Bmphk]({{ "/assets/images/gallery/BitmapBmphk.png" | relative_url }}) | `BitmapBmphk.bin` | 100x120, 8-bit | Unknown graphic |
+| ![Dredt0d]({{ "/assets/images/gallery/BitmapDredt0d.png" | relative_url }}) | `BitmapDredt0d.bin` | 168x119, 8-bit | Unknown graphic |
+| ![Dredt0k]({{ "/assets/images/gallery/BitmapDredt0k.png" | relative_url }}) | `BitmapDredt0k.bin` | 88x119, 8-bit | Unknown graphic |
+| ![Ntedt0d]({{ "/assets/images/gallery/BitmapNtedt0d.png" | relative_url }}) | `BitmapNtedt0d.bin` | 240x127, 8-bit | Note edit graphic |
 | ![Ntedt0k]({{ "/assets/images/gallery/BitmapNtedt0k.png" | relative_url }}) | `BitmapNtedt0k.bin` | 127x16, 8-bit | Note edit graphic small |
 
 ---
