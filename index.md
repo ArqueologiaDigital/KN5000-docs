@@ -63,6 +63,7 @@ See [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) for detai
 - [Memory Map]({{ site.baseurl }}/memory-map/)
 - [How You Can Help]({{ site.baseurl }}/help-wanted/)
 - [Open Questions]({{ site.baseurl }}/questions/)
+- [Project Issues]({{ site.baseurl }}/issues/) - Full issue tracker (auto-generated)
 
 ## Resources
 
