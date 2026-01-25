@@ -375,6 +375,183 @@ Transition effects found in extracted images:
 
 ---
 
+## Sound Hardware
+
+The KN5000 has a sophisticated sound generation system with dedicated processors for synthesis and effects.
+
+### Architecture Overview
+
+```
+Main CPU (TMP94C241F)
+    │
+    │ Commands via 0x120000 latches
+    ▼
+Sub CPU (IC27) ──────► Waveform ROM (IC306-307)
+    │                      │
+    │ Audio data           │ Samples
+    ▼                      ▼
+DSP (IC311) ◄──────────────┘
+    │
+    │ Processed audio
+    ▼
+DAC (IC310)
+    │
+    │ Analog audio
+    ▼
+Output Jacks (Line, Headphones, Speakers)
+```
+
+### Hardware Components
+
+| IC | Function | Description |
+|----|----------|-------------|
+| IC27 | Sub CPU | Tone generator control, synthesis engine |
+| IC306-307 | Waveform ROM | PCM sample storage for all instruments |
+| IC311 | DSP | Digital effects (reverb, chorus, EQ) |
+| IC310 | DAC | Digital-to-analog conversion for audio output |
+
+### Sub CPU (IC27)
+
+The Sub CPU handles all real-time sound generation, receiving commands from the main CPU.
+
+**Tasks:**
+1. Identify exact chip type from service manual schematics
+2. Find datasheet and document architecture
+3. Document clock speed and memory map
+4. Analyze I/O capabilities and interfaces
+
+### DSP (IC311)
+
+Digital Signal Processor for audio effects.
+
+**Tasks:**
+1. Identify chip type and find datasheet
+2. Determine if programmable or fixed-function
+3. Document effects capabilities (reverb types, chorus, EQ)
+4. Trace interface to main/sub CPU
+5. Document audio data format and routing
+
+### DAC (IC310)
+
+Converts digital audio to analog output.
+
+**Tasks:**
+1. Identify chip type and specifications
+2. Document resolution (bits) and sample rate
+3. Identify number of output channels
+4. Document interface protocol (I2S, parallel, etc.)
+5. Trace analog output path
+
+### Waveform ROM (IC306-307)
+
+Contains all PCM samples for instrument sounds.
+
+**Tasks:**
+1. Document total ROM size
+2. Analyze sample encoding (PCM bit depth, compression)
+3. Document sample indexing scheme
+4. Map samples to instrument patches
+5. Identify loop points and root notes
+
+### Main CPU ↔ Sub CPU Protocol
+
+Communication via latches at `0x120000`.
+
+**Expected command types:**
+- Note On/Off (key number, velocity, channel)
+- Program Change (instrument selection)
+- Control Change (volume, pan, expression, sustain)
+- Pitch Bend
+- Effects parameters (reverb depth, chorus rate, etc.)
+
+**Tasks:**
+1. Trace all accesses to `0x120000` in main CPU firmware
+2. Document command byte format
+3. Create complete command reference
+4. Identify response/status mechanism
+
+### Synthesis Architecture
+
+**Questions to answer:**
+- Polyphony count (simultaneous voices)
+- Synthesis method (sample playback, wavetable, FM hybrid?)
+- Envelope generators (ADSR parameters)
+- LFO capabilities
+- Filter types and parameters
+
+**Tasks:**
+1. Analyze sub CPU firmware for synthesis routines
+2. Document oscillator/voice architecture
+3. Trace envelope generator implementation
+4. Identify filter algorithms
+
+### Effects Processing
+
+**Known effects (from panel labels):**
+- Reverb (multiple types: Hall, Room, Plate, etc.)
+- Chorus/Flanger
+- EQ (bass, treble, presence)
+
+**Tasks:**
+1. Determine which chip handles each effect
+2. Document effects parameter ranges
+3. Trace effects routing (insert vs send)
+4. Catalog effects presets
+
+### Audio Output Path
+
+From DAC to physical jacks.
+
+**Outputs:**
+- Line Out (L/R)
+- Headphone jack
+- Internal speakers (if present)
+
+**Tasks:**
+1. Trace analog signal path from DAC
+2. Document amplifier stages
+3. Identify any analog mixing or effects
+4. Document output levels and impedances
+
+### MIDI Implementation
+
+Full MIDI capability for external control and sequencing.
+
+**Tasks:**
+1. Document MIDI IN/OUT/THRU signal handling
+2. Identify channel assignments (parts to channels)
+3. Document supported Control Change (CC) messages
+4. Analyze SysEx command format
+5. Check GM/GS/XG compatibility level
+6. Document MIDI clock sync behavior
+
+### Rhythm/Accompaniment Engine
+
+Auto-accompaniment system for backing tracks.
+
+**Components:**
+- Rhythm patterns (drums, percussion)
+- Bass patterns
+- Chord patterns
+- Style variations (Intro, Main A/B, Fill, Ending)
+
+**Tasks:**
+1. Analyze rhythm pattern data format in ROM
+2. Document chord detection algorithm
+3. Trace bass/chord part generation
+4. Document style structure and switching
+
+### Sample/Patch Extraction
+
+**Goals:**
+1. Extract all instrument patch definitions
+2. Document patch parameters (samples, envelopes, filters)
+3. Create patch list matching front panel sound groups
+4. Extract raw waveforms as WAV files for analysis
+5. Document sample rates, loop points, root notes
+
+---
+
 ## References
 
 - [Service Manual PDF]({{ site.baseurl }}/service_manual/technics_sx-kn5000.pdf)
