@@ -5,3 +5,6 @@ _site/
 vendor/
 .bundle/
 Gemfile.lock
+
+# Individual split pages (generated from full PDF)
+service_manual/pages/
