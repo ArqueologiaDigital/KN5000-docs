@@ -1,7 +1,7 @@
 title: Technics KN5000 Reverse Engineering
 description: Documentation for the KN5000 music keyboard reverse engineering project
-baseurl: "/kn5000-docs"
-url: ""
+baseurl: "/KN5000-docs"
+url: "https://arqueologiadigital.github.io"
 
 # Build settings
 markdown: kramdown

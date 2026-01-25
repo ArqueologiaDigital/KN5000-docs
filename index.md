@@ -29,11 +29,11 @@ This project aims to fully document and emulate the Technics KN5000 music keyboa
 
 ## Getting Started
 
-- [ROM Reconstruction Status](rom-reconstruction.html)
-- [Control Panel Protocol](control-panel-protocol.html)
-- [Memory Map](memory-map.html)
-- [How You Can Help](help-wanted.html)
-- [Open Questions](questions.html)
+- [ROM Reconstruction Status]({{ site.baseurl }}/rom-reconstruction/)
+- [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/)
+- [Memory Map]({{ site.baseurl }}/memory-map/)
+- [How You Can Help]({{ site.baseurl }}/help-wanted/)
+- [Open Questions]({{ site.baseurl }}/questions/)
 
 ## Resources
 
