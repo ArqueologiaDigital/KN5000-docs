@@ -1,0 +1,26 @@
+title: Technics KN5000 Reverse Engineering
+description: Documentation for the KN5000 music keyboard reverse engineering project
+baseurl: "/kn5000-docs"
+url: ""
+
+# Build settings
+markdown: kramdown
+theme: minima
+
+# Navigation
+header_pages:
+  - index.md
+  - rom-reconstruction.md
+  - control-panel-protocol.md
+  - memory-map.md
+  - help-wanted.md
+  - questions.md
+
+# Collections for organized content
+collections:
+  findings:
+    output: true
+    permalink: /findings/:name/
+  protocols:
+    output: true
+    permalink: /protocols/:name/
