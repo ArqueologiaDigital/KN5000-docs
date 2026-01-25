@@ -692,6 +692,169 @@ Auto-accompaniment system for backing tracks.
 
 ---
 
+## System Update Procedures
+
+The KN5000 supports firmware updates via floppy disk. Understanding this system enables custom firmware development.
+
+### Update File Formats
+
+Official updates distributed as executable files on floppy disk.
+
+**Known files (from [archive.org](https://archive.org/details/technics-kn5000-system-update-disks)):**
+
+| File | Version | Date |
+|------|---------|------|
+| KN5KPV5.EXE | v5 | 1997-11-12 |
+| KN5KPV6.EXE | v6 | 1998-01-16 |
+| KN5KPV7.EXE | v7 | 1998-06-26 |
+| KN5KPV8.EXE | v8 | 1998-11-13 |
+| KN5KPV9.EXE | v9 | 1999-01-26 |
+| KN5KPV10.EXE | v10 | 1999-08-02 |
+
+**Tasks:**
+1. Analyze file header format
+2. Document payload structure
+3. Identify checksum algorithm
+4. Check for compression
+
+### Update Mode Entry
+
+Special key combinations trigger update mode at power-on.
+
+**Tasks:**
+1. Find key combo detection code in firmware
+2. Document required button sequence
+3. Identify any service mode entries
+
+### File Types and Target Components
+
+Different file types update different system components.
+
+| Target | Address | Description |
+|--------|---------|-------------|
+| Main CPU Program | 0xE00000 | 2MB program Flash |
+| Custom Data | 0x300000 | 1MB user storage Flash |
+| Sub CPU Payload | via DMA | 192KB loaded at boot |
+| HDAE5000 | 0x280000 | Expansion board firmware |
+
+**Tasks:**
+1. Map file naming patterns to targets
+2. Document multi-file updates
+3. Identify version compatibility checks
+
+### Flash ROM Chips
+
+**Tasks:**
+1. Identify chip manufacturer and part numbers from service manual
+2. Document capacity and sector size
+3. Identify command set (JEDEC/AMD/Intel)
+
+**Expected chip locations:**
+- IC4/IC6: Program Flash (0xE00000)
+- Custom Data Flash (0x300000)
+
+### Flash Erase Algorithm
+
+Flash memory must be erased before programming.
+
+**Typical sequence:**
+1. Write unlock sequence to chip
+2. Issue sector erase or chip erase command
+3. Poll for completion
+4. Verify erasure (all 0xFF)
+
+**Tasks:**
+1. Trace erase routine in firmware
+2. Document unlock sequence
+3. Identify sector vs chip erase usage
+4. Document timeout handling
+
+### Flash Program Algorithm
+
+Writing data to Flash ROM.
+
+**Typical sequence:**
+1. Write unlock sequence
+2. Issue program command
+3. Write data byte/word
+4. Poll for completion
+5. Verify written data
+
+**Tasks:**
+1. Trace program routine in firmware
+2. Identify byte-program vs page-buffer mode
+3. Document write verification
+4. Trace error handling
+
+### FDC Interaction
+
+Floppy Disk Controller at `0x110000` (IC208: D72068GF-3B9).
+
+**Tasks:**
+1. Document disk detection sequence
+2. Trace file reading routines
+3. Analyze sector layout expectations
+4. Document multi-disk handling ("Change FD 2 of 2")
+
+### Update Progress Display
+
+LCD messages during update (extracted as 1-bit bitmaps):
+
+| Bitmap | Message | Stage |
+|--------|---------|-------|
+| `Bitmap_1bit_Flash_Memory_Update.bin` | Flash Memory Update | Start |
+| `Bitmap_1bit_Please_Wait.bin` | Please Wait | Processing |
+| `Bitmap_1bit_Now_Erasing.bin` | Now Erasing | Erase phase |
+| `Bitmap_1bit_FD_to_Flash_Memory.bin` | FD to Flash Memory | Write phase |
+| `Bitmap_1bit_Completed.bin` | Completed | Success |
+| `Bitmap_1bit_Turn_On_AGAIN.bin` | Turn On AGAIN | Restart needed |
+| `Bitmap_1bit_Illegal_Disk.bin` | Illegal Disk | Error |
+| `Bitmap_1bit_Change_FD_2_of_2.bin` | Change FD 2 of 2 | Multi-disk |
+
+**Tasks:**
+1. Correlate bitmaps with update state machine
+2. Document state transitions
+3. Identify error conditions
+
+### Validation and Error Handling
+
+**Tasks:**
+1. Document file header validation
+2. Trace checksum verification
+3. Identify version checking logic
+4. Document ROM verification after write
+5. Analyze "Illegal Disk" trigger conditions
+
+### HDAE5000 Update
+
+Separate update procedure for HD-AE5000 expansion.
+
+**Versions:**
+- v1.10i (1998-07-06)
+- v1.15i (1998-10-13)
+- v2.0i (1999-01-15) - Added lyrics display
+
+**Tasks:**
+1. Document separate update disk format
+2. Trace communication via PPI (0x160000)
+3. Identify Flash chips on expansion board
+4. Document version compatibility
+
+### Homebrew Development
+
+Understanding the update system enables:
+- Custom firmware creation
+- Feature modifications
+- Bug fixes for aging hardware
+- Preservation of update capability
+
+**Tools needed:**
+- Update file parser (extract/create update files)
+- Checksum calculator
+- Flash programmer emulation for testing
+
+---
+
 ## References
 
 - [Service Manual PDF]({{ site.baseurl }}/service_manual/technics_sx-kn5000.pdf)
