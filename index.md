@@ -17,7 +17,7 @@ This project aims to fully document and emulate the Technics KN5000 music keyboa
 
 **Project Goals:**
 
-- **ROM Reconstruction** - Achieving 100% byte-matching rebuilds from disassembled source
+- **ROM Reconstruction** - Achieving 100% byte-matching rebuilds from disassembled source, gaining deeper insight into the device's inner workings to aid development of an accurate emulator
 - **MAME Emulation** - Enabling the keyboard to run in the MAME emulator
 - **Homebrew Development** - Creating custom software for the real hardware
 - **Compiler Development** *(long-term)* - Porting a higher-level compiler (potentially LLVM-based) to target the TMP94C241F CPU, enabling C/C++ development for the KN5000
