@@ -205,5 +205,5 @@ The exact protocol details must be reverse-engineered from the main CPU firmware
 
 ## References
 
-- Service Manual: EMID971655 A5
+- **Service Manual**: EMID971655 A5 ([Download PDF]({{ site.baseurl }}/service_manual/technics_sx-kn5000.pdf) - 26MB)
 - Schematic pages: II-9 through II-38
