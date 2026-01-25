@@ -339,6 +339,37 @@ Separate from the command state machine, tracks DMA transfer phases:
 | 1 | Pending | Transfer initiated, waiting for completion |
 | 2 | In Progress | Multi-phase transfer, first phase complete |
 
+#### DMA Register Encoding (LDC Instructions)
+
+The TMP94C241F uses `LDC` instructions to configure DMA registers. These are not supported by ASL's TMP96C141 mode, so they require macros emitting raw bytes.
+
+**DMA Register Address Encoding (Third Byte of LDC):**
+
+| Register | Third Byte | Description |
+|----------|------------|-------------|
+| DMAS0 | `00h` | DMA Source, Channel 0 |
+| DMAS2 | `08h` | DMA Source, Channel 2 |
+| DMAS3 | `0Ch` | DMA Source, Channel 3 |
+| DMAD0 | `20h` | DMA Destination, Channel 0 |
+| DMAD2 | `28h` | DMA Destination, Channel 2 |
+| DMAD3 | `2Ch` | DMA Destination, Channel 3 |
+| DMAM0 | `40h` | DMA Mode, Channel 0 |
+| DMAC0 | `42h` | DMA Count, Channel 0 (byte) |
+| DMAM2 | `48h` | DMA Mode, Channel 2 |
+| DMAC2 | `4Ah` | DMA Count, Channel 2 |
+| DMAM3 | `4Ch` | DMA Mode, Channel 3 |
+| DMAC3 | `4Eh` | DMA Count, Channel 3 |
+
+**LDC Instruction Format:**
+
+```
+Byte 1: Register operand encoding (e.g., E8=XWA, E9=XBC, D8=WA, C9=A)
+Byte 2: 2Eh (LDC opcode)
+Byte 3: DMA register selector (see table above)
+```
+
+**Example:** `LDC DMAD0, XWA` = `E8 2E 20` (load DMA destination 0 from XWA)
+
 ### Memory Test Routine (0xFF89FC)
 
 At boot, the sub CPU tests RAM integrity using complementary bit patterns. Results are stored in `MEMTEST_RESULT` (0x0556).
