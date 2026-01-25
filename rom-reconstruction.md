@@ -8,6 +8,29 @@ permalink: /rom-reconstruction/
 
 Goal: Rebuild all firmware ROMs from disassembled source with 100% byte accuracy.
 
+## Firmware Version History
+
+Official firmware updates were distributed on floppy disk. All versions are archived at [archive.org](https://archive.org/details/technics-kn5000-system-update-disks).
+
+### Main Board Firmware
+
+| Version | Release Date | Notes |
+|---------|--------------|-------|
+| v5 | 1997-11-12 | Earliest available |
+| v6 | 1998-01-16 | |
+| v7 | 1998-06-26 | |
+| v8 | 1998-11-13 | |
+| v9 | 1999-01-26 | |
+| **v10** | 1999-08-02 | **Current disassembly target** |
+
+### HD-AE5000 Firmware
+
+| Version | Release Date | Notes |
+|---------|--------------|-------|
+| v1.10i | 1998-07-06 | Initial release |
+| v1.15i | 1998-10-13 | |
+| v2.0i | 1999-01-15 | Added lyrics display |
+
 ## Current Status
 
 | ROM | Size | Match % | Bytes Off | Source File |

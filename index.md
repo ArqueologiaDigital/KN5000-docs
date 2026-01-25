@@ -41,6 +41,7 @@ See [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) for detai
 ## Resources
 
 - [Service Manual PDF]({{ site.baseurl }}/service_manual/technics_sx-kn5000.pdf) (EMID971655 A5, 26MB) - Schematics, board layouts, IC pinouts
+- [System Update Disks Archive](https://archive.org/details/technics-kn5000-system-update-disks) - All official firmware versions (v5-v10) and HD-AE5000 updates
 - [HDAE5000 Hard Disk Expansion](https://www.keysoftservice.ch/hdae5000-e.htm) - Technical info about the HD-AE5000 accessory
 - [GitHub: ROM Disassembly](https://github.com/user/kn5000-roms-disasm)
 - [MAME Pull Request](https://github.com/mamedev/mame/pull/14558)

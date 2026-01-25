@@ -92,6 +92,16 @@ The HD-AE5000 is a hard disk expansion system, not an audio processor. It serves
 **Interface:** PPI at `0x160000`
 **ROM:** `0x280000` (512KB)
 
+### Firmware Versions
+
+| Version | Release Date | Notes |
+|---------|--------------|-------|
+| v1.10i | 1998-07-06 | Initial release |
+| v1.15i | 1998-10-13 | |
+| v2.0i | 1999-01-15 | Added lyrics display |
+
+All versions archived at [archive.org](https://archive.org/details/technics-kn5000-system-update-disks).
+
 ### Features
 
 - Flash-ROM and Static RAM for quick directory access
