@@ -12,29 +12,35 @@ Images extracted from the KN5000 firmware ROMs. These graphics are displayed on 
 
 These BMP images are used in the keyboard's feature demonstration mode.
 
-<div class="gallery">
-
 ### FTBMP01 - Demo Screen 1
-![FTBMP01]({{ site.baseurl }}/assets/images/gallery/FTBMP01.png)
+
+![FTBMP01]({{ "/assets/images/gallery/FTBMP01.png" | relative_url }})
+
 *320x240, 8-bit color*
 
 ### FTBMP02 - Demo Screen 2
-![FTBMP02]({{ site.baseurl }}/assets/images/gallery/FTBMP02.png)
+
+![FTBMP02]({{ "/assets/images/gallery/FTBMP02.png" | relative_url }})
+
 *320x130, 8-bit color*
 
 ### FTBMP03 - Demo Screen 3
-![FTBMP03]({{ site.baseurl }}/assets/images/gallery/FTBMP03.png)
+
+![FTBMP03]({{ "/assets/images/gallery/FTBMP03.png" | relative_url }})
+
 *320x120, 8-bit color*
 
 ### FTBMP05 - Demo Screen 5
-![FTBMP05]({{ site.baseurl }}/assets/images/gallery/FTBMP05.png)
+
+![FTBMP05]({{ "/assets/images/gallery/FTBMP05.png" | relative_url }})
+
 *320x125, 8-bit color*
 
 ### FTBMP06 - Demo Screen 6
-![FTBMP06]({{ site.baseurl }}/assets/images/gallery/FTBMP06.png)
-*320x240, 8-bit color*
 
-</div>
+![FTBMP06]({{ "/assets/images/gallery/FTBMP06.png" | relative_url }})
+
+*320x240, 8-bit color*
 
 **Note:** FTBMP04 has a corrupted header and could not be converted.
 
