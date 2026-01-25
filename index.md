@@ -24,12 +24,25 @@ This project aims to fully document and emulate the Technics KN5000 music keyboa
 
 ## Project Status
 
+### ROM Reconstruction
+
+| Component | Size | Match | Notes |
+|-----------|------|-------|-------|
+| Main CPU Program | 2MB | 99.99% | 177 bytes divergent |
+| Sub CPU Payload | 192KB | 100% | Complete match |
+| Sub CPU Boot ROM | 128KB | - | Not yet disassembled |
+| Table Data | 2MB | 32.42% | Mostly binary assets |
+| Custom Data | 1MB | - | User storage, not reconstructed |
+| HDAE5000 ROM | 512KB | - | Not yet disassembled |
+
+### Emulation & Tools
+
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Main CPU ROM | 99.99% | 177 bytes remaining |
-| Sub CPU ROM | Needs rebuild | Source exists |
-| Table Data ROM | 32.42% | Mostly binary data |
-| Control Panel HLE | In progress | Protocol RE ongoing |
+| MAME Driver | In progress | [PR #14558](https://github.com/mamedev/mame/pull/14558) |
+| Control Panel HLE | In progress | Protocol reverse engineering ongoing |
+| Hardware Documentation | Active | Service manual analyzed |
+| Image Extraction | Partial | 43+ images catalogued |
 
 ## Hardware Overview
 
