@@ -204,11 +204,19 @@ The `INIT_TONE_GEN` routine writes initialization patterns to registers at 0x130
 **Completed:**
 - BOOT_INIT (0xFF8290) - Full hardware initialization
 - COPY_VECTORS (0xFF846D) - Vector trampoline copy
-- INIT_TONE_GEN (0xFF84A8) - Tone generator setup
+- RESET_ENTRY (0xFF8433) - Alternative reset handler (uses `jrl T` to BOOT_INIT)
+- SUB_8437 (0xFF8437) - Tone generator channel initialization loop
+- HALT_LOOP (0xFF8490) - Error handler with stub routines
+- TONE_GEN_WRITE (0xFF84F1) - Write data to tone generator
+- SUB_850E (0xFF850E) - Multi-register push/call wrapper
+- SUB_853A (0xFF853A) - Write register pairs to tone generator channel
+- COPY_WORDS (0xFF858B) - Word block copy using `ldirw`
+- FILL_WORDS (0xFF8594) - Memory fill with word values
+- CHECKSUM_CALC (0xFF859B) - Calculate checksum over memory range
 - INIT_DMA_SERIAL (0xFF85AE) - DMA/Serial configuration
+- INIT_TONE_GEN (0xFF84A8) - Tone generator setup
 - MAIN_LOOP - Payload wait loop
 - DEFAULT_HANDLER (0xFF8432) - Simple RETI
-- HALT_LOOP (0xFF8490) - Error handler
 - Vector trampolines (0xFF8F6C) - All 45 handlers
 - Interrupt vector table (0xFFFF00)
 - INT_HANDLER_9 (0xFF881F) - Serial receive interrupt
@@ -221,6 +229,7 @@ The `INIT_TONE_GEN` routine writes initialization patterns to registers at 0x130
 
 **TODO:**
 - Data tables analysis (0xFF8000)
+- DMA transfer and inter-CPU comm routines (0xFF8604-0xFF8955) - ~850 bytes of code
 - SUB_8B37, SUB_8B89, SUB_8C80 helper routines
 
 ### Inter-CPU Protocol (Boot ROM Side)

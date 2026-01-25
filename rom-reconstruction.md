@@ -37,7 +37,7 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 |-----|------|---------|-----------|-------------|
 | Main CPU | 2MB | 99.99% | 177 | `maincpu/kn5000_v10_program.asm` |
 | Sub CPU Payload | 192KB | **100%** | 0 | `subcpu/kn5000_subprogram_v142.asm` |
-| Sub CPU Boot | 128KB | 98.24% | 2,303 | `subcpu_boot/kn5000_subcpu_boot.asm` |
+| Sub CPU Boot | 128KB | 98.48% | 1,981 | `subcpu_boot/kn5000_subcpu_boot.asm` |
 | Table Data | 2MB | 32.42% | 1,417,294 | `table_data/kn5000_table_data.asm` |
 | Custom Data | 1MB | - | - | No source yet |
 | HDAE5000 (HD Expansion) | 512KB | - | - | No source yet |
@@ -58,15 +58,26 @@ Two color palettes have been extracted as binary includes:
 - **Palette 1** at 0xEB37DE - first palette (inline in sequential section)
 - **Palette 2** at 0xEEFAF0 - second palette (`Palette_8bit_RGBA_2.bin`)
 
-### Sub CPU Boot (2,303 bytes)
+### Sub CPU Boot (1,981 bytes)
 
-The Sub CPU boot ROM is now buildable and at 98.24% match. Remaining divergences start at ROM address `0xFF840A` and are caused by:
+The Sub CPU boot ROM is now buildable and at 98.48% match. Recent progress includes:
 
-1. **Instruction encoding differences**: ASL chooses different (but equivalent) encodings
-2. **Relative vs absolute calls**: Original uses `calr`, ASL emits `call`
-3. **Address size encoding**: Original uses 24-bit addresses where ASL uses 16-bit
+**Routines discovered and added:**
+- `SUB_8437` (0xFF8437) - Tone generator initialization loop
+- `SUB_850E` (0xFF850E) - Multi-register push/call wrapper
+- `SUB_853A` (0xFF853A) - Write register pairs to tone generator
+- `COPY_WORDS` (0xFF858B) - Word block copy using `ldirw`
+- `FILL_WORDS` (0xFF8594) - Memory fill with word values
+- `CHECKSUM_CALC` (0xFF859B) - Calculate checksum over memory range
+- Stub routines at 0xFF8496-0xFF85AB returning 0 in HL
 
-**Investigation needed:** Systematic comparison of instruction encodings at divergent locations to create additional macros.
+**Encoding fixes applied:**
+- `jrl T` (3-byte relative long jump) vs `jp` (4-byte absolute)
+- `ldir` encoding: TMP94C241 uses `83 11`, ASL generates `85 11`
+- `ld D, imm8` encoding: TMP94C241 uses `24 nn`, ASL generates different encoding
+- `ld A, imm8` encoding: TMP94C241 uses `21 nn`
+
+**Remaining divergences** (~850 bytes from 0xFF8604-0xFF8955) include DMA transfer routines and inter-CPU communication handlers that need to be disassembled.
 
 ### Table Data (67.58% incorrect)
 
@@ -111,6 +122,11 @@ The `tmp94c241.inc` file contains macros that emit raw byte sequences for unsupp
 | `CP_pXBC_d_WORD d,val` | `99 dd 3f LL HH` | Compare (XBC+d) with 16-bit immediate |
 | `LDA_XWA_IMM24 value` | `f2 LL MM HH 30` | Load 24-bit address into XWA |
 | `CALR target` | `1e LL HH` | Call relative (3-byte encoding) |
+| `CALL_ABS24 target` | `1d LL MM HH` | Call absolute with 24-bit address |
+| `JRL_T target` | `78 LL HH` | Jump relative long (always true) |
+| `LDIR_94` | `83 11` | Block copy (TMP94C241 encoding) |
+| `LD_A value` | `21 nn` | Load immediate to A register |
+| `LD_D value` | `24 nn` | Load immediate to D register |
 
 ### Encoding Differences
 
@@ -120,6 +136,10 @@ ASL sometimes chooses different (but functionally equivalent) encodings than the
 |-------------|----------|-------------|-------|
 | `lda XWA, imm16` | 5-byte (24-bit addr) | 4-byte (16-bit) | Use `LDA_XWA_IMM24` macro |
 | `call addr` | 3-byte `calr` | 4-byte `call` | Use `CALR` macro when target is within range |
+| `jp addr` | 3-byte `jrl T` | 4-byte `jp` | Use `JRL_T` macro for relative long jump |
+| `ldir` | `83 11` | `85 11` | Use `LDIR_94` macro for TMP94C241 encoding |
+| `ld A, imm8` | `21 nn` | Different | Use `LD_A` macro |
+| `ld D, imm8` | `24 nn` | Different | Use `LD_D` macro |
 
 These encoding differences cause byte mismatches even when the code is functionally correct.
 
