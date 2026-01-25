@@ -79,11 +79,78 @@ permalink: /memory-map/
 | `0x8D92` | `CPANEL_SERIAL_FLAGS_B` | Serial protocol flags (byte) |
 | `0x8D93` | `CPANEL_SERIAL_FLAGS_C` | Serial protocol flags (byte) |
 
+## Sub CPU Address Space
+
+The sub CPU (tone generator controller) has its own memory map, documented from boot ROM disassembly.
+
+| Address Range | Size | Description |
+|---------------|------|-------------|
+| `0x0000 - 0x00FF` | 256B | Special Function Registers (SFR) |
+| `0x0100 - 0x01FF` | 256B | Extended SFR / Memory Controller |
+| `0x0400 - 0x04E0` | 225B | Interrupt vector trampolines (copied from boot ROM) |
+| `0x04FE` | 1B | Payload ready flag |
+| `0x0500 - 0x05A2` | ~160B | RAM / Stack area (stack init = 0x05A2) |
+| `0x120000` | - | Inter-CPU Communication Latch (shared with main CPU) |
+| `0x130000` | - | Tone Generator Registers |
+| `0xFE0000 - 0xFFFFFF` | 128KB | Boot ROM |
+
+### Sub CPU SFR Addresses (Confirmed from Boot ROM)
+
+| Address | Register | Description |
+|---------|----------|-------------|
+| `0x07` | P0FC | Port 0 Function Control |
+| `0x0B` | P1FC | Port 1 Function Control |
+| `0x0F` | P2FC | Port 2 Function Control |
+| `0x1C` | P7 | Port 7 Data |
+| `0x1E` | P7CR | Port 7 Control |
+| `0x1F` | P7FC | Port 7 Function Control |
+| `0x20` | P8 | Port 8 Data |
+| `0x22` | P8CR | Port 8 Control |
+| `0x23` | P8FC | Port 8 Function Control |
+| `0x28` | PA | Port A Data |
+| `0x2B` | PAFC | Port A Function Control |
+| `0x2C` | PB | Port B Data |
+| `0x2F` | PBFC | Port B Function Control |
+| `0x30` | INTTC01 | Interrupt Control (Timer 0/1) |
+| `0x34` | SC0BUF | Serial Channel 0 Buffer |
+| `0x36` | SC0CR | Serial Channel 0 Control |
+| `0x38` | SC0MOD | Serial Channel 0 Mode |
+| `0x3A` | SC1BUF | Serial Channel 1 Buffer |
+| `0x3C` | SC1CR | Serial Channel 1 Control |
+| `0x3E` | SC1MOD | Serial Channel 1 Mode |
+| `0x80` | WDMOD | Watchdog Mode |
+| `0x81` | WDCR | Watchdog Control |
+
 ## Inter-CPU Communication
 
-The main CPU communicates with the sub CPU via latches at `0x120000`.
+The main CPU and sub CPU communicate via latches at `0x120000`.
 
-*Details TBD*
+### Latch Address
+
+| Address | Access | Description |
+|---------|--------|-------------|
+| `0x120000` | R/W | Inter-CPU Communication Latch |
+
+The sub CPU boot ROM configures DMA to use this address for bidirectional communication with the main CPU.
+
+### Communication Protocol
+
+1. Main CPU writes command/data to latch
+2. Sub CPU reads from latch
+3. Sub CPU writes response/status to latch
+4. Main CPU reads response
+
+*Full protocol documentation in progress.*
+
+## Tone Generator
+
+The tone generator hardware is accessed at `0x130000`.
+
+| Address | Description |
+|---------|-------------|
+| `0x130000` | Tone Generator Base Address |
+
+The sub CPU boot ROM initializes tone generator registers with patterns starting at this address. Each voice appears to use a 32-byte register block.
 
 ## HDAE5000 Hard Disk Expansion
 

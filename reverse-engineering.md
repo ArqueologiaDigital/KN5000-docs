@@ -117,6 +117,114 @@ The sub CPU payload (`subcpu/kn5000_subprogram_v142.asm`) is 192KB.
 
 ---
 
+## Sub CPU Boot ROM
+
+The 128KB boot ROM (`kn5000_subcpu_boot.ic30`) initializes the sub CPU hardware and provides a bootstrap environment until the payload is ready.
+
+### Memory Map
+
+| Address Range | Size | Description |
+|---------------|------|-------------|
+| 0x0000-0x00FF | 256B | Special Function Registers (SFR) |
+| 0x0100-0x01FF | 256B | Extended SFR / Memory Controller |
+| 0x0400-0x04E0 | 225B | Interrupt vector trampolines (copied from ROM) |
+| 0x04FE | 1B | Payload ready flag |
+| 0x0500-0x05A2 | ~160B | RAM / Stack area |
+| 0x120000 | - | Inter-CPU Communication Latch |
+| 0x130000 | - | Tone Generator Registers |
+| 0xFE0000-0xFFFFFF | 128KB | Boot ROM (mostly 0xFF, code at 0xFF8000+) |
+
+### ROM Structure
+
+The 128KB boot ROM is mostly erased (0xFF):
+
+| Offset | Address | Size | Content |
+|--------|---------|------|---------|
+| 0x00000-0x17FFF | 0xFE0000-0xFF7FFF | 96KB | Erased (0xFF) |
+| 0x18000-0x1828F | 0xFF8000-0xFF828F | 656B | Data tables (audio lookup?) |
+| 0x18290-0x1904D | 0xFF8290-0xFF904D | ~2KB | Boot code and routines |
+| 0x1F000-0x1FEFF | 0xFFF000-0xFFFEFF | 4KB | Mostly 0xFF |
+| 0x1FEE0 | 0xFFFEE0 | 5B | Reset handler (JP BOOT_INIT) |
+| 0x1FF00-0x1FFEF | 0xFFFF00-0xFFFFEF | 240B | Interrupt vector table |
+| 0x1FFF0-0x1FFFF | 0xFFFFF0-0xFFFFFF | 16B | Reset vectors |
+
+### Boot Sequence (Confirmed)
+
+1. **Reset** (0xFFFEE0): `JP 0xFF8290` jumps to boot initialization
+2. **Hardware Init** (0xFF8290): Configures all SFR registers:
+   - Port function control (P0FC-PBFC)
+   - Serial channels (SC0, SC1)
+   - Timers and watchdog
+   - DRAM refresh
+   - DMA for inter-CPU latch
+3. **Stack Setup**: Sets XSP to 0x05A2
+4. **Vector Copy** (0xFF846D): Copies 225 bytes of interrupt trampolines from ROM (0xFF8F6C) to RAM (0x0400)
+5. **Enable Interrupts**: `EI 0`
+6. **Initialization Routines**:
+   - Memory test (0xFF8956)
+   - DMA/Serial setup (0xFF85AE) - configures inter-CPU latch at 0x120000
+   - Tone generator init (0xFF84A8) - initializes registers at 0x130000
+7. **Main Loop**: Waits for payload ready flag at 0x04FE, then calls 0x0400
+
+### Interrupt Trampoline System
+
+The boot ROM uses an elegant trampoline system for interrupts:
+
+1. **ROM Vector Table** (0xFFFF00): Contains 4-byte addresses pointing to RAM (0x04xx)
+2. **RAM Trampolines** (0x0400): Each is 5 bytes: `JP addr` (4B) + `RET` (1B)
+3. **ROM Handlers**: Trampolines initially point back to ROM handlers
+
+This allows the payload to replace interrupt handlers by modifying the trampolines in RAM.
+
+**Trampoline Layout:**
+
+| RAM Address | Handler | Initial Target |
+|-------------|---------|----------------|
+| 0x0400 | Handler 0 (Reset) | 0xFFFEE0 (ROM) |
+| 0x0405 | Handler 1 | 0xFF8432 (Default RETI) |
+| 0x040A | Handler 2 | 0xFF8432 (Default RETI) |
+| ... | ... | ... |
+| 0x0428 | Handler 9 | 0xFF881F (Specific) |
+| ... | ... | ... |
+| 0x04AA | Handler 35 | 0xFF88B8 (Specific) |
+| 0x04B4 | Handler 37 | 0xFF889A (Specific) |
+
+### Key Hardware Addresses Discovered
+
+**Inter-CPU Communication Latch (0x120000)**
+
+The DMA is configured to use 0x120000 for communication between main CPU and sub CPU. This confirms the latch address documented elsewhere.
+
+**Tone Generator (0x130000)**
+
+The `INIT_TONE_GEN` routine writes initialization patterns to registers at 0x130000, confirming this as the tone generator base address.
+
+### Disassembly Status
+
+**Completed:**
+- BOOT_INIT (0xFF8290) - Full hardware initialization
+- COPY_VECTORS (0xFF846D) - Vector trampoline copy
+- INIT_TONE_GEN (0xFF84A8) - Tone generator setup
+- INIT_DMA_SERIAL (0xFF85AE) - DMA/Serial configuration
+- MAIN_LOOP - Payload wait loop
+- DEFAULT_HANDLER (0xFF8432) - Simple RETI
+- HALT_LOOP (0xFF8490) - Error handler
+- Vector trampolines (0xFF8F6C) - All 45 handlers
+- Interrupt vector table (0xFFFF00)
+
+**TODO:**
+- Memory test routine (0xFF89FC)
+- Delay routines
+- Serial initialization
+- Specific interrupt handlers (9, 35, 37)
+- Data tables analysis (0xFF8000)
+
+### Source File
+
+`subcpu_boot/kn5000_subcpu_boot.asm` - Initial disassembly with documented structure
+
+---
+
 ## Embedded Images
 
 The ROMs contain icons, UI elements, and splash screens for the LCD display.
