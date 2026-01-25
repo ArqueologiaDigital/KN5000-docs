@@ -13,11 +13,14 @@ title: Home
 >
 > This documentation is being developed with the assistance of [Claude Code](https://claude.ai/code) AI agents, guided by Felipe Sanches. While every effort is made to ensure accuracy, some information may be incomplete or contain errors as the reverse engineering work progresses. All content is under continuous review and verification against actual hardware behavior. Contributions and corrections are welcome.
 
-This project aims to fully document and emulate the Technics KN5000 music keyboard through:
+This project aims to fully document and emulate the Technics KN5000 music keyboard. Join the discussion at the [Homebrew Development Forum](https://forum.fiozera.com.br/t/technics-kn5000-homebrew-development/321).
+
+**Project Goals:**
 
 - **ROM Reconstruction** - Achieving 100% byte-matching rebuilds from disassembled source
 - **MAME Emulation** - Enabling the keyboard to run in the MAME emulator
 - **Homebrew Development** - Creating custom software for the real hardware
+- **Compiler Development** *(long-term)* - Porting a higher-level compiler (potentially LLVM-based) to target the TMP94C241F CPU, enabling C/C++ development for the KN5000
 
 ## Project Status
 

@@ -64,6 +64,19 @@ If you have a working KN5000:
 3. Check the [open questions](questions.html) for areas needing investigation
 4. Join the [discussion forum](https://forum.fiozera.com.br/t/technics-kn5000-homebrew-development/321)
 
+## Long-Term Goals
+
+### Higher-Level Compiler
+
+We envision eventually porting a higher-level compiler to target the TMP94C241F (TLCS-900/H2) CPU, enabling C or C++ development for the KN5000 instead of assembly-only programming.
+
+**Potential approaches:**
+- **LLVM backend** - Create a new LLVM target for TLCS-900
+- **GCC port** - Port GCC to generate TLCS-900 code
+- **SDCC extension** - Extend Small Device C Compiler
+
+This is a significant undertaking requiring compiler development expertise. If you have experience with LLVM backends or retargeting compilers, we'd love to hear from you.
+
 ## Skills We Need
 
 - **Assembly programming** (TLCS-900 or similar)
@@ -72,6 +85,7 @@ If you have a working KN5000:
 - **Hardware hacking** (ROM dumping, logic analysis)
 - **C++ programming** (for MAME HLE devices)
 - **Technical writing** (documentation)
+- **Compiler development** (LLVM, GCC) - for long-term goals
 
 ## Contact
 
