@@ -10,6 +10,7 @@ theme: minima
 # Navigation
 header_pages:
   - index.md
+  - hardware-architecture.md
   - rom-reconstruction.md
   - control-panel-protocol.md
   - memory-map.md

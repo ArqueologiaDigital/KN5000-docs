@@ -24,23 +24,23 @@ Things we don't know yet and need to investigate.
 
 ### LED Control
 - [ ] How many LEDs are there total?
-- [ ] What is the addressing scheme?
+- [x] What is the addressing scheme? **Segment outputs SEG00-SEG15** via HD74LS07P drivers
 - [ ] Can LEDs be dimmed or only on/off?
-- [ ] Is there multiplexing?
+- [x] Is there multiplexing? **Yes**, MCU multiplexes via segment outputs
 
 ### Rotary Encoders
 - [ ] How many encoders are there?
-- [ ] Absolute or relative encoding?
+- [x] Absolute or relative encoding? **Relative** (quadrature: ROTA/ROTB signals)
 - [ ] What is the resolution (steps per rotation)?
-- [ ] How is direction determined?
+- [x] How is direction determined? **Quadrature decoding** of ROTA/ROTB phase relationship
 
 ## Hardware Architecture
 
 ### Control Panel MCUs
-- [ ] What MCU model is used? (chip marking/datasheet)
-- [ ] How many MCUs are on the control panel board?
+- [x] What MCU model is used? **Mitsubishi M37471M2196S** (8-bit CMOS, 740 series)
+- [x] How many MCUs are on the control panel board? **2** (CPL board and CPR board)
 - [ ] What is the serial baud rate?
-- [ ] Is it UART, SPI, or custom protocol?
+- [x] Is it UART, SPI, or custom protocol? **UART** (M37471 has built-in serial interface)
 
 ### Inter-CPU Communication
 - [ ] How do main CPU and sub CPU coordinate?
@@ -69,9 +69,9 @@ Things we don't know yet and need to investigate.
 These areas would benefit from official datasheets or service manuals:
 
 - [ ] **TMP94C241F datasheet** - Full instruction encoding tables
-- [ ] **HDAE5000 documentation** - Audio processor interface
-- [ ] **KN5000 Service Manual** - Board layout, chip identification
-- [ ] **Control panel schematic** - MCU connections and signals
+- [ ] **HDAE5000 documentation** - Hard disk expansion interface
+- [x] **KN5000 Service Manual** - ✓ Have it! (EMID971655 A5, 59 pages)
+- [x] **Control panel schematic** - ✓ Analyzed pages II-35 to II-38
 
 ## Partially Understood
 

@@ -22,13 +22,16 @@ This project aims to fully document and emulate the Technics KN5000 music keyboa
 
 ## Hardware Overview
 
-- **Main CPU**: TMP94C241F (TLCS-900/H2 variant)
-- **Architecture**: 32-bit microcontroller
+- **Main CPU**: TMP94C241F (TLCS-900/H2 variant, 32-bit)
+- **Control Panel MCUs**: Mitsubishi M37471M2196S (8-bit, 740 series) - 2 units
 - **Program Flash**: 2MB at 0xE00000
-- **Control Panel**: Dedicated MCUs for buttons, LEDs, rotary encoders
+- **Control Panel**: Serial bus with SIN/SOUT/CLK signals
+
+See [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) for detailed documentation from service manual schematics.
 
 ## Getting Started
 
+- [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) - Detailed hardware documentation from service manual
 - [ROM Reconstruction Status]({{ site.baseurl }}/rom-reconstruction/)
 - [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/)
 - [Memory Map]({{ site.baseurl }}/memory-map/)
