@@ -35,7 +35,7 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 
 | ROM | Size | Match % | Bytes Off | Source File |
 |-----|------|---------|-----------|-------------|
-| Main CPU | 2MB | 99.96% | 893* | `maincpu/kn5000_v10_program.asm` |
+| Main CPU | 2MB | 99.99% | 177 | `maincpu/kn5000_v10_program.asm` |
 | Sub CPU Payload | 192KB | **100%** | 0 | `subcpu/kn5000_subprogram_v142.asm` |
 | Sub CPU Boot | 128KB | - | - | No source yet |
 | Table Data | 2MB | 32.42% | 1,417,294 | `table_data/kn5000_table_data.asm` |
@@ -50,13 +50,13 @@ The project uses **ASL (Alfred Arnold's Macro Assembler)** version 1.42 Beta.
 
 ## Known Divergences
 
-### Main CPU (893 bytes*)
+### Main CPU (177 bytes)
 
-*\*716 bytes are from a recent palette binclude regression (issue kn5000-prgr). The palette data at 0xEB37DE was replaced with a binary include, but this unexpectedly affected data at 0xEEFB0C near the second palette area. Investigation in progress.*
+*Analysis in progress - divergent byte offsets being cataloged.*
 
-**Original 177 bytes**: Various instruction encoding issues being cataloged.
-
-**Regression (+716 bytes)**: Caused by removing inline `dd LABEL_*` statements from palette data where label addresses (0xFF0000, 0xFFFF00, etc.) coincidentally matched color values.
+Two color palettes have been extracted as binary includes:
+- **Palette 1** at 0xEB37DE - first palette (inline in sequential section)
+- **Palette 2** at 0xEEFAF0 - second palette (`Palette_8bit_RGBA_2.bin`)
 
 ### Table Data (67.58% incorrect)
 
