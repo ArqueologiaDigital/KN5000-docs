@@ -8,12 +8,14 @@ permalink: /help-wanted/
 
 This is a community reverse engineering project. Here's how you can contribute:
 
+**Current Progress:** Main CPU ROM reconstruction is at 99.99% (177 bytes divergent). See the [Project Issues]({{ site.baseurl }}/issues/) page for many open tasks organized by category.
+
 ## High Priority
 
 ### ROM Dumps Needed
 
 We're missing ROM dumps for several chips:
-- **Control Panel MCUs** - The MCUs handling buttons, LEDs, and rotary encoders
+- **Control Panel MCUs** (Mitsubishi M37471M2196S) - Custom-masked ROMs handling buttons, LEDs, and rotary encoders. These would require decapping to dump.
 - **Sub CPU Boot ROM** (`kn5000_subcpu_boot.ic30`) - Need to verify/update source
 - **Any other undumped chips** on the KN5000 board
 
@@ -53,16 +55,17 @@ If you have a working KN5000:
 
 ### Tooling
 
-- Improve the custom assembler (tlcs900asm)
+- Extend ASL Macro Assembler support for TMP94C241F-specific instructions
 - Create visualization tools for protocol analysis
 - Build comparison/diff tools for ROM analysis
 
 ## Getting Started
 
-1. Clone the [ROM disassembly repo](https://github.com/user/kn5000-roms-disasm)
+1. Clone the [ROM disassembly repo](https://github.com/ArqueologiaDigital/kn5000-roms-disasm)
 2. Read the `CLAUDE.md` for build instructions
-3. Check the [open questions](questions.html) for areas needing investigation
-4. Join the [discussion forum](https://forum.fiozera.com.br/t/technics-kn5000-homebrew-development/321)
+3. Browse the [Project Issues]({{ site.baseurl }}/issues/) to find tasks you can help with
+4. Check the [Open Questions]({{ site.baseurl }}/questions/) for areas needing investigation
+5. Join the [discussion forum](https://forum.fiozera.com.br/t/technics-kn5000-homebrew-development/321)
 
 ## Long-Term Goals
 
