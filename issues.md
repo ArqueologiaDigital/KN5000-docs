@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 91 (88 open, 3 closed)
+**Total Issues:** 96 (93 open, 3 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (9) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (7) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (12) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (6) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (10)
+[Boot Sequence](#boot-sequence) (14) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (7) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (12) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (6) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (10)
 
 ---
 
@@ -51,6 +51,20 @@ Trace main CPU code that initializes sub CPU communication. Document: when sub C
 
 ---
 
+#### 🟠 SubCPU Boot: Document tone generator registers at 0x130000 {#issue-kn5000-n9g}
+
+**ID:** `kn5000-n9g` | **Priority:** High | **Created:** 2026-01-25
+
+The boot ROM initializes tone generator registers at 0x130000. INIT_TONE_GEN (0xFF8628) writes initialization patterns from ROM. Tasks:
+1. Trace INIT_TONE_GEN routine completely
+2. Document register layout - appears to use 32-byte blocks per voice
+3. Identify initialization values and their purposes
+4. Cross-reference with any tone generator documentation
+
+This is critical for understanding the sound hardware architecture.
+
+---
+
 #### 🟡 Boot: Document HDAE5000 detection and init {#issue-kn5000-izk}
 
 **ID:** `kn5000-izk` | **Priority:** Medium | **Created:** 2026-01-25
@@ -80,6 +94,60 @@ Trace initialization of tone generator and audio path. Document: sub CPU command
 **ID:** `kn5000-bq4` | **Priority:** Medium | **Created:** 2026-01-25
 
 Trace initialization of control panel serial communication. Document: when serial channel to CPL/CPR MCUs is configured, initial command sequence sent to panels, LED initialization pattern, how main CPU confirms panel MCUs are responding.
+
+---
+
+#### 🟡 SubCPU Boot: Add build system support {#issue-kn5000-vf0}
+
+**ID:** `kn5000-vf0` | **Priority:** Medium | **Created:** 2026-01-25
+
+Add Makefile targets for the subcpu_boot ROM reconstruction:
+1. Add ASL assembly target for subcpu_boot/kn5000_subcpu_boot.asm
+2. Create compare target against original_ROMs/kn5000_subcpu_boot.ic30
+3. Update compare_roms.py to include subcpu_boot in status report
+4. Handle the ROM structure: 96KB of 0xFF + 32KB of actual code at 0xFF8000
+
+Build should produce rebuilt_ROMs/kn5000_subcpu_boot.rebuilt.rom
+
+---
+
+#### 🟡 SubCPU Boot: Analyze data tables at 0xFF8000 {#issue-kn5000-e12}
+
+**ID:** `kn5000-e12` | **Priority:** Medium | **Created:** 2026-01-25
+
+Analyze the 656-byte data section at the beginning of the boot ROM code area (0xFF8000-0xFF8290). Currently extracted to subcpu_boot/subcpu_boot_data_8000.bin. Contents include:
+- Interrupt vector trampoline data (45 entries x 5 bytes = 225 bytes at 0xFF8000)
+- Tone generator initialization patterns (starting after trampolines)
+- Possible SFR initialization values
+
+Document the structure and purpose of each data region.
+
+---
+
+#### 🟡 SubCPU Boot: Disassemble interrupt handlers {#issue-kn5000-x1i}
+
+**ID:** `kn5000-x1i` | **Priority:** Medium | **Created:** 2026-01-25
+
+Disassemble the three interrupt handler routines used by the boot ROM:
+- INT_HANDLER_09 (0xFF87A8) - Called via trampoline at RAM 0x0428
+- INT_HANDLER_35 (0xFF8ABF) - Called via trampoline at RAM 0x04B0
+- INT_HANDLER_37 (0xFF8B5B) - Called via trampoline at RAM 0x04BC
+
+These handlers are part of the interrupt trampoline system where ROM copies 45 entries to RAM 0x0400. Need to determine what hardware events trigger these interrupts.
+
+---
+
+#### 🟡 SubCPU Boot: Disassemble remaining routines {#issue-kn5000-ucj}
+
+**ID:** `kn5000-ucj` | **Priority:** Medium | **Created:** 2026-01-25
+
+Complete disassembly of these routines discovered in the boot ROM:
+- MEM_TEST_ROUTINE (0xFF89FC) - Memory test at boot
+- DELAY_ROUTINE (0xFF89A9) - Timing delay loop
+- SERIAL_INIT (0xFF8B07) - Serial channel initialization
+- LOOP_UNTIL_PAYLOAD_READY (0xFF8950) - Waits for payload flag at 0x04FE
+
+These routines are referenced from BOOT_INIT but only have placeholder labels currently. The disassembly framework is in subcpu_boot/kn5000_subcpu_boot.asm.
 
 ---
 
@@ -625,6 +693,8 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 Document the latch-based communication mechanism at 0x120000. Determine: latch register layout (command, status, data bytes), handshaking signals, how main CPU signals 'payload ready', how sub CPU acknowledges receipt, and any checksumming or verification.
 
+**Notes:** Boot ROM confirms latch address 0x120000. INIT_DMA_SERIAL (0xFF86EA) sets up DMA for bidirectional communication. Sub CPU uses serial channel with DMA for transfers. Need to trace actual protocol commands/responses.
+
 ---
 
 #### 🟠 SubCPU: Document MicroDMA registers on TMP94C241F {#issue-kn5000-fmq}
@@ -649,6 +719,16 @@ Find and document the main CPU code that initializes the sub CPU payload transfe
 
 Trace the complete boot sequence: 1) Main CPU reset/init, 2) Sub CPU held in reset?, 3) Payload transfer trigger, 4) DMA transfer execution, 5) Sub CPU release from reset?, 6) Sub CPU boot ROM hands off to payload, 7) Sub CPU signals ready to main CPU. Document timing requirements.
 
+**Notes:** Boot ROM analysis reveals sub CPU side of handshake:
+1. Boot ROM copies interrupt trampolines to RAM 0x0400
+2. Initializes SFRs (ports, serial, watchdog)
+3. Initializes tone generator at 0x130000
+4. Sets up DMA for inter-CPU latch at 0x120000
+5. Enters LOOP_UNTIL_PAYLOAD_READY checking flag at 0x04FE
+6. After payload loaded, jumps to 0x0400 (payload entry)
+
+Still need to trace main CPU side of handshake.
+
 ---
 
 #### 🟡 SubCPU: Document payload memory layout {#issue-kn5000-1ru}
@@ -664,6 +744,18 @@ Analyze the 192KB sub CPU payload structure. Document: entry point address, inte
 **ID:** `kn5000-ayt` | **Priority:** Medium | **Created:** 2026-01-25
 
 Determine the sub CPU chip type (IC27 on main board). Document its memory map: where the 128KB boot ROM resides, where the 192KB payload is loaded, RAM areas, and any memory-mapped I/O for tone generator control. Check service manual schematics.
+
+**Notes:** Boot ROM analysis confirms Sub CPU memory map:
+- 0x0000-0x00FF: SFR (documented 20+ registers in memory-map.md)
+- 0x0100-0x01FF: Extended SFR / Memory Controller
+- 0x0400-0x04E0: Interrupt vector trampolines (copied from boot ROM)
+- 0x04FE: Payload ready flag
+- 0x0500-0x05A2: RAM/Stack (stack init = 0x05A2)
+- 0x120000: Inter-CPU Communication Latch
+- 0x130000: Tone Generator Registers
+- 0xFE0000-0xFFFFFF: 128KB Boot ROM
+
+Sub CPU type still needs confirmation from service manual - likely TMP94C241 variant.
 
 ---
 
@@ -776,15 +868,15 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 31 |
-| Medium | 44 |
+| High | 32 |
+| Medium | 48 |
 | Low | 12 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Boot Sequence | 9 |
+| Boot Sequence | 14 |
 | Control Panel | 1 |
 | Feature Demo | 11 |
 | Firmware Update | 12 |
@@ -799,4 +891,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-25 19:10*
+*Last updated: 2026-01-25 19:18*
