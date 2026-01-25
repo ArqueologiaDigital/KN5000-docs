@@ -46,91 +46,112 @@ These BMP images are used in the keyboard's feature demonstration mode.
 
 ---
 
-## Main CPU ROM Images (Raw Binary)
+## Main CPU ROM Images
 
-These images are stored as raw bitmap data in the main CPU ROM. They require conversion tools to view. Dimensions and format vary.
+These images were extracted from raw bitmap data in the main CPU ROM and converted to PNG.
 
-### Status Messages (1-bit bitmaps, 616 bytes each)
+### Status Messages (1-bit bitmaps, 224x22 pixels)
 
-| Filename | Purpose |
-|----------|---------|
-| `Bitmap_1bit_Please_Wait.bin` | "Please Wait" message |
-| `Bitmap_1bit_Completed.bin` | "Completed" message |
-| `Bitmap_1bit_Now_Erasing.bin` | "Now Erasing" message |
-| `Bitmap_1bit_Illegal_Disk.bin` | "Illegal Disk" error |
-| `Bitmap_1bit_Turn_On_AGAIN.bin` | "Turn On Again" instruction |
-| `Bitmap_1bit_Flash_Memory_Update.bin` | Flash update message |
-| `Bitmap_1bit_FD_to_Flash_Memory.bin` | FD to Flash message |
-| `Bitmap_1bit_Change_FD_2_of_2.bin` | Multi-disk prompt |
+| Image | Filename | Purpose |
+|-------|----------|---------|
+| ![Flash Memory Update]({{ "/assets/images/gallery/Bitmap_1bit_Flash_Memory_Update.png" | relative_url }}) | `Bitmap_1bit_Flash_Memory_Update.bin` | Flash Memory Update message |
+| ![Now Erasing]({{ "/assets/images/gallery/Bitmap_1bit_Now_Erasing.png" | relative_url }}) | `Bitmap_1bit_Now_Erasing.bin` | Now Erasing message |
+| ![FD to Flash Memory]({{ "/assets/images/gallery/Bitmap_1bit_FD_to_Flash_Memory.png" | relative_url }}) | `Bitmap_1bit_FD_to_Flash_Memory.bin` | FD to Flash Memory message |
+| ![Completed]({{ "/assets/images/gallery/Bitmap_1bit_Completed.png" | relative_url }}) | `Bitmap_1bit_Completed.bin` | Completed message |
+| ![Please Wait]({{ "/assets/images/gallery/Bitmap_1bit_Please_Wait.png" | relative_url }}) | `Bitmap_1bit_Please_Wait.bin` | Please Wait message |
+| ![Change FD 2 of 2]({{ "/assets/images/gallery/Bitmap_1bit_Change_FD_2_of_2.png" | relative_url }}) | `Bitmap_1bit_Change_FD_2_of_2.bin` | Change FD 2 of 2 message |
+| ![Illegal Disk]({{ "/assets/images/gallery/Bitmap_1bit_Illegal_Disk.png" | relative_url }}) | `Bitmap_1bit_Illegal_Disk.bin` | Illegal Disk error |
+| ![Turn On AGAIN]({{ "/assets/images/gallery/Bitmap_1bit_Turn_On_AGAIN.png" | relative_url }}) | `Bitmap_1bit_Turn_On_AGAIN.bin` | Turn On AGAIN instruction |
 
 ### Logos
 
-| Filename | Size | Description |
-|----------|------|-------------|
-| `BitmapTechnicsLogo.bin` | 14,040 bytes | Technics brand logo |
-| `BitmapKN5000Logo.bin` | 7,200 bytes | KN5000 model logo |
+| Image | Filename | Dimensions | Description |
+|-------|----------|------------|-------------|
+| ![Technics Logo]({{ "/assets/images/gallery/BitmapTechnicsLogo.png" | relative_url }}) | `BitmapTechnicsLogo.bin` | 234x60, 8-bit | Technics brand logo |
+| ![KN5000 Logo]({{ "/assets/images/gallery/BitmapKN5000Logo.png" | relative_url }}) | `BitmapKN5000Logo.bin` | 150x48, 8-bit | KN5000 model logo |
+
+### Split Point Indicators (58x52 pixels, 8-bit)
+
+These images show keyboard split point notes displayed when configuring the keyboard split.
+
+| Image | Note |
+|-------|------|
+| ![Split C]({{ "/assets/images/gallery/BitmapSplitPoint_C.png" | relative_url }}) | C |
+| ![Split Db]({{ "/assets/images/gallery/BitmapSplitPoint_Db.png" | relative_url }}) | Db |
+| ![Split D]({{ "/assets/images/gallery/BitmapSplitPoint_D.png" | relative_url }}) | D |
+| ![Split Eb]({{ "/assets/images/gallery/BitmapSplitPoint_Eb.png" | relative_url }}) | Eb |
+| ![Split E]({{ "/assets/images/gallery/BitmapSplitPoint_E.png" | relative_url }}) | E |
+| ![Split F]({{ "/assets/images/gallery/BitmapSplitPoint_F.png" | relative_url }}) | F |
+| ![Split Gb]({{ "/assets/images/gallery/BitmapSplitPoint_Gb.png" | relative_url }}) | Gb |
+| ![Split G]({{ "/assets/images/gallery/BitmapSplitPoint_G.png" | relative_url }}) | G |
+| ![Split Ab]({{ "/assets/images/gallery/BitmapSplitPoint_Ab.png" | relative_url }}) | Ab |
+| ![Split A]({{ "/assets/images/gallery/BitmapSplitPoint_A.png" | relative_url }}) | A |
+| ![Split Bb]({{ "/assets/images/gallery/BitmapSplitPoint_Bb.png" | relative_url }}) | Bb |
+| ![Split B]({{ "/assets/images/gallery/BitmapSplitPoint_B.png" | relative_url }}) | B |
+| ![No Split]({{ "/assets/images/gallery/BitmapSplitPoint_no_split.png" | relative_url }}) | No Split |
+
+### Drawbar Sliders (111x44 pixels, 8-bit)
+
+| Image | Filename | Description |
+|-------|----------|-------------|
+| ![Drawbar 1]({{ "/assets/images/gallery/BitmapDrawbarNumberedSlider_1.png" | relative_url }}) | `BitmapDrawbarNumberedSlider_1.bin` | Drawbar slider 1 |
+| ![Drawbar 2]({{ "/assets/images/gallery/BitmapDrawbarNumberedSlider_2.png" | relative_url }}) | `BitmapDrawbarNumberedSlider_2.bin` | Drawbar slider 2 |
+| ![Drawbar 3]({{ "/assets/images/gallery/BitmapDrawbarNumberedSlider_3.png" | relative_url }}) | `BitmapDrawbarNumberedSlider_3.bin` | Drawbar slider 3 |
+
+### MIDI Connection Diagrams (296x108 pixels, 8-bit)
+
+| Image | Filename | Description |
+|-------|----------|-------------|
+| ![MIDI 1]({{ "/assets/images/gallery/BitmapMIDIConnections_1.png" | relative_url }}) | `BitmapMIDIConnections_1.bin` | MIDI connections diagram 1 |
+| ![MIDI 2]({{ "/assets/images/gallery/BitmapMIDIConnections_2.png" | relative_url }}) | `BitmapMIDIConnections_2.bin` | MIDI connections diagram 2 |
+| ![MIDI 3]({{ "/assets/images/gallery/BitmapMIDIConnections_3.png" | relative_url }}) | `BitmapMIDIConnections_3.bin` | MIDI connections diagram 3 |
 
 ### UI Elements
 
-| Filename | Size | Description |
-|----------|------|-------------|
-| `BitmapDrawbarNumberedSlider_1.bin` | 4,884 bytes | Drawbar slider graphic |
-| `BitmapDrawbarNumberedSlider_2.bin` | 4,884 bytes | Drawbar slider graphic |
-| `BitmapDrawbarNumberedSlider_3.bin` | 4,884 bytes | Drawbar slider graphic |
-| `BitmapSomeArrows.bin` | 1,764 bytes | Arrow icons |
-| `BitmapWormWearingHat.bin` | 576 bytes | Easter egg? |
-
-### Split Point Indicators
-
-12 images showing keyboard split point notes (C, Db, D, Eb, E, F, Gb, G, Ab, A, Bb, B, plus "no split").
-
-Each file is 3,016 bytes: `BitmapSplitPoint_*.bin`
-
-### MIDI Connection Diagrams
-
-| Filename | Size | Description |
-|----------|------|-------------|
-| `BitmapMIDIConnections_1.bin` | 31,968 bytes | MIDI setup diagram |
-| `BitmapMIDIConnections_2.bin` | 31,968 bytes | MIDI setup diagram |
-| `BitmapMIDIConnections_3.bin` | 31,968 bytes | MIDI setup diagram |
+| Image | Filename | Dimensions | Description |
+|-------|----------|------------|-------------|
+| ![Worm]({{ "/assets/images/gallery/BitmapWormWearingHat.png" | relative_url }}) | `BitmapWormWearingHat.bin` | 24x24, 8-bit | Easter egg - worm wearing hat |
+| ![Arrows]({{ "/assets/images/gallery/BitmapSomeArrows.png" | relative_url }}) | `BitmapSomeArrows.bin` | 42x42, 8-bit | Arrow icons |
 
 ### Transition Effects
 
-| Filename | Size | Description |
-|----------|------|-------------|
-| `BitmapFadeInPicture.bin` | 2,800 bytes | Fade-in effect |
-| `BitmapFadeOutPicture.bin` | 2,850 bytes | Fade-out effect |
-| `BitmapFadeInText.bin` | 1,440 bytes | Text fade-in |
-| `BitmapFadeOutText.bin` | 2,160 bytes | Text fade-out |
+| Image | Filename | Dimensions | Description |
+|-------|----------|------------|-------------|
+| ![Fade In Picture]({{ "/assets/images/gallery/BitmapFadeInPicture.png" | relative_url }}) | `BitmapFadeInPicture.bin` | 70x40, 8-bit | Fade in picture effect |
+| ![Fade Out Picture]({{ "/assets/images/gallery/BitmapFadeOutPicture.png" | relative_url }}) | `BitmapFadeOutPicture.bin` | 70x40, 8-bit | Fade out picture effect |
+| ![Fade In Text]({{ "/assets/images/gallery/BitmapFadeInText.png" | relative_url }}) | `BitmapFadeInText.bin` | 60x24, 8-bit | Fade in text effect |
+| ![Fade Out Text]({{ "/assets/images/gallery/BitmapFadeOutText.png" | relative_url }}) | `BitmapFadeOutText.bin` | 60x36, 8-bit | Fade out text effect |
 
-### Other Graphics
+### Accompaniment & Edit Graphics
 
-| Filename | Size | Description |
-|----------|------|-------------|
-| `BitmapAccger16.bin` | 11,400 bytes | Accompaniment graphic (German?) |
-| `BitmapAccita16.bin` | 11,400 bytes | Accompaniment graphic (Italian?) |
-| `BitmapBmphk.bin` | 12,000 bytes | Unknown |
-| `BitmapDredt0d.bin` | 19,992 bytes | Unknown |
-| `BitmapDredt0k.bin` | 10,472 bytes | Unknown |
-| `BitmapNtedt0d.bin` | 30,480 bytes | Note edit graphic |
-| `BitmapNtedt0k.bin` | 2,032 bytes | Note edit graphic |
+| Image | Filename | Dimensions | Description |
+|-------|----------|------------|-------------|
+| ![Accger16]({{ "/assets/images/gallery/BitmapAccger16.png" | relative_url }}) | `BitmapAccger16.bin` | 150x76, 8-bit | Accompaniment graphic (German) |
+| ![Accita16]({{ "/assets/images/gallery/BitmapAccita16.png" | relative_url }}) | `BitmapAccita16.bin` | 150x76, 8-bit | Accompaniment graphic (Italian) |
+| ![Bmphk]({{ "/assets/images/gallery/BitmapBmphk.png" | relative_url }}) | `BitmapBmphk.bin` | 150x80, 8-bit | Unknown graphic |
+| ![Dredt0d]({{ "/assets/images/gallery/BitmapDredt0d.png" | relative_url }}) | `BitmapDredt0d.bin` | 222x90, 8-bit | Unknown graphic |
+| ![Dredt0k]({{ "/assets/images/gallery/BitmapDredt0k.png" | relative_url }}) | `BitmapDredt0k.bin` | 131x80, 8-bit | Unknown graphic |
+| ![Ntedt0d]({{ "/assets/images/gallery/BitmapNtedt0d.png" | relative_url }}) | `BitmapNtedt0d.bin` | 254x120, 8-bit | Note edit graphic |
+| ![Ntedt0k]({{ "/assets/images/gallery/BitmapNtedt0k.png" | relative_url }}) | `BitmapNtedt0k.bin` | 127x16, 8-bit | Note edit graphic small |
 
 ---
 
 ## Image Format Notes
 
 - **Table Data BMP**: Standard Windows BMP format, 8-bit indexed color
-- **Main CPU raw**: Custom format, likely raw pixel data without headers
-- **1-bit bitmaps**: Monochrome, dimensions need to be determined from code
+- **Main CPU raw**: Custom format, raw pixel data without headers
+- **1-bit bitmaps**: Monochrome, 224x22 pixels (28 bytes per row)
+- **8-bit bitmaps**: Grayscale, dimensions vary by image
 - **LCD resolution**: 320x240 pixels (QVGA)
 - **LCD controller**: MN89304 with 4Mbit Video RAM (IC207)
 
-## Contributing
+## Converting New Images
 
-Help needed:
-1. Determine dimensions of raw .bin images from display code analysis
-2. Create conversion tools for raw formats
-3. Identify purpose of unknown images
-4. Extract any remaining embedded images
+When new images are extracted as `.bin` files:
+
+1. Add metadata to `convert_images.py` in the ROM disassembly repo
+2. Run `make gallery` to convert and copy to this site
+3. Update this page with the new images
+4. Commit both repositories together
 
 See [Reverse Engineering - Embedded Images]({{ site.baseurl }}/reverse-engineering/#embedded-images) for the extraction workflow.
