@@ -37,7 +37,7 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 |-----|------|---------|-----------|-------------|
 | Main CPU | 2MB | 99.99% | 177 | `maincpu/kn5000_v10_program.asm` |
 | Sub CPU Payload | 192KB | **100%** | 0 | `subcpu/kn5000_subprogram_v142.asm` |
-| Sub CPU Boot | 128KB | - | - | No source yet |
+| Sub CPU Boot | 128KB | WIP | - | `subcpu_boot/kn5000_subcpu_boot.asm` |
 | Table Data | 2MB | 32.42% | 1,417,294 | `table_data/kn5000_table_data.asm` |
 | Custom Data | 1MB | - | - | No source yet |
 | HDAE5000 (HD Expansion) | 512KB | - | - | No source yet |
