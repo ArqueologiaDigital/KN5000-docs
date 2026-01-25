@@ -28,12 +28,14 @@ This project aims to fully document and emulate the Technics KN5000 music keyboa
 
 | Component | Size | Match | Notes |
 |-----------|------|-------|-------|
-| Main CPU Program | 2MB | 99.99% | 177 bytes divergent |
+| Main CPU Program | 2MB | 99.96% | 893 bytes divergent* |
 | Sub CPU Payload | 192KB | 100% | Complete match |
 | Sub CPU Boot ROM | 128KB | - | Not yet disassembled |
 | Table Data | 2MB | 32.42% | Mostly binary assets |
 | Custom Data | 1MB | - | User storage, not reconstructed |
 | HDAE5000 ROM | 512KB | - | Not yet disassembled |
+
+*\*Includes 716 bytes from a palette binclude regression under investigation (issue kn5000-prgr)*
 
 ### Emulation & Tools
 
