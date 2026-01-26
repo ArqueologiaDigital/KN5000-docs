@@ -37,7 +37,7 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 |-----|------|---------|-----------|-------------|
 | Main CPU | 2MB | 99.99% | 177 | `maincpu/kn5000_v10_program.asm` |
 | Sub CPU Payload | 192KB | **100%** | 0 | `subcpu/kn5000_subprogram_v142.asm` |
-| Sub CPU Boot | 128KB | 99.92% | 101 | `subcpu_boot/kn5000_subcpu_boot.asm` |
+| Sub CPU Boot | 128KB | **100%** | 0 | `subcpu_boot/kn5000_subcpu_boot.asm` |
 | Table Data | 2MB | 32.42% | 1,417,294 | `table_data/kn5000_table_data.asm` |
 | Custom Data | 1MB | - | - | No source yet |
 | HDAE5000 (HD Expansion) | 512KB | - | - | No source yet |
@@ -58,11 +58,11 @@ Two color palettes have been extracted as binary includes:
 - **Palette 1** at 0xEB37DE - first palette (inline in sequential section)
 - **Palette 2** at 0xEEFAF0 - second palette (`Palette_8bit_RGBA_2.bin`)
 
-### Sub CPU Boot (101 bytes)
+### Sub CPU Boot (100% COMPLETE!)
 
-The Sub CPU boot ROM is now buildable and at 99.92% match. Recent progress includes:
+The Sub CPU boot ROM has achieved **100% byte-perfect reconstruction!**
 
-**Routines discovered and added:**
+**All routines fully disassembled:**
 - `SUB_8437` (0xFF8437) - Tone generator initialization loop
 - `SUB_850E` (0xFF850E) - Multi-register push/call wrapper
 - `SUB_853A` (0xFF853A) - Write register pairs to tone generator
@@ -76,20 +76,17 @@ The Sub CPU boot ROM is now buildable and at 99.92% match. Recent progress inclu
 - `SUB_8C80` (0xFF8C80) - Hardware calibration routine with timeout loop
 - `SUB_8D0A` (0xFF8D0A) - Hardware parameter write (21 param pairs)
 - `SUB_8F57` (0xFF8F57) - Hardware write with delay
-- Stub routines at 0xFF8496-0xFF85AB returning 0 in HL
+- `SUB_FE80-FEC1` (0xFFFE80) - Debug/diagnostic routines (hex output, string output)
+- Vector trampolines and interrupt handlers
 
 **Encoding fixes applied:**
 - `jrl T` (3-byte relative long jump) vs `jp` (4-byte absolute)
 - `ldir` encoding: TMP94C241 uses `83 11`, ASL generates `85 11`
-- `ld D, imm8` encoding: TMP94C241 uses `24 nn`, ASL generates different encoding
-- `ld A, imm8` encoding: TMP94C241 uses `21 nn`
-- `ld (XIX), imm16` encoding: TMP94C241 uses `b4 02 LL HH` (4-byte)
-- `ld (XHL), imm16` encoding: TMP94C241 uses `b3 02 LL HH` (4-byte)
+- `ld r, imm8` encoding: TMP94C241 uses different opcodes for A, D, E, L, W
+- `ld (XIX/XHL), imm16` encoding: 4-byte vs 3-byte
 - `ld (24-bit addr), imm16` encoding: 7-byte `LD_MEM24_IMM16` macro
 
-**Remaining divergences** (~101 bytes) include:
-- Reserved/vector area near end of ROM (0xFFFE81+)
-- Minor trampoline byte ordering issues
+This marks the second 100% complete ROM in the project, after Sub CPU Payload!
 
 ### Table Data (67.58% incorrect)
 
