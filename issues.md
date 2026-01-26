@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 99 (78 open, 21 closed)
+**Total Issues:** 100 (79 open, 21 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (19) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (20) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
 
 ---
 
@@ -347,6 +347,35 @@ Analyze maincpu code to catalog all 2-byte command sequences sent to control pan
 
 ---
 
+#### 🟠 Document jump tables in maincpu ROM {#issue-kn5000-6je}
+
+**ID:** `kn5000-6je` | **Priority:** High | **Created:** 2026-01-26
+
+**Notes:** The maincpu ROM contains numerous jump tables used for dispatch. Found patterns include:
+
+**Indirect call patterns:**
+- CALL T, XHL - calls through XHL register
+- CALL T, XIX - calls through XIX register
+- JP T, XIX + WA - indexed jump with WA offset
+- JP T, XIX + BC - indexed jump with BC offset
+- JP T, XIX + DE - indexed jump with DE offset
+
+**Known jump tables:**
+1. HANDLE_UPDATE_OFFSETS (0xE00178) - 16-bit offset table for update file handling
+2. LABEL_EF0D64 - 3-entry address table for state machine
+3. LABEL_EF0DA5 - 16-entry address table for sub-state handling
+4. Large address table at line 36362 (~170 entries for handler dispatch)
+5. Address tables at E1611A, E16128, E16136 (encoder handling)
+6. Jump table at F97D8D with 12+ undisassembled target routines
+
+**Work needed:**
+- Label all jump tables with meaningful names
+- Ensure all target routines are disassembled
+- Document the purpose of each table
+- Create cross-references in comments
+
+---
+
 #### 🟠 Extract hardware info from service manual schematics {#issue-kn5000-z9k}
 
 **ID:** `kn5000-z9k` | **Priority:** High | **Created:** 2026-01-25
@@ -413,11 +442,15 @@ Based on protocol documentation, design the C++ interface for a MAME HLE device 
 
 **ID:** `kn5000-kc5` | **Priority:** Medium | **Created:** 2026-01-26
 
+**Notes:** At address 0xF97D8D there's a jump table that references routines at F97696, F976E4, F97835, F97C21, F97C7C, F96BBF, F96BD0, F97984, F97C4B, F97C54, F97C5B, and F96D95. These routines are currently empty ORG labels. Need to disassemble the code at these addresses. Found via jump table pattern: JP T, XIX + WA with LDA XIX, LABEL_F97D8D.
+
 ---
 
 #### 🟡 Document binary include e0176c_e01f7f.bin data structure {#issue-kn5000-jqa}
 
 **ID:** `kn5000-jqa` | **Priority:** Medium | **Created:** 2026-01-26
+
+**Notes:** Binary include at 0xE0176C-0xE01F7F (~2KB). Part of jump table area following large address table at line 36362. Need to analyze structure and determine if this is code, data tables, or other data.
 
 ---
 
@@ -425,11 +458,15 @@ Based on protocol documentation, design the C++ interface for a MAME HLE device 
 
 **ID:** `kn5000-c9c` | **Priority:** Medium | **Created:** 2026-01-26
 
+**Notes:** Large binary include at 0xE02510-0xE06BAF (~295KB). This is one of the largest undocumented blocks in the ROM. Need to analyze structure: could be sound data, lookup tables, compressed assets, or code.
+
 ---
 
 #### 🟡 Document binary include e06f30_e0adcf.bin data structure (~254KB) {#issue-kn5000-gqu}
 
 **ID:** `kn5000-gqu` | **Priority:** Medium | **Created:** 2026-01-26
+
+**Notes:** Large binary include at 0xE06F30-0xE0ADCF (~254KB). Need to analyze structure: could be sound data, lookup tables, compressed assets, or code.
 
 ---
 
@@ -437,11 +474,15 @@ Based on protocol documentation, design the C++ interface for a MAME HLE device 
 
 **ID:** `kn5000-baz` | **Priority:** Medium | **Created:** 2026-01-26
 
+**Notes:** Binary include at 0xE0B250-0xE0BA60 (~8KB). Relatively small block that may be easier to analyze. Check for table structure, code, or known data patterns.
+
 ---
 
 #### 🟡 Document binary include e0bb90_e0e974.bin data structure (~46KB) {#issue-kn5000-9os}
 
 **ID:** `kn5000-9os` | **Priority:** Medium | **Created:** 2026-01-26
+
+**Notes:** Binary include at 0xE0BB90-0xE0E974 (~46KB). Medium-sized undocumented block. Check for table structure, code, or known data patterns.
 
 ---
 
@@ -724,7 +765,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 14 |
+| High | 15 |
 | Medium | 51 |
 | Low | 12 |
 
@@ -739,7 +780,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
 | Main CPU ROM | 1 |
-| Other | 19 |
+| Other | 20 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Table Data ROM | 1 |
@@ -747,4 +788,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-26 13:52*
+*Last updated: 2026-01-26 14:10*

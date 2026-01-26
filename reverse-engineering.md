@@ -1593,10 +1593,11 @@ OFFSET_TABLE:
 | Table | Address | Type | Entries | Purpose |
 |-------|---------|------|---------|---------|
 | `HANDLE_UPDATE_OFFSETS` | 0xE00178 | 16-bit offsets | 8 | Update file type dispatch |
-| `LABEL_EF0D64` | 0xEF0D64 | 32-bit addresses | 3 | State machine (3 states) |
-| `LABEL_EF0DA5` | 0xEF0DA5 | 32-bit addresses | 16 | Sub-state handler dispatch |
-| `LABEL_E01F80` | 0xE01F80 | 32-bit addresses | ~170 | Main handler dispatch table |
-| `LABEL_F97D8D` | 0xF97D8D | 32-bit addresses | 12+ | Undocumented routines |
+| `UI_STATE_MACHINE_TABLE` | 0xEF0D64 | 32-bit addresses | 3 | UI state machine (3 states) |
+| `UI_SUBSTATE_TABLE` | 0xEF0DA5 | 32-bit addresses | 16 | UI sub-state handler dispatch |
+| `SOUND_DATA_SECTION_PTRS` | 0xE023B0 | 32-bit addresses | 16 | Sound category data pointers |
+| `FDC_HANDLER_OFFSETS` | 0xEA98CA | 16-bit offsets | 12 | FDC command handler dispatch |
+| `FDC_HANDLER_DISPATCH_BASE` | 0xF97D8D | (base address) | 12 | FDC handler routines |
 
 ### Handler Dispatch Example
 
@@ -1642,22 +1643,24 @@ LABEL_EF0DA5:
 
 ### Undocumented Jump Table Targets
 
-The table at `LABEL_F97D8D` references routines that need disassembly:
+The FDC handler dispatch table (`FDC_HANDLER_OFFSETS` at 0xEA98CA) calls helper routines that are still raw bytes in the source. These routines handle floppy disk operations:
 
-| Routine | Address | Status |
-|---------|---------|--------|
-| `LABEL_F97696` | 0xF97696 | TODO |
-| `LABEL_F976E4` | 0xF976E4 | TODO |
-| `LABEL_F97835` | 0xF97835 | TODO |
-| `LABEL_F97C21` | 0xF97C21 | TODO |
-| `LABEL_F97C7C` | 0xF97C7C | TODO |
-| `LABEL_F96BBF` | 0xF96BBF | TODO |
-| `LABEL_F96BD0` | 0xF96BD0 | TODO |
-| `LABEL_F97984` | 0xF97984 | TODO |
-| `LABEL_F97C4B` | 0xF97C4B | TODO |
-| `LABEL_F97C54` | 0xF97C54 | TODO |
-| `LABEL_F97C5B` | 0xF97C5B | TODO |
-| `LABEL_F96D95` | 0xF96D95 | TODO |
+| Routine | Address | Status | Called By |
+|---------|---------|--------|-----------|
+| `LABEL_F97696` | 0xF97696 | Raw bytes | FDC_HANDLER_02 |
+| `LABEL_F976E4` | 0xF976E4 | Raw bytes | FDC_HANDLER_03 |
+| `LABEL_F97835` | 0xF97835 | Raw bytes | FDC_HANDLER_04 |
+| `LABEL_F97C21` | 0xF97C21 | Raw bytes | Multiple handlers |
+| `LABEL_F97C7C` | 0xF97C7C | Raw bytes | FDC_HANDLER_11 |
+| `LABEL_F96BBF` | 0xF96BBF | Raw bytes | LABEL_F97639 |
+| `LABEL_F96BD0` | 0xF96BD0 | Raw bytes | LABEL_F97639 |
+| `LABEL_F97984` | 0xF97984 | Raw bytes | FDC_HANDLER_05 |
+| `LABEL_F97C4B` | 0xF97C4B | Raw bytes | FDC_HANDLER_07 |
+| `LABEL_F97C54` | 0xF97C54 | Raw bytes | FDC_HANDLER_08 |
+| `LABEL_F97C5B` | 0xF97C5B | Raw bytes | FDC_HANDLER_09 |
+| `LABEL_F96D95` | 0xF96D95 | Raw bytes | FDC_HANDLER_10 |
+
+These routines are in `LABEL_F97652` raw byte block (lines 336862-336929).
 
 ### Finding Jump Tables
 
