@@ -8,7 +8,7 @@ permalink: /help-wanted/
 
 This is a community reverse engineering project. Here's how you can contribute:
 
-**Current Progress:** Main CPU ROM at 99.99% (177 bytes), Sub CPU Boot at 98.48% (1,981 bytes), Sub CPU Payload at 100%. See the [Project Issues]({{ site.baseurl }}/issues/) page for many open tasks organized by category.
+**Current Progress:** Main CPU ROM at 99.99% (177 bytes), Sub CPU Boot at **100%**, Sub CPU Payload at **100%**. See the [Project Issues]({{ site.baseurl }}/issues/) page for many open tasks organized by category.
 
 ## High Priority
 
@@ -20,13 +20,9 @@ We're missing ROM dumps for several chips:
 
 If you have a KN5000 and can dump ROMs, please reach out!
 
-### Sub CPU Boot ROM (98.48% match)
+### Main CPU ROM (99.99% match)
 
-The Sub CPU Boot ROM disassembly is progressing well. Remaining work:
-- ~850 bytes of DMA transfer routines at 0xFF8604-0xFF8955
-- Additional instruction encoding fixes as needed
-
-See issues `kn5000-b21` and `kn5000-ii4` for details.
+The Main CPU ROM has only 177 bytes remaining. Analysis needed to identify and fix the remaining divergences, which may be due to instruction encoding differences between TMP94C241F and TMP96C141 (what ASL supports).
 
 ### Assembly Analysis
 
