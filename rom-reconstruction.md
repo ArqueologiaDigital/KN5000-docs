@@ -37,7 +37,7 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 |-----|------|---------|-----------|-------------|
 | Main CPU | 2MB | 99.99% | 177 | `maincpu/kn5000_v10_program.asm` |
 | Sub CPU Payload | 192KB | **100%** | 0 | `subcpu/kn5000_subprogram_v142.asm` |
-| Sub CPU Boot | 128KB | 99.35% | 846 | `subcpu_boot/kn5000_subcpu_boot.asm` |
+| Sub CPU Boot | 128KB | 99.92% | 101 | `subcpu_boot/kn5000_subcpu_boot.asm` |
 | Table Data | 2MB | 32.42% | 1,417,294 | `table_data/kn5000_table_data.asm` |
 | Custom Data | 1MB | - | - | No source yet |
 | HDAE5000 (HD Expansion) | 512KB | - | - | No source yet |
@@ -58,9 +58,9 @@ Two color palettes have been extracted as binary includes:
 - **Palette 1** at 0xEB37DE - first palette (inline in sequential section)
 - **Palette 2** at 0xEEFAF0 - second palette (`Palette_8bit_RGBA_2.bin`)
 
-### Sub CPU Boot (846 bytes)
+### Sub CPU Boot (101 bytes)
 
-The Sub CPU boot ROM is now buildable and at 99.35% match. Recent progress includes:
+The Sub CPU boot ROM is now buildable and at 99.92% match. Recent progress includes:
 
 **Routines discovered and added:**
 - `SUB_8437` (0xFF8437) - Tone generator initialization loop
@@ -73,6 +73,9 @@ The Sub CPU boot ROM is now buildable and at 99.35% match. Recent progress inclu
 - `SUB_8B89` (0xFF8B89) - Inter-CPU communication handler (reads from 0x110000 latches)
 - `SUB_8BD2` (0xFF8BD2) - Note/velocity calculation with lookup tables
 - `SUB_8C75` (0xFF8C75) - Hardware register write helper (0x100000)
+- `SUB_8C80` (0xFF8C80) - Hardware calibration routine with timeout loop
+- `SUB_8D0A` (0xFF8D0A) - Hardware parameter write (21 param pairs)
+- `SUB_8F57` (0xFF8F57) - Hardware write with delay
 - Stub routines at 0xFF8496-0xFF85AB returning 0 in HL
 
 **Encoding fixes applied:**
@@ -82,10 +85,11 @@ The Sub CPU boot ROM is now buildable and at 99.35% match. Recent progress inclu
 - `ld A, imm8` encoding: TMP94C241 uses `21 nn`
 - `ld (XIX), imm16` encoding: TMP94C241 uses `b4 02 LL HH` (4-byte)
 - `ld (XHL), imm16` encoding: TMP94C241 uses `b3 02 LL HH` (4-byte)
+- `ld (24-bit addr), imm16` encoding: 7-byte `LD_MEM24_IMM16` macro
 
-**Remaining divergences** (~846 bytes) include:
-- SUB_8C80+ hardware calibration routines (0xFF8C80+)
-- DMA transfer routines and inter-CPU communication handlers (0xFF8604-0xFF8955)
+**Remaining divergences** (~101 bytes) include:
+- Reserved/vector area near end of ROM (0xFFFE81+)
+- Minor trampoline byte ordering issues
 
 ### Table Data (67.58% incorrect)
 
