@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 92 (78 open, 14 closed)
+**Total Issues:** 92 (75 open, 17 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (13) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (12) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
 
 ---
 
@@ -261,14 +261,6 @@ Write end-user documentation for performing system updates. Include: required ma
 
 ### HD-AE5000 Expansion {#hd-ae5000-expansion}
 
-#### 🟠 HDAE5000: Analyze PPI interface at 0x160000 {#issue-kn5000-618}
-
-**ID:** `kn5000-618` | **Priority:** High | **Created:** 2026-01-25
-
-Reverse engineer the 8255 PPI interface used to communicate with HD-AE5000. Document port A/B/C assignments, control register settings, and data transfer protocol. Cross-reference with main CPU firmware at addresses accessing 0x160000.
-
----
-
 #### 🟠 HDAE5000: Disassemble ROM at 0x280000 {#issue-kn5000-kuu}
 
 **ID:** `kn5000-kuu` | **Priority:** High | **Created:** 2026-01-25
@@ -376,16 +368,6 @@ Main CPU ROM (kn5000_v10_program.rebuilt.rom) is at 99.99% match with 177 incorr
 **ID:** `kn5000-99f` | **Priority:** Critical | **Created:** 2026-01-25
 
 **Depends on:** [`kn5000-cfe`](#issue-kn5000-cfe), [`kn5000-kqy`](#issue-kn5000-kqy), [`kn5000-hlw`](#issue-kn5000-hlw)
-
----
-
-#### 🟠 Document DATA/BCK serial interface pinout {#issue-kn5000-jwk}
-
-**ID:** `kn5000-jwk` | **Priority:** High | **Created:** 2026-01-25
-
-From the block diagram, control panel MCUs connect to main CPU via DATA and BCK (clock) signals. Extract the exact pinout from schematics: which MAIN CPU pins, connector numbers, and signal characteristics (voltage levels, timing if noted).
-
-**Notes:** Partial progress: Serial interface signals documented - SIN, SOUT, CLK, CNTR1, CMD0-CMD4. Full pinout in hardware-architecture.md. Protocol details still need firmware analysis.
 
 ---
 
@@ -524,14 +506,6 @@ Identify and document the DSP chip (IC311). Find datasheet. Document: DSP archit
 **ID:** `kn5000-d38` | **Priority:** High | **Created:** 2026-01-25
 
 Analyze the waveform ROM chips. Document: total size, data format, sample encoding (PCM bits, compression), how samples are indexed, instrument mapping. These contain the raw sound samples for synthesis.
-
----
-
-#### 🟠 Sound: Identify and document Sub CPU (IC27) {#issue-kn5000-toq}
-
-**ID:** `kn5000-toq` | **Priority:** High | **Created:** 2026-01-25
-
-Determine the exact chip type of IC27 (Sub CPU) from service manual schematics. Find datasheet. Document: CPU architecture, clock speed, memory map, I/O capabilities. This CPU controls the tone generator.
 
 ---
 
@@ -697,6 +671,9 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-jwk` | Document DATA/BCK serial interface pinout | 2026-01-26 |
+| `kn5000-618` | HDAE5000: Analyze PPI interface at 0x160000 | 2026-01-26 |
+| `kn5000-toq` | Sound: Identify and document Sub CPU (IC27) | 2026-01-26 |
 | `kn5000-595` | Boot: Document sub CPU startup handshake | 2026-01-26 |
 | `kn5000-c3p` | SubCPU: Trace payload transfer initialization | 2026-01-26 |
 | `kn5000-dui` | SubCPU: Analyze inter-CPU latch protocol at 0x120000 | 2026-01-26 |
@@ -721,7 +698,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 21 |
+| High | 18 |
 | Medium | 44 |
 | Low | 12 |
 
@@ -733,15 +710,15 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Control Panel | 1 |
 | Feature Demo | 11 |
 | Firmware Update | 12 |
-| HD-AE5000 Expansion | 6 |
+| HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
 | Main CPU ROM | 1 |
-| Other | 13 |
-| Sound & Audio | 12 |
+| Other | 12 |
+| Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Table Data ROM | 1 |
 | Video & Display | 7 |
 
 ---
 
-*Last updated: 2026-01-26 08:21*
+*Last updated: 2026-01-26 08:22*
