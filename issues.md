@@ -8,24 +8,16 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 92 (85 open, 7 closed)
+**Total Issues:** 92 (78 open, 14 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (6) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (13) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (6) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (10)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (13) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
 
 ---
 
 ## Open Issues
 
 ### Boot Sequence {#boot-sequence}
-
-#### 🟠 Boot: Document sub CPU startup handshake {#issue-kn5000-595}
-
-**ID:** `kn5000-595` | **Priority:** High | **Created:** 2026-01-25
-
-Trace main CPU code that initializes sub CPU communication. Document: when sub CPU is released from reset, MicroDMA payload transfer trigger, latch communication at 0x120000 during boot, how main CPU knows sub CPU is ready. Cross-reference with SubCPU tasks.
-
----
 
 #### 🟡 Boot: Document HDAE5000 detection and init {#issue-kn5000-izk}
 
@@ -609,43 +601,6 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 ### Sub CPU {#sub-cpu}
 
-#### 🟠 SubCPU: Analyze inter-CPU latch protocol at 0x120000 {#issue-kn5000-dui}
-
-**ID:** `kn5000-dui` | **Priority:** High | **Created:** 2026-01-25
-
-Document the latch-based communication mechanism at 0x120000. Determine: latch register layout (command, status, data bytes), handshaking signals, how main CPU signals 'payload ready', how sub CPU acknowledges receipt, and any checksumming or verification.
-
----
-
-#### 🟠 SubCPU: Document MicroDMA registers on TMP94C241F {#issue-kn5000-fmq}
-
-**ID:** `kn5000-fmq` | **Priority:** High | **Created:** 2026-01-25
-
-Document the MicroDMA controller registers on the TMP94C241F. Include DMAS (source), DMAD (destination), DMAC (count), DMAM (mode) registers. Reference TMP94C241F datasheet for register addresses and bit definitions. Identify which DMA channel is used for sub CPU payload transfer.
-
-**Notes:** Additional macros created for DMA register access:
-
-New macros in tmp94c241.inc:
-- LDIR_94: Block copy with TMP94C241 encoding (83 11 vs ASL's 85 11)
-- JRL_T: Relative long jump (78 LL HH)
-- CALL_ABS24: Absolute call with 24-bit address (1d LL MM HH)
-
-Boot ROM uses DMA channels 0 and 2:
-- Channel 0: Inter-CPU latch source (DMAS0, DMAC0)
-- Channel 2: Inter-CPU latch destination (DMAS2, DMAD2, DMAC2)
-
-DMA transfer routines at 0xFF8604-0xFF8955 use these extensively.
-
----
-
-#### 🟠 SubCPU: Trace payload transfer initialization {#issue-kn5000-c3p}
-
-**ID:** `kn5000-c3p` | **Priority:** High | **Created:** 2026-01-25
-
-Find and document the main CPU code that initializes the sub CPU payload transfer. Identify: source address (payload location in main ROM), destination address (sub CPU memory), transfer size (192KB), DMA mode settings, and any handshaking with sub CPU before/during/after transfer.
-
----
-
 #### 🟡 SubCPU: Document boot sequence handshake {#issue-kn5000-51z}
 
 **ID:** `kn5000-51z` | **Priority:** Medium | **Created:** 2026-01-25
@@ -681,30 +636,6 @@ Table data ROM (kn5000_table_data.rebuilt.rom) is at 32.42% match with 1,417,294
 ---
 
 ### Video & Display {#video-display}
-
-#### 🟠 Video: Document LCD controller IC206 (MN89304) {#issue-kn5000-6qi}
-
-**ID:** `kn5000-6qi` | **Priority:** High | **Created:** 2026-01-25
-
-Research and document the MN89304 LCD controller. Find datasheet if available. Document: register map, supported video modes, pixel formats, timing parameters, interface to main CPU. Identify memory-mapped I/O addresses used to control the display.
-
----
-
-#### 🟠 Video: Document Video RAM IC207 (M5M44265CJ8S) {#issue-kn5000-m91}
-
-**ID:** `kn5000-m91` | **Priority:** High | **Created:** 2026-01-25
-
-Document the 4Mbit Video RAM. Determine: memory organization, how it maps to screen pixels, double-buffering if used, access patterns from main CPU. Calculate how 4Mbit supports 320x240 display with various color depths.
-
----
-
-#### 🟠 Video: Trace LCD initialization in firmware {#issue-kn5000-t75}
-
-**ID:** `kn5000-t75` | **Priority:** High | **Created:** 2026-01-25
-
-Find and document LCD controller initialization code in main CPU firmware. Document: register values written during init, video mode selection, timing setup, any self-test. Cross-reference with boot sequence tasks.
-
----
 
 #### 🟡 Video: Document UI widget rendering {#issue-kn5000-5dc}
 
@@ -766,6 +697,13 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-595` | Boot: Document sub CPU startup handshake | 2026-01-26 |
+| `kn5000-c3p` | SubCPU: Trace payload transfer initialization | 2026-01-26 |
+| `kn5000-dui` | SubCPU: Analyze inter-CPU latch protocol at 0x120000 | 2026-01-26 |
+| `kn5000-m91` | Video: Document Video RAM IC207 (M5M44265CJ8S) | 2026-01-26 |
+| `kn5000-t75` | Video: Trace LCD initialization in firmware | 2026-01-26 |
+| `kn5000-6qi` | Video: Document LCD controller IC206 (MN89304) | 2026-01-26 |
+| `kn5000-fmq` | SubCPU: Document MicroDMA registers on TMP94C241F | 2026-01-26 |
 | `kn5000-52e` | Boot: Document peripheral initialization order | 2026-01-26 |
 | `kn5000-cav` | Boot: Document memory initialization sequence | 2026-01-26 |
 | `kn5000-24m` | Boot: Document reset vector and early initialization | 2026-01-26 |
@@ -783,7 +721,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 28 |
+| High | 21 |
 | Medium | 44 |
 | Low | 12 |
 
@@ -791,7 +729,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Category | Count |
 |----------|-------|
-| Boot Sequence | 6 |
+| Boot Sequence | 5 |
 | Control Panel | 1 |
 | Feature Demo | 11 |
 | Firmware Update | 12 |
@@ -800,10 +738,10 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Main CPU ROM | 1 |
 | Other | 13 |
 | Sound & Audio | 12 |
-| Sub CPU | 6 |
+| Sub CPU | 3 |
 | Table Data ROM | 1 |
-| Video & Display | 10 |
+| Video & Display | 7 |
 
 ---
 
-*Last updated: 2026-01-26 07:49*
+*Last updated: 2026-01-26 08:21*
