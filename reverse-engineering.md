@@ -1542,6 +1542,134 @@ Understanding the update system enables:
 
 ---
 
+## Jump Tables
+
+The firmware uses jump tables extensively for event dispatching, state machines, and handler selection. Documenting these tables is essential for understanding program flow.
+
+### Jump Table Patterns
+
+**Direct address tables** (32-bit entries):
+```asm
+; Table of absolute addresses
+JUMP_TABLE:
+    dd HANDLER_0
+    dd HANDLER_1
+    dd HANDLER_2
+
+; Usage: index in register, multiply by 4, load address, jump
+    SLL 2, A           ; index * 4
+    LDA XHL, JUMP_TABLE
+    LD XHL, (XHL + A)  ; load address
+    JP T, XHL          ; jump to handler
+```
+
+**Offset tables** (16-bit entries):
+```asm
+; Table of offsets from base address
+OFFSET_TABLE:
+    dw (HANDLER_0 - BASE_ADDR)
+    dw (HANDLER_1 - BASE_ADDR)
+
+; Usage: load offset, add to base, jump
+    LDA XIX, OFFSET_TABLE
+    LD WA, (XIX + WA)      ; load offset
+    LDA XIX, BASE_ADDR
+    JP T, XIX + WA         ; jump to base+offset
+```
+
+### Indirect Jump Instructions
+
+| Pattern | Description |
+|---------|-------------|
+| `CALL T, XHL` | Call through XHL register |
+| `CALL T, XIX` | Call through XIX register |
+| `JP T, XHL` | Jump through XHL register |
+| `JP T, XIX + WA` | Indexed jump (base + WA offset) |
+| `JP T, XIX + BC` | Indexed jump (base + BC offset) |
+| `JP T, XIX + DE` | Indexed jump (base + DE offset) |
+
+### Known Jump Tables
+
+| Table | Address | Type | Entries | Purpose |
+|-------|---------|------|---------|---------|
+| `HANDLE_UPDATE_OFFSETS` | 0xE00178 | 16-bit offsets | 8 | Update file type dispatch |
+| `LABEL_EF0D64` | 0xEF0D64 | 32-bit addresses | 3 | State machine (3 states) |
+| `LABEL_EF0DA5` | 0xEF0DA5 | 32-bit addresses | 16 | Sub-state handler dispatch |
+| `LABEL_E01F80` | 0xE01F80 | 32-bit addresses | ~170 | Main handler dispatch table |
+| `LABEL_F97D8D` | 0xF97D8D | 32-bit addresses | 12+ | Undocumented routines |
+
+### Handler Dispatch Example
+
+The update file handler uses offset-based dispatch:
+
+```asm
+Erase_and_Burn____when_disk_is_valid:
+    LD A, (0F23Ch)              ; Get file type ID
+    EXTZ WA                     ; Zero-extend to 16-bit
+    SLL 1, WA                   ; Multiply by 2 (word offset)
+    LDA XIX, HANDLE_UPDATE_OFFSETS
+    LD WA, (XIX + WA)           ; Load offset from table
+    LDA XIX, HANDLE_UPDATE_FILE_TYPE_ID_001h  ; Base address
+    JP T, XIX + WA              ; Jump to handler
+```
+
+### State Machine Pattern
+
+Multi-level dispatch using nested jump tables:
+
+```asm
+; First level: 3 main states
+    LDA XHL, 0EF0D64h       ; Main state table
+    LD XHL, (XHL + A)
+    JP T, XHL
+
+LABEL_EF0D64:
+    dd LABEL_EF0D70         ; State 0
+    dd LABEL_EF0D73         ; State 1
+    dd LABEL_EF0D8F         ; State 2
+
+; State 2 has 16 sub-states
+LABEL_EF0D8F:
+    LDA XHL, 0EF0DA5h       ; Sub-state table
+    LD XHL, (XHL + A)
+    JP T, XHL
+
+LABEL_EF0DA5:
+    dd LABEL_EF0DE5         ; Sub-state 0
+    dd LABEL_EF0DEF         ; Sub-state 1
+    ... (16 total entries)
+```
+
+### Undocumented Jump Table Targets
+
+The table at `LABEL_F97D8D` references routines that need disassembly:
+
+| Routine | Address | Status |
+|---------|---------|--------|
+| `LABEL_F97696` | 0xF97696 | TODO |
+| `LABEL_F976E4` | 0xF976E4 | TODO |
+| `LABEL_F97835` | 0xF97835 | TODO |
+| `LABEL_F97C21` | 0xF97C21 | TODO |
+| `LABEL_F97C7C` | 0xF97C7C | TODO |
+| `LABEL_F96BBF` | 0xF96BBF | TODO |
+| `LABEL_F96BD0` | 0xF96BD0 | TODO |
+| `LABEL_F97984` | 0xF97984 | TODO |
+| `LABEL_F97C4B` | 0xF97C4B | TODO |
+| `LABEL_F97C54` | 0xF97C54 | TODO |
+| `LABEL_F97C5B` | 0xF97C5B | TODO |
+| `LABEL_F96D95` | 0xF96D95 | TODO |
+
+### Finding Jump Tables
+
+To find undocumented jump tables:
+
+1. Search for indirect jumps: `grep -E "JP T, X|CALL T, X"`
+2. Look for raw address loads before jumps: `LDA XIX, 0E*h` or `LDA XHL, 0F*h`
+3. Trace back to find table definitions (`dd LABEL_*` or `dw offset`)
+4. Verify all table targets are disassembled
+
+---
+
 ## References
 
 - [Service Manual PDF]({{ site.baseurl }}/service_manual/technics_sx-kn5000.pdf)

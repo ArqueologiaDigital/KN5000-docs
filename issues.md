@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 93 (72 open, 21 closed)
+**Total Issues:** 99 (78 open, 21 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (13) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (19) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
 
 ---
 
@@ -409,9 +409,56 @@ Based on protocol documentation, design the C++ interface for a MAME HLE device 
 
 ---
 
+#### 🟡 Disassemble TODO routines at F97696-F97D8D range (jump table targets) {#issue-kn5000-kc5}
+
+**ID:** `kn5000-kc5` | **Priority:** Medium | **Created:** 2026-01-26
+
+---
+
+#### 🟡 Document binary include e0176c_e01f7f.bin data structure {#issue-kn5000-jqa}
+
+**ID:** `kn5000-jqa` | **Priority:** Medium | **Created:** 2026-01-26
+
+---
+
+#### 🟡 Document binary include e02510_e06baf.bin data structure (~295KB) {#issue-kn5000-c9c}
+
+**ID:** `kn5000-c9c` | **Priority:** Medium | **Created:** 2026-01-26
+
+---
+
+#### 🟡 Document binary include e06f30_e0adcf.bin data structure (~254KB) {#issue-kn5000-gqu}
+
+**ID:** `kn5000-gqu` | **Priority:** Medium | **Created:** 2026-01-26
+
+---
+
+#### 🟡 Document binary include e0b250_e0ba60.bin data structure (~8KB) {#issue-kn5000-baz}
+
+**ID:** `kn5000-baz` | **Priority:** Medium | **Created:** 2026-01-26
+
+---
+
+#### 🟡 Document binary include e0bb90_e0e974.bin data structure (~46KB) {#issue-kn5000-9os}
+
+**ID:** `kn5000-9os` | **Priority:** Medium | **Created:** 2026-01-26
+
+---
+
 #### 🟡 Fix 177 divergent bytes in Main CPU ROM (24-bit address encoding issue) {#issue-kn5000-5a0}
 
 **ID:** `kn5000-5a0` | **Priority:** Medium | **Created:** 2026-01-26
+
+**Notes:** Root cause identified: At 0xFDECB6, 'LD C, (8D3Ah:24)' generates 5 bytes but original uses 4-byte 16-bit encoding. The extra byte shifts all subsequent addresses by +1.
+
+Fix requires:
+1. Find the compensating instruction elsewhere that generates 1 byte less than expected
+2. Once found, remove ':24' suffix AND fix the other encoding
+3. Alternatively, analyze the entire ROM for instruction encoding mismatches
+
+Affected regions: 0xFDDE5F-0xFDED63 (10 divergent regions, 177 bytes total)
+
+See rom-reconstruction.md for detailed analysis.
 
 ---
 
@@ -678,7 +725,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 1 |
 | High | 14 |
-| Medium | 45 |
+| Medium | 51 |
 | Low | 12 |
 
 ### By Category
@@ -692,7 +739,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
 | Main CPU ROM | 1 |
-| Other | 13 |
+| Other | 19 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Table Data ROM | 1 |
@@ -700,4 +747,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-26 09:27*
+*Last updated: 2026-01-26 13:52*
