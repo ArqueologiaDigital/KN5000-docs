@@ -1623,6 +1623,27 @@ FDC handler routines access these RAM locations:
 | 0x8A6C | FDC drive/mode selector |
 | 0x8B04 | FDC control register |
 
+### FDC Handler Routines
+
+The FDC subsystem uses a handler dispatch table at 0xF97D8D with 12 handlers. Full disassembly is documented in `docs/fdc_disassembly.md` in the roms-disasm repository.
+
+| Address | Name | Description |
+|---------|------|-------------|
+| 0xF96BBF | FDC_INIT | Basic FDC initialization |
+| 0xF96BD0 | FDC_CONFIG_VERIFY | Configuration/status verification |
+| 0xF96D95 | FDC_CMD_DISPATCH_SUB | Command handler subroutine |
+| 0xF97696 | FDC_STATUS_HANDLER | Status/interrupt handler |
+| 0xF976E4 | FDC_CMD_EXEC | Command execution handler |
+| 0xF97835 | FDC_SECTOR_XFER | Sector/data transfer handler |
+| 0xF97984 | FDC_MODE_CONFIG | Mode configuration (modes 0-5) |
+| 0xF97C21 | FDC_CMD_ENABLE | Command enable (sets bit 3 @ 0x28) |
+| 0xF97C4B | FDC_CMD_DISABLE | Command disable |
+| 0xF97C54 | FDC_STATUS_COPY | Copy cached status |
+| 0xF97C5B | FDC_OUTPUT_CTRL | Output control |
+| 0xF97C7C | FDC_INTERRUPT_HANDLER | Main interrupt handler |
+
+**Handler dispatch** works by reading an index from 0x8A40 (0-11) and calling the corresponding routine through the dispatch table.
+
 ### Known Jump Tables
 
 | Table | Address | Type | Entries | Purpose |
