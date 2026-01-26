@@ -42,9 +42,32 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 | Custom Data | 1MB | - | - | No source yet |
 | HDAE5000 (HD Expansion) | 512KB | - | - | No source yet |
 
+## Original ROM Files
+
+The original firmware dumps are stored in `original_ROMs/`:
+
+| File | Size | Description |
+|------|------|-------------|
+| `kn5000_v10_program.rom` | 2MB | Main CPU program ROM |
+| `kn5000_subprogram_v142.rom` | 192KB | Sub CPU payload (sent by main CPU at boot) |
+| `kn5000_subcpu_boot.ic30` | 128KB | Sub CPU boot ROM |
+| `kn5000_table_data_rom_odd.ic1` | 1MB | Table data ROM (odd bytes) |
+| `kn5000_table_data_rom_even.ic3` | 1MB | Table data ROM (even bytes) |
+| `kn5000_custom_data.ic19` | 1MB | Custom data flash (user storage) |
+| `hd-ae5000_v2_06i.ic4` | 512KB | HDAE5000 hard disk expansion ROM |
+
+Reference disassembly files (`.unidasm`) are generated with MAME's `unidasm` tool for analysis.
+
 ## Assembler
 
 The project uses **ASL (Alfred Arnold's Macro Assembler)** version 1.42 Beta.
+
+**Build Process:**
+1. ASL assembles `.asm` files to `.p` intermediate format
+2. `p2bin` converts `.p` to binary `.rom` files
+3. `compare_roms.py` verifies byte-for-byte match against originals
+
+**Note:** ASL embeds a version signature in `.p` files (e.g., "AS 1.42 Beta [Bld 298]"), but `p2bin` strips this metadata when generating the final `.rom` files, so no post-processing is needed.
 
 **Challenge**: ASL only supports TMP96C141, not TMP94C241F. Unsupported instructions are handled via macros in `tmp94c241.inc` that emit raw byte sequences.
 

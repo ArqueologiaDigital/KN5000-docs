@@ -153,6 +153,47 @@ Detailed hardware documentation extracted from the service manual schematics.
 | IC207 | M5M44265CJ8S | 4Mbit Video RAM |
 | IC208 | D72068GF-3B9 | Floppy Disk Controller |
 
+### LCD Controller (MN89304)
+
+The MN89304 provides a VGA-compatible register interface at I/O base `0x170000`.
+
+**Memory Map:**
+
+| Address | Description |
+|---------|-------------|
+| `0x170000` + port | VGA I/O registers |
+| `0x1A0000` | Video RAM base (512KB) |
+
+**VGA I/O Ports:**
+
+| Port | Register | Description |
+|------|----------|-------------|
+| `0x3C0` | Attribute Controller | Address/Data |
+| `0x3C2` | Misc Output | Write only |
+| `0x3C4/3C5` | Sequencer | Address/Data |
+| `0x3C6` | DAC Mask | Palette mask |
+| `0x3C8/3C9` | DAC | Write address/Data |
+| `0x3CE/3CF` | Graphics Controller | Address/Data |
+| `0x3D4/3D5` | CRTC | Address/Data |
+| `0x3DA` | Input Status 1 | Read only |
+
+**CRTC Register Indices:**
+
+| Index | Name | Description |
+|-------|------|-------------|
+| `0x00` | CRTC_HORIZ_TOTAL | Horizontal Total |
+| `0x01` | CRTC_HORIZ_DISP_END | Horizontal Display End |
+| `0x06` | CRTC_VERT_TOTAL | Vertical Total |
+| `0x07` | CRTC_OVERFLOW | Overflow bits |
+| `0x09` | CRTC_MAX_SCAN_LINE | Maximum Scan Line |
+| `0x0C/0D` | CRTC_START_ADDR | Display start address |
+| `0x10` | CRTC_VERT_RETRACE_START | Vertical Retrace Start |
+| `0x11` | CRTC_VERT_RETRACE_END | Vertical Retrace End (bit 7 = protect) |
+| `0x12` | CRTC_VERT_DISP_END | Vertical Display End |
+| `0x17` | CRTC_MODE_CONTROL | Mode Control |
+
+Registers `0x19` and `0x1A` are MN89304-specific extensions (not standard VGA).
+
 ### Logic ICs
 
 | IC | Part Number | Function |
