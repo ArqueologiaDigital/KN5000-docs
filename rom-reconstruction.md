@@ -292,6 +292,13 @@ Per project policy, binary includes are split when code references internal addr
   - `e02510_e0458f.bin` - Instrument category data (PIANO, ORGAN, etc.)
   - `e04590_e04b2f.bin` - GUITAR data
   - `e04b30_e06baf.bin` - STRINGS & VOCAL data
+- `e06f30_e0adcf.bin` split into four parts:
+  - `e06f30_e078f1.bin` - FLUTE sound data
+  - `e078f2_e08baf.bin` - Additional FLUTE data
+  - `e08bb0_e0914f.bin` - SAX & REED sound data
+  - `e09150_e0adcf.bin` - MALLET & ORCH PERC sound data
+- `e0bb90_e0e974.bin` split into seven parts for instrument data tables
+- `e0b250_e0ba60.bin` split into nineteen parts for orchestral pad data (many internal cross-references)
 
 ### Control Panel Protocol Naming
 
