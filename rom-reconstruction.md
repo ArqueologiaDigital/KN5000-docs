@@ -37,7 +37,7 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 |-----|------|---------|-----------|-------------|
 | Main CPU | 2MB | 99.99% | 177 | `maincpu/kn5000_v10_program.asm` |
 | Sub CPU Payload | 192KB | **100%** | 0 | `subcpu/kn5000_subprogram_v142.asm` |
-| Sub CPU Boot | 128KB | 98.48% | 1,981 | `subcpu_boot/kn5000_subcpu_boot.asm` |
+| Sub CPU Boot | 128KB | 99.17% | 1,084 | `subcpu_boot/kn5000_subcpu_boot.asm` |
 | Table Data | 2MB | 32.42% | 1,417,294 | `table_data/kn5000_table_data.asm` |
 | Custom Data | 1MB | - | - | No source yet |
 | HDAE5000 (HD Expansion) | 512KB | - | - | No source yet |
@@ -58,9 +58,9 @@ Two color palettes have been extracted as binary includes:
 - **Palette 1** at 0xEB37DE - first palette (inline in sequential section)
 - **Palette 2** at 0xEEFAF0 - second palette (`Palette_8bit_RGBA_2.bin`)
 
-### Sub CPU Boot (1,981 bytes)
+### Sub CPU Boot (1,084 bytes)
 
-The Sub CPU boot ROM is now buildable and at 98.48% match. Recent progress includes:
+The Sub CPU boot ROM is now buildable and at 99.17% match. Recent progress includes:
 
 **Routines discovered and added:**
 - `SUB_8437` (0xFF8437) - Tone generator initialization loop
@@ -69,6 +69,7 @@ The Sub CPU boot ROM is now buildable and at 98.48% match. Recent progress inclu
 - `COPY_WORDS` (0xFF858B) - Word block copy using `ldirw`
 - `FILL_WORDS` (0xFF8594) - Memory fill with word values
 - `CHECKSUM_CALC` (0xFF859B) - Calculate checksum over memory range
+- `SUB_8B37` (0xFF8B37) - LED/output bit manipulation routine
 - Stub routines at 0xFF8496-0xFF85AB returning 0 in HL
 
 **Encoding fixes applied:**
@@ -76,8 +77,12 @@ The Sub CPU boot ROM is now buildable and at 98.48% match. Recent progress inclu
 - `ldir` encoding: TMP94C241 uses `83 11`, ASL generates `85 11`
 - `ld D, imm8` encoding: TMP94C241 uses `24 nn`, ASL generates different encoding
 - `ld A, imm8` encoding: TMP94C241 uses `21 nn`
+- `ld (XIX), imm16` encoding: TMP94C241 uses `b4 02 LL HH` (4-byte)
+- `ld (XHL), imm16` encoding: TMP94C241 uses `b3 02 LL HH` (4-byte)
 
-**Remaining divergences** (~850 bytes from 0xFF8604-0xFF8955) include DMA transfer routines and inter-CPU communication handlers that need to be disassembled.
+**Remaining divergences** (~1,084 bytes) include:
+- SUB_8B89 and related serial/communication helpers (0xFF8B89+)
+- DMA transfer routines and inter-CPU communication handlers (0xFF8604-0xFF8955)
 
 ### Table Data (67.58% incorrect)
 
@@ -127,6 +132,12 @@ The `tmp94c241.inc` file contains macros that emit raw byte sequences for unsupp
 | `LDIR_94` | `83 11` | Block copy (TMP94C241 encoding) |
 | `LD_A value` | `21 nn` | Load immediate to A register |
 | `LD_D value` | `24 nn` | Load immediate to D register |
+| `LD_E value` | `25 nn` | Load immediate to E register |
+| `LD_L value` | `27 nn` | Load immediate to L register |
+| `LD_W value` | `20 nn` | Load immediate to W register |
+| `LD_pXIX_IMM16 value` | `b4 02 LL HH` | Store 16-bit imm to (XIX) |
+| `LD_pXHL_IMM16 value` | `b3 02 LL HH` | Store 16-bit imm to (XHL) |
+| `LD_MEM24_IMM16 addr,val` | `f2 LL MM HH 02 VV WW` | Store 16-bit to 24-bit addr |
 
 ### Encoding Differences
 
