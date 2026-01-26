@@ -8,32 +8,16 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 92 (87 open, 5 closed)
+**Total Issues:** 92 (85 open, 7 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (8) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (13) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (6) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (10)
+[Boot Sequence](#boot-sequence) (6) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (13) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (6) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (10)
 
 ---
 
 ## Open Issues
 
 ### Boot Sequence {#boot-sequence}
-
-#### 🟠 Boot: Document memory initialization sequence {#issue-kn5000-cav}
-
-**ID:** `kn5000-cav` | **Priority:** High | **Created:** 2026-01-25
-
-Trace RAM initialization: DRAM refresh setup (IC9/IC10), SRAM initialization (IC21), memory mapping configuration. Document any memory tests performed at boot and how the memory controller registers are configured.
-
----
-
-#### 🟠 Boot: Document peripheral initialization order {#issue-kn5000-52e}
-
-**ID:** `kn5000-52e` | **Priority:** High | **Created:** 2026-01-25
-
-Trace initialization of all peripherals in boot sequence order: serial channels (SC0/SC1), timers (T0-TB), interrupts (INTA/INT0), FDC (0x110000), LCD controller (IC206), any other I/O. Document register values written during init.
-
----
 
 #### 🟠 Boot: Document sub CPU startup handshake {#issue-kn5000-595}
 
@@ -782,6 +766,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-52e` | Boot: Document peripheral initialization order | 2026-01-26 |
+| `kn5000-cav` | Boot: Document memory initialization sequence | 2026-01-26 |
 | `kn5000-24m` | Boot: Document reset vector and early initialization | 2026-01-26 |
 | `kn5000-b21` | SubCPU Boot: Fix remaining 1,981 byte divergences | 2026-01-26 |
 | `kn5000-ii4` | SubCPU Boot: Disassemble DMA transfer routines (0xFF8604-... | 2026-01-26 |
@@ -797,7 +783,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 30 |
+| High | 28 |
 | Medium | 44 |
 | Low | 12 |
 
@@ -805,7 +791,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Category | Count |
 |----------|-------|
-| Boot Sequence | 8 |
+| Boot Sequence | 6 |
 | Control Panel | 1 |
 | Feature Demo | 11 |
 | Firmware Update | 12 |
@@ -820,4 +806,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-26 07:48*
+*Last updated: 2026-01-26 07:49*
