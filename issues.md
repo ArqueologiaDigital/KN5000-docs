@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 92 (88 open, 4 closed)
+**Total Issues:** 92 (87 open, 5 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (9) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (13) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (6) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (10)
+[Boot Sequence](#boot-sequence) (8) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (13) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (6) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (10)
 
 ---
 
@@ -32,14 +32,6 @@ Trace RAM initialization: DRAM refresh setup (IC9/IC10), SRAM initialization (IC
 **ID:** `kn5000-52e` | **Priority:** High | **Created:** 2026-01-25
 
 Trace initialization of all peripherals in boot sequence order: serial channels (SC0/SC1), timers (T0-TB), interrupts (INTA/INT0), FDC (0x110000), LCD controller (IC206), any other I/O. Document register values written during init.
-
----
-
-#### 🟠 Boot: Document reset vector and early initialization {#issue-kn5000-24m}
-
-**ID:** `kn5000-24m` | **Priority:** High | **Created:** 2026-01-25
-
-Trace main CPU behavior from reset vector (0xE00000 area). Document: initial stack pointer setup, memory controller configuration, clock/PLL initialization, watchdog setup. Identify the entry point and first instructions executed after power-on.
 
 ---
 
@@ -790,6 +782,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-24m` | Boot: Document reset vector and early initialization | 2026-01-26 |
 | `kn5000-b21` | SubCPU Boot: Fix remaining 1,981 byte divergences | 2026-01-26 |
 | `kn5000-ii4` | SubCPU Boot: Disassemble DMA transfer routines (0xFF8604-... | 2026-01-26 |
 | `kn5000-cfe` | subcpu: Get payload build working | 2026-01-25 |
@@ -804,7 +797,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 31 |
+| High | 30 |
 | Medium | 44 |
 | Low | 12 |
 
@@ -812,7 +805,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Category | Count |
 |----------|-------|
-| Boot Sequence | 9 |
+| Boot Sequence | 8 |
 | Control Panel | 1 |
 | Feature Demo | 11 |
 | Firmware Update | 12 |
@@ -827,4 +820,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-26 07:43*
+*Last updated: 2026-01-26 07:46*
