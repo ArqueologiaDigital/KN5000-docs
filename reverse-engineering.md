@@ -1594,15 +1594,34 @@ Analysis of indirect jump patterns in the main CPU ROM:
 
 | Pattern | Count | Status |
 |---------|-------|--------|
-| `JP T, XIX + WA` | 118 | 3 documented, 115 need naming |
-| `JP T, XIX + BC` | ~50 | Most undocumented |
-| `JP T, XIX + DE` | ~30 | Most undocumented |
-| `CALL T, XHL` | 103 | 5 labeled, 6 using raw addresses only |
-| `LDA XIX/XHL, 0E/0F*h` | 441 | Raw address loads for jump tables |
+| `JP T, XIX + WA` | 118 | 9 documented, 109 need naming |
+| `JP T, XIX + BC` | 54 | 4% documented |
+| `JP T, XIX + DE` | 56 | 4% documented |
+| `CALL T, XHL` | 103 | 5 labeled, 6 raw addresses |
+| `LDA XIX/XHL, 0E/0F*h` | 441 | Raw address loads |
 
-**High-use indirect call tables:**
-- 0xE9F11C (13 uses) - Critical event/message dispatch
-- 0xEA0A16 (12 uses) - Event handler dispatch
+**High-use indirect call tables (analyzed):**
+- 0xE9F11C (13 uses) - EVENT_HANDLER_DISPATCH_TABLE (11 handlers + 2 padding)
+- 0xEA0A16 (12 uses) - SingleLoadDstHandlerTable (data transfer subsystem)
+
+### FDC Memory Map
+
+FDC handler routines access these RAM locations:
+
+| Address | Purpose |
+|---------|---------|
+| 0x8A20 | FDC status/mode flag (0xFF = active) |
+| 0x8A24 | Error indicator (0x00 = success) |
+| 0x8A26 | Cached FDC status |
+| 0x8A2E | FDC timing parameter |
+| 0x8A34 | FDC control value |
+| 0x8A36 | FDC address register |
+| 0x8A40 | FDC command code (0-11) |
+| 0x8A44 | FDC output control flag |
+| 0x8A48-4A | Sector/track/head |
+| 0x8A6A | FDC output enable flag |
+| 0x8A6C | FDC drive/mode selector |
+| 0x8B04 | FDC control register |
 
 ### Known Jump Tables
 
