@@ -92,21 +92,25 @@ These routines handle DMA-based data transfer between the Sub CPU and Main CPU:
 | `DMA_MULTI_STAGE` | 0xFF874C | 211 bytes | Two-phase DMA with E1 command, 200-cycle delays |
 
 **Inter-CPU Communication Protocol:**
-- Uses handshaking via `INTERCPU_STATUS` register at 0x34
-- Bit 0: Ready flag (set/cleared by DMA routines)
-- Bit 4: DMA ready flag (checked for acknowledgment)
+- Uses handshaking via `INTERCPU_STATUS` register at 0x34:
+  - Bit 0: Sub CPU ready flag (set when ready, cleared when starting transfer)
+  - Bit 1: Completion signal from interrupt handler
+  - Bit 2: Gate for command processing in INT_HANDLER_9
+  - Bit 4: Main CPU ready flag (polled by sub CPU)
 - Commands sent via `INTER_CPU_LATCH` at 0x120000:
-  - E1 command: Multi-stage DMA transfer (used by DMA_MULTI_STAGE)
-  - E2 command: Payload transfer initiated
-  - E3 command: Payload ready signal
+  - E1 command: Multi-stage DMA transfer (two-phase with 200-cycle delays)
+  - E2 command: Payload transfer (10-byte parameter block)
+  - E3 command: Payload ready signal (sets bit 6 of SUBCPU_STATUS_FLAGS)
+  - Other: Low 5 bits = byte count-1, high 3 bits = handler index from table
 
 **Key memory locations discovered:**
 - `DMA_MODE_REG` (0x0102) - DMA mode control register
 - `DMA_READY_FLAG` (0x04FE) - DMA ready indication flag
 - `DMA_PARAM_BLOCK` (0x0502) - DMA parameter storage (XWA, XDE, BC)
 - `DMA_BUFFER_1` (0x050C) - First DMA buffer (multi-stage phase 1)
-- `DMA_SYNC_FLAG` (0x0516) - DMA synchronization flag
+- `DMA_SYNC_FLAG` (0x0516) - DMA sync state: 0=idle, 1=single xfer, 2=multi-stage
 - `DMA_BUFFER_2` (0x053E) - Second DMA buffer (multi-stage phase 2)
+- `AUDIO_HW_BASE` (0x100000) - Audio hardware registers (DSP/DAC)
 
 **Encoding fixes applied:**
 - `jrl T` (3-byte relative long jump) vs `jp` (4-byte absolute)

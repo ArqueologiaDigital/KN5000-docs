@@ -100,6 +100,8 @@ The sub CPU (tone generator controller) has its own memory map, documented from 
 | `0x054A` | 10B | `CMD_E2_BUFFER` - E2 command data buffer |
 | `0x0556` | 1B | `MEMTEST_RESULT` - Memory test result flags |
 | `0x0558` | 8B | `SERIAL_STATUS` - Serial communication status bytes |
+| `0x100000` | - | Audio Hardware Registers (DSP/DAC) |
+| `0x110000` | - | Keyboard/Control Panel Interface Latches |
 | `0x120000` | - | Inter-CPU Communication Latch (shared with main CPU) |
 | `0x130000` | - | Tone Generator Registers |
 | `0xFE0000 - 0xFFFFFF` | 128KB | Boot ROM |
@@ -122,7 +124,7 @@ The sub CPU (tone generator controller) has its own memory map, documented from 
 | `0x2C` | PB | Port B Data |
 | `0x2F` | PBFC | Port B Function Control |
 | `0x30` | INTTC01 | Interrupt Control (Timer 0/1) |
-| `0x34` | INTERCPU_STATUS | Inter-CPU handshaking status (bit 0=ready, bit 4=DMA ready) |
+| `0x34` | INTERCPU_STATUS | Inter-CPU handshaking: bit 0=sub ready, bit 1=completion, bit 2=gate, bit 4=main ready |
 | `0x36` | SC0CR | Serial Channel 0 Control |
 | `0x38` | SC0MOD | Serial Channel 0 Mode |
 | `0x3A` | SC1BUF | Serial Channel 1 Buffer |
@@ -194,7 +196,7 @@ Example: Command `0x45` = handler 2 (`0x45 >> 5 = 2`), 6 bytes (`(0x45 & 0x1F) +
 |---------|--------|-------------|
 | `0x04FE` | `SUBCPU_STATUS_FLAGS` | Bit 6: payload ready, Bit 7: transfer complete |
 | `0x0512` | `DMA_TARGET_ADDR` | Current DMA destination address (4 bytes) |
-| `0x0516` | `DMA_STATE` | 0=idle, 1=pending, 2=in-progress |
+| `0x0516` | `DMA_SYNC_FLAG` | 0=idle, 1=single xfer, 2=multi-stage (E1) |
 | `0x0518` | `CMD_PROCESSING_STATE` | 0-4, tracks command processing phase |
 | `0x051A` | `LAST_CMD_BYTE` | Most recent command byte received |
 | `0x051E` | `CMD_DATA_BUFFER` | Variable-length command data (32 bytes) |
@@ -231,7 +233,7 @@ Key routines identified in the boot ROM at 0xFF8000+:
 | `0xFF8594` | `FILL_WORDS` | Memory fill with word values |
 | `0xFF859B` | `CHECKSUM_CALC` | Calculate checksum over memory range |
 | `0xFF85AE` | `INIT_DMA_SERIAL` | DMA and serial initialization |
-| `0xFF8604-0xFF8955` | *DMA routines* | ~850 bytes, not yet disassembled |
+| `0xFF8604-0xFF881E` | *DMA routines* | 539 bytes, fully disassembled (5 routines) |
 | `0xFF8956` | `INIT_MEMORY_TEST` | Memory test initialization |
 | `0xFF881F` | `INT_HANDLER_9` | Serial receive interrupt |
 | `0xFF889A` | `INT_HANDLER_37` | DMA complete interrupt |
