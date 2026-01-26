@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 92 (90 open, 2 closed)
+**Total Issues:** 92 (89 open, 3 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (11) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (13) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (6) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (10)
+[Boot Sequence](#boot-sequence) (10) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (6) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (13) · [Sound & Audio](#sound-audio) (12) · [Sub CPU](#sub-cpu) (6) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (10)
 
 ---
 
@@ -48,30 +48,6 @@ Trace main CPU behavior from reset vector (0xE00000 area). Document: initial sta
 **ID:** `kn5000-595` | **Priority:** High | **Created:** 2026-01-25
 
 Trace main CPU code that initializes sub CPU communication. Document: when sub CPU is released from reset, MicroDMA payload transfer trigger, latch communication at 0x120000 during boot, how main CPU knows sub CPU is ready. Cross-reference with SubCPU tasks.
-
----
-
-#### 🟠 SubCPU Boot: Disassemble DMA transfer routines (0xFF8604-0xFF8955) {#issue-kn5000-ii4}
-
-**ID:** `kn5000-ii4` | **Priority:** High | **Created:** 2026-01-25
-
-About 850 bytes of code from 0xFF8604 to 0xFF8955 need to be disassembled.
-
-This section contains DMA transfer and inter-CPU communication routines:
-- Multiple timeout loops with 0xEA60 counter
-- DMA channel 2 configuration (DMAS2, DMAC2)
-- Latch communication at 0x120000
-- Status flag handling at 0x0516
-- Memory buffer operations at 0x0502
-
-From unidasm analysis, routines include:
-- SUB_8604: DMA transfer setup with timeout
-- SUB_8649: Channel setup helper
-- SUB_86AC: Status polling routine
-- SUB_86DC: Alternate transfer handler
-- Several more helper routines
-
-Cross-reference with kn5000_subcpu_boot.ic30.unidasm for disassembly.
 
 ---
 
@@ -833,6 +809,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-ii4` | SubCPU Boot: Disassemble DMA transfer routines (0xFF8604-... | 2026-01-26 |
 | `kn5000-cfe` | subcpu: Get payload build working | 2026-01-25 |
 | `kn5000-bcn` | Identify control panel MCU chip type from schematics | 2026-01-25 |
 
@@ -845,7 +822,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 33 |
+| High | 32 |
 | Medium | 44 |
 | Low | 12 |
 
@@ -853,7 +830,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Category | Count |
 |----------|-------|
-| Boot Sequence | 11 |
+| Boot Sequence | 10 |
 | Control Panel | 1 |
 | Feature Demo | 11 |
 | Firmware Update | 12 |
@@ -868,4 +845,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-26 02:04*
+*Last updated: 2026-01-26 03:08*
