@@ -16,10 +16,58 @@ The HD-AE5000 is an optional hard disk expansion that provides 1.08GB storage fo
 
 The main CPU communicates with the HDAE5000 via an 8255 PPI (Programmable Peripheral Interface).
 
-**Tasks:**
-1. Document Port A/B/C assignments and control register settings
-2. Trace all main CPU firmware accesses to `0x160000`
-3. Identify command/response protocol
+**PPI Port Addresses:**
+
+| Address | Port | Direction | Function |
+|---------|------|-----------|----------|
+| 0x160000 | Port A | Output | Data output |
+| 0x160002 | Port B | Input | Status input |
+| 0x160004 | Port C | Output | Control signals |
+| 0x160006 | Control | Write | PPI configuration |
+
+**PPI Control Register Value: 0x82**
+- Bit 7 = 1: Mode set active
+- Port A: Mode 0, Output
+- Port B: Mode 0, Input
+- Port C: Output (both nibbles)
+
+**Port C Control Signals:**
+
+| Bit | Function | Usage |
+|-----|----------|-------|
+| 0 | Strobe | SET 0 / RES 0 for pulse |
+| 1 | Secondary strobe | Secondary handshake |
+| 2 | Data direction/select | CHG 2 toggles |
+| 3 | Control signal | CHG 3 toggles |
+
+**Initialization Sequence (HDAE5000_Parport_Setup at 0xEF4BCC):**
+
+```
+1. B5CSL = 0x66 (bus timing for HDAE5000)
+2. Control Register = 0x82 (configure PPI)
+3. Port A = 0x00 (clear output)
+4. Port C = 0x00, then 0x0F (pulse control signals)
+5. Delay loop (0xDBBA0 iterations)
+6. Port C = 0x00 (clear control)
+7. Poll Port B bit 0 until clear (wait for ready)
+```
+
+**HDAE5000 Detection (at 0xEF05B0):**
+
+```asm
+BIT 0, (PE)           ; Check PE port bit 0
+JR NZ, skip_hdae      ; If set, HD-AE5000 NOT present
+CALR Get_Area_Region_Code
+CP L, 4               ; Check region code
+CALL NZ, HDAE5000_Parport_Setup ; Init if present
+```
+
+The HD-AE5000 presence is detected via PE port bit 0 (active low).
+
+**Data Transfer Protocol:**
+- Port A: Data output (byte values)
+- Port B: Status input (bit 0 = busy/ready)
+- Port C: Handshaking control signals
 
 ### HDAE5000 ROM (0x280000)
 
@@ -63,45 +111,133 @@ The main CPU (TMP94C241F) loads a 192KB executable payload to the sub CPU (IC27)
 
 ### MicroDMA Mechanism
 
-The TMP94C241F has a built-in MicroDMA controller for high-speed transfers.
+The TMP94C241F has a built-in MicroDMA controller with 4 channels (0-3).
 
-**Key Registers:**
-- `DMAS` - DMA Source address
-- `DMAD` - DMA Destination address
-- `DMAC` - DMA Count (transfer size)
-- `DMAM` - DMA Mode (transfer settings)
+**DMA Register Addresses:**
 
-**Tasks:**
-1. Document MicroDMA register addresses and bit definitions from TMP94C241F datasheet
-2. Identify which DMA channel is used for sub CPU transfer
-3. Find initialization code in main CPU firmware
+| Register | Ch0 | Ch1 | Ch2 | Ch3 | Description |
+|----------|-----|-----|-----|-----|-------------|
+| DMASn | 0x100 | 0x110 | 0x120 | 0x130 | Source Address (24-bit) |
+| DMADn | 0x104 | 0x114 | 0x124 | 0x134 | Destination Address (24-bit) |
+| DMACn | 0x108 | 0x118 | 0x128 | 0x138 | Transfer Count (16-bit) |
+| DMAMn | 0x10C | 0x11C | 0x12C | 0x13C | Mode Register |
+
+**DMA Mode Register Bits (DMAMn):**
+
+| Bits | Function | Values |
+|------|----------|--------|
+| 7-6 | Transfer mode | 00=burst, 01=cycle-steal, 10=single |
+| 5-4 | Source addressing | 00=fixed, 01=increment, 10=decrement |
+| 3-2 | Dest addressing | 00=fixed, 01=increment, 10=decrement |
+| 1-0 | Data size | 00=byte, 01=word, 10=long |
+
+**LDC Instruction Encoding for DMA Registers:**
+
+DMA registers are accessed via special `LDC` (Load Control) instructions. ASL doesn't support these natively, so macros emit raw bytes:
+
+| Instruction | Encoding | Description |
+|-------------|----------|-------------|
+| `LDC DMAS0, XWA` | `E8 2E 00` | Load source ch0 from XWA |
+| `LDC DMAD0, XWA` | `E8 2E 20` | Load dest ch0 from XWA |
+| `LDC DMAC0, WA` | `D8 2E 40` | Load count ch0 from WA |
+| `LDC DMAS2, XDE` | `EA 2E 08` | Load source ch2 from XDE |
+| `LDC DMAD2, XWA` | `E8 2E 28` | Load dest ch2 from XWA |
+| `LDC DMAC2, BC` | `D9 2E 48` | Load count ch2 from BC |
+
+**Third Byte Encoding (DMA register selector):**
+
+| Value | Register | Description |
+|-------|----------|-------------|
+| 0x00 | DMAS0 | Source, Channel 0 |
+| 0x08 | DMAS2 | Source, Channel 2 |
+| 0x0C | DMAS3 | Source, Channel 3 |
+| 0x20 | DMAD0 | Destination, Channel 0 |
+| 0x28 | DMAD2 | Destination, Channel 2 |
+| 0x2C | DMAD3 | Destination, Channel 3 |
+| 0x40 | DMAM0 | Mode, Channel 0 |
+| 0x42 | DMAC0 | Count, Channel 0 |
+| 0x48 | DMAM2 | Mode, Channel 2 |
+| 0x4A | DMAC2 | Count, Channel 2 |
+
+**Sub CPU Boot ROM DMA Usage:**
+- **Channel 0**: Latch reads (source=0x120000 fixed, dest=RAM incrementing)
+- **Channel 2**: Payload transfers (configurable source/dest)
+- **DMA_MODE_REG** (0x0102) = 0x16: Enables DMA, sets trigger mode
+- **Trigger**: Write 0x0A to 0x0100, or set T01MOD bit 2
+
+**DMA Transfer Routines (Sub CPU Boot ROM):**
+
+| Routine | Address | Size | Function |
+|---------|---------|------|----------|
+| DMA_SEND_CHUNKED | 0xFF8604 | 69B | Sends data in 32-byte chunks |
+| DMA_SEND_BLOCK | 0xFF8649 | 99B | Single block with handshaking |
+| SEND_E3_CMD | 0xFF86AC | 48B | Payload ready signal |
+| WAIT_DMA_THEN_E2 | 0xFF86DC | 112B | Wait then send E2 command |
+| DMA_MULTI_STAGE | 0xFF874C | 211B | Two-phase transfer with E1 |
 
 ### Inter-CPU Communication (0x120000)
 
-The main and sub CPUs communicate via latches at `0x120000`.
+The main and sub CPUs communicate via a single-byte latch at `0x120000`.
 
-**Tasks:**
-1. Document latch register layout (command, status, data bytes)
-2. Identify handshaking signals
-3. Trace how main CPU signals "payload ready"
-4. Trace how sub CPU acknowledges receipt
+**Command Encoding:**
+
+| Byte Range | Format | Description |
+|------------|--------|-------------|
+| 0x00-0x1F | `HHHLLLLL` | Handler (bits 7-5) + data length-1 (bits 4-0) |
+| 0xE1 | Fixed | Multi-stage DMA, 6-byte param block at 0x0544 |
+| 0xE2 | Fixed | Payload transfer, 10-byte param block at 0x054A |
+| 0xE3 | Fixed | Payload ready signal |
+
+**Handshaking Register (INTERCPU_STATUS at SFR 0x34):**
+
+| Bit | Name | Description |
+|-----|------|-------------|
+| 0 | SUB_READY | Sub CPU ready to receive |
+| 1 | COMPLETION | Transfer complete signal |
+| 2 | GATE | Processing gate for INT_HANDLER_9 |
+| 4 | MAIN_READY | Main CPU ready (polled by sub) |
+
+**Transfer Sequence (Sub CPU → Main CPU):**
+
+```
+1. Poll MAIN_READY (bit 4) until set
+2. Clear SUB_READY (bit 0)
+3. Write command byte to 0x120000
+4. Poll MAIN_READY for acknowledgment
+5. Set SUB_READY, initiate DMA
+6. Wait for COMPLETION (bit 1) via interrupt
+```
+
+**Status Flags (SUBCPU_STATUS_FLAGS at 0x04FE):**
+- Bit 6: Payload data ready
+- Bit 7: Transfer complete
+
+**No checksumming** observed in protocol - relies on handshaking for reliability.
 
 ### Boot Sequence
 
-**Expected flow:**
-1. Main CPU initializes after reset
-2. Sub CPU held in reset (or waiting)
-3. Main CPU configures DMA: source = payload in ROM, dest = sub CPU memory
-4. DMA transfer executes (192KB)
-5. Main CPU signals transfer complete via latch
-6. Sub CPU boot ROM jumps to payload entry point
-7. Sub CPU signals ready to main CPU
+**Confirmed flow (from firmware analysis):**
 
-**Tasks:**
-1. Trace complete boot sequence in main CPU firmware
-2. Identify sub CPU type (IC27) from service manual
-3. Document sub CPU memory map
-4. Analyze 192KB payload structure (entry point, vectors, segments)
+1. Main CPU initializes after reset (see Reset Vector section)
+2. Sub CPU boot ROM runs from 0xFF8290 (BOOT_INIT)
+3. Sub CPU configures DMA for inter-CPU latch at 0x120000
+4. Sub CPU waits for payload via `INT_HANDLER_9` (serial receive)
+5. Main CPU sends payload via DMA transfers
+6. Sub CPU receives E3 command (payload ready signal)
+7. Sub CPU jumps to payload entry point via trampoline at 0x0400
+8. Sub CPU signals ready to main CPU via INTERCPU_STATUS
+
+**Sub CPU Boot ROM Key Routines:**
+
+| Address | Routine | Function |
+|---------|---------|----------|
+| 0xFF8290 | BOOT_INIT | Hardware initialization entry |
+| 0xFF846D | COPY_VECTORS | Copy trampolines to RAM (0x0400) |
+| 0xFF85AE | INIT_DMA_SERIAL | Configure DMA for latch |
+| 0xFF84A8 | INIT_TONE_GEN | Initialize tone generator at 0x130000 |
+| 0xFF881F | INT_HANDLER_9 | Serial receive interrupt |
+| 0xFF88B8 | INT_HANDLER_35 | Timer/processing interrupt |
+| 0xFF889A | INT_HANDLER_37 | DMA complete interrupt |
 
 ### Payload Structure
 
@@ -505,13 +641,64 @@ Understanding the complete boot sequence is essential for MAME emulation and deb
 
 ### Reset Vector and Early Init
 
-The main CPU begins execution at the reset vector (near `0xE00000`).
+**Reset Vector:** `0xFFFF00` points to `RESET_HANDLER` at `0xEF03C6`
 
-**Tasks:**
-1. Document initial stack pointer setup
-2. Trace memory controller configuration
-3. Document clock/PLL initialization
-4. Identify watchdog setup
+The main CPU executes the following initialization sequence:
+
+| Step | Address | Action | Register Values |
+|------|---------|--------|-----------------|
+| 1 | 0xEF03C6 | Disable Watchdog | WDMOD=0x00, WDCR=0xB1 |
+| 2 | 0xEF03CC | Clock Config | CLKMOD=0x04 |
+| 3 | 0xEF03D0 | Port Setup | See table below |
+| 4 | 0xEF0420 | Timer Init | T01MOD=0x1D, T23MOD=0x1D |
+| 5 | 0xEF0450 | Memory Controller | MSAR0-5, MAMR0-5 |
+| 6 | 0xEF04A1 | DRAM Init | DRAM1REF, DRAM1CRL/H |
+| 7 | 0xEF04C0 | Bus Chip Select | B0CSL-B5CSL, B0CSH-B5CSH |
+| 8 | 0xEF0510 | Serial & DAC | SC0MOD=0x29, DAREG0/1=0xFF |
+| 9 | 0xEF0526 | Stack Pointer | XSP=0x00000C00 |
+
+**Port Configuration (Step 3):**
+
+| Port | Data | Function Control | Control Register |
+|------|------|------------------|------------------|
+| PF | 0x00 | 0x73 (panel on, MIDI off) | 0x15 |
+| P2/P3 | - | 0xFF | - |
+| P7 | 0xFF | 0x1F | 0x00 |
+| PA | 0xFE | 0x08 | - |
+| PB | 0xFF | 0x1F | - |
+| PC | 0x03 | 0x00 | 0x02 |
+| PD | 0x00 | 0x06 | 0x11 |
+| PE | 0x00 | 0x42 | 0x20 |
+| PH | 0x00 | 0x1E | 0x09 |
+| PZ | 0xFF | - | 0x03 |
+
+**Timer Initialization (Step 4):**
+
+```
+8-bit Timers:
+  T01MOD = 0x1D, T23MOD = 0x1D
+  T02FFCR = 0x00
+  TREG0 = 0x0A, TREG1 = 0x10
+  T8RUN bit 1 set
+
+16-bit Timer 4:
+  T4MOD = 0x05, T4FFCR = 0x00, T16CR = 0x00
+  TREG4L = 0x0001, TREG5L = 0x3D09
+  T16RUN bits 7 and 0 set
+```
+
+**Post-Init Sequence (after 0xEF0526):**
+1. `Seems_to_copy_some_data_buffers` - Data initialization
+2. `MainCPU_self_test_routines` - RAM test
+3. `Get_Firmware_Version` - Read version from ROM
+4. If boot ROM (version 0xFF): Display "Please Wait !!" bitmap
+5. Initialize system timestamp to 0
+6. Call peripheral init routines
+7. Set interrupt priorities (INTET01, INTET45)
+8. Detect area/region code
+9. Check for HD-AE5000 (PE bit 0)
+10. Read control panel buttons for update mode
+11. Optional: `FLASH_MEM_UPDATE` if holding button combo
 
 ### Memory Initialization
 
@@ -519,28 +706,73 @@ The main CPU begins execution at the reset vector (near `0xE00000`).
 - DRAM: IC9/IC10 (M5M44260AJ7S, 4Mbit each)
 - SRAM: IC21 (1Mbit, battery-backed)
 
-**Tasks:**
-1. Document DRAM refresh setup
-2. Trace SRAM initialization
-3. Document memory mapping configuration
-4. Identify any memory tests performed
+**Memory Segment Configuration (MSAR/MAMR):**
+
+| Segment | MSAR | MAMR | Start Address | Size |
+|---------|------|------|---------------|------|
+| 0 | 0x1E | 0x0F | 0x1E0000 | 64KB |
+| 1 | 0x10 | 0x3F | 0x100000 | 256KB |
+| 2 | 0xC0 | 0x7F | 0xC00000 | 512KB |
+| 3 | 0x00 | 0x1F | 0x000000 | 128KB |
+| 4 | 0x80 | 0xFF | 0x800000 | 1MB (Table Data) |
+| 5 | 0x00 | 0xFF | 0x000000 | 1MB |
+
+**DRAM Initialization Sequence (0xEF04A1-0xEF04BC):**
+
+```
+1. Short delay loop (BC = 0x400 iterations)
+2. DRAM1REF = 0x81 (initial refresh)
+3. Longer delay loop (BC = 0x2000 iterations)
+4. DRAM1REF = 0x71 (final refresh)
+5. DRAM1CRL = 0x8B (DRAM control low)
+6. DRAM1CRH = 0x58 (DRAM control high)
+7. PMEMCR bit 4 cleared
+```
+
+**Bus Chip Select Configuration:**
+
+| Register | Low | High | Description |
+|----------|-----|------|-------------|
+| B0CS | 0x11 | 0x80 | Bus segment 0 |
+| B1CS | 0x33 | 0x81 | Bus segment 1 |
+| B2CS | 0x11 | 0xC2 | Bus segment 2 |
+| B3CS | 0x22 | 0x8A | Bus segment 3 |
+| B4CS | 0x11 | 0x82 | Bus segment 4 |
+| B5CS | 0x22 | 0x81 | Bus segment 5 |
+
+**Memory Test:**
+- `MainCPU_self_test_routines` performs RAM test
+- Uses complementary patterns: 0x5A5A5A5A and 0xA5A5A5A5
 
 ### Peripheral Initialization Order
 
-Peripherals are initialized in a specific sequence after memory setup.
+The confirmed initialization order (from RESET_HANDLER analysis):
 
-**Expected order:**
-1. Serial channels (SC0/SC1) - for control panel and MIDI
-2. Timers (T0-TB) - for timing and PWM
-3. Interrupt controllers (INTA/INT0)
-4. FDC at `0x110000` - floppy disk controller
-5. LCD controller (IC206)
-6. Other I/O
+| Order | Peripheral | Registers | Values |
+|-------|------------|-----------|--------|
+| 1 | Watchdog | WDMOD, WDCR | 0x00, 0xB1 (disable) |
+| 2 | Clock | CLKMOD | 0x04 |
+| 3 | GPIO Ports | Px, PxFC, PxCR | See port table above |
+| 4 | 8-bit Timers | T01MOD, T23MOD, TREGx | See timer table |
+| 5 | 16-bit Timers | T4MOD, T16RUN, TREGxL | See timer table |
+| 6 | Memory Controller | MSARx, MAMRx | See memory table |
+| 7 | DRAM | DRAM1REF, DRAM1CRL/H | See DRAM sequence |
+| 8 | Bus Chip Select | BxCSL, BxCSH | See bus table |
+| 9 | Serial Channel 0 | SC0MOD, SC0CR | 0x29, 0x00 |
+| 10 | DAC | DAREG0, DAREG1, DADRV | 0xFF, 0xFF, 0x03 |
+| 11 | Stack Pointer | XSP | 0x00000C00 |
 
-**Tasks:**
-1. Trace each peripheral init in firmware
-2. Document register values written
-3. Create initialization order diagram
+**Sub CPU Initialization (after main init):**
+
+| Order | Peripheral | Registers | Values |
+|-------|------------|-----------|--------|
+| 1 | Watchdog | WDMOD_REAL, WDCR_REAL | 0x00, 0xB1 |
+| 2 | Interrupt | INT_CTRL (0x10A) | 0x04 |
+| 3 | Port Functions | P0FC-PBFC | 0xFF (most ports) |
+| 4 | Interrupt/Status | INTTC01 (0x30) | 0x03 |
+| 5 | 8-bit Timers | T01MOD, T23MOD | 0x1D, 0x0A |
+| 6 | 16-bit Timer 4 | T4MOD, T4FFCR | 0x05, 0x00 |
+| 7 | Serial Channels | SER0_MOD, SER1_MOD | 0x01, 0x29 |
 
 ### Sub CPU Startup
 
@@ -605,41 +837,120 @@ The KN5000 has a 320x240 QVGA LCD display for user interface.
 
 ### LCD Controller (MN89304)
 
-Matsushita/Panasonic LCD controller.
+The MN89304 is a Panasonic LCD controller providing **VGA-compatible register interface**.
 
-**Tasks:**
-1. Find datasheet (if available)
-2. Document register map
-3. Identify supported video modes
-4. Document pixel formats
-5. Trace timing parameters
-6. Find memory-mapped I/O addresses
+**I/O Port Addresses (memory-mapped):**
+
+| Port | Register | Function |
+|------|----------|----------|
+| 0x3C0 | Attribute Controller | Address/Data |
+| 0x3C2 | Misc Output | Timing config (write) |
+| 0x3C3 | VGA Enable | Global enable |
+| 0x3C4/3C5 | Sequencer | Address/Data |
+| 0x3C6 | DAC Mask | Palette mask |
+| 0x3C8 | DAC Write Addr | Palette index |
+| 0x3C9 | DAC Data | Palette RGB (6-bit each) |
+| 0x3CE/3CF | Graphics Ctrl | Address/Data |
+| 0x3D4/3D5 | CRTC | Address/Data |
+| 0x3DA | Input Status 1 | Vertical retrace |
+
+**Display Configuration:**
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Resolution | 320x240 | QVGA |
+| Color Depth | 8bpp | 256 indexed colors |
+| Dot Clock | 25 MHz | From Misc Output = 0xE3 |
+| Refresh | ~60 Hz | Standard VGA timing |
+
+**Initialization Sequence (`Some_VGA_setup` at 0xEF55A7):**
+
+| Step | Port | Value | Action |
+|------|------|-------|--------|
+| 1 | 0x3C3 | 0x01 | Global enable |
+| 2 | 0x3C2 | 0xE3 | 25MHz clock, 60Hz |
+| 3 | Seq 00 | 0x00 | Reset sequencer |
+| 4 | Seq 01 | 0x21 | Screen off, 8-dot clock |
+| 5 | Seq 00 | 0x03 | Release reset |
+| 6 | Seq 02 | 0x0F | All planes writable |
+| 7 | Seq 04 | 0x06 | Sequential, extended mem |
+| 8 | GC 05 | 0x00 | Write mode 0, read mode 0 |
+| 9 | GC 08 | 0xFF | Bit mask all bits |
+
+**CRTC Timing Registers:**
+
+| Register | Value | Description |
+|----------|-------|-------------|
+| Horiz Total | 0x65 | 101 characters |
+| Horiz Display End | 0x27 | 39 chars = 320 pixels |
+| Start H Retrace | 0x28 | Horizontal sync start |
+| End H Retrace | 0x29 | Horizontal sync end |
+| Vert Total | 0xF3 | 243 scanlines total |
+| Vert Display End | 0xEF | 239 = 240 visible lines |
+| Start V Retrace | 0xF2 | Vertical sync start |
+| End V Retrace | 0x03 | Vertical sync end |
+
+**Helper Functions:**
+- `Write_VGA_Register` (0xEF5141): Writes BC to port WA
+- `Read_VGA_Register` (0xEF5157): Reads from port WA
 
 ### Video RAM Organization
 
-4Mbit VRAM supports various configurations:
+**IC207: Mitsubishi M5M44265CJ8S (4Mbit VRAM)**
 
-| Color Depth | Bytes/Pixel | Frame Size | Frames in 4Mbit |
-|-------------|-------------|------------|-----------------|
-| 8bpp (256 colors) | 1 | 76,800 bytes | ~6.8 frames |
-| 16bpp (65K colors) | 2 | 153,600 bytes | ~3.4 frames |
-| 4bpp (16 colors) | 0.5 | 38,400 bytes | ~13.6 frames |
+| Parameter | Value |
+|-----------|-------|
+| Capacity | 512KB (4Mbit) |
+| Type | Dual-ported VRAM |
+| Base Address | 0x1A0000 |
 
-**Tasks:**
-1. Determine actual color depth used
-2. Document memory organization
-3. Identify double-buffering if used
-4. Trace access patterns from main CPU
+**Confirmed Configuration:**
+
+| Setting | Value |
+|---------|-------|
+| Color Depth | 8bpp (256 colors) |
+| Frame Size | 320 × 240 × 1 = 76,800 bytes |
+| Available Frames | 512KB / 75KB ≈ 6.8 frames |
+
+**Memory Layout:**
+
+| Address Range | Size | Content |
+|---------------|------|---------|
+| 0x1A0000-0x1A12BFF | 76,800B | Frame buffer 0 |
+| 0x1A12C00-0x1A257FF | 76,800B | Frame buffer 1 (if double-buffered) |
+| 0x1A25800-0x1A7FFFF | ~360KB | Additional buffers / sprites |
+
+**Access Patterns:**
+- CPU writes to 0x1A0000 base
+- VGA controller reads via serializer
+- CRTC Start Address (0x0C/0x0D) selects active buffer
+- Current config: Start Address = 0x0000 (buffer 0)
+
+**Display Timing:**
+- Pixel clock: 25 MHz
+- Horizontal: 320 visible + blanking ≈ 400 total
+- Vertical: 240 visible + blanking ≈ 262 total
+- Frame rate: 25MHz / (400 × 262) ≈ 60 Hz
 
 ### Pixel Format and Palette
 
-Based on extracted images, likely 8bpp indexed color.
+**Confirmed: 8-bit indexed color**
 
-**Tasks:**
-1. Confirm bits per pixel
-2. Document palette format and location
-3. Trace how palette is loaded
-4. Identify any direct color modes
+| Property | Value |
+|----------|-------|
+| Bits per pixel | 8 |
+| Color count | 256 |
+| Palette format | 6-bit R, 6-bit G, 6-bit B |
+| Total palette colors | 18-bit (262,144 possible) |
+
+**Palette Loading:**
+1. Write palette index to 0x3C8
+2. Write R, G, B values (6-bit each) to 0x3C9
+3. Index auto-increments
+
+**EGA Compatibility:**
+- Attribute Controller (0x3C0) provides 16-color EGA palette at indices 0-15
+- Standard EGA palette loaded during initialization
 
 ### Drawing Primitives
 
@@ -1043,47 +1354,91 @@ Official updates distributed as executable files on floppy disk.
 | KN5KPV9.EXE | v9 | 1999-01-26 |
 | KN5KPV10.EXE | v10 | 1999-08-02 |
 
-**Tasks:**
-1. Analyze file header format
-2. Document payload structure
-3. Identify checksum algorithm
-4. Check for compression
+**File Type Identifiers (38-byte header at 0xE00038):**
+
+| ID | Header String | Description |
+|----|---------------|-------------|
+| 1 | `Technics KN5000 Program  DATA FILE 1/2` | Main CPU ROM disk 1 |
+| 2 | `Technics KN5000 Program  DATA FILE 2/2` | Main CPU ROM disk 2 |
+| 3 | `Technics KN5000 Table    DATA FILE 1/2` | Table data disk 1 |
+| 4 | `Technics KN5000 Table    DATA FILE 2/2` | Table data disk 2 |
+| 5 | `Technics KN5000 CMPCUSTOMDATA FILE    ` | Custom data (compressed?) |
+| 6 | `Technics KN5000 HD-AEPRG DATA FILE    ` | HDAE5000 ROM |
+| 7 | `Technics KN5000 Program  DATA FILE PCK` | Main CPU ROM (packed) |
+| 8 | `Technics KN5000 Table    DATA FILE PCK` | Table data (packed) |
+
+**File Structure:**
+- 38-byte identification header string
+- Null terminator (0x00)
+- 0xFF marker byte
+- Payload data
+
+**Handler Dispatch:** Table at 0xE00178 routes each file type to its handler.
+Types 2 and 4 show "ILLEGAL DISK" if loaded before 1 and 3 respectively.
 
 ### Update Mode Entry
 
-Special key combinations trigger update mode at power-on.
+**Entry Conditions (all must be true at RESET_HANDLER 0xEF05C5):**
 
-**Tasks:**
-1. Find key combo detection code in firmware
-2. Document required button sequence
-3. Identify any service mode entries
+| Condition | Check | Description |
+|-----------|-------|-------------|
+| 1 | Firmware version = 0xFF | Running from boot ROM, not flash |
+| 2 | Floppy disk inserted | `Check_for_Floppy_Disk_Change` ≠ 0 |
+| 3 | Button code = 0x04 | Specific button held at power-on |
+
+**Detection Code:**
+
+```asm
+CALL Read_control_panel_buttons  ; Read buttons at power-on
+LD (0402h), L                    ; Store button state
+CALL Get_Firmware_Version
+CP L, 0ffh                       ; Check if boot ROM
+JR NZ, skip_update
+CALL Check_for_Floppy_Disk_Change
+CP HL, 0                         ; Check disk present
+JR Z, skip_update
+CP (0402h), 004h                 ; Button code 0x04?
+JR NZ, skip_update
+CALL FLASH_MEM_UPDATE            ; Enter update mode
+```
+
+**Notes:**
+- Update mode only accessible from boot ROM (virgin/corrupted flash)
+- "Please Wait !!" bitmap displayed at 0xEF0536 when in boot ROM mode
+- System halts after update (infinite loop at LABEL_EF05E6)
 
 ### File Types and Target Components
 
-Different file types update different system components.
+| File ID | Header | Target | Address | Size |
+|---------|--------|--------|---------|------|
+| 1 | Program 1/2 | Main CPU ROM (first half) | 0xE00000+ | 1MB |
+| 2 | Program 2/2 | Main CPU ROM (second half) | 0xF00000+ | 1MB |
+| 3 | Table 1/2 | Table Data (first half) | 0x800000+ | 1MB |
+| 4 | Table 2/2 | Table Data (second half) | 0x900000+ | 1MB |
+| 5 | CMPCUSTOMDATA | Custom Data Flash | 0x300000 | 1MB |
+| 6 | HD-AEPRG | HDAE5000 ROM | 0x280000 | 512KB |
+| 7 | Program PCK | Main CPU ROM (packed) | 0xE00000 | 2MB |
+| 8 | Table PCK | Table Data (packed) | 0x800000 | 2MB |
 
-| Target | Address | Description |
-|--------|---------|-------------|
-| Main CPU Program | 0xE00000 | 2MB program Flash |
-| Custom Data | 0x300000 | 1MB user storage Flash |
-| Sub CPU Payload | via DMA | 192KB loaded at boot |
-| HDAE5000 | 0x280000 | Expansion board firmware |
+**Component Sizes:**
 
-**Tasks:**
-1. Map file naming patterns to targets
-2. Document multi-file updates
-3. Identify version compatibility checks
+| Component | Size | Distribution |
+|-----------|------|--------------|
+| Main CPU ROM | 2MB | 2 disks (1/2, 2/2) or 1 packed |
+| Table Data | 2MB | 2 disks (1/2, 2/2) or 1 packed |
+| Custom Data | 1MB | 1 disk (compressed?) |
+| HDAE5000 ROM | 512KB | 1 disk |
+
+**Note:** Sub CPU payload (192KB) is embedded within main CPU ROM, not a separate update file.
 
 ### Flash ROM Chips
 
-**Tasks:**
-1. Identify chip manufacturer and part numbers from service manual
-2. Document capacity and sector size
-3. Identify command set (JEDEC/AMD/Intel)
+**Chip Identification:** QV1GFKN5KAX1
 
-**Expected chip locations:**
-- IC4/IC6: Program Flash (0xE00000)
-- Custom Data Flash (0x300000)
+| Location | Chip | Capacity | Address |
+|----------|------|----------|---------|
+| IC4/IC6 | Program Flash | 2MB total | 0xE00000 |
+| - | Custom Data Flash | 1MB | 0x300000 |
 
 ### Flash Erase Algorithm
 

@@ -98,6 +98,38 @@ Detailed hardware documentation extracted from the service manual schematics.
 - DMA controller
 - Timers
 
+### Sub CPU (Tone Generator Controller)
+
+**IC27: TMP94C241F**
+- Toshiba 32-bit TLCS-900/H2 microcontroller (same as main CPU)
+- Up to 20 MHz clock
+- 16 MB linear address space (24-bit addresses)
+- 2 KB internal RAM (0x000800-0x000FFF)
+
+**Memory Map:**
+
+| Address | Size | Description |
+|---------|------|-------------|
+| 0x0000-0x00FF | 256B | Special Function Registers (SFR) |
+| 0x0100-0x01FF | 256B | Extended SFR (memory controller, DMA, watchdog) |
+| 0x0400-0x04E0 | 225B | Interrupt trampolines (copied from ROM) |
+| 0x0500-0x05A2 | ~160B | RAM / Stack area |
+| 0x100000 | - | Audio hardware registers (DSP/DAC interface) |
+| 0x110000 | - | Keyboard/control panel interface |
+| 0x120000 | - | Inter-CPU communication latch |
+| 0x130000 | - | Tone generator registers |
+| 0xFE0000-0xFFFFFF | 128KB | Boot ROM |
+
+**I/O Capabilities:**
+- 2 serial channels (SC0, SC1)
+- 4 8-bit timers (T0-T3)
+- 16-bit timer (T4)
+- DMA controller (channels 0 and 2 used)
+- Multiple GPIO ports (P0-PB, PE, PF)
+- DRAM controller with refresh
+
+**Role:** Controls tone generator at 0x130000, handles audio synthesis, and communicates with main CPU via latch at 0x120000. Receives 192KB payload from main CPU at boot.
+
 ### Memory
 
 | IC | Part Number | Type | Size | Function |

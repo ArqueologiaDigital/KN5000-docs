@@ -639,26 +639,26 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
-| `kn5000-7vw` | Update: Identify Flash ROM chip types | 2026-01-26 |
-| `kn5000-3cm` | Update: Map file types to system components | 2026-01-26 |
-| `kn5000-qtl` | Update: Document key combinations for update mode | 2026-01-26 |
-| `kn5000-psz` | Update: Document floppy disk file formats | 2026-01-26 |
 | `kn5000-jwk` | Document DATA/BCK serial interface pinout | 2026-01-26 |
-| `kn5000-618` | HDAE5000: Analyze PPI interface at 0x160000 | 2026-01-26 |
+| `kn5000-bcn` | Identify control panel MCU chip type from schematics | 2026-01-26 |
 | `kn5000-toq` | Sound: Identify and document Sub CPU (IC27) | 2026-01-26 |
+| `kn5000-7vw` | Update: Identify Flash ROM chip types | 2026-01-26 |
+| `kn5000-qtl` | Update: Document key combinations for update mode | 2026-01-26 |
+| `kn5000-3cm` | Update: Map file types to system components | 2026-01-26 |
+| `kn5000-psz` | Update: Document floppy disk file formats | 2026-01-26 |
+| `kn5000-6qi` | Video: Document LCD controller IC206 (MN89304) | 2026-01-26 |
+| `kn5000-m91` | Video: Document Video RAM IC207 (M5M44265CJ8S) | 2026-01-26 |
+| `kn5000-t75` | Video: Trace LCD initialization in firmware | 2026-01-26 |
+| `kn5000-618` | HDAE5000: Analyze PPI interface at 0x160000 | 2026-01-26 |
 | `kn5000-595` | Boot: Document sub CPU startup handshake | 2026-01-26 |
 | `kn5000-c3p` | SubCPU: Trace payload transfer initialization | 2026-01-26 |
 | `kn5000-dui` | SubCPU: Analyze inter-CPU latch protocol at 0x120000 | 2026-01-26 |
-| `kn5000-m91` | Video: Document Video RAM IC207 (M5M44265CJ8S) | 2026-01-26 |
-| `kn5000-t75` | Video: Trace LCD initialization in firmware | 2026-01-26 |
-| `kn5000-6qi` | Video: Document LCD controller IC206 (MN89304) | 2026-01-26 |
 | `kn5000-fmq` | SubCPU: Document MicroDMA registers on TMP94C241F | 2026-01-26 |
 | `kn5000-52e` | Boot: Document peripheral initialization order | 2026-01-26 |
 | `kn5000-cav` | Boot: Document memory initialization sequence | 2026-01-26 |
 | `kn5000-24m` | Boot: Document reset vector and early initialization | 2026-01-26 |
 | `kn5000-b21` | SubCPU Boot: Fix remaining 1,981 byte divergences | 2026-01-26 |
 | `kn5000-ii4` | SubCPU Boot: Disassemble DMA transfer routines (0xFF8604-... | 2026-01-26 |
-| `kn5000-cfe` | subcpu: Get payload build working | 2026-01-25 |
 
 *...and 1 more closed issues*
 
@@ -694,4 +694,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-26 08:25*
+*Last updated: 2026-01-26 08:40*

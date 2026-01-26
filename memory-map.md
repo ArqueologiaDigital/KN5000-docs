@@ -13,9 +13,11 @@ permalink: /memory-map/
 | `0x000000 - 0x0FFFFF` | 1MB | Internal RAM / SFRs |
 | `0x110000` | - | Floppy Disk Controller |
 | `0x120000` | - | Inter-CPU Communication Latches |
-| `0x160000` | - | HDAE5000 PPI (Hard Disk Expansion Interface) |
+| `0x160000 - 0x160006` | 8B | HDAE5000 PPI (8255) |
+| `0x1A0000 - 0x1A7FFF` | 512KB | Video RAM (IC207 M5M44265CJ8S) |
 | `0x280000` | 512KB | HDAE5000 ROM |
 | `0x300000` | 1MB | Custom Data Flash (User Storage) |
+| `0x3C0 - 0x3DA` | - | VGA Registers (LCD Controller IC206) |
 | `0x400000` | - | Rhythm Data ROM |
 | `0x800000` | 2MB | Table Data ROM |
 | `0xE00000` | 2MB | Program Flash (Main ROM) |
