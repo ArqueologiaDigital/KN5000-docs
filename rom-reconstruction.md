@@ -89,21 +89,24 @@ These routines handle DMA-based data transfer between the Sub CPU and Main CPU:
 | `DMA_SEND_BLOCK` | 0xFF8649 | 99 bytes | Send single data block via DMA |
 | `SEND_E3_CMD` | 0xFF86AC | 48 bytes | Send E3 (payload ready) command |
 | `WAIT_DMA_THEN_E2` | 0xFF86DC | 112 bytes | Wait for DMA, then send E2 command |
-| `DMA_MULTI_STAGE` | 0xFF874C | 211 bytes | Complex multi-stage DMA transfer |
+| `DMA_MULTI_STAGE` | 0xFF874C | 211 bytes | Two-phase DMA with E1 command, 200-cycle delays |
 
 **Inter-CPU Communication Protocol:**
 - Uses handshaking via `INTERCPU_STATUS` register at 0x34
 - Bit 0: Ready flag (set/cleared by DMA routines)
 - Bit 4: DMA ready flag (checked for acknowledgment)
-- Commands sent via `INTER_CPU_LATCH` at 0x120000
-- E2 command: Payload transfer initiated
-- E3 command: Payload ready signal
+- Commands sent via `INTER_CPU_LATCH` at 0x120000:
+  - E1 command: Multi-stage DMA transfer (used by DMA_MULTI_STAGE)
+  - E2 command: Payload transfer initiated
+  - E3 command: Payload ready signal
 
 **Key memory locations discovered:**
 - `DMA_MODE_REG` (0x0102) - DMA mode control register
-- `DMA_PARAM_BLOCK` (0x0502) - DMA parameter storage (XWA, XDE, BC)
 - `DMA_READY_FLAG` (0x04FE) - DMA ready indication flag
+- `DMA_PARAM_BLOCK` (0x0502) - DMA parameter storage (XWA, XDE, BC)
+- `DMA_BUFFER_1` (0x050C) - First DMA buffer (multi-stage phase 1)
 - `DMA_SYNC_FLAG` (0x0516) - DMA synchronization flag
+- `DMA_BUFFER_2` (0x053E) - Second DMA buffer (multi-stage phase 2)
 
 **Encoding fixes applied:**
 - `jrl T` (3-byte relative long jump) vs `jp` (4-byte absolute)
