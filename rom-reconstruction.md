@@ -37,7 +37,7 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 |-----|------|---------|-----------|-------------|
 | Main CPU | 2MB | 99.99% | 177 | `maincpu/kn5000_v10_program.asm` |
 | Sub CPU Payload | 192KB | **100%** | 0 | `subcpu/kn5000_subprogram_v142.asm` |
-| Sub CPU Boot | 128KB | 99.17% | 1,084 | `subcpu_boot/kn5000_subcpu_boot.asm` |
+| Sub CPU Boot | 128KB | 99.35% | 846 | `subcpu_boot/kn5000_subcpu_boot.asm` |
 | Table Data | 2MB | 32.42% | 1,417,294 | `table_data/kn5000_table_data.asm` |
 | Custom Data | 1MB | - | - | No source yet |
 | HDAE5000 (HD Expansion) | 512KB | - | - | No source yet |
@@ -58,9 +58,9 @@ Two color palettes have been extracted as binary includes:
 - **Palette 1** at 0xEB37DE - first palette (inline in sequential section)
 - **Palette 2** at 0xEEFAF0 - second palette (`Palette_8bit_RGBA_2.bin`)
 
-### Sub CPU Boot (1,084 bytes)
+### Sub CPU Boot (846 bytes)
 
-The Sub CPU boot ROM is now buildable and at 99.17% match. Recent progress includes:
+The Sub CPU boot ROM is now buildable and at 99.35% match. Recent progress includes:
 
 **Routines discovered and added:**
 - `SUB_8437` (0xFF8437) - Tone generator initialization loop
@@ -70,6 +70,9 @@ The Sub CPU boot ROM is now buildable and at 99.17% match. Recent progress inclu
 - `FILL_WORDS` (0xFF8594) - Memory fill with word values
 - `CHECKSUM_CALC` (0xFF859B) - Calculate checksum over memory range
 - `SUB_8B37` (0xFF8B37) - LED/output bit manipulation routine
+- `SUB_8B89` (0xFF8B89) - Inter-CPU communication handler (reads from 0x110000 latches)
+- `SUB_8BD2` (0xFF8BD2) - Note/velocity calculation with lookup tables
+- `SUB_8C75` (0xFF8C75) - Hardware register write helper (0x100000)
 - Stub routines at 0xFF8496-0xFF85AB returning 0 in HL
 
 **Encoding fixes applied:**
@@ -80,8 +83,8 @@ The Sub CPU boot ROM is now buildable and at 99.17% match. Recent progress inclu
 - `ld (XIX), imm16` encoding: TMP94C241 uses `b4 02 LL HH` (4-byte)
 - `ld (XHL), imm16` encoding: TMP94C241 uses `b3 02 LL HH` (4-byte)
 
-**Remaining divergences** (~1,084 bytes) include:
-- SUB_8B89 and related serial/communication helpers (0xFF8B89+)
+**Remaining divergences** (~846 bytes) include:
+- SUB_8C80+ hardware calibration routines (0xFF8C80+)
 - DMA transfer routines and inter-CPU communication handlers (0xFF8604-0xFF8955)
 
 ### Table Data (67.58% incorrect)
