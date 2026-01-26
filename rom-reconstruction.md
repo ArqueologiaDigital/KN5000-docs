@@ -79,6 +79,32 @@ The Sub CPU boot ROM has achieved **100% byte-perfect reconstruction!**
 - `SUB_FE80-FEC1` (0xFFFE80) - Debug/diagnostic routines (hex output, string output)
 - Vector trampolines and interrupt handlers
 
+**DMA Transfer Routines (0xFF8604-0xFF881E):**
+
+These routines handle DMA-based data transfer between the Sub CPU and Main CPU:
+
+| Routine | Address | Size | Description |
+|---------|---------|------|-------------|
+| `DMA_SEND_CHUNKED` | 0xFF8604 | 69 bytes | Send data in 32-byte chunks via DMA |
+| `DMA_SEND_BLOCK` | 0xFF8649 | 99 bytes | Send single data block via DMA |
+| `SEND_E3_CMD` | 0xFF86AC | 48 bytes | Send E3 (payload ready) command |
+| `WAIT_DMA_THEN_E2` | 0xFF86DC | 112 bytes | Wait for DMA, then send E2 command |
+| `DMA_MULTI_STAGE` | 0xFF874C | 211 bytes | Complex multi-stage DMA transfer |
+
+**Inter-CPU Communication Protocol:**
+- Uses handshaking via `INTERCPU_STATUS` register at 0x34
+- Bit 0: Ready flag (set/cleared by DMA routines)
+- Bit 4: DMA ready flag (checked for acknowledgment)
+- Commands sent via `INTER_CPU_LATCH` at 0x120000
+- E2 command: Payload transfer initiated
+- E3 command: Payload ready signal
+
+**Key memory locations discovered:**
+- `DMA_MODE_REG` (0x0102) - DMA mode control register
+- `DMA_PARAM_BLOCK` (0x0502) - DMA parameter storage (XWA, XDE, BC)
+- `DMA_READY_FLAG` (0x04FE) - DMA ready indication flag
+- `DMA_SYNC_FLAG` (0x0516) - DMA synchronization flag
+
 **Encoding fixes applied:**
 - `jrl T` (3-byte relative long jump) vs `jp` (4-byte absolute)
 - `ldir` encoding: TMP94C241 uses `83 11`, ASL generates `85 11`
@@ -114,12 +140,16 @@ The `tmp94c241.inc` file contains macros that emit raw byte sequences for unsupp
 | Macro | Encoding | Description |
 |-------|----------|-------------|
 | `LDC_DMAS0_XWA` | `e8 2e 00` | Load DMA source 0 from XWA |
+| `LDC_DMAS2_XDE` | `ea 2e 08` | Load DMA source 2 from XDE |
+| `LDC_DMAS2_XHL` | `eb 2e 08` | Load DMA source 2 from XHL |
 | `LDC_DMAD0_XWA` | `e8 2e 20` | Load DMA destination 0 from XWA |
 | `LDC_DMAD0_XBC` | `e9 2e 20` | Load DMA destination 0 from XBC |
 | `LDC_DMAD2_XWA` | `e8 2e 28` | Load DMA destination 2 from XWA |
 | `LDC_DMAC0_WA` | `d8 2e 40` | Load DMA count 0 from WA |
 | `LDC_DMAC0_A` | `c9 2e 42` | Load DMA count 0 from A |
 | `LDC_DMAC2_A` | `c9 2e 4a` | Load DMA count 2 from A |
+| `LDC_DMAC2_BC` | `d9 2e 48` | Load DMA count 2 from BC |
+| `LDC_DMAC2_WA` | `d8 2e 48` | Load DMA count 2 from WA |
 
 **Additional Sub CPU Boot ROM Macros:**
 
@@ -142,6 +172,30 @@ The `tmp94c241.inc` file contains macros that emit raw byte sequences for unsupp
 | `LD_pXIX_IMM16 value` | `b4 02 LL HH` | Store 16-bit imm to (XIX) |
 | `LD_pXHL_IMM16 value` | `b3 02 LL HH` | Store 16-bit imm to (XHL) |
 | `LD_MEM24_IMM16 addr,val` | `f2 LL MM HH 02 VV WW` | Store 16-bit to 24-bit addr |
+
+**Stack Frame and Register Macros (DMA routines):**
+
+| Macro | Encoding | Description |
+|-------|----------|-------------|
+| `DEC_6_XSP` | `ef 6e` | Decrement XSP by 6 (allocate stack frame) |
+| `INC_6_XSP` | `ef 66` | Increment XSP by 6 (deallocate stack frame) |
+| `LD_IZ_BC` | `d9 8e` | Load IZ from BC |
+| `CP_IZ_imm16 val` | `de cf LL HH` | Compare IZ with 16-bit immediate |
+| `SUB_IZ_imm16 val` | `de ca LL HH` | Subtract 16-bit immediate from IZ |
+| `LD_C_IZL` | `c7 f8 8b` | Load C from low byte of IZ |
+| `EXTZ_WA` | `d8 12` | Zero-extend A to WA |
+| `EXTZ_BC` | `d9 12` | Zero-extend C to BC |
+
+**Stack-Relative Addressing Macros:**
+
+| Macro | Encoding | Description |
+|-------|----------|-------------|
+| `LD_A_pXSP_d disp` | `8f dd 21` | Load A from (XSP+disp) |
+| `LD_XDE_pXSP_d disp` | `af dd 22` | Load XDE from (XSP+disp) |
+| `LD_XBC_pXSP_d disp` | `af dd 21` | Load XBC from (XSP+disp) |
+| `LD_pXSP_d_A disp` | `bf dd 41` | Store A to (XSP+disp) |
+| `LD_pXSP_d_XDE disp` | `bf dd 62` | Store XDE to (XSP+disp) |
+| `ADD_pXSP_d_XWA disp` | `af dd 88` | Add XWA to (XSP+disp) |
 
 ### Encoding Differences
 

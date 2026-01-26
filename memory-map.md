@@ -88,10 +88,11 @@ The sub CPU (tone generator controller) has its own memory map, documented from 
 | `0x0000 - 0x00FF` | 256B | Special Function Registers (SFR) |
 | `0x0100 - 0x01FF` | 256B | Extended SFR / Memory Controller |
 | `0x0400 - 0x04E0` | 225B | Interrupt vector trampolines (copied from boot ROM) |
-| `0x04FE` | 1B | `SUBCPU_STATUS_FLAGS` - Status flags (bit 6=payload ready, bit 7=xfer complete) |
+| `0x04FE` | 1B | `DMA_READY_FLAG` - DMA ready indication (bit 7 set when DMA ready) |
 | `0x0500 - 0x05A2` | ~160B | RAM / Stack area (stack init = 0x05A2) |
+| `0x0502` | 12B | `DMA_PARAM_BLOCK` - DMA parameter storage (XWA, XDE, BC values) |
 | `0x0512` | 4B | `DMA_TARGET_ADDR` - Current DMA destination address |
-| `0x0516` | 2B | `DMA_STATE` - DMA state machine (0=idle, 1=pending, 2=in progress) |
+| `0x0516` | 2B | `DMA_SYNC_FLAG` - DMA synchronization (0=complete, 1=pending, 2=E1 mode) |
 | `0x0518` | 2B | `CMD_PROCESSING_STATE` - Command processing state (0-4) |
 | `0x051A` | 1B | `LAST_CMD_BYTE` - Last received command byte from main CPU |
 | `0x051E` | 32B | `CMD_DATA_BUFFER` - Variable-length command data buffer |
@@ -121,14 +122,16 @@ The sub CPU (tone generator controller) has its own memory map, documented from 
 | `0x2C` | PB | Port B Data |
 | `0x2F` | PBFC | Port B Function Control |
 | `0x30` | INTTC01 | Interrupt Control (Timer 0/1) |
-| `0x34` | SC0BUF | Serial Channel 0 Buffer |
+| `0x34` | INTERCPU_STATUS | Inter-CPU handshaking status (bit 0=ready, bit 4=DMA ready) |
 | `0x36` | SC0CR | Serial Channel 0 Control |
 | `0x38` | SC0MOD | Serial Channel 0 Mode |
 | `0x3A` | SC1BUF | Serial Channel 1 Buffer |
 | `0x3C` | SC1CR | Serial Channel 1 Control |
 | `0x3E` | SC1MOD | Serial Channel 1 Mode |
-| `0x80` | WDMOD | Watchdog Mode |
-| `0x81` | WDCR | Watchdog Control |
+| `0x80` | T01MOD | Timer 0/1 Mode (not watchdog - real WD at 0x110) |
+| `0x81` | T01FFCR | Timer 0/1 Flip-Flop Control |
+| `0x82` | T8RUN | 8-bit Timer Run Control |
+| `0x102` | DMA_MODE_REG | DMA mode configuration register |
 
 ## Inter-CPU Communication
 
