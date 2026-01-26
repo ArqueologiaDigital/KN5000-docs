@@ -52,7 +52,35 @@ The project uses **ASL (Alfred Arnold's Macro Assembler)** version 1.42 Beta.
 
 ### Main CPU (177 bytes)
 
-*Analysis in progress - divergent byte offsets being cataloged.*
+All 177 divergent bytes are located in a small region (0xFDDE5F - 0xFDED63) and stem from a single root cause:
+
+**Root Cause: 24-bit vs 16-bit Address Encoding**
+
+At address 0xFDECB6, the instruction `LD C, (8D3Ah)` is encoded differently:
+- **Original ROM**: `C1 3A 8D 23` (4 bytes) - 16-bit address mode
+- **Rebuilt ROM**: `C2 3A 8D 00 23` (5 bytes) - 24-bit address mode (`:24` suffix)
+
+The extra byte causes all subsequent addresses to shift by +1, affecting:
+- 6 CALL/JP target addresses (showing F4→F5, 11→12 patterns)
+- ~170 bytes of shifted code in the FDECB5-FDED63 range
+
+**Why Simple Fix Doesn't Work**
+
+Removing the `:24` suffix saves 1 byte but makes the ROM 1 byte too short. The original ROM has some other instruction generating 1 extra byte elsewhere that balances the total. Finding this compensating difference requires analyzing the entire ROM's instruction encodings.
+
+**Divergent Regions (10 total):**
+
+| Region | Address Range | Bytes | Description |
+|--------|---------------|-------|-------------|
+| 1 | 0xFDDE5F | 1 | CALL target offset |
+| 2 | 0xFDDE63 | 1 | CALL target offset |
+| 3 | 0xFDDEDF | 1 | CALL target offset |
+| 4 | 0xFDDEE3 | 1 | CALL target offset |
+| 5 | 0xFDE00C | 1 | CALL target offset |
+| 6 | 0xFDE010 | 1 | CALL target offset |
+| 7-10 | 0xFDECB5-0xFDED63 | 171 | Instruction encoding + shifted code |
+
+**Palettes:**
 
 Two color palettes have been extracted as binary includes:
 - **Palette 1** at 0xEB37DE - first palette (inline in sequential section)

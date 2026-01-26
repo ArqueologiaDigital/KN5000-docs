@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 92 (71 open, 21 closed)
+**Total Issues:** 93 (72 open, 21 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (12) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (13) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
 
 ---
 
@@ -409,6 +409,12 @@ Based on protocol documentation, design the C++ interface for a MAME HLE device 
 
 ---
 
+#### 🟡 Fix 177 divergent bytes in Main CPU ROM (24-bit address encoding issue) {#issue-kn5000-5a0}
+
+**ID:** `kn5000-5a0` | **Priority:** Medium | **Created:** 2026-01-26
+
+---
+
 #### 🟡 Map LED indices to physical panel LEDs {#issue-kn5000-ljl}
 
 **ID:** `kn5000-ljl` | **Priority:** Medium | **Created:** 2026-01-25
@@ -672,7 +678,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 1 |
 | High | 14 |
-| Medium | 44 |
+| Medium | 45 |
 | Low | 12 |
 
 ### By Category
@@ -686,7 +692,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
 | Main CPU ROM | 1 |
-| Other | 12 |
+| Other | 13 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Table Data ROM | 1 |
@@ -694,4 +700,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-26 08:40*
+*Last updated: 2026-01-26 09:27*
