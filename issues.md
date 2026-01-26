@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 92 (75 open, 17 closed)
+**Total Issues:** 92 (71 open, 21 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (12) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (12) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (12) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
 
 ---
 
@@ -162,38 +162,6 @@ Create complete documentation of the Feature Demo: slide order, timing between s
 ---
 
 ### Firmware Update {#firmware-update}
-
-#### 🟠 Update: Document floppy disk file formats {#issue-kn5000-psz}
-
-**ID:** `kn5000-psz` | **Priority:** High | **Created:** 2026-01-25
-
-Analyze the system update floppy disk structure. Document: file naming conventions (KN5KPV*.EXE pattern), file header format, payload structure, checksums/validation, compression if any. Reference update disks at archive.org.
-
----
-
-#### 🟠 Update: Document key combinations for update mode {#issue-kn5000-qtl}
-
-**ID:** `kn5000-qtl` | **Priority:** High | **Created:** 2026-01-25
-
-Find and document the key press combinations needed to enter system update mode. Check for: power-on key combos, button sequences, service mode entry. Trace the code that detects these combinations in main CPU firmware.
-
----
-
-#### 🟠 Update: Identify Flash ROM chip types {#issue-kn5000-7vw}
-
-**ID:** `kn5000-7vw` | **Priority:** High | **Created:** 2026-01-25
-
-Document the Flash ROM chips used for updatable storage. From service manual: identify manufacturer, part numbers, capacity, sector size, command set (JEDEC, AMD, Intel). Chips at 0xE00000 (program) and 0x300000 (custom data).
-
----
-
-#### 🟠 Update: Map file types to system components {#issue-kn5000-3cm}
-
-**ID:** `kn5000-3cm` | **Priority:** High | **Created:** 2026-01-25
-
-Document which file types update which system components: main CPU program ROM, sub CPU payload, table data, custom data flash, HDAE5000 firmware. Create matrix showing file extension/name pattern vs target component.
-
----
 
 #### 🟡 Update: Document FDC interaction during update {#issue-kn5000-70b}
 
@@ -671,6 +639,10 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-7vw` | Update: Identify Flash ROM chip types | 2026-01-26 |
+| `kn5000-3cm` | Update: Map file types to system components | 2026-01-26 |
+| `kn5000-qtl` | Update: Document key combinations for update mode | 2026-01-26 |
+| `kn5000-psz` | Update: Document floppy disk file formats | 2026-01-26 |
 | `kn5000-jwk` | Document DATA/BCK serial interface pinout | 2026-01-26 |
 | `kn5000-618` | HDAE5000: Analyze PPI interface at 0x160000 | 2026-01-26 |
 | `kn5000-toq` | Sound: Identify and document Sub CPU (IC27) | 2026-01-26 |
@@ -687,7 +659,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-b21` | SubCPU Boot: Fix remaining 1,981 byte divergences | 2026-01-26 |
 | `kn5000-ii4` | SubCPU Boot: Disassemble DMA transfer routines (0xFF8604-... | 2026-01-26 |
 | `kn5000-cfe` | subcpu: Get payload build working | 2026-01-25 |
-| `kn5000-bcn` | Identify control panel MCU chip type from schematics | 2026-01-25 |
+
+*...and 1 more closed issues*
 
 ---
 
@@ -698,7 +671,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 18 |
+| High | 14 |
 | Medium | 44 |
 | Low | 12 |
 
@@ -709,7 +682,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Boot Sequence | 5 |
 | Control Panel | 1 |
 | Feature Demo | 11 |
-| Firmware Update | 12 |
+| Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
 | Main CPU ROM | 1 |
@@ -721,4 +694,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-26 08:22*
+*Last updated: 2026-01-26 08:25*
