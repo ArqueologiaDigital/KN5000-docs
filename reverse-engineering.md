@@ -1588,6 +1588,22 @@ OFFSET_TABLE:
 | `JP T, XIX + BC` | Indexed jump (base + BC offset) |
 | `JP T, XIX + DE` | Indexed jump (base + DE offset) |
 
+### Jump Table Statistics
+
+Analysis of indirect jump patterns in the main CPU ROM:
+
+| Pattern | Count | Status |
+|---------|-------|--------|
+| `JP T, XIX + WA` | 118 | 3 documented, 115 need naming |
+| `JP T, XIX + BC` | ~50 | Most undocumented |
+| `JP T, XIX + DE` | ~30 | Most undocumented |
+| `CALL T, XHL` | 103 | 5 labeled, 6 using raw addresses only |
+| `LDA XIX/XHL, 0E/0F*h` | 441 | Raw address loads for jump tables |
+
+**High-use indirect call tables:**
+- 0xE9F11C (13 uses) - Critical event/message dispatch
+- 0xEA0A16 (12 uses) - Event handler dispatch
+
 ### Known Jump Tables
 
 | Table | Address | Type | Entries | Purpose |
@@ -1598,6 +1614,15 @@ OFFSET_TABLE:
 | `SOUND_DATA_SECTION_PTRS` | 0xE023B0 | 32-bit addresses | 16 | Sound category data pointers |
 | `FDC_HANDLER_OFFSETS` | 0xEA98CA | 16-bit offsets | 12 | FDC command handler dispatch |
 | `FDC_HANDLER_DISPATCH_BASE` | 0xF97D8D | (base address) | 12 | FDC handler routines |
+| `SQTR_DISPATCH_TABLE_1` | 0xF20D37 | Inline code | 6 | Sequencer track handler (SqTrAsTtlFunc) |
+| `SQTR_DISPATCH_TABLE_2` | 0xF20D8E | Inline code | 6 | Sequencer track handler (SqTrAsTtlFunc) |
+| `APP_EVENT_HANDLER_TABLE` | 0xF44169 | Inline code | 32 | Application event delivery system |
+| `NOTE_EVENT_DISPATCH_1` | 0xF17155 | Inline code | 7 | Note event handler (BC index) |
+| `NOTE_EVENT_DISPATCH_2` | 0xF171C4 | Inline code | 7 | Note event handler (WA index) |
+| `UI_COMPONENT_DISPATCH` | 0xF1A7CB | Inline code | 8 | UI grid/focus component handler |
+| `RESOURCE_INFO_HANDLERS` | 0xF1EA4C | Inline code | 10 | Resource info retrieval (GetResouceInfo) |
+| `FDC_COMMAND_DISPATCHER` | 0xF96DB1 | Inline code | 12 | FDC command dispatcher |
+| `FDC_CMD_HANDLER_BASE` | 0xF96DD6 | (base address) | 12 | FDC command handler base |
 
 ### Handler Dispatch Example
 
