@@ -1644,6 +1644,34 @@ The FDC subsystem uses a handler dispatch table at 0xF97D8D with 12 handlers. Fu
 
 **Handler dispatch** works by reading an index from 0x8A40 (0-11) and calling the corresponding routine through the dispatch table.
 
+### FDC Helper Routines (Fully Analyzed)
+
+These helper routines support the main FDC handlers:
+
+| Address | Name | Size | Description |
+|---------|------|------|-------------|
+| 0xF97544 | FDC_DRIVE_DETECT | 78 bytes | 6-check drive detection (returns HL=0xFFFF if found) |
+| 0xF97592 | FDC_DRIVE_STATUS | 26 bytes | Quick 2-check status validation |
+| 0xF972F9 | FDC_SEND_COMMAND | 231 bytes | NEC uPD765 command protocol |
+| 0xF975DC | FDC_SET_TIMEOUT | 6 bytes | Set wait flag for timeout protection |
+| 0xF975E2 | FDC_WAIT_TIMEOUT | 48 bytes | Wait with 500ms timeout (error 0x09) |
+| 0xF97612 | SOME_DELAY | 32 bytes | Millisecond delay (WA/2 ms) |
+
+**FDC_DRIVE_DETECT (0xF97544)** validates 6 conditions:
+1. (8A46h) == 0 - Status register 3 clear
+2. (8A44h) == 0 - Status register 2 clear
+3. (8A40h) == 3 - Command = Sense Drive Status
+4. (8A4Ah) == 1 - Result count = 1
+5. (8A10h) == 0xFFFF - Detection mode active
+6. (8A48h) == 2 or 0xFF - Valid drive response
+
+**FDC_SEND_COMMAND (0xF972F9)** implements the NEC uPD765 protocol:
+- Command byte structure: MT(7), MF(6), SK(5), Command(4-0)
+- Accesses FDC hardware at 0x110008 (status) and 0x11000A (data)
+- Handles: Seek, Recalibrate, Read/Write Data, Format Track, Sense Interrupt
+
+**SOME_DELAY timing**: Uses SYSTEM_TIMESTAMP at 0x0409, incremented by Timer 1 at ~1ms intervals. Delay = WA/2 milliseconds.
+
 ### Known Jump Tables
 
 | Table | Address | Type | Entries | Purpose |
@@ -1735,6 +1763,100 @@ To find undocumented jump tables:
 2. Look for raw address loads before jumps: `LDA XIX, 0E*h` or `LDA XHL, 0F*h`
 3. Trace back to find table definitions (`dd LABEL_*` or `dw offset`)
 4. Verify all table targets are disassembled
+
+### Jump Table Analysis Statistics
+
+Analysis of indirect jump patterns in the main CPU ROM reveals the scale of dispatch mechanisms used:
+
+| Pattern | Count | Status |
+|---------|-------|--------|
+| `JP T, XIX + WA` | 118 | 9 documented, 109 need naming |
+| `JP T, XIX + BC` | 54 | 4% documented |
+| `JP T, XIX + DE` | 56 | 4% documented |
+| `CALL T, XHL` | 103 | 5 labeled, 6 raw addresses |
+| `LDA XIX/XHL, 0E/0F*h` | 441 | Raw address loads for tables |
+
+**High-Use Indirect Call Tables (Analyzed):**
+
+| Address | Uses | Purpose |
+|---------|------|---------|
+| 0xE9F11C | 13 | EVENT_HANDLER_DISPATCH_TABLE (11 handlers + 2 padding) |
+| 0xEA0A16 | 12 | SingleLoadDstHandlerTable (data transfer subsystem) |
+| 0xEA0212 | 1 | Resource loader dispatch |
+
+---
+
+## UI and Event System
+
+The firmware implements a sophisticated event-driven UI system with multiple dispatch layers.
+
+### Event Handler Dispatch
+
+The main event loop uses a multi-level dispatch system:
+
+**APP_EVENT_HANDLER_TABLE (0xF44169):**
+- 32 inline code handlers for application events
+- Used for LED control, button handling, and UI updates
+
+**UI_COMPONENT_DISPATCH (0xF1A7CB):**
+- 8 inline code handlers for UI grid/focus components
+- Handles keyboard grid navigation and focus management
+
+**NOTE_EVENT_DISPATCH (0xF17155 / 0xF171C4):**
+- Two 7-entry tables for note event handling
+- Uses BC index (table 1) or WA index (table 2)
+
+### Sequencer System
+
+The sequencer track system uses dedicated dispatch tables:
+
+| Table | Address | Entries | Purpose |
+|-------|---------|---------|---------|
+| SQTR_DISPATCH_TABLE_1 | 0xF20D37 | 6 | SqTrAsTtlFunc handlers |
+| SQTR_DISPATCH_TABLE_2 | 0xF20D8E | 6 | SqTrAsTtlFunc handlers |
+
+### Resource System
+
+**GetResouceInfo (0xF1EA4C):**
+- 10-entry dispatch table for resource information retrieval
+- Handles font metrics, character widths, and string dimensions
+
+**Known lookup tables:**
+
+| Address | Register | Purpose |
+|---------|----------|---------|
+| 0xE0CB1A | XHL | Character lookup table |
+| 0xE46312 | XHL | Character/font metrics |
+| 0xE161E4-0xE16244 | XHL | String width tables |
+
+### UI State Machine
+
+The main UI uses a two-level state machine:
+
+```
+Level 1 (0xEF0D64): 3 main states
+  ├── State 0: LABEL_EF0D70
+  ├── State 1: LABEL_EF0D73
+  └── State 2: LABEL_EF0D8F → Level 2
+
+Level 2 (0xEF0DA5): 16 sub-states for detailed UI handling
+```
+
+---
+
+## Undocumented Data Structures
+
+Large binary includes that need analysis:
+
+| Address Range | Size | File | Status |
+|---------------|------|------|--------|
+| 0xE0176C-0xE01F7F | 2.1 KB | `e0176c_e01f7f.bin` | Unknown structure |
+| 0xE02510-0xE06BAF | 18 KB | `e02510_e06baf.bin` | Unknown structure |
+| 0xE06F30-0xE0ADCF | 16 KB | `e06f30_e0adcf.bin` | Unknown structure |
+| 0xE0B250-0xE0BA60 | 2.1 KB | `e0b250_e0ba60.bin` | Unknown structure |
+| 0xE0BB90-0xE0E974 | 12 KB | `e0bb90_e0e974.bin` | Unknown structure |
+
+**Total undocumented binary data: ~50 KB** requiring structural analysis.
 
 ---
 
