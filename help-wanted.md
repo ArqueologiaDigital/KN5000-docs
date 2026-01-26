@@ -62,10 +62,59 @@ If you have a working KN5000:
 - Create visualization tools for protocol analysis
 - Build comparison/diff tools for ROM analysis
 
+## Contribution Guidelines (STRICT POLICIES)
+
+These policies ensure the disassembly remains useful for understanding the firmware, not just rebuilding it.
+
+### Symbolic Cross-Referencing
+
+**All cross-references must be symbolic (using labels), never numeric addresses.**
+
+```asm
+; WRONG - numeric address
+CALL 0F97544h
+LDA XIX, 0E46312h
+
+; CORRECT - symbolic label
+CALL FDC_DRIVE_DETECT
+LDA XIX, FONT_METRICS_TABLE
+```
+
+**Meaningful names are STRONGLY preferred:**
+- Use descriptive names: `FDC_SEND_COMMAND`, `LED_CONTROL_DISPATCH`, `MIDI_EVENT_HANDLER`
+- `LABEL_XXXXXX` style names are a **last resort** for completely unknown code/data
+- When you discover what a `LABEL_*` does, rename it immediately
+
+**Naming conventions:**
+- Routines: VerbNoun (`SendCommand`, `InitHardware`)
+- Data tables: NOUN_TABLE (`FONT_METRICS_TABLE`)
+- Constants: NOUN (`SYSTEM_TIMESTAMP`)
+- Flags: NOUN_FLAG (`DMA_READY_FLAG`)
+
+### Binary Include Splitting
+
+**When code references an address inside a binary include (not the first address), the binary must be split.**
+
+This ensures cross-references are symbolic and binary files become smaller for analysis.
+
+**Example:** If `data.bin` covers 0xE02510-0xE06BAF and code references 0xE04000:
+1. Split the binary at 0xE04000
+2. Replace one `binclude` with two, each with a proper label
+3. Remove old binary, add new binaries to git
+4. Verify build still produces identical ROM
+
+### Disassembly Quality
+
+- **Prefer disassembled code over raw bytes** - Raw `db` sequences are last resort
+- **Never sacrifice readability** for byte-matching
+- **Document everything** - Comments, labels, and clear structure
+
+See `CLAUDE.md` in the repository for complete policy details.
+
 ## Getting Started
 
 1. Clone the [ROM disassembly repo](https://github.com/ArqueologiaDigital/kn5000-roms-disasm)
-2. Read the `CLAUDE.md` for build instructions
+2. Read the `CLAUDE.md` for build instructions and **contribution policies**
 3. Browse the [Project Issues]({{ site.baseurl }}/issues/) to find tasks you can help with
 4. Check the [Open Questions]({{ site.baseurl }}/questions/) for areas needing investigation
 5. Join the [discussion forum](https://forum.fiozera.com.br/t/technics-kn5000-homebrew-development/321)
