@@ -197,9 +197,19 @@ The encoder dispatch routine `CPanel_EncoderDispatch` (0xFC6C5F):
 
 | ID | Handler | Output Variable | Physical Control |
 |----|---------|-----------------|------------------|
-| 2 | Active | `ENCODER_0_OUTPUT` | Data wheel / Jog wheel |
-| 5 | Active | `ENCODER_1_OUTPUT`, `MIDI_CC_VOLUME_VALUE` | Volume slider / Expression |
-| 0-31 (others) | Default | Returns 0xFFFF | Unknown/unused |
+| 2 | `Encoder_ProcessModwheel` | `MIDI_CC_MODWHEEL_VALUE` | Modulation wheel |
+| 5 | `Encoder_ProcessVolume` | `MIDI_CC_VOLUME_VALUE` | Volume slider |
+| 25 | `Encoder_ProcessBreath` | `MIDI_CC_BREATH_VALUE` | Breath controller |
+| 26 | `Encoder_ProcessFoot` | `MIDI_CC_FOOT_VALUE` | Foot controller |
+| 27 | `Encoder_ProcessExpression` | `MIDI_CC_EXPRESSION_VALUE` | Expression pedal |
+| 31 | `Encoder_ReturnValue` | Direct passthrough | Raw value output |
+| 0-1,3-4,6-24,28-30 | `Encoder_ReturnOne` | Returns 1 | Unused |
+
+**Encoder Processing:**
+- Raw input values are inverted (`CPL A`) and stored in `ENCODER_RAW_*` variables
+- Values are divided by 2 (`SRL 1, A`) and used as lookup table indices
+- Lookup tables at `ENCODER_LUT_*` convert raw values to MIDI CC range (0-127)
+- Change detection compares with previous value before storing
 
 ### Timing Requirements
 
@@ -711,14 +721,7 @@ The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "valu
 
 ### LED Packet Format
 
-The LED handler uses bits 4-5 of the first byte to dispatch to one of 4 handlers via `CPanel_LED_PacketHandlers` (0xFC4B85). The handlers are undisassembled (raw bytes starting at 0xFC6C80).
-
-| Bits 4-5 | Handler | Status |
-|----------|---------|--------|
-| 00 | `LABEL_FC6C80` | Undisassembled |
-| 01 | `LABEL_FC6CAE`? | Undisassembled |
-| 10 | Unknown | Undisassembled |
-| 11 | Unknown | Undisassembled |
+The LED handler uses bits 4-5 of the first byte to dispatch to one of 4 handlers via `CPanel_LED_PacketHandlers` (0xFC4B85). Further investigation needed to understand exact LED packet structure.
 
 ### Multi-byte Packet Purpose (Types 6, 7)
 
@@ -737,12 +740,15 @@ We know the segment addressing scheme but lack complete physical button mapping:
 
 ### Encoder Physical Mapping
 
-Only 2 of 32 encoder IDs have active handlers:
-- **ID 2**: Used for `ENCODER_0_OUTPUT` (data wheel?)
-- **ID 5**: Used for `ENCODER_1_OUTPUT` and volume
-- **IDs 0-1, 3-4, 6-31**: Return 0xFFFF (no handler)
+Six encoder IDs have dedicated processing handlers:
+- **ID 2**: Modulation wheel → `MIDI_CC_MODWHEEL_VALUE`
+- **ID 5**: Volume slider → `MIDI_CC_VOLUME_VALUE`
+- **ID 25**: Breath controller → `MIDI_CC_BREATH_VALUE`
+- **ID 26**: Foot controller → `MIDI_CC_FOOT_VALUE`
+- **ID 27**: Expression pedal → `MIDI_CC_EXPRESSION_VALUE`
+- **ID 31**: Direct passthrough (raw value)
 
-Physical encoder assignment (pitch bend, mod wheel, etc.) unconfirmed.
+Physical assignments confirmed from firmware analysis. Remaining IDs (0-1, 3-4, 6-24, 28-30) return 1 (unused).
 
 ### Baud Rate Transitions
 
@@ -751,15 +757,14 @@ The serial channel switches between rates during operation:
 - 250 kHz during normal operation
 - Exact timing/trigger for rate switches not fully traced
 
-### Undisassembled Routines
-
-These routines need disassembly to complete protocol understanding:
+### Remaining Undisassembled Routines
 
 | Address | Size | Context |
 |---------|------|---------|
-| 0xFC6C80 | ~112 bytes | LED packet handlers |
 | 0xFC4B95 | Unknown | Called from LED path |
 | 0xFC4BC5 | Unknown | Called from LED path |
+
+Note: Encoder handlers (0xFC6C80-0xFC6E41) have been fully disassembled.
 
 ## References
 

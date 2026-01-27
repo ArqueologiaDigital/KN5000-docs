@@ -84,6 +84,19 @@ permalink: /memory-map/
 | `0x8D92` | `CPANEL_PROTOCOL_FLAGS` | Protocol state flags (byte) |
 | `0x8D93` | `CPANEL_PANEL_DETECT_FLAGS` | Panel detection flags (byte) |
 
+### Encoder Raw Input Storage
+
+| Address | Variable | Description |
+|---------|----------|-------------|
+| `0x8ECA` | `ENCODER_RAW_MODWHEEL` | Raw modulation wheel input |
+| `0x8ECC` | `ENCODER_RAW_VOLUME` | Raw volume slider input |
+| `0x8ED4` | `ENCODER_RAW_BREATH` | Raw breath controller input |
+| `0x8ED6` | `ENCODER_RAW_FOOT` | Raw foot controller input |
+| `0x8ED8` | `ENCODER_RAW_EXPRESSION` | Raw expression pedal input |
+| `0x8EDA` | `ENCODER_BREATH_MODE` | Breath controller mode/enable |
+| `0x8EDC` | `ENCODER_VOLUME_MODE` | Volume mode configuration |
+| `0x8EDE` | `ENCODER_RANGE_LIMIT` | Encoder range limit value |
+
 ### MIDI Controller Values
 
 | Address | Variable | Description |
@@ -92,9 +105,9 @@ permalink: /memory-map/
 | `0x8EE2` | `MIDI_CC_EXPRESSION_PENDING` | Expression value with change flag (bit 7) |
 | `0x8EE4` | `MIDI_CC_MODWHEEL_VALUE` | Current modulation wheel value (CC#1) |
 | `0x8EE6` | `MIDI_CC_EXPRESSION_VALUE` | Current expression value (CC#0) |
-| `0x8EE8` | `MIDI_CC_BREATH_VALUE` | Breath controller value (CC#2?) |
-| `0x8EEA` | `MIDI_CC_FOOT_VALUE` | Foot controller value (CC#4?) |
-| `0x8EF4` | `MIDI_CC_VOLUME_VALUE` | Volume controller value |
+| `0x8EE8` | `MIDI_CC_BREATH_VALUE` | Breath controller value (CC#2) |
+| `0x8EEA` | `MIDI_CC_FOOT_VALUE` | Foot controller value (CC#4) |
+| `0x8EF4` | `MIDI_CC_VOLUME_VALUE` | Volume controller value (CC#7) |
 
 ### Encoder State
 
@@ -107,6 +120,19 @@ permalink: /memory-map/
 | `0x8F10` | `ENCODER_0_OUTPUT` | Encoder 0 output buffer (2 bytes) |
 | `0x8F16` | `ENCODER_1_OUTPUT` | Encoder 1 output buffer (2 bytes) |
 | `0x8F18` | `ENCODER_STATE_BASE` | Base of encoder state structure |
+
+### Encoder Lookup Tables (ROM)
+
+| Address | Variable | Description |
+|---------|----------|-------------|
+| `0xEDA13C` | `ENCODER_LUT_MODWHEEL` | Modulation wheel value lookup |
+| `0xEDA1BC` | `ENCODER_LUT_VOLUME` | Volume slider value lookup |
+| `0xEDA2BC` | `ENCODER_LUT_BREATH_INDEX` | Breath controller index lookup |
+| `0xEDA2D2` | `ENCODER_LUT_BREATH_VALUE` | Breath controller value lookup |
+| `0xEDA3D2` | `ENCODER_LUT_BREATH_MULT` | Breath controller multiplier table |
+| `0xEDA3EA` | `ENCODER_LUT_BREATH_OFFSET` | Breath controller offset table |
+| `0xEDA402` | `ENCODER_LUT_FOOT` | Foot controller value lookup |
+| `0xEDA482` | `ENCODER_LUT_EXPRESSION` | Expression pedal value lookup |
 
 ## Sub CPU Address Space
 

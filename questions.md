@@ -31,12 +31,12 @@ Things we don't know yet and need to investigate.
 - [x] LED packet format? **Bits 4-5 select handler, bits 5-0 = row, bits 7-6 = panel select**
 
 ### Rotary Encoders
-- [ ] How many encoders are there? (Firmware supports 32 IDs, only 2 have handlers)
+- [x] How many encoders are there? **6 active encoder IDs** (2, 5, 25, 26, 27, 31)
 - [x] Absolute or relative encoding? **Relative** (quadrature: ROTA/ROTB signals)
 - [ ] What is the resolution (steps per rotation)?
 - [x] How is direction determined? **Quadrature decoding** of ROTA/ROTB phase relationship
 - [x] Encoder ID encoding? **5-bit ID from bits 0-2 and 6-7 of packet byte 0**
-- [ ] Which physical encoders map to IDs 2 and 5? (Only IDs with handlers)
+- [x] Which physical encoders map to which IDs? **ID 2=Modwheel, 5=Volume, 25=Breath, 26=Foot, 27=Expression, 31=Passthrough**
 
 ## Hardware Architecture
 
@@ -101,8 +101,8 @@ Some flag bits appear unused in the code we've analyzed:
 - Various routines use "wait 6 ticks" or "wait 3000 loops" - what are the actual timing requirements?
 
 ### Undisassembled Code
-- LED packet handlers at 0xFC6C80 (~112 bytes of raw data)
-- Several routines called from LED/encoder paths need disassembly
+- ~~Encoder handlers at 0xFC6C80~~ ✓ **Fully disassembled** (450 bytes → 6 handlers)
+- LED-related routines at 0xFC4B95, 0xFC4BC5 need investigation
 
 ---
 
