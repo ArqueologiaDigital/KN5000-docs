@@ -307,7 +307,7 @@ Significant naming improvements applied to the control panel serial protocol cod
 **Packet Processing:**
 - `CPanel_RX_ProcessWithFlag` / `CPanel_RX_Process` - Entry points
 - `CPanel_RX_ParseNext` - Main packet processing loop
-- `CPanel_Packet_Handler_Table` - Jump table for packet type dispatch
+- `CPanel_RX_PacketHandlers` - Jump table for packet type dispatch
 
 **Packet Type Handlers:**
 - `CPanel_RX_ButtonPacket` - Button state packets (types 0, 1)
@@ -316,7 +316,7 @@ Significant naming improvements applied to the control panel serial protocol cod
 - `CPanel_RX_MultiBytePacket` - Multi-byte packets (types 6, 7)
 
 **LED and Initialization:**
-- `CPanel_Send_LED_Data` - LED state transmission
+- `CPanel_UpdateLEDs` - LED state transmission
 - `CPanel_InitLEDBuffer` - Serial/LED initialization
 - `CPanel_InitButtonState` - Button state array setup
 

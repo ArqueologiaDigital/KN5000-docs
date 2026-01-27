@@ -295,7 +295,7 @@ if ((A & 0x3F) < 0x30) {
 
 ### Serial Routine Jump Table
 
-Located at `CPANEL_SERIAL_ROUTINES_LIST` (0xFC4489):
+Located at `CPANEL_STATE_MACHINE_TABLE` (0xFC4489):
 
 | Offset | Routine | Address | Purpose |
 |--------|---------|---------|---------|
@@ -667,7 +667,7 @@ The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "valu
 
 | Address | Name | Description |
 |---------|------|-------------|
-| 0xFC4965 | `CPanel_Packet_Handler_Table` | 8-entry jump table for packet types |
+| 0xFC4965 | `CPanel_RX_PacketHandlers` | 8-entry jump table for packet types |
 | 0xFC4985 | `CPanel_RX_ButtonPacket` | Process button state packets |
 | 0xFC49E0 | `CPanel_RX_EncoderPacket` | Process rotary encoder packets |
 | 0xFC4A40 | `CPanel_RX_MultiBytePacket` | Process multi-byte packets |
@@ -677,8 +677,8 @@ The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "valu
 
 | Address | Name | Description |
 |---------|------|-------------|
-| 0xFC4B2D | `CPanel_Send_LED_Data` | Main LED transmission routine |
-| 0xFC4B85 | `CPanel_LED_Handler_Table` | 4-entry jump table for LED types |
+| 0xFC4B2D | `CPanel_UpdateLEDs` | Main LED transmission routine |
+| 0xFC4B85 | `CPanel_LED_PacketHandlers` | 4-entry jump table for LED types |
 
 ### Serial Interrupt Handlers
 
@@ -686,7 +686,7 @@ The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "valu
 |---------|------|-------------|
 | 0xFC44B5 | `INTTX1_HANDLER` | Serial TX complete interrupt |
 | 0xFC44D7 | `INTRX1_HANDLER` | Serial RX complete interrupt |
-| 0xFC4489 | `CPANEL_SERIAL_ROUTINES_LIST` | Jump table for state machine |
+| 0xFC4489 | `CPANEL_STATE_MACHINE_TABLE` | Jump table for state machine |
 
 ### Helper Routines
 
