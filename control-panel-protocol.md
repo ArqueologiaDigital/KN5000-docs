@@ -43,20 +43,20 @@ The control panel MCUs use **mask ROM** (M2196S suffix indicates a specific mask
 ### Physical Connections
 
 ```
-Main CPU (TMP94C241F)              Control Panel MCUs
-    Port F, SC1                    ┌─────────┐  ┌─────────┐
-        │                          │   CPL   │  │   CPR   │
-        │◄───── SOUT ─────────────│← SOUT   │  │ SOUT →│───►│
-        │                          │         │  │         │
-        │────── SIN ──────────────►│→ SIN    │  │ SIN ←│◄───│
-        │                          │         │  │         │
-        │────── SCLK1 ────────────►│→ CLK    │  │ CLK ←│◄───│
-        │                          │         │  │         │
-        │────── CNTR1 ────────────►│→ CNTR1  │  │ CNTR1←│◄───│
-        │                          └─────────┘  └─────────┘
-        │
-   PF.5 (INTA) ◄──── Interrupt from panels
-   PF.6 (SCLK1) ───► Serial clock output / clock detect input
+Main CPU (TMP94C241F)                Control Panel MCUs
+    Port F, SC1                    +---------+  +---------+
+        |                          |   CPL   |  |   CPR   |
+        |<----- SOUT --------------|   SOUT--|  |--SOUT   |
+        |                          |         |  |         |
+        |------ SIN -------------->|   SIN---|  |---SIN   |
+        |                          |         |  |         |
+        |------ SCLK1 ------------>|   CLK---|  |---CLK   |
+        |                          |         |  |         |
+        |------ CNTR1 ------------>|  CNTR1--|  |--CNTR1  |
+        |                          +---------+  +---------+
+        |
+   PF.5 (INTA) <---- Interrupt from panels
+   PF.6 (SCLK1) ---> Serial clock output / clock detect input
 ```
 
 ### Serial Interface Specifications
@@ -170,7 +170,7 @@ The handler at `CPanel_RX_ButtonPacket`:
 1. Extracts segment index: `W = byte0 & 0x4F`
 2. Calculates button array offset
 3. XORs new state with previous to detect changes
-4. Stores result in `CPANEL_VAR__8D96` for edge detection
+4. Stores result in `CPANEL_LAST_EVENT_VALUE` for edge detection
 
 ### Encoder Packet Format (Type 2)
 
@@ -546,7 +546,7 @@ The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "valu
 | 0x8D93 | `CPANEL_PANEL_DETECT_FLAGS` | byte | Communication test results |
 | 0x8D94 | `CPANEL_RX_PACKET_BYTE_1` | byte | First byte of received packet |
 | 0x8D95 | `CPANEL_RX_PACKET_BYTE_2` | byte | Second byte of received packet |
-| 0x8D96 | `CPANEL_VAR__8D96` | byte | Changed button bits (XOR result) |
+| 0x8D96 | `CPANEL_LAST_EVENT_VALUE` | byte | Changed button bits (XOR result) |
 | 0x8D97 | `CPANEL_COUNTER_DOWN_FROM_200` | byte | Ready check timeout counter |
 | 0x8D98 | `CPANEL_COUNTER_UP_TO_20` | byte | General counter |
 | 0x8D9A | `CPANEL_COUNTER_UP_TO_42` | byte | Main loop iteration counter |
@@ -579,13 +579,14 @@ The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "valu
 
 | Buffer | Base Address | Size | Modulus | Notes |
 |--------|--------------|------|---------|-------|
-| `CPANEL_RX_DATA` | 0x8DA1 | 92 bytes | 0x5C | RX from panels |
-| `SomeCpanelData` | 0x200AD | 128 bytes | 0x80 | Processed button events |
-| `SomeOtherCpanelData` | 0x20137 | 128 bytes | 0x80 | LED TX queue |
+| `CPANEL_RX_RING_BUFFER` | 0x8DA1 | 92 bytes | 0x5C | RX from panels |
+| `CPANEL_RX_EVENT_QUEUE` | 0x200AD | 128 bytes | 0x80 | Processed button/encoder events |
+| `CPANEL_LED_EVENT_QUEUE` | 0x20137 | 128 bytes | 0x80 | LED command queue |
 
 ### Flag Definitions
 
-**CPANEL_TX_RX_FLAGS (0x8D8C):**
+#### CPANEL_TX_RX_FLAGS (0x8D8C)
+
 | Bit | Usage |
 |-----|-------|
 | 0 | TX in progress |
@@ -595,7 +596,8 @@ The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "valu
 | 6 | Initialized |
 | 7 | Reserved |
 
-**CPANEL_PROTOCOL_FLAGS (0x8D92):**
+#### CPANEL_PROTOCOL_FLAGS (0x8D92)
+
 | Bit | Usage |
 |-----|-------|
 | 0 | RX buffer has space / ready |
@@ -605,7 +607,8 @@ The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "valu
 | 6 | Interrupt pending |
 | 7 | Ready to send |
 
-**CPANEL_PANEL_DETECT_FLAGS (0x8D93):**
+#### CPANEL_PANEL_DETECT_FLAGS (0x8D93)
+
 | Bit | Usage |
 |-----|-------|
 | 0 | Left panel responded to ping |
@@ -618,7 +621,7 @@ The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "valu
 | Address | Name | Description |
 |---------|------|-------------|
 | 0xFC3EF5 | `CPanel_InitHardware` | Main initialization sequence |
-| 0xFC3FA9 | `LABEL_FC3FA9` | Sub-initialization (send 1F 1A, 1D 00, DD 03, 1E 80) |
+| 0xFC3FA9 | `CPanel_SendInitSequence` | Send init commands (1F 1A, 1D 00, DD 03, 1E 80) |
 | 0xFC4021 | `CPanel_InitLEDBuffer` | Configure serial port, init LED array |
 | 0xFC42FB | `CPanel_InitButtonState` | Initialize button state arrays |
 
