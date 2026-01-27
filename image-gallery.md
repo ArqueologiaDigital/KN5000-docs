@@ -136,6 +136,44 @@ These images show keyboard split point notes displayed when configuring the keyb
 
 ---
 
+## HDAE5000 Hard Disk Expansion ROM Images
+
+These images were extracted from the HD-AE5000 hard disk expansion ROM. They are 320x240 8-bit grayscale images stored at fixed offsets in the ROM, likely displayed on a connected PC during file transfer operations.
+
+### HD-AE5000 Product Logo
+
+![HDAE5000 Logo]({{ "/assets/images/gallery/HDAE5000_Logo.png" | relative_url }})
+
+*320x240, 8-bit grayscale - ROM offset: 0x28c00*
+
+Shows the HD-AE5000 product name with a stylized hard disk drive graphic.
+
+### Hands Operating HD-AE5000
+
+![HDAE5000 Hands]({{ "/assets/images/gallery/HDAE5000_Hands.png" | relative_url }})
+
+*320x240, 8-bit grayscale - ROM offset: 0x3b800*
+
+Promotional image showing hands operating the HD-AE5000 unit connected to a KN5000 keyboard.
+
+### File Selection Panel
+
+![HDAE5000 File Panel]({{ "/assets/images/gallery/HDAE5000_FilePanel.png" | relative_url }})
+
+*320x240, 8-bit grayscale - ROM offset: 0x4e400*
+
+UI panel showing file selection interface with textured button areas.
+
+### HD-AE5000 Version 2 Startup Screen
+
+![HDAE5000 Startup]({{ "/assets/images/gallery/HDAE5000_StartupScreen.png" | relative_url }})
+
+*320x240, 8-bit grayscale - ROM offset: 0x60400*
+
+Startup screen showing "HD-AE5000 Version 2" with "Start-up!" prompt and decorative graphics.
+
+---
+
 ## Image Format Notes
 
 - **Table Data BMP**: Standard Windows BMP format, 8-bit indexed color
