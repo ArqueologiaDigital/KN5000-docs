@@ -179,10 +179,10 @@ Byte 0: [ 0 | 1 | 0 | Encoder ID (3 bits) | Flags ]
 Byte 1: [ Delta value (signed 8-bit) ]
 ```
 
-The encoder lookup at `LABEL_FC6C5F` (address 0xFC6C5F):
+The encoder dispatch routine `CPanel_EncoderDispatch` (0xFC6C5F):
 1. Extracts encoder ID from bits 0-2 and 6-7
-2. Indexes into table at `0xEDA0BC`
-3. Calls encoder-specific handler
+2. Indexes into jump table at `0xEDA0BC`
+3. Dispatches to encoder-specific handler
 4. Returns 0xFFFF if invalid/no change
 
 ### Timing Requirements
@@ -618,11 +618,11 @@ void kn5000_cpanel_device::process_encoder(int encoder_id, int8_t delta)
 
 | Address | Name | Description |
 |---------|------|-------------|
-| 0xFC4C08 | `INC_IY_MOD_05Ch` | Increment IY with modulo 92 |
-| 0xFC4C13 | `INC_IY_MOD_03Ch` | Increment IY with modulo 60 |
-| 0xFC4C1E | `INC_IX_MOD_080h` | Increment IX with modulo 128 |
-| 0xFC4C29 | `DEC_IX_MOD_080h` | Decrement IX with modulo 128 |
-| 0xFC6C5F | `LABEL_FC6C5F` | Encoder lookup/dispatch |
+| 0xFC4C08 | `CPanel_IncRXPtr` | Increment RX buffer pointer (modulo 92) |
+| 0xFC4C13 | `CPanel_IncLEDPtr` | Increment LED buffer pointer (modulo 60) |
+| 0xFC4C1E | `CPanel_IncEventPtr` | Increment event queue pointer (modulo 128) |
+| 0xFC4C29 | `CPanel_DecEventPtr` | Decrement event queue pointer (modulo 128) |
+| 0xFC6C5F | `CPanel_EncoderDispatch` | Dispatch to encoder-specific handler via jump table |
 
 ### Delay Routines
 
