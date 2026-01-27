@@ -13,9 +13,11 @@ header_pages:
   - hardware-architecture.md
   - rom-reconstruction.md
   - reverse-engineering.md
+  - hdae5000.md
   - image-gallery.md
   - control-panel-protocol.md
   - memory-map.md
+  - rom-strings.md
   - serial-debugging-journey.md
   - issues.md
   - help-wanted.md

@@ -24,6 +24,25 @@ If you have a KN5000 and can dump ROMs, please reach out!
 
 The Main CPU ROM has only 177 bytes remaining. Analysis needed to identify and fix the remaining divergences, which may be due to instruction encoding differences between TMP94C241F and TMP96C141 (what ASL supports).
 
+### HDAE5000 ROM Disassembly
+
+The HD-AE5000 hard disk expansion ROM has been partially analyzed but needs complete disassembly:
+
+**Known Entry Points:**
+- Boot initialization at 0x28F576 (called via JP at 0x280008)
+- Frame handler at 0x28F662 (called via JP at 0x280010)
+
+**Analysis Tasks:**
+- Disassemble PPORT command handlers (15 commands documented)
+- Document FSB (File System Block) structure
+- Trace HD controller communication routines
+- Analyze Windows DLL callback interfaces
+- Document file transfer protocol details
+
+**Skills Needed:** TLCS-900 assembly, parallel port protocols, filesystem analysis
+
+See [HDAE5000 page]({{ site.baseurl }}/hdae5000/) for current findings.
+
 ### Assembly Analysis
 
 Help analyze the disassembled code:

@@ -312,30 +312,62 @@ The sub CPU boot ROM initializes tone generator registers with patterns starting
 
 ## HDAE5000 Hard Disk Expansion
 
-The HD-AE5000 is a hard disk expansion system, not an audio processor. It serves as a data control center for managing large music file libraries beyond floppy disk capacity.
+The HD-AE5000 is a hard disk expansion system providing 1.08GB storage for music files. See the [dedicated HDAE5000 page]({{ site.baseurl }}/hdae5000/) for complete documentation.
 
-**Interface:** PPI at `0x160000`
-**ROM:** `0x280000` (512KB)
+### Memory-Mapped Addresses
+
+| Address | Size | Description |
+|---------|------|-------------|
+| `0x160000` | 2B | PPI Port A (Data output) |
+| `0x160002` | 2B | PPI Port B (Status input) |
+| `0x160004` | 2B | PPI Port C (Control signals) |
+| `0x160006` | 2B | PPI Control Register |
+| `0x280000` | 512KB | HDAE5000 ROM |
+
+### ROM Entry Points
+
+| Address | Target | Description |
+|---------|--------|-------------|
+| `0x280008` | JP 0x28F576 | Boot initialization |
+| `0x280010` | JP 0x28F662 | Frame handler (PPORT polling) |
+
+### Analyzed Firmware Version
+
+| Property | Value |
+|----------|-------|
+| ROM File | `hd-ae5000_v2_06i.ic4` |
+| Internal Version | 2.33J |
+| Development Period | Juli-Oktober 1996 |
+| Author | M. Kitajima |
+
+### PPORT Commands (PC Parallel Port)
+
+| Code | Command | Description |
+|------|---------|-------------|
+| 01 | Send Infos About HD | Report HD info to PC |
+| 02 | Exit PPORT | End parallel port session |
+| 03 | Read FSB from HD | Read File System Block |
+| 04 | Sending FSB to PC | Transfer FSB to PC |
+| 05 | Rcv FSB from PC | Receive FSB from PC |
+| 06 | Writing FSB to HD | Write FSB to HD |
+| 07 | Load HD to Memory | Load file to KN5000 |
+| 08 | Send data to PC | Data transfer to PC |
+| 09 | Sending files to PC | File transfer to PC |
+| 10 | Rcv data from PC | Receive data from PC |
+| 11 | Save memory to HD | Save to hard disk |
+| 16 | Delete files | Delete HD files |
+| 17 | Formating HD | Format hard disk |
+| 18 | Switch HD-motor off | Spin down HD |
+| 20 | Send XapFile flash | XAP file transfer |
 
 ### Firmware Versions
 
 | Version | Release Date | Notes |
 |---------|--------------|-------|
 | v1.10i | 1998-07-06 | Initial release |
-| v1.15i | 1998-10-13 | |
+| v1.15i | 1998-10-13 | Bug fixes |
 | v2.0i | 1999-01-15 | Added lyrics display |
 
 All versions archived at [archive.org](https://archive.org/details/technics-kn5000-system-update-disks).
-
-### Features
-
-- Flash-ROM and Static RAM for quick directory access
-- 2.5" Hard Disk Drive (1.08 GB storage)
-- Parallel port for PC communication (HD-TechManager5000 software)
-- Audio outputs with channel separation options
-
-### Limitations
-
-Files cannot be played directly from hard drive during performance - all file operations occur during breaks to protect the drive.
 
 **Reference:** [keysoftservice.ch/hdae5000-e.htm](https://www.keysoftservice.ch/hdae5000-e.htm)

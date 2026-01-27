@@ -38,7 +38,7 @@ This project aims to fully document and emulate the Technics KN5000 music keyboa
 | Sub CPU Boot ROM | 128KB | **100%** | 0 | Complete match |
 | Table Data | 2MB | 32.42% | 1,417,294 | Mostly binary assets |
 | Custom Data | 1MB | 0% | 1,048,576 | User storage, not reconstructed |
-| HDAE5000 ROM | 512KB | 0% | 524,288 | Not yet disassembled |
+| HDAE5000 ROM | 512KB | ~5% | 500,000 | Entry points documented, PPORT commands identified |
 
 *Progress calculated from `compare_roms.py` byte-by-byte verification.*
 
@@ -64,7 +64,8 @@ See [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) for detai
 
 - [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) - Detailed hardware documentation from service manual
 - [ROM Reconstruction Status]({{ site.baseurl }}/rom-reconstruction/)
-- [Reverse Engineering Strategies]({{ site.baseurl }}/reverse-engineering/) - HDAE5000, SubCPU/MicroDMA, embedded images
+- [Reverse Engineering Strategies]({{ site.baseurl }}/reverse-engineering/) - SubCPU/MicroDMA, embedded images
+- [HDAE5000 Hard Disk Expansion]({{ site.baseurl }}/hdae5000/) - HD-AE5000 firmware analysis
 - [Image Gallery]({{ site.baseurl }}/image-gallery/) - Extracted graphics from the firmware
 - [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/)
 - [Memory Map]({{ site.baseurl }}/memory-map/)

@@ -153,6 +153,28 @@ Detailed hardware documentation extracted from the service manual schematics.
 | IC207 | M5M44265CJ8S | 4Mbit Video RAM |
 | IC208 | D72068GF-3B9 | Floppy Disk Controller |
 
+### HDAE5000 Hard Disk Expansion (Optional)
+
+The HD-AE5000 is an optional expansion providing 1.08GB storage.
+
+| Component | Address | Description |
+|-----------|---------|-------------|
+| PPI (8255) | 0x160000-0x160006 | Programmable Peripheral Interface |
+| ROM | 0x280000 | 512KB firmware ROM |
+
+**PPI Port Mapping:**
+
+| Address | Port | Function |
+|---------|------|----------|
+| 0x160000 | Port A | Data output to HD controller |
+| 0x160002 | Port B | Status input from HD controller |
+| 0x160004 | Port C | Control signals (strobe, handshake) |
+| 0x160006 | Control | PPI mode configuration (0x82) |
+
+**Detection:** PE port bit 0 (active low) indicates HDAE5000 presence.
+
+See [HDAE5000 page]({{ site.baseurl }}/hdae5000/) for firmware details.
+
 ### LCD Controller (MN89304)
 
 The MN89304 provides a VGA-compatible register interface at I/O base `0x170000`.

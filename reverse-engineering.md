@@ -10,7 +10,23 @@ Documented approaches for understanding undocumented aspects of the KN5000 syste
 
 ## HDAE5000 Hard Disk Expansion
 
-The HD-AE5000 is an optional hard disk expansion that provides 1.08GB storage for music files. Reverse engineering it requires understanding multiple layers.
+The HD-AE5000 is an optional hard disk expansion that provides 1.08GB storage for music files. **See the [dedicated HDAE5000 page]({{ site.baseurl }}/hdae5000/) for complete documentation** including PPORT commands, entry points, and firmware analysis.
+
+### Key Findings Summary
+
+| Property | Value |
+|----------|-------|
+| ROM File | `hd-ae5000_v2_06i.ic4` (512KB) |
+| Base Address | 0x280000 |
+| Internal Version | 2.33J (Juli-Oktober 1996, M. Kitajima) |
+| PPI Address | 0x160000-0x160006 |
+
+### ROM Entry Points
+
+| Address | Target | Description |
+|---------|--------|-------------|
+| 0x280008 | JP 0x28F576 | Boot initialization |
+| 0x280010 | JP 0x28F662 | Frame handler (PPORT polling) |
 
 ### PPI Interface (0x160000)
 
@@ -64,44 +80,31 @@ CALL NZ, HDAE5000_Parport_Setup ; Init if present
 
 The HD-AE5000 presence is detected via PE port bit 0 (active low).
 
-**Data Transfer Protocol:**
-- Port A: Data output (byte values)
-- Port B: Status input (bit 0 = busy/ready)
-- Port C: Handshaking control signals
+### PPORT Commands (Documented)
 
-### HDAE5000 ROM (0x280000)
+15 commands have been identified for PC parallel port communication:
 
-A 512KB ROM contains the HDAE5000 firmware.
+| Code | Command | Description |
+|------|---------|-------------|
+| 01 | Send Infos About HD | Report HD info to PC |
+| 02 | Exit PPORT | End session |
+| 03-06 | FSB Operations | Read/Write File System Block |
+| 07-11 | Data Transfer | Load/Save between HD, memory, PC |
+| 16-18 | HD Management | Delete, Format, Motor off |
+| 20 | Send XapFile flash | XAP file transfer |
 
-**Tasks:**
-1. Disassemble the ROM (determine CPU type first)
-2. Identify command handlers and filesystem routines
-3. Document the command set
+### Windows DLL Callbacks
 
-### Filesystem Structure
+The firmware contains callback function names used by HD-TechManager5000:
+- `LyricBackColorCheck`, `LyricForeColorCheck`, `LyricJumpEditCheck`
+- `ErrMsgTimerCatch`, `FlsOverWrSwCatch`, `AttenHDFormatSwCatch`
 
-The 1.08GB hard disk uses a custom or standard filesystem.
+### Remaining Tasks
 
-**Tasks:**
-1. Analyze directory structure and file allocation
-2. Document how Flash-ROM/SRAM provides quick directory access
-3. Compare with standard FAT if applicable
-
-### Parallel Port Protocol
-
-The HD-TechManager5000 PC software communicates via parallel port.
-
-**Tasks:**
-1. Capture and analyze parallel port traffic
-2. Document handshaking, command format, file transfer protocol
-3. Reverse engineer the Windows software (available at [archive.org](https://archive.org/details/technics-kn5000-system-update-disks))
-
-### Interface Cable Pinout
-
-**Tasks:**
-1. Identify connector types from service manual
-2. Document signal assignments (accent data/control/bus/power)
-3. Verify voltage levels
+1. **Disassemble command handlers** - Trace PPORT command implementation
+2. **Document FSB structure** - File System Block format
+3. **Analyze HD controller protocol** - Communication with HD hardware
+4. **Reverse engineer file format** - How files are stored on HD
 
 ---
 
