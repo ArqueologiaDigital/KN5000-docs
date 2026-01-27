@@ -388,11 +388,13 @@ Analyze the KN5000 service manual (59 pages) to extract hardware architecture de
 
 ---
 
-#### 🟠 Trace CPANEL_SERIAL_ROUTINE_* handlers {#issue-kn5000-32b}
+#### 🟠 Trace CPanel_SM_* state machine handlers {#issue-kn5000-32b}
 
 **ID:** `kn5000-32b` | **Priority:** High | **Created:** 2026-01-25
 
-Trace execution flow through all CPANEL_SERIAL_ROUTINE_0 through CPANEL_SERIAL_ROUTINE_8 handlers. Document what each handler does, when it's called, and how it processes data.
+Trace execution flow through all CPanel_SM_* state machine handlers (states 0-10 in CPANEL_STATE_MACHINE_INDEX). Document what each handler does, when it's called, and how it processes data. Key routines: CPanel_InitHardware, CPanel_WaitTXReady, CPanel_SendCommand, CPanel_RX_Process, CPanel_RX_ParseNext.
+
+**Notes:** Trace execution flow through all CPanel_SM_* state machine handlers (states 0-10). Document what each handler does, when it's called, and how it processes data. Key routines: CPanel_InitHardware, CPanel_WaitTXReady, CPanel_SendCommand, CPanel_RX_Process, CPanel_RX_ParseNext.
 
 ---
 
@@ -507,7 +509,9 @@ See rom-reconstruction.md for detailed analysis.
 
 **ID:** `kn5000-ljl` | **Priority:** Medium | **Created:** 2026-01-25
 
-Analyze CPANEL_INDEX_FOR_LEDS and LED command handling to understand LED addressing scheme. Create a mapping from index to physical LED name/location on the KN5000 front panel.
+Analyze CPANEL_LED_READ_PTR, CPANEL_LED_WRITE_PTR, and CPANEL_LED_TX_BUFFER to understand LED addressing scheme. Create a mapping from index to physical LED name/location on the KN5000 front panel.
+
+**Notes:** Analyze CPANEL_LED_READ_PTR, CPANEL_LED_WRITE_PTR, and CPANEL_LED_TX_BUFFER to understand LED addressing scheme. Create a mapping from index to physical LED name/location on the KN5000 front panel.
 
 ---
 
@@ -788,4 +792,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-26 18:06*
+*Last updated: 2026-01-26 22:10*
