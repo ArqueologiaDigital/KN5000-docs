@@ -175,15 +175,31 @@ The handler at `CPanel_RX_ButtonPacket`:
 ### Encoder Packet Format (Type 2)
 
 ```
-Byte 0: [ 0 | 1 | 0 | Encoder ID (3 bits) | Flags ]
+Byte 0: [ ID_hi[1:0] | 0 | 1 | 0 | ID_lo[2:0] ]
+         bits 7-6     5   4   3   bits 2-0
+
 Byte 1: [ Delta value (signed 8-bit) ]
 ```
 
+**Encoder ID Encoding:**
+- Bits 0-2 of byte 0 → bits 0-2 of encoder ID
+- Bits 6-7 of byte 0 → bits 3-4 of encoder ID
+- This gives a 5-bit encoder ID (0-31)
+
 The encoder dispatch routine `CPanel_EncoderDispatch` (0xFC6C5F):
-1. Extracts encoder ID from bits 0-2 and 6-7
-2. Indexes into jump table at `0xEDA0BC`
-3. Dispatches to encoder-specific handler
-4. Returns 0xFFFF if invalid/no change
+1. Extracts encoder ID: `ID = (byte0 & 0x07) | ((byte0 >> 3) & 0x18)`
+2. Multiplies by 4 for jump table offset
+3. Indexes into jump table at `ENCODER_HANDLER_TABLE` (0xEDA0BC)
+4. Dispatches to encoder-specific handler
+5. Returns 0xFFFF if invalid/no change
+
+**Known Encoder IDs:**
+
+| ID | Handler | Output Variable | Physical Control |
+|----|---------|-----------------|------------------|
+| 2 | Active | `ENCODER_0_OUTPUT` | Data wheel / Jog wheel |
+| 5 | Active | `ENCODER_1_OUTPUT`, `MIDI_CC_VOLUME_VALUE` | Volume slider / Expression |
+| 0-31 (others) | Default | Returns 0xFFFF | Unknown/unused |
 
 ### Timing Requirements
 
@@ -386,8 +402,10 @@ void kn5000_cpanel_device::process_command()
             resp_len = 2;
         } else if (data == 0x0B || data == 0x10) {
             // Button state query
+            // NOTE: Panel selection is via bit 6, NOT the type field!
+            // Bit 6 = 0: right panel, Bit 6 = 1: left panel
             int segment = data & 0x0F;
-            response[0] = (is_right_panel ? 0x08 : 0x00) | segment;  // Type 1 or 0
+            response[0] = (is_right_panel ? 0x00 : 0x40) | segment;  // Bit 6 for left panel
             response[1] = get_button_segment(segment + (is_right_panel ? 0 : 16));
             resp_len = 2;
         }
@@ -405,8 +423,9 @@ void kn5000_cpanel_device::process_command()
     case 0x2B:  // Init state array (left)
     case 0xEB:  // Init state array (right)
         // Send all button segments
+        // NOTE: Bit 6 selects panel (0=right, 1=left)
         for (int seg = 0; seg < 16; seg++) {
-            response[0] = seg | (is_right_panel ? 0x40 : 0x00);
+            response[0] = seg | (is_right_panel ? 0x00 : 0x40);  // Bit 6 for left panel
             response[1] = get_button_segment(seg + (is_right_panel ? 0 : 16));
             send_response(response, 2);
         }
@@ -481,21 +500,19 @@ Encoders send signed delta values via Type 2 packets:
 ```cpp
 void kn5000_cpanel_device::process_encoder(int encoder_id, int8_t delta)
 {
-    // Encoder IDs (estimated):
-    // 0-2: Data wheel / jog wheel
-    // 3-4: Pitch bend wheel
-    // 5-6: Modulation wheels
-
-    // The encoder lookup table at 0xEDA0BC maps encoder IDs to handlers
-    // Each encoder has a specific behavior:
-    // - Some are relative (delta applied to current value)
-    // - Some are absolute (A/D converter values)
+    // Known Encoder IDs (from firmware analysis):
+    // 2: Data wheel / jog wheel -> ENCODER_0_OUTPUT
+    // 5: Volume slider / expression -> ENCODER_1_OUTPUT, MIDI_CC_VOLUME_VALUE
+    // Other IDs (0-1, 3-4, 6-31) return 0xFFFF (no handler)
 
     m_encoder_delta[encoder_id] += delta;
 
     // Report encoder change
+    // Byte 0 format: [ ID_hi[1:0] | 0 | 1 | 0 | ID_lo[2:0] ]
+    //                  bits 7-6     5   4   3   bits 2-0
+    // Type 2 = bits 5-3 = 010 = 0x10
     uint8_t response[2];
-    response[0] = 0x10 | ((encoder_id & 0x07) | ((encoder_id & 0x18) << 3));  // Type 2
+    response[0] = 0x10 | (encoder_id & 0x07) | ((encoder_id & 0x18) << 3);  // Type 2 + encoder ID
     response[1] = delta;
     send_response(response, 2);
 }
@@ -689,6 +706,60 @@ The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "valu
 | 0xFC4160 | `Detect_Control_Panel_button_combos` | Check for special button combinations |
 | 0xFC4265 | `CPanel_PollButtonState_Loop` | Main button polling loop |
 | 0xFC4289 | `CPanel_CheckEncoderState` | Check encoder value changes |
+
+## 8. Protocol Gaps (What We Don't Know)
+
+### LED Packet Format
+
+The LED handler uses bits 4-5 of the first byte to dispatch to one of 4 handlers via `CPanel_LED_PacketHandlers` (0xFC4B85). The handlers are undisassembled (raw bytes starting at 0xFC6C80).
+
+| Bits 4-5 | Handler | Status |
+|----------|---------|--------|
+| 00 | `LABEL_FC6C80` | Undisassembled |
+| 01 | `LABEL_FC6CAE`? | Undisassembled |
+| 10 | Unknown | Undisassembled |
+| 11 | Unknown | Undisassembled |
+
+### Multi-byte Packet Purpose (Types 6, 7)
+
+The `CPanel_RX_MultiBytePacket` handler has complex decoding logic:
+- Calculates byte count from `(byte0 & 0x0F) + 1`
+- Uses bit 4 for mode selection
+- Purpose and expected data format unknown
+
+### Button-to-Segment Mapping
+
+We know the segment addressing scheme but lack complete physical button mapping:
+- 16 segments per panel (right: 0-15, left: 16-31 via bit 6)
+- Each segment holds 8 button states
+- Partial mapping known from button combo detection code
+- Full physical layout needs hardware verification
+
+### Encoder Physical Mapping
+
+Only 2 of 32 encoder IDs have active handlers:
+- **ID 2**: Used for `ENCODER_0_OUTPUT` (data wheel?)
+- **ID 5**: Used for `ENCODER_1_OUTPUT` and volume
+- **IDs 0-1, 3-4, 6-31**: Return 0xFFFF (no handler)
+
+Physical encoder assignment (pitch bend, mod wheel, etc.) unconfirmed.
+
+### Baud Rate Transitions
+
+The serial channel switches between rates during operation:
+- 31.25 kHz during initialization
+- 250 kHz during normal operation
+- Exact timing/trigger for rate switches not fully traced
+
+### Undisassembled Routines
+
+These routines need disassembly to complete protocol understanding:
+
+| Address | Size | Context |
+|---------|------|---------|
+| 0xFC6C80 | ~112 bytes | LED packet handlers |
+| 0xFC4B95 | Unknown | Called from LED path |
+| 0xFC4BC5 | Unknown | Called from LED path |
 
 ## References
 

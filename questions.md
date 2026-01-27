@@ -27,19 +27,23 @@ Things we don't know yet and need to investigate.
 - [x] What is the addressing scheme? **Segment outputs SEG00-SEG15** via HD74LS07P drivers
 - [ ] Can LEDs be dimmed or only on/off?
 - [x] Is there multiplexing? **Yes**, MCU multiplexes via segment outputs
+- [ ] What do the 4 LED packet types (bits 4-5) represent? (Handlers at 0xFC6C80+ undisassembled)
+- [x] LED packet format? **Bits 4-5 select handler, bits 5-0 = row, bits 7-6 = panel select**
 
 ### Rotary Encoders
-- [ ] How many encoders are there?
+- [ ] How many encoders are there? (Firmware supports 32 IDs, only 2 have handlers)
 - [x] Absolute or relative encoding? **Relative** (quadrature: ROTA/ROTB signals)
 - [ ] What is the resolution (steps per rotation)?
 - [x] How is direction determined? **Quadrature decoding** of ROTA/ROTB phase relationship
+- [x] Encoder ID encoding? **5-bit ID from bits 0-2 and 6-7 of packet byte 0**
+- [ ] Which physical encoders map to IDs 2 and 5? (Only IDs with handlers)
 
 ## Hardware Architecture
 
 ### Control Panel MCUs
 - [x] What MCU model is used? **Mitsubishi M37471M2196S** (8-bit CMOS, 740 series)
 - [x] How many MCUs are on the control panel board? **2** (CPL board and CPR board)
-- [ ] What is the serial baud rate?
+- [x] What is the serial baud rate? **250 kHz normal operation, 31.25 kHz during init** (fc/16/4 and fc/64/8)
 - [x] Is it UART, SPI, or custom protocol? **UART** (M37471 has built-in serial interface)
 
 ### Inter-CPU Communication
@@ -87,8 +91,18 @@ Some flag bits appear unused in the code we've analyzed:
 - `CPANEL_PACKET_BYTE_COUNT` can hold values 0-17, tracking expected bytes in multi-byte transfers
 - See [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) for complete state machine diagram
 
+### Multi-byte Packets (Types 6, 7)
+- Complex decoding in `CPanel_RX_MultiBytePacket` (0xFC4A40)
+- Byte count = `(byte0 & 0x0F) + 1`
+- Bit 4 used for mode selection
+- Purpose and expected data format unknown
+
 ### Timing
 - Various routines use "wait 6 ticks" or "wait 3000 loops" - what are the actual timing requirements?
+
+### Undisassembled Code
+- LED packet handlers at 0xFC6C80 (~112 bytes of raw data)
+- Several routines called from LED/encoder paths need disassembly
 
 ---
 
