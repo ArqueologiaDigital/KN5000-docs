@@ -4,159 +4,648 @@ title: Control Panel Protocol
 permalink: /control-panel-protocol/
 ---
 
-# Control Panel Serial Protocol
+# Control Panel Serial Protocol - MAME HLE Implementation Guide
 
-The KN5000 control panel uses dedicated MCUs to handle:
-- **LED indicators** - Status lights across the front panel
-- **Button scanning** - All front panel buttons
-- **Rotary encoders** - Data wheel, pitch/mod wheels
+This document provides comprehensive information for implementing High Level Emulation (HLE) of the KN5000 control panel MCUs in MAME.
 
-These MCUs communicate with the main CPU via serial protocol. Since we lack ROM dumps for these MCUs, MAME emulation requires **High Level Emulation (HLE)** based on reverse-engineered protocol understanding.
+## 1. Overview
 
-## Protocol Overview
+### Purpose of Control Panel MCUs
 
-Communication uses 2-byte command sequences sent from main CPU to control panel MCUs.
+The KN5000 control panel uses two dedicated Mitsubishi M37471M2196S microcontrollers to handle:
 
-### Command Categories
+- **Button scanning** - Matrix scanning of all front panel buttons
+- **LED control** - Multiplexed driving of status LEDs
+- **Rotary encoders** - Data wheel, pitch bend, and modulation wheels
+- **Analog inputs** - Volume sliders and continuous controllers
 
-| Prefix | Purpose | Example |
-|--------|---------|---------|
-| `1d`, `1e`, `1f` | Initialization | `1f da`, `1f 1a`, `1d 00`, `1e 80` |
-| `dd` | Setup | `dd 03` |
-| `20` | Query/Read | `20 00`, `20 10`, `20 0b` |
-| `25`, `2b` | Data commands | `25 01`, `2b 00` |
-| `e0`, `e2`, `e3`, `eb` | Extended commands | `e0 00`, `e2 04`, `e2 11`, `e3 10`, `eb 00` |
+### Why HLE is Needed
 
-### Initialization Sequence
+The control panel MCUs use **mask ROM** (M2196S suffix indicates a specific mask pattern). Without physical decapping and ROM extraction, the firmware is unavailable. However, the main CPU firmware extensively documents the communication protocol, making HLE feasible.
 
-From `SOME_CPANEL_ROUTINE__FC3EF5`:
+**HLE Strategy:**
+1. Intercept serial commands from the main CPU
+2. Maintain virtual button/LED/encoder state
+3. Generate appropriate response packets
+4. Interface with MAME input system for user interaction
+
+## 2. Hardware Architecture
+
+### MCU Identification
+
+| Parameter | Value |
+|-----------|-------|
+| **Part Number** | Mitsubishi M37471M2196S |
+| **Architecture** | 8-bit CMOS (Mitsubishi 740 series) |
+| **Features** | Built-in A/D, Serial UART, 16 segment outputs |
+| **Quantity** | 2 (CPL = Left panel, CPR = Right panel) |
+
+### Physical Connections
+
 ```
-send 1f da / wait / INDEX_FOR_LEDS = 0 / wait
-send 1f 1a / wait / INDEX_FOR_LEDS = 0 / wait
-send 1d 00 / wait / INDEX_FOR_LEDS = 0 / wait
-send dd 03 / wait / INDEX_FOR_LEDS = 0 / wait
-send 1e 80 / wait
+Main CPU (TMP94C241F)              Control Panel MCUs
+    Port F, SC1                    ┌─────────┐  ┌─────────┐
+        │                          │   CPL   │  │   CPR   │
+        │◄───── SOUT ─────────────│← SOUT   │  │ SOUT →│───►│
+        │                          │         │  │         │
+        │────── SIN ──────────────►│→ SIN    │  │ SIN ←│◄───│
+        │                          │         │  │         │
+        │────── SCLK1 ────────────►│→ CLK    │  │ CLK ←│◄───│
+        │                          │         │  │         │
+        │────── CNTR1 ────────────►│→ CNTR1  │  │ CNTR1←│◄───│
+        │                          └─────────┘  └─────────┘
+        │
+   PF.5 (INTA) ◄──── Interrupt from panels
+   PF.6 (SCLK1) ───► Serial clock output / clock detect input
 ```
 
-## Key Data Structures
+### Serial Interface Specifications
 
-### Memory Locations
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| **Serial Channel** | SC1 (Serial Channel 1) | TMP94C241F UART |
+| **Clock Source** | Internal, derived from fc=16MHz | |
+| **TX Baud Rate** | 250 kHz | fc/16/4 (BR1CR=0x14) during data TX |
+| **Initial Baud Rate** | 31.25 kHz | fc/64/8 (BR1CR=0x28) during init |
+| **Data Format** | 8-bit, odd parity (disabled), async | SC1MOD, SC1CR config |
+| **Flow Control** | Software (CNTR1 pin for chip select) | |
 
-| Address | Name | Size | Purpose |
-|---------|------|------|---------|
-| `0x8D8B` | `CPANEL_STATE_0_TO_17` | byte | Protocol state machine (values 0-17) |
-| `0x8D9D` | `CPANEL_BACKUP_RX_INDEX` | word | Backup of RX buffer position |
-| `0x8D9F` | `CPANEL_RX_INDEX` | word | Current receive buffer index |
-| `0x8DFD` | `CPANEL_INDEX_FOR_LEDS` | word | Current LED addressing index |
-| `0x8E4A` | `STATE_OF_CPANEL_BUTTONS` | array | Button state array (Right panel) |
-| `0x8E5A` | `STATE_OF_CPANEL_BUTTONS_LEFT` | array | Button state array (Left panel) |
+### Clock Configuration (from BR1CR register)
 
-### Status Flags
+| BR1CR Value | Prescaler | Divider | Baud Rate | Usage |
+|-------------|-----------|---------|-----------|-------|
+| `0x14` | T2 (fc/16) | /4 | 250 kHz | Normal data transfer |
+| `0x24` | T8 (fc/64) | /4 | 62.5 kHz | Idle/reset state |
+| `0x28` | T8 (fc/64) | /8 | 31.25 kHz | Initialization |
 
-| Address | Name | Bits Used |
-|---------|------|-----------|
-| `0x8D8C` | `CPANEL_SERIAL_FLAGS_A` (CP_Flags_A) | bits 0,1,2,4,6,7 |
-| `0x8D92` | `CPANEL_SERIAL_FLAGS_B` (CP_Flags_B) | bits 0,1,2,3,6,7 |
-| `0x8D93` | `CPANEL_SERIAL_FLAGS_C` (CP_Flags_C) | bits 0,4 |
+## 3. Protocol Specification
 
-### Flag Usage
+### Command Format
 
-| Flag | Used By |
-|------|---------|
-| `CP_Flags_A.10` | Serial routines, interrupt handler |
-| `CP_Flags_A.76` | Setup routines |
-| `CP_Flags_B.0` | Most command routines |
-| `CP_Flags_B.7` | Ready check, serial handler |
-| `CP_Flags_C.0`, `CP_Flags_C.4` | Initial comm test results |
+All commands are **2-byte sequences** sent from main CPU to control panel MCUs:
 
-## Key Routines
+```
+Byte 0: Command/Address byte
+Byte 1: Data/Parameter byte
+```
 
-### Initialization and Setup
+The high 3 bits of the command byte (bits 7-5) select the target panel:
 
-| Routine | Address | Purpose |
-|---------|---------|---------|
-| `SOME_CPANEL_ROUTINE__FC3EF5` | 0xFC3EF5 | Initial setup |
-| `CPanel_Init_Serial_LEDs` | 0xFC4021 | Initialize serial communication and LED array |
-| `CPanel_Init_StateArray` | 0xFC42FB | Initialize state arrays for RX/TX |
-| `SEND_CMD_TO_CPANEL` | 0xFC43D9 | Low-level 2-byte command send |
-| `CHECK_IF_WE_ARE_READY_TO_SEND_CMD_TO_CPANEL` | 0xFC4374 | TX ready check with timeout |
+| Bits 7-5 | Binary | Target |
+|----------|--------|--------|
+| 0-3 | `000`-`011` | Left panel (CPL) |
+| 4-7 | `100`-`111` | Right panel (CPR) |
 
-### RX Packet Processing
+### Complete Command Reference
 
-| Routine | Address | Purpose |
-|---------|---------|---------|
-| `Process_CPanel_Rx_SetFlag` | 0xFC490E | Entry point with flag set |
-| `Process_CPanel_Rx_ClearFlag` | 0xFC4915 | Entry point with flag clear |
-| `Process_CPanel_Rx_Setup` | 0xFC491A | Initialize pointers for packet processing |
-| `Process_CPanel_Rx_Loop` | 0xFC492B | Main packet processing loop |
-| `Process_CPanel_Rx_Return` | 0xFC4B2C | Return from processing |
+#### Initialization Commands
 
-### Packet Type Handlers
+| Command | Bytes | Purpose | Timing |
+|---------|-------|---------|--------|
+| `1F DA` | Init sequence 1 | Reset/sync left panel | 3000 loops wait |
+| `1F 1A` | Init sequence 2 | Configure left panel | 3000 loops wait |
+| `1D 00` | Init sequence 3 | Initialize left panel | 6000 loops wait |
+| `DD 03` | Setup mode | Configure both panels | 6000 loops wait |
+| `1E 80` | Init sequence 4 | Final init (left) | 9000 loops wait |
 
-The `CPanel_Packet_Handler_Table` at 0xFC4965 dispatches to handlers based on packet type (bits 3-5 of first byte):
+#### Query Commands
 
-| Type | Handler | Address | Purpose |
-|------|---------|---------|---------|
-| 0, 1 | `CPanel_Handle_ButtonState` | 0xFC4985 | Process button state packets |
-| 2 | `CPanel_Handle_EncoderLookup` | 0xFC49E0 | Process rotary encoder data |
-| 3, 4, 5 | `CPanel_Handle_SyncPacket` | 0xFC4B10 | Synchronization/acknowledgment packets |
-| 6, 7 | `CPanel_Handle_MultiBytePacket` | 0xFC4A40 | Multi-byte data packets |
+| Command | Bytes | Purpose | Expected Response |
+|---------|-------|---------|-------------------|
+| `20 00` | Ping left panel | Communication test | Any response = OK |
+| `20 0B` | Poll left buttons | Read button segment 0x0B | Button state packet |
+| `20 10` | Query left panel | Read status/sync | Sync packet |
+| `E0 00` | Ping right panel | Communication test | Any response = OK |
+| `E2 04` | Query right panel | Read specific register | Data packet |
+| `E2 11` | Query right panel | Read specific register | Data packet |
+| `E3 10` | Query right extended | Extended read | Multi-byte packet |
+
+#### Data Commands
+
+| Command | Bytes | Purpose |
+|---------|-------|---------|
+| `25 01` | Left panel data | Set/request data mode |
+| `2B 00` | Init state array (left) | Initialize button state |
+| `EB 00` | Init state array (right) | Initialize button state |
+
+### Response Packet Format
+
+Responses from control panel MCUs are processed by `Process_CPanel_Rx_Loop` at address `0xFC491A`.
+
+#### Packet Type Encoding
+
+The packet type is encoded in bits 5-3 of the first response byte:
+
+```
+Byte 0: [ X | X | Type2 | Type1 | Type0 | X | X | X ]
+                 \___________|__________/
+                    Packet type (0-7)
+```
+
+#### Packet Type Handlers
+
+| Type | Bits 5-3 | Handler | Address | Purpose |
+|------|----------|---------|---------|---------|
+| 0 | `000` | `CPanel_Handle_ButtonState` | 0xFC4985 | Button state (left panel) |
+| 1 | `001` | `CPanel_Handle_ButtonState` | 0xFC4985 | Button state (right panel) |
+| 2 | `010` | `CPanel_Handle_EncoderLookup` | 0xFC49E0 | Rotary encoder delta |
+| 3 | `011` | `CPanel_Handle_SyncPacket` | 0xFC4B10 | Sync/ACK |
+| 4 | `100` | `CPanel_Handle_SyncPacket` | 0xFC4B10 | Sync/ACK |
+| 5 | `101` | `CPanel_Handle_SyncPacket` | 0xFC4B10 | Sync/ACK |
+| 6 | `110` | `CPanel_Handle_MultiBytePacket` | 0xFC4A40 | Multi-byte data |
+| 7 | `111` | `CPanel_Handle_MultiBytePacket` | 0xFC4A40 | Multi-byte data |
+
+### Button State Packet Format (Types 0, 1)
+
+```
+Byte 0: [ Panel | Type | Segment Index (bits 3-0 + bit 6) ]
+Byte 1: [ Button bitmap - 8 buttons per segment ]
+```
+
+**Segment index calculation:**
+- If bit 6 is set: `segment = (byte0 & 0x0F) + 0x10` (left panel offset)
+- Otherwise: `segment = byte0 & 0x0F`
+
+The handler at `CPanel_Handle_ButtonState`:
+1. Extracts segment index: `W = byte0 & 0x4F`
+2. Calculates button array offset
+3. XORs new state with previous to detect changes
+4. Stores result in `CPANEL_VAR__8D96` for edge detection
+
+### Encoder Packet Format (Type 2)
+
+```
+Byte 0: [ 0 | 1 | 0 | Encoder ID (3 bits) | Flags ]
+Byte 1: [ Delta value (signed 8-bit) ]
+```
+
+The encoder lookup at `LABEL_FC6C5F` (address 0xFC6C5F):
+1. Extracts encoder ID from bits 0-2 and 6-7
+2. Indexes into table at `0xEDA0BC`
+3. Calls encoder-specific handler
+4. Returns 0xFFFF if invalid/no change
+
+### Timing Requirements
+
+| Operation | Delay | Method |
+|-----------|-------|--------|
+| Post-command wait | 6 system ticks | `DELAY_6_TICKS` (0xFC4213) |
+| Init command wait | 3000 loop iterations | `DELAY_3000_LOOPS` (0xFC4118) |
+| Ready check timeout | 200 attempts * 1500 loops | `CHECK_IF_WE_ARE_READY_TO_SEND_CMD_TO_CPANEL` |
+
+## 4. State Machine
+
+### Serial Routine State Machine
+
+The main CPU uses a state machine indexed by `CPANEL_SELECT_SERIAL_ROUTINE` (address 0x8D8A) with values 0-10 (stored as byte offsets 0x00-0x28).
+
+```
+State Transition Diagram:
+
+    ┌─────────────────────────────────────────────────────────────────┐
+    │                                                                 │
+    │  IDLE (0)                                                       │
+    │    │                                                            │
+    │    │ SEND_CMD_TO_CPANEL called                                  │
+    │    ▼                                                            │
+    │  ROUTINE_1 (1) ──► Start TX, check SCLK1                        │
+    │    │                │                                           │
+    │    │ SCLK1=1        │ SCLK1=0 (panel talking)                   │
+    │    ▼                ▼                                           │
+    │  ROUTINE_2 (2)    Back to IDLE (0)                              │
+    │    │                                                            │
+    │    │ TX byte, update LED index                                  │
+    │    ▼                                                            │
+    │  ROUTINE_3 (3) ──► Disable serial pins                          │
+    │    │                                                            │
+    │    ▼                                                            │
+    │  ROUTINE_4 (4) ──► Continue TX, count down STATE_0_TO_17        │
+    │    │                │                                           │
+    │    │ count > 1      │ count <= 1                                │
+    │    ▼                ▼                                           │
+    │  ROUTINE_3 (loop)  ROUTINE_5 (5)                                │
+    │                      │                                          │
+    │                      ▼                                          │
+    │                    ROUTINE_6 (6) ──► Check if more LED data     │
+    │                      │       │                                  │
+    │                      │ more  │ done                             │
+    │                      ▼       ▼                                  │
+    │                    ROUTINE_1  IDLE (0)                          │
+    │                                                                 │
+    │  ═══════════════════════════════════════════════════════════    │
+    │                                                                 │
+    │  ROUTINE_7 (8) ──► RX phase 1, first byte from panel            │
+    │    │                                                            │
+    │    │ Byte received, calculate STATE_0_TO_17                     │
+    │    ▼                                                            │
+    │  ROUTINE_8 (9) ──► RX phase 2, additional bytes                 │
+    │    │                │                                           │
+    │    │ count > 1      │ count <= 1                                │
+    │    ▼                ▼                                           │
+    │  ROUTINE_8 (loop)  IDLE (0)                                     │
+    │                                                                 │
+    └─────────────────────────────────────────────────────────────────┘
+```
+
+### STATE_0_TO_17 Meaning
+
+The variable `CPANEL_STATE_0_TO_17` (address 0x8D8B) tracks the expected byte count in multi-byte transfers:
+
+| Value | Meaning |
+|-------|---------|
+| 0 | Idle/complete |
+| 1 | Last byte expected |
+| 2 | Standard 2-byte packet |
+| 3-17 | Extended packet, N bytes remaining |
+
+**Calculation (from received byte A):**
+```c
+if ((A & 0x3F) < 0x30) {
+    STATE_0_TO_17 = 2;
+} else {
+    STATE_0_TO_17 = (A & 0x0F) + 3;  // 3 to 18 bytes
+}
+```
+
+### Serial Routine Jump Table
+
+Located at `CPANEL_SERIAL_ROUTINES_LIST` (0xFC4489):
+
+| Offset | Routine | Address | Purpose |
+|--------|---------|---------|---------|
+| 0x00 | ROUTINE_0 | 0xFC47E9 | Idle state |
+| 0x04 | ROUTINE_1 | 0xFC44F9 | Start TX sequence |
+| 0x08 | ROUTINE_2 | 0xFC45A8 | Send LED data byte |
+| 0x0C | ROUTINE_3 | 0xFC4544 | Disable pins, next byte |
+| 0x10 | ROUTINE_4 | 0xFC460D | Continue LED data |
+| 0x14 | ROUTINE_5 | 0xFC4573 | Finalize LED group |
+| 0x18 | ROUTINE_6 | 0xFC4672 | Check for more data |
+| 0x1C | ROUTINE_0 | 0xFC47E9 | (duplicate) Idle |
+| 0x20 | ROUTINE_7 | 0xFC46EA | RX first byte |
+| 0x24 | ROUTINE_8 | 0xFC4767 | RX subsequent bytes |
+| 0x28 | ROUTINE_0 | 0xFC47E9 | (duplicate) Unreachable |
+
+## 5. HLE Implementation Guide
+
+### MAME Device Class Structure
+
+```cpp
+// kn5000_cpanel.h
+
+#ifndef MAME_TECHNICS_KN5000_CPANEL_H
+#define MAME_TECHNICS_KN5000_CPANEL_H
+
+#pragma once
+
+class kn5000_cpanel_device : public device_t
+{
+public:
+    kn5000_cpanel_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+    // Serial interface
+    void sin_w(int state);           // Serial data in (from main CPU)
+    int sout_r();                    // Serial data out (to main CPU)
+    void sclk_w(int state);          // Serial clock
+    void cntr_w(int state);          // Chip select / control
+
+    // Configuration
+    auto sout_callback() { return m_sout_cb.bind(); }
+    auto irq_callback() { return m_irq_cb.bind(); }
+
+protected:
+    virtual void device_start() override;
+    virtual void device_reset() override;
+    virtual ioport_constructor device_input_ports() const override;
+
+private:
+    // Serial state
+    uint8_t m_rx_shift;              // Receive shift register
+    uint8_t m_tx_shift;              // Transmit shift register
+    int m_bit_count;                 // Bit counter
+    bool m_sclk_state;               // Previous clock state
+
+    // Command processing
+    uint8_t m_cmd_buffer[2];         // 2-byte command buffer
+    int m_cmd_index;                 // Current command byte index
+
+    // Panel state
+    uint8_t m_button_state[16];      // 16 segments * 8 buttons
+    uint8_t m_led_state[60];         // LED array (60 bytes)
+    int8_t m_encoder_delta[8];       // Rotary encoder deltas
+
+    // Callbacks
+    devcb_write_line m_sout_cb;
+    devcb_write_line m_irq_cb;
+
+    // Internal methods
+    void process_command();
+    void send_response(const uint8_t *data, int length);
+    uint8_t get_button_segment(int segment);
+    void update_leds(int index, uint8_t pattern);
+};
+
+DECLARE_DEVICE_TYPE(KN5000_CPANEL, kn5000_cpanel_device)
+
+#endif // MAME_TECHNICS_KN5000_CPANEL_H
+```
+
+### Key Callbacks to Implement
+
+```cpp
+// Command processing
+void kn5000_cpanel_device::process_command()
+{
+    uint8_t cmd = m_cmd_buffer[0];
+    uint8_t data = m_cmd_buffer[1];
+    uint8_t response[16];
+    int resp_len = 0;
+
+    // Determine packet type from high bits
+    bool is_right_panel = (cmd & 0xE0) >= 0x80;  // Bits 7-5 >= 4
+
+    switch (cmd)
+    {
+    // Initialization commands
+    case 0x1F:  // Init (left panel)
+    case 0x1D:
+    case 0x1E:
+    case 0xDD:  // Setup
+        // Acknowledge with sync packet
+        response[0] = 0x18 | (is_right_panel ? 0x80 : 0);  // Type 3 = sync
+        response[1] = 0x00;
+        resp_len = 2;
+        break;
+
+    // Query commands
+    case 0x20:  // Query left panel
+    case 0xE0:  // Query right panel
+        if (data == 0x00) {
+            // Ping - respond with sync
+            response[0] = 0x18;
+            response[1] = 0x00;
+            resp_len = 2;
+        } else if (data == 0x0B || data == 0x10) {
+            // Button state query
+            int segment = data & 0x0F;
+            response[0] = (is_right_panel ? 0x08 : 0x00) | segment;  // Type 1 or 0
+            response[1] = get_button_segment(segment + (is_right_panel ? 0 : 16));
+            resp_len = 2;
+        }
+        break;
+
+    case 0x25:  // Left data command
+    case 0xE2:
+    case 0xE3:
+        // Extended data - respond appropriately
+        response[0] = 0x18;  // Sync
+        response[1] = data;
+        resp_len = 2;
+        break;
+
+    case 0x2B:  // Init state array (left)
+    case 0xEB:  // Init state array (right)
+        // Send all button segments
+        for (int seg = 0; seg < 16; seg++) {
+            response[0] = seg | (is_right_panel ? 0x40 : 0x00);
+            response[1] = get_button_segment(seg + (is_right_panel ? 0 : 16));
+            send_response(response, 2);
+        }
+        return;
+    }
+
+    if (resp_len > 0) {
+        send_response(response, resp_len);
+    }
+}
+```
+
+### Button State Reporting Format
+
+Buttons are organized in segments of 8 buttons each:
+
+```cpp
+uint8_t kn5000_cpanel_device::get_button_segment(int segment)
+{
+    // Read from MAME input ports
+    // Map segment index to physical button group
+
+    // Example mapping for left panel segments:
+    // Segment 0x04: CPL_SEG4 = AUTO PLAY CHORD + SPLIT POINT + VARIATION 4 + VARIATION 3
+    // Segment 0x06: CPL_SEG6 = SHOWTIME & TRAD DANCE + PARTY TIME + MARCH & WALTZ
+
+    // Example mapping for right panel segments:
+    // Segment 0x01: CPR_SEG1 = GM SPECIAL + ACCORDION REGISTER + DIGITAL DRAWBAR
+    // Segment 0x06: CPR_SEG6 = PM 4 + PM 3 + PM 2 + PM 1 (Panel Memory buttons)
+
+    ioport_value port_value = m_button_ports[segment]->read();
+    return (uint8_t)(port_value & 0xFF);
+}
+```
+
+**Known button combinations (from firmware):**
+
+| Segment | Bitmask | Buttons | Effect |
+|---------|---------|---------|--------|
+| CPL+4 | 0x6C | AUTO PLAY CHORD + SPLIT POINT + VAR4 + VAR3 | Display software build numbers |
+| CPR+1 | 0x70 | GM SPECIAL + ACCORDION REGISTER + DIGITAL DRAWBAR | Display firmware version |
+| CPL+6 | 0x38 | SHOWTIME & TRAD DANCE + PARTY TIME + MARCH & WALTZ | Unknown function |
+| CPR+6 | 0x0F | PM 1 + PM 2 + PM 3 + PM 4 | Firmware update mode |
+
+### LED Control Interface
+
+LEDs are controlled via the `CPANEL_ARRAY__STATE_OF_LEDS` array (60 bytes at 0x8E01):
+
+```cpp
+void kn5000_cpanel_device::update_leds(int index, uint8_t pattern)
+{
+    // Index wraps at 0x3C (60)
+    index %= 60;
+    m_led_state[index] = pattern;
+
+    // Map LED index to physical LEDs
+    // The LED array is transmitted in 2-byte sequences
+    // Byte 0: Row select (bits 5-0 = row, bits 7-6 = panel select)
+    // Byte 1: Column pattern (which LEDs in row are lit)
+
+    // Update MAME output for visual feedback
+    for (int bit = 0; bit < 8; bit++) {
+        machine().output().set_indexed_value("led", index * 8 + bit, BIT(pattern, bit));
+    }
+}
+```
+
+### Rotary Encoder Format
+
+Encoders send signed delta values via Type 2 packets:
+
+```cpp
+void kn5000_cpanel_device::process_encoder(int encoder_id, int8_t delta)
+{
+    // Encoder IDs (estimated):
+    // 0-2: Data wheel / jog wheel
+    // 3-4: Pitch bend wheel
+    // 5-6: Modulation wheels
+
+    // The encoder lookup table at 0xEDA0BC maps encoder IDs to handlers
+    // Each encoder has a specific behavior:
+    // - Some are relative (delta applied to current value)
+    // - Some are absolute (A/D converter values)
+
+    m_encoder_delta[encoder_id] += delta;
+
+    // Report encoder change
+    uint8_t response[2];
+    response[0] = 0x10 | ((encoder_id & 0x07) | ((encoder_id & 0x18) << 3));  // Type 2
+    response[1] = delta;
+    send_response(response, 2);
+}
+```
+
+## 6. Memory Map
+
+### Control Panel RAM Variables
+
+| Address | Name | Size | Description |
+|---------|------|------|-------------|
+| 0x8D8A | `CPANEL_SELECT_SERIAL_ROUTINE` | byte | Current serial state machine index (0-10) |
+| 0x8D8B | `CPANEL_STATE_0_TO_17` | byte | Byte count for multi-byte packets |
+| 0x8D8C | `CPANEL_SERIAL_FLAGS_A` | byte | Flags: bits 0,1,2,4,6,7 used |
+| 0x8D8E | `PFCR_VALUE` | byte | Shadow of Port F Control Register |
+| 0x8D8F | `PFFC_VALUE` | byte | Shadow of Port F Function Control |
+| 0x8D92 | `CPANEL_SERIAL_FLAGS_B` | byte | Flags: bits 0,1,2,3,6,7 used |
+| 0x8D93 | `CPANEL_SERIAL_FLAGS_C` | byte | Communication test results |
+| 0x8D94 | `CPANEL_RX_PACKET_BYTE_1` | byte | First byte of received packet |
+| 0x8D95 | `CPANEL_RX_PACKET_BYTE_2` | byte | Second byte of received packet |
+| 0x8D96 | `CPANEL_VAR__8D96` | byte | Changed button bits (XOR result) |
+| 0x8D97 | `CPANEL_COUNTER_DOWN_FROM_200` | byte | Ready check timeout counter |
+| 0x8D98 | `CPANEL_COUNTER_UP_TO_20` | byte | General counter |
+| 0x8D9A | `CPANEL_COUNTER_UP_TO_42` | byte | Main loop iteration counter |
+| 0x8D9B | `TIMESTAMP_FOR_DELAY` | word | Timestamp for delay routines |
+| 0x8D9D | `CPANEL_BACKUP_RX_INDEX` | word | Backup of RX buffer position |
+| 0x8D9F | `CPANEL_RX_INDEX` | word | Current RX buffer write position |
+| 0x8DA1 | `CPANEL_RX_DATA` | 92 bytes | Circular RX buffer |
+| 0x8DFD | `CPANEL_INDEX_FOR_LEDS` | word | LED array TX index |
+| 0x8DFF | `CPANEL_VAR_RELATED_TO_ARRAY_OF_LEDS` | word | LED array limit index |
+| 0x8E01 | `CPANEL_ARRAY__STATE_OF_LEDS` | 60 bytes | LED state array |
+| 0x8E4A | `STATE_OF_CPANEL_BUTTONS` | 16 bytes | Button state (right panel) |
+| 0x8E5A | `STATE_OF_CPANEL_BUTTONS_LEFT` | 16 bytes | Button state (left panel) |
+| 0x8F38 | `CPANEL_LEDS__ROW_AND_PATTERN_BYTES` | word | Current LED row/pattern |
+
+### Circular Buffer Parameters
+
+| Buffer | Base Address | Size | Modulus | Notes |
+|--------|--------------|------|---------|-------|
+| `CPANEL_RX_DATA` | 0x8DA1 | 92 bytes | 0x5C | RX from panels |
+| `SomeCpanelData` | 0x200AD | 128 bytes | 0x80 | Processed button events |
+| `SomeOtherCpanelData` | 0x20137 | 128 bytes | 0x80 | LED TX queue |
+
+### Flag Definitions
+
+**CPANEL_SERIAL_FLAGS_A (0x8D8C):**
+| Bit | Usage |
+|-----|-------|
+| 0 | TX in progress |
+| 1 | TX active |
+| 2 | RX flag (set/clear by Process_CPanel_Rx functions) |
+| 4 | Extended mode (never set?) |
+| 6 | Initialized |
+| 7 | Reserved |
+
+**CPANEL_SERIAL_FLAGS_B (0x8D92):**
+| Bit | Usage |
+|-----|-------|
+| 0 | RX buffer has space / ready |
+| 1 | TX collision detected |
+| 2 | Unknown |
+| 3 | Sync packet received |
+| 6 | Interrupt pending |
+| 7 | Ready to send |
+
+**CPANEL_SERIAL_FLAGS_C (0x8D93):**
+| Bit | Usage |
+|-----|-------|
+| 0 | Left panel responded to ping |
+| 3 | (bit 4 in some code) Right panel responded to ping |
+
+## 7. Code Reference
+
+### Initialization Routines
+
+| Address | Name | Description |
+|---------|------|-------------|
+| 0xFC3EF5 | `SOME_CPANEL_ROUTINE__FC3EF5` | Main initialization sequence |
+| 0xFC3FA9 | `LABEL_FC3FA9` | Sub-initialization (send 1F 1A, 1D 00, DD 03, 1E 80) |
+| 0xFC4021 | `CPanel_Init_Serial_LEDs` | Configure serial port, init LED array |
+| 0xFC42FB | `CPanel_Init_StateArray` | Initialize button state arrays |
+
+### Command Send/Receive
+
+| Address | Name | Description |
+|---------|------|-------------|
+| 0xFC4374 | `CHECK_IF_WE_ARE_READY_TO_SEND_CMD_TO_CPANEL` | TX ready check with timeout |
+| 0xFC43D9 | `SEND_CMD_TO_CPANEL` | Send 2-byte command |
+| 0xFC490E | `Process_CPanel_Rx_SetFlag` | Process RX with flag set |
+| 0xFC4915 | `Process_CPanel_Rx_ClearFlag` | Process RX with flag clear |
+| 0xFC491A | `Process_CPanel_Rx_Setup` | Initialize RX processing pointers |
+| 0xFC492B | `Process_CPanel_Rx_Loop` | Main RX packet dispatch loop |
+
+### Packet Handlers
+
+| Address | Name | Description |
+|---------|------|-------------|
+| 0xFC4965 | `CPanel_Packet_Handler_Table` | 8-entry jump table for packet types |
+| 0xFC4985 | `CPanel_Handle_ButtonState` | Process button state packets |
+| 0xFC49E0 | `CPanel_Handle_EncoderLookup` | Process rotary encoder packets |
+| 0xFC4A40 | `CPanel_Handle_MultiBytePacket` | Process multi-byte packets |
+| 0xFC4B10 | `CPanel_Handle_SyncPacket` | Process sync/ACK packets |
 
 ### LED Transmission
 
-| Routine | Address | Purpose |
-|---------|---------|---------|
-| `CPanel_Send_LED_Data` | 0xFC4B2D | Send LED state to panel MCUs |
-| `CPanel_LED_Handler_Table` | 0xFC4B85 | Jump table for LED packet types |
-
-### Button Polling
-
-| Routine | Address | Purpose |
-|---------|---------|---------|
-| `CPanel_PollButtonState_Loop` | 0xFC4293 | Main button state polling loop |
-| `CPanel_CheckEncoderState` | 0xFC42B7 | Check rotary encoder changes |
+| Address | Name | Description |
+|---------|------|-------------|
+| 0xFC4B2D | `CPanel_Send_LED_Data` | Main LED transmission routine |
+| 0xFC4B85 | `CPanel_LED_Handler_Table` | 4-entry jump table for LED types |
 
 ### Serial Interrupt Handlers
 
-| Routine | Purpose |
-|---------|---------|
-| `CPANEL_SERIAL_ROUTINE_0` | Idle state |
-| `CPANEL_SERIAL_ROUTINE_1` through `_6` | TX state machine |
-| `CPANEL_SERIAL_ROUTINE_7` | Read buttons state (phase 1) |
-| `CPANEL_SERIAL_ROUTINE_8` | Read buttons state (phase 2) |
+| Address | Name | Description |
+|---------|------|-------------|
+| 0xFC44B5 | `INTTX1_HANDLER` | Serial TX complete interrupt |
+| 0xFC44D7 | `INTRX1_HANDLER` | Serial RX complete interrupt |
+| 0xFC4489 | `CPANEL_SERIAL_ROUTINES_LIST` | Jump table for state machine |
 
-## Packet Format
+### Helper Routines
 
-### RX Packet Structure
+| Address | Name | Description |
+|---------|------|-------------|
+| 0xFC4C08 | `INC_IY_MOD_05Ch` | Increment IY with modulo 92 |
+| 0xFC4C13 | `INC_IY_MOD_03Ch` | Increment IY with modulo 60 |
+| 0xFC4C1E | `INC_IX_MOD_080h` | Increment IX with modulo 128 |
+| 0xFC4C29 | `DEC_IX_MOD_080h` | Decrement IX with modulo 128 |
+| 0xFC6C5F | `LABEL_FC6C5F` | Encoder lookup/dispatch |
 
-Incoming packets from control panel MCUs:
-- **Byte 0**: Type/flags byte
-  - Bits 3-5: Packet type (0-7, indexes into handler table)
-  - Other bits: Type-specific flags
-- **Byte 1**: Data byte (meaning depends on packet type)
+### Delay Routines
 
-### Button State Packets (Types 0, 1)
+| Address | Name | Iterations/Ticks |
+|---------|------|------------------|
+| 0xFC40F4 | `DELAY_10_LOOPS` | 10 |
+| 0xFC4100 | `DELAY_300_LOOPS` | 300 |
+| 0xFC410C | `DELAY_1500_LOOPS` | 1500 |
+| 0xFC4118 | `DELAY_3000_LOOPS` | 3000 |
+| 0xFC4213 | `DELAY_6_TICKS` | 6 system ticks |
+| 0xFC4225 | `DELAY_51_TICKS` | 51 system ticks |
 
-Stored in `CPANEL_RX_PACKET_BYTE_1` (0x8D94) and `CPANEL_RX_PACKET_BYTE_2` (0x8D95):
-- First byte: Button segment identifier
-- Second byte: Button state bitmap
+### Button Detection
 
-## Response Handling
+| Address | Name | Description |
+|---------|------|-------------|
+| 0xFC4160 | `Detect_Control_Panel_button_combos` | Check for special button combinations |
+| 0xFC4265 | `CPanel_PollButtonState_Loop` | Main button polling loop |
+| 0xFC4289 | `CPanel_CheckEncoderState` | Check encoder value changes |
 
-The main CPU processes responses via `Process_CPanel_Rx_Loop` which:
-1. Checks if enough data is in the RX buffer
-2. Extracts packet type from first byte
-3. Dispatches to appropriate handler via jump table
-4. Updates buffer indices and state flags
+## References
 
-## Button Mapping
-
-*Analysis in progress - mapping button indices to physical buttons.*
-
-## LED Mapping
-
-*Analysis in progress - mapping LED indices to physical LEDs.*
-
-## Rotary Encoder Format
-
-*Analysis in progress - determining encoder data format.*
+- **Source Code**: `/home/fsanches/claude_jail/kn5000-roms-disasm/maincpu/kn5000_v10_program.asm`
+- **Protocol Analysis**: `/home/fsanches/claude_jail/kn5000-roms-disasm/docs/cpanel_protocol_analysis.txt`
+- **Hardware Architecture**: [Hardware Architecture Page]({{ site.baseurl }}/hardware-architecture/)
+- **Service Manual**: EMID971655 A5 (Schematics II-9 through II-38)
