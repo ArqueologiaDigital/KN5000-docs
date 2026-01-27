@@ -130,7 +130,7 @@ The high 3 bits of the command byte (bits 7-5) select the target panel:
 
 ### Response Packet Format
 
-Responses from control panel MCUs are processed by `Process_CPanel_Rx_Loop` at address `0xFC491A`.
+Responses from control panel MCUs are processed by `CPanel_RX_ParseNext` at address `0xFC491A`.
 
 #### Packet Type Encoding
 
@@ -146,14 +146,14 @@ Byte 0: [ X | X | Type2 | Type1 | Type0 | X | X | X ]
 
 | Type | Bits 5-3 | Handler | Address | Purpose |
 |------|----------|---------|---------|---------|
-| 0 | `000` | `CPanel_Handle_ButtonState` | 0xFC4985 | Button state (left panel) |
-| 1 | `001` | `CPanel_Handle_ButtonState` | 0xFC4985 | Button state (right panel) |
-| 2 | `010` | `CPanel_Handle_EncoderLookup` | 0xFC49E0 | Rotary encoder delta |
-| 3 | `011` | `CPanel_Handle_SyncPacket` | 0xFC4B10 | Sync/ACK |
-| 4 | `100` | `CPanel_Handle_SyncPacket` | 0xFC4B10 | Sync/ACK |
-| 5 | `101` | `CPanel_Handle_SyncPacket` | 0xFC4B10 | Sync/ACK |
-| 6 | `110` | `CPanel_Handle_MultiBytePacket` | 0xFC4A40 | Multi-byte data |
-| 7 | `111` | `CPanel_Handle_MultiBytePacket` | 0xFC4A40 | Multi-byte data |
+| 0 | `000` | `CPanel_RX_ButtonPacket` | 0xFC4985 | Button state (left panel) |
+| 1 | `001` | `CPanel_RX_ButtonPacket` | 0xFC4985 | Button state (right panel) |
+| 2 | `010` | `CPanel_RX_EncoderPacket` | 0xFC49E0 | Rotary encoder delta |
+| 3 | `011` | `CPanel_RX_SyncPacket` | 0xFC4B10 | Sync/ACK |
+| 4 | `100` | `CPanel_RX_SyncPacket` | 0xFC4B10 | Sync/ACK |
+| 5 | `101` | `CPanel_RX_SyncPacket` | 0xFC4B10 | Sync/ACK |
+| 6 | `110` | `CPanel_RX_MultiBytePacket` | 0xFC4A40 | Multi-byte data |
+| 7 | `111` | `CPanel_RX_MultiBytePacket` | 0xFC4A40 | Multi-byte data |
 
 ### Button State Packet Format (Types 0, 1)
 
@@ -166,7 +166,7 @@ Byte 1: [ Button bitmap - 8 buttons per segment ]
 - If bit 6 is set: `segment = (byte0 & 0x0F) + 0x10` (left panel offset)
 - Otherwise: `segment = byte0 & 0x0F`
 
-The handler at `CPanel_Handle_ButtonState`:
+The handler at `CPanel_RX_ButtonPacket`:
 1. Extracts segment index: `W = byte0 & 0x4F`
 2. Calculates button array offset
 3. XORs new state with previous to detect changes
@@ -191,13 +191,13 @@ The encoder lookup at `LABEL_FC6C5F` (address 0xFC6C5F):
 |-----------|-------|--------|
 | Post-command wait | 6 system ticks | `DELAY_6_TICKS` (0xFC4213) |
 | Init command wait | 3000 loop iterations | `DELAY_3000_LOOPS` (0xFC4118) |
-| Ready check timeout | 200 attempts * 1500 loops | `CHECK_IF_WE_ARE_READY_TO_SEND_CMD_TO_CPANEL` |
+| Ready check timeout | 200 attempts * 1500 loops | `CPanel_WaitTXReady` |
 
 ## 4. State Machine
 
 ### Serial Routine State Machine
 
-The main CPU uses a state machine indexed by `CPANEL_SELECT_SERIAL_ROUTINE` (address 0x8D8A) with values 0-10 (stored as byte offsets 0x00-0x28).
+The main CPU uses a state machine indexed by `CPANEL_STATE_MACHINE_INDEX` (address 0x8D8A) with values 0-10 (stored as byte offsets 0x00-0x28).
 
 ```
 State Transition Diagram:
@@ -206,7 +206,7 @@ State Transition Diagram:
     │                                                                 │
     │  IDLE (0)                                                       │
     │    │                                                            │
-    │    │ SEND_CMD_TO_CPANEL called                                  │
+    │    │ CPanel_SendCommand called                                  │
     │    ▼                                                            │
     │  ROUTINE_1 (1) ──► Start TX, check SCLK1                        │
     │    │                │                                           │
@@ -249,7 +249,7 @@ State Transition Diagram:
 
 ### STATE_0_TO_17 Meaning
 
-The variable `CPANEL_STATE_0_TO_17` (address 0x8D8B) tracks the expected byte count in multi-byte transfers:
+The variable `CPANEL_PACKET_BYTE_COUNT` (address 0x8D8B) tracks the expected byte count in multi-byte transfers:
 
 | Value | Meaning |
 |-------|---------|
@@ -453,7 +453,7 @@ uint8_t kn5000_cpanel_device::get_button_segment(int segment)
 
 ### LED Control Interface
 
-LEDs are controlled via the `CPANEL_ARRAY__STATE_OF_LEDS` array (60 bytes at 0x8E01):
+LEDs are controlled via the `CPANEL_LED_TX_BUFFER` array (60 bytes at 0x8E01):
 
 ```cpp
 void kn5000_cpanel_device::update_leds(int index, uint8_t pattern)
@@ -507,13 +507,13 @@ void kn5000_cpanel_device::process_encoder(int encoder_id, int8_t delta)
 
 | Address | Name | Size | Description |
 |---------|------|------|-------------|
-| 0x8D8A | `CPANEL_SELECT_SERIAL_ROUTINE` | byte | Current serial state machine index (0-10) |
-| 0x8D8B | `CPANEL_STATE_0_TO_17` | byte | Byte count for multi-byte packets |
-| 0x8D8C | `CPANEL_SERIAL_FLAGS_A` | byte | Flags: bits 0,1,2,4,6,7 used |
+| 0x8D8A | `CPANEL_STATE_MACHINE_INDEX` | byte | Current serial state machine index (0-10) |
+| 0x8D8B | `CPANEL_PACKET_BYTE_COUNT` | byte | Byte count for multi-byte packets |
+| 0x8D8C | `CPANEL_TX_RX_FLAGS` | byte | Flags: bits 0,1,2,4,6,7 used |
 | 0x8D8E | `PFCR_VALUE` | byte | Shadow of Port F Control Register |
 | 0x8D8F | `PFFC_VALUE` | byte | Shadow of Port F Function Control |
-| 0x8D92 | `CPANEL_SERIAL_FLAGS_B` | byte | Flags: bits 0,1,2,3,6,7 used |
-| 0x8D93 | `CPANEL_SERIAL_FLAGS_C` | byte | Communication test results |
+| 0x8D92 | `CPANEL_PROTOCOL_FLAGS` | byte | Flags: bits 0,1,2,3,6,7 used |
+| 0x8D93 | `CPANEL_PANEL_DETECT_FLAGS` | byte | Communication test results |
 | 0x8D94 | `CPANEL_RX_PACKET_BYTE_1` | byte | First byte of received packet |
 | 0x8D95 | `CPANEL_RX_PACKET_BYTE_2` | byte | Second byte of received packet |
 | 0x8D96 | `CPANEL_VAR__8D96` | byte | Changed button bits (XOR result) |
@@ -521,12 +521,12 @@ void kn5000_cpanel_device::process_encoder(int encoder_id, int8_t delta)
 | 0x8D98 | `CPANEL_COUNTER_UP_TO_20` | byte | General counter |
 | 0x8D9A | `CPANEL_COUNTER_UP_TO_42` | byte | Main loop iteration counter |
 | 0x8D9B | `TIMESTAMP_FOR_DELAY` | word | Timestamp for delay routines |
-| 0x8D9D | `CPANEL_BACKUP_RX_INDEX` | word | Backup of RX buffer position |
-| 0x8D9F | `CPANEL_RX_INDEX` | word | Current RX buffer write position |
+| 0x8D9D | `CPANEL_RX_READ_PTR` | word | Backup of RX buffer position |
+| 0x8D9F | `CPANEL_RX_WRITE_PTR` | word | Current RX buffer write position |
 | 0x8DA1 | `CPANEL_RX_DATA` | 92 bytes | Circular RX buffer |
-| 0x8DFD | `CPANEL_INDEX_FOR_LEDS` | word | LED array TX index |
-| 0x8DFF | `CPANEL_VAR_RELATED_TO_ARRAY_OF_LEDS` | word | LED array limit index |
-| 0x8E01 | `CPANEL_ARRAY__STATE_OF_LEDS` | 60 bytes | LED state array |
+| 0x8DFD | `CPANEL_LED_READ_PTR` | word | LED TX buffer read pointer |
+| 0x8DFF | `CPANEL_LED_WRITE_PTR` | word | LED TX buffer write pointer |
+| 0x8E01 | `CPANEL_LED_TX_BUFFER` | 60 bytes | LED state TX buffer |
 | 0x8E4A | `STATE_OF_CPANEL_BUTTONS` | 16 bytes | Button state (right panel) |
 | 0x8E5A | `STATE_OF_CPANEL_BUTTONS_LEFT` | 16 bytes | Button state (left panel) |
 | 0x8F38 | `CPANEL_LEDS__ROW_AND_PATTERN_BYTES` | word | Current LED row/pattern |
@@ -541,17 +541,17 @@ void kn5000_cpanel_device::process_encoder(int encoder_id, int8_t delta)
 
 ### Flag Definitions
 
-**CPANEL_SERIAL_FLAGS_A (0x8D8C):**
+**CPANEL_TX_RX_FLAGS (0x8D8C):**
 | Bit | Usage |
 |-----|-------|
 | 0 | TX in progress |
 | 1 | TX active |
-| 2 | RX flag (set/clear by Process_CPanel_Rx functions) |
+| 2 | RX flag (set/clear by CPanel_RX_* functions) |
 | 4 | Extended mode (never set?) |
 | 6 | Initialized |
 | 7 | Reserved |
 
-**CPANEL_SERIAL_FLAGS_B (0x8D92):**
+**CPANEL_PROTOCOL_FLAGS (0x8D92):**
 | Bit | Usage |
 |-----|-------|
 | 0 | RX buffer has space / ready |
@@ -561,7 +561,7 @@ void kn5000_cpanel_device::process_encoder(int encoder_id, int8_t delta)
 | 6 | Interrupt pending |
 | 7 | Ready to send |
 
-**CPANEL_SERIAL_FLAGS_C (0x8D93):**
+**CPANEL_PANEL_DETECT_FLAGS (0x8D93):**
 | Bit | Usage |
 |-----|-------|
 | 0 | Left panel responded to ping |
@@ -573,31 +573,31 @@ void kn5000_cpanel_device::process_encoder(int encoder_id, int8_t delta)
 
 | Address | Name | Description |
 |---------|------|-------------|
-| 0xFC3EF5 | `SOME_CPANEL_ROUTINE__FC3EF5` | Main initialization sequence |
+| 0xFC3EF5 | `CPanel_InitHardware` | Main initialization sequence |
 | 0xFC3FA9 | `LABEL_FC3FA9` | Sub-initialization (send 1F 1A, 1D 00, DD 03, 1E 80) |
-| 0xFC4021 | `CPanel_Init_Serial_LEDs` | Configure serial port, init LED array |
-| 0xFC42FB | `CPanel_Init_StateArray` | Initialize button state arrays |
+| 0xFC4021 | `CPanel_InitLEDBuffer` | Configure serial port, init LED array |
+| 0xFC42FB | `CPanel_InitButtonState` | Initialize button state arrays |
 
 ### Command Send/Receive
 
 | Address | Name | Description |
 |---------|------|-------------|
-| 0xFC4374 | `CHECK_IF_WE_ARE_READY_TO_SEND_CMD_TO_CPANEL` | TX ready check with timeout |
-| 0xFC43D9 | `SEND_CMD_TO_CPANEL` | Send 2-byte command |
-| 0xFC490E | `Process_CPanel_Rx_SetFlag` | Process RX with flag set |
-| 0xFC4915 | `Process_CPanel_Rx_ClearFlag` | Process RX with flag clear |
-| 0xFC491A | `Process_CPanel_Rx_Setup` | Initialize RX processing pointers |
-| 0xFC492B | `Process_CPanel_Rx_Loop` | Main RX packet dispatch loop |
+| 0xFC4374 | `CPanel_WaitTXReady` | TX ready check with timeout |
+| 0xFC43D9 | `CPanel_SendCommand` | Send 2-byte command |
+| 0xFC490E | `CPanel_RX_ProcessWithFlag` | Process RX with flag set |
+| 0xFC4915 | `CPanel_RX_Process` | Process RX with flag clear |
+| 0xFC491A | `CPanel_RX_DispatchLoop` | Initialize RX processing pointers |
+| 0xFC492B | `CPanel_RX_ParseNext` | Main RX packet dispatch loop |
 
 ### Packet Handlers
 
 | Address | Name | Description |
 |---------|------|-------------|
 | 0xFC4965 | `CPanel_Packet_Handler_Table` | 8-entry jump table for packet types |
-| 0xFC4985 | `CPanel_Handle_ButtonState` | Process button state packets |
-| 0xFC49E0 | `CPanel_Handle_EncoderLookup` | Process rotary encoder packets |
-| 0xFC4A40 | `CPanel_Handle_MultiBytePacket` | Process multi-byte packets |
-| 0xFC4B10 | `CPanel_Handle_SyncPacket` | Process sync/ACK packets |
+| 0xFC4985 | `CPanel_RX_ButtonPacket` | Process button state packets |
+| 0xFC49E0 | `CPanel_RX_EncoderPacket` | Process rotary encoder packets |
+| 0xFC4A40 | `CPanel_RX_MultiBytePacket` | Process multi-byte packets |
+| 0xFC4B10 | `CPanel_RX_SyncPacket` | Process sync/ACK packets |
 
 ### LED Transmission
 
