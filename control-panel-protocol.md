@@ -871,6 +871,108 @@ Read from main CPU Port H:
 | (XP) | Philippines |
 | (XW) | Singapore |
 
+## 10. DEMO Button Code Path (Case Study)
+
+This section traces the complete code path from when a user presses the DEMO button to when the demo mode handler executes.
+
+### Button Press Detection
+
+When DEMO is pressed (CPL_SEG3, bit 0):
+
+```
+Hardware interrupt (serial RX)
+    ↓
+CPanel_RX_ButtonPacket (0xFC4985)
+    - Reads segment byte (3) and button state (bit 0)
+    - XORs new state with previous to detect change
+    - Queues event to CPANEL_RX_EVENT_QUEUE
+```
+
+### Event Queue
+
+- **Location:** `CPANEL_RX_EVENT_QUEUE` (0x000200AD)
+- **Size:** 128 bytes circular buffer
+- **Content:** Changed bits mask + segment info
+
+### Application Event Dispatch
+
+```
+ApDeliveryEvent (0xFA9E09) - Called from main loop
+    ↓
+LABEL_F44147 (0xF44147) - Event Dispatcher
+    - Extracts event code (0x01c00013)
+    - Indexes APP_EVENT_HANDLER_TABLE with handler ID
+    - Jumps to handler
+    ↓
+DemoModeFunc (0xF222DD, line 179085)
+```
+
+### Event Code Encoding: `0x01c00013`
+
+```
+01c00013h breakdown:
+  0x01   = Button event group identifier
+  0xc0   = LEFT panel segment encoding
+  0x00   = Padding/flags
+  0x13   = Handler index 19 (DEMO button handler)
+```
+
+### DemoModeFunc Handler (0xF222DD)
+
+```asm
+DemoModeFunc:
+    CP XBC, 01c00013h        ; Verify this is DEMO button event
+    JR NZ, LABEL_F222FA      ; Not DEMO? Exit
+    CP XDE, 00000001h        ; Check if button released (XDE=1)
+    JR Z, LABEL_F222EE       ; Released → call LABEL_F869E3
+    OR XDE, XDE              ; Check if button pressed (XDE=0)
+    JR NZ, LABEL_F222FA      ; Neither? Exit
+    ; Button pressed (XDE=0) → call LABEL_F8696F
+    CALL LABEL_F8696F        ; Demo mode entry routine
+```
+
+### Key Addresses
+
+| Component | Address | Purpose |
+|-----------|---------|---------|
+| `CPanel_RX_ButtonPacket` | 0xFC4985 | Packet parsing, XOR change detection |
+| `CPANEL_RX_EVENT_QUEUE` | 0x000200AD | Event queue buffer |
+| `ApDeliveryEvent` | 0xFA9E09 | Main event dispatcher |
+| `APP_EVENT_HANDLER_TABLE` | 0xF44169 | Handler lookup table |
+| `DemoModeFunc` | 0xF222DD | DEMO button handler |
+| `LABEL_F8696F` | 0xF8696F | Demo mode entry (button press) |
+| `LABEL_F869E3` | 0xF869E3 | Demo mode (button release) |
+
+### Complete Call Chain
+
+```
+Hardware interrupt (serial RX)
+    ↓
+CPanel_RX_Process
+    ↓
+CPanel_RX_ParseNext (line 401556)
+    ↓
+CPanel_RX_ButtonPacket (0xFC4985)
+    ├─ Read packet byte 1 (segment)
+    ├─ Read packet byte 2 (button state)
+    ├─ XOR with previous state → changed bits
+    └─ Queue event to CPANEL_RX_EVENT_QUEUE
+    ↓
+ApDeliveryEvent (0xFA9E09) - Called from main loop
+    ├─ Extract event code (0x01c00013) from queue entry
+    ├─ Decode handler type (0x13 = 19)
+    └─ Call LABEL_F44147
+    ↓
+LABEL_F44147 (0xF44147)
+    ├─ Index APP_EVENT_HANDLER_TABLE with handler ID
+    ├─ Compute offset from handler offset lookup table
+    └─ Jump to handler function
+    ↓
+DemoModeFunc (0xF222DD)
+    ├─ CP XBC, 01c00013h  ← Verify this is DEMO event
+    └─ Execute action based on XDE (button state)
+```
+
 ## References
 
 - **Source Code**: `/home/fsanches/claude_jail/kn5000-roms-disasm/maincpu/kn5000_v10_program.asm`
