@@ -305,20 +305,20 @@ Per project policy, binary includes are split when code references internal addr
 Significant naming improvements applied to the control panel serial protocol code (0xFC3E00-0xFC7FFF):
 
 **Packet Processing:**
-- `Process_CPanel_Rx_SetFlag` / `Process_CPanel_Rx_ClearFlag` - Entry points
-- `Process_CPanel_Rx_Loop` - Main packet processing loop
+- `CPanel_RX_ProcessWithFlag` / `CPanel_RX_Process` - Entry points
+- `CPanel_RX_ParseNext` - Main packet processing loop
 - `CPanel_Packet_Handler_Table` - Jump table for packet type dispatch
 
 **Packet Type Handlers:**
-- `CPanel_Handle_ButtonState` - Button state packets (types 0, 1)
-- `CPanel_Handle_EncoderLookup` - Rotary encoder data (type 2)
-- `CPanel_Handle_SyncPacket` - Sync/ack packets (types 3, 4, 5)
-- `CPanel_Handle_MultiBytePacket` - Multi-byte packets (types 6, 7)
+- `CPanel_RX_ButtonPacket` - Button state packets (types 0, 1)
+- `CPanel_RX_EncoderPacket` - Rotary encoder data (type 2)
+- `CPanel_RX_SyncPacket` - Sync/ack packets (types 3, 4, 5)
+- `CPanel_RX_MultiBytePacket` - Multi-byte packets (types 6, 7)
 
 **LED and Initialization:**
 - `CPanel_Send_LED_Data` - LED state transmission
-- `CPanel_Init_Serial_LEDs` - Serial/LED initialization
-- `CPanel_Init_StateArray` - State array setup
+- `CPanel_InitLEDBuffer` - Serial/LED initialization
+- `CPanel_InitButtonState` - Button state array setup
 
 **Variables:**
 - `CPANEL_RX_PACKET_BYTE_1` / `CPANEL_RX_PACKET_BYTE_2` - Incoming packet bytes (formerly `CPANEL_UNUSED_2/3`)

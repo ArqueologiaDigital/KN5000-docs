@@ -79,12 +79,13 @@ Things we have some info on but need verification:
 
 ### CP_Flags Usage
 Some flag bits appear unused in the code we've analyzed:
-- `CP_Flags_A.2` - Set by `LABEL_FC490E`/`LABEL_FC4915` but never read?
-- `CP_Flags_A.4` - Never set, only tested?
-- `CP_Flags_B.1`, `B.2`, `B.3`, `B.6` - Purpose unclear
+- `CPANEL_TX_RX_FLAGS.2` - Set by `CPanel_RX_ProcessWithFlag`/`CPanel_RX_Process` but never read?
+- `CPANEL_TX_RX_FLAGS.4` - Never set, only tested?
+- `CPANEL_PROTOCOL_FLAGS.1`, `.2`, `.3`, `.6` - Purpose unclear
 
 ### State Machine
-- `CPANEL_STATE_0_TO_17` can hold values 0-17, but we don't have a complete state diagram
+- `CPANEL_PACKET_BYTE_COUNT` can hold values 0-17, tracking expected bytes in multi-byte transfers
+- See [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) for complete state machine diagram
 
 ### Timing
 - Various routines use "wait 6 ticks" or "wait 3000 loops" - what are the actual timing requirements?

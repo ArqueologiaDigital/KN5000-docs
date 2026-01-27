@@ -63,15 +63,18 @@ permalink: /memory-map/
 
 | Address | Variable | Description |
 |---------|----------|-------------|
-| `0x8DFD` | `CPANEL_INDEX_FOR_LEDS` | Current LED addressing index (word) |
+| `0x8DFD` | `CPANEL_LED_READ_PTR` | LED TX buffer read pointer (word) |
+| `0x8DFF` | `CPANEL_LED_WRITE_PTR` | LED TX buffer write pointer (word) |
+| `0x8E01` | `CPANEL_LED_TX_BUFFER` | LED state TX buffer (60 bytes) |
 
 ### Protocol State
 
 | Address | Variable | Description |
 |---------|----------|-------------|
-| `0x8D8B` | `CPANEL_STATE_0_TO_17` | State machine variable (byte, values 0-17) |
-| `0x8D9D` | `CPANEL_BACKUP_RX_INDEX` | Backup of RX buffer position (word) |
-| `0x8D9F` | `CPANEL_RX_INDEX` | Current receive buffer index (word) |
+| `0x8D8A` | `CPANEL_STATE_MACHINE_INDEX` | State machine index (byte, values 0-10) |
+| `0x8D8B` | `CPANEL_PACKET_BYTE_COUNT` | Packet byte counter (byte, values 0-17) |
+| `0x8D9D` | `CPANEL_RX_READ_PTR` | RX buffer read pointer (word) |
+| `0x8D9F` | `CPANEL_RX_WRITE_PTR` | RX buffer write pointer (word) |
 
 ### Status Flags
 
