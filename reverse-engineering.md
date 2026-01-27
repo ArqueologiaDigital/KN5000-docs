@@ -598,10 +598,17 @@ The ROMs contain icons, UI elements, and splash screens for the LCD display.
 - 1-bit status bitmaps (Please Wait, Completed, etc.)
 - UI elements (drawbar sliders, icons)
 - Various graphics referenced by display routines
+- Palette data at `0xEB37DE` (256 colors × 4 bytes RGBA)
 
 **Table Data ROM:**
 - Feature demo BMP images (FTBMP01-06)
 - Additional UI assets
+
+**HDAE5000 ROM:**
+- Product logo, promotional images, UI panels (320×240, 8-bit indexed)
+- Hard disk icon (28×28, 8-bit indexed)
+- Main palette at `0x65dce` (256 colors × 4 bytes RGBA)
+- Icon palette at `0x6158e` (Windows halftone-style)
 
 ### Image Format
 
@@ -618,19 +625,37 @@ The LCD controller is IC206 (MN89304) with 4Mbit Video RAM (IC207).
 
 1. **Scan ROMs** for image signatures (BMP headers: `0x42 0x4D`)
 2. **Trace display code** to find image address references
-3. **Extract to binary files** in `maincpu/images/` and `table_data/images/`
+3. **Extract to binary files** in `maincpu/images/`, `table_data/images/`, or `hdae5000/images/`
 4. **Name descriptively** based on apparent purpose
 5. **Update assembly sources** with `incbin` directives
 6. **Verify byte-match** after rebuild
 
+### Palette Discovery Technique
+
+For indexed color images without obvious palette data, trace the boot/initialization code:
+
+1. **Search for VGA DAC writes** - Look for code writing to `0x3C8` (palette index) and `0x3C9` (RGB data)
+2. **Find the palette load routine** - Often a loop loading 256 entries
+3. **Trace back to find palette address** - The `LDA` instruction before the call reveals the palette location
+
+**Example (HDAE5000):** Boot code at `0x28f585` executes:
+```asm
+lda XWA, 0x2e5dce    ; Palette address (ROM offset 0x65dce)
+calr 0x28f8e0        ; Palette load routine
+```
+
+The load routine at `0x28f8e0` shifts each RGB component right by 4 bits before writing to the 6-bit VGA DAC.
+
 ### Current Progress
 
 **Already extracted:**
-- `maincpu/images/` - 18+ files (1-bit bitmaps, UI elements)
+- `maincpu/images/` - 42 files (1-bit bitmaps, UI elements, logos)
 - `table_data/images/` - 6 BMP files (feature demo screens)
+- `hdae5000/images/` - 4 images + 2 palettes (product images, icon)
 
 **Tools:**
 - `extract_include_binaries.py` - Extraction script
+- `convert_images.py` - Converts raw `.bin` to PNG with correct palettes
 
 ### Conversion for Documentation
 

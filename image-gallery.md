@@ -138,13 +138,15 @@ These images show keyboard split point notes displayed when configuring the keyb
 
 ## HDAE5000 Hard Disk Expansion ROM Images
 
-These images were extracted from the HD-AE5000 hard disk expansion ROM. They are 320x240 8-bit grayscale images stored at fixed offsets in the ROM, likely displayed on a connected PC during file transfer operations.
+These images were extracted from the HD-AE5000 hard disk expansion ROM. The images are 8-bit indexed color, displayed on the KN5000's LCD during HD-AE5000 operations.
+
+**Palette discovery**: Disassembly analysis found the boot code at `0x28f585` loads palette data from ROM offset `0x65dce`. The icon uses a separate Windows halftone-style palette at `0x6158e`.
 
 ### HD-AE5000 Product Logo
 
 ![HDAE5000 Logo]({{ "/assets/images/gallery/HDAE5000_Logo.png" | relative_url }})
 
-*320x240, 8-bit grayscale - ROM offset: 0x28c00*
+*320x240, 8-bit indexed color - ROM offset: 0x2898e (CPU: 0x2A898E)*
 
 Shows the HD-AE5000 product name with a stylized hard disk drive graphic.
 
@@ -152,7 +154,7 @@ Shows the HD-AE5000 product name with a stylized hard disk drive graphic.
 
 ![HDAE5000 Hands]({{ "/assets/images/gallery/HDAE5000_Hands.png" | relative_url }})
 
-*320x240, 8-bit grayscale - ROM offset: 0x3b800*
+*320x240, 8-bit indexed color - ROM offset: 0x3b98e (CPU: 0x2BB98E)*
 
 Promotional image showing hands operating the HD-AE5000 unit connected to a KN5000 keyboard.
 
@@ -160,26 +162,27 @@ Promotional image showing hands operating the HD-AE5000 unit connected to a KN50
 
 ![HDAE5000 File Panel]({{ "/assets/images/gallery/HDAE5000_FilePanel.png" | relative_url }})
 
-*320x240, 8-bit grayscale - ROM offset: 0x4e400*
+*320x240, 8-bit indexed color - ROM offset: 0x4e98e (CPU: 0x2CE98E)*
 
 UI panel showing file selection interface with textured button areas.
 
-### HD-AE5000 Version 2 Startup Screen
+### Hard Disk Icon
 
-![HDAE5000 Startup]({{ "/assets/images/gallery/HDAE5000_StartupScreen.png" | relative_url }})
+![HDAE5000 Icon]({{ "/assets/images/gallery/HDAE5000_Icon.png" | relative_url }})
 
-*320x240, 8-bit grayscale - ROM offset: 0x60400*
+*28x28, 8-bit indexed color - ROM offset: 0x6198e (CPU: 0x2E198E)*
 
-Startup screen showing "HD-AE5000 Version 2" with "Start-up!" prompt and decorative graphics.
+Small icon depicting a hard disk with magnetic head, used in UI elements.
 
 ---
 
 ## Image Format Notes
 
 - **Table Data BMP**: Standard Windows BMP format, 8-bit indexed color
-- **Main CPU raw**: Custom format, raw pixel data without headers
+- **Main CPU raw**: Custom format, raw pixel data without headers, uses RGBA palette at `0xEB37DE`
+- **HDAE5000 raw**: Raw pixel data, main images use palette at ROM offset `0x65dce`, icon uses halftone palette at `0x6158e`
 - **1-bit bitmaps**: Monochrome, 224x22 pixels (28 bytes per row)
-- **8-bit bitmaps**: Grayscale, dimensions vary by image
+- **8-bit bitmaps**: 256-color indexed, dimensions vary by image
 - **LCD resolution**: 320x240 pixels (QVGA)
 - **LCD controller**: MN89304 with 4Mbit Video RAM (IC207)
 
