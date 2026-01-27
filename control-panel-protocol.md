@@ -450,35 +450,48 @@ void kn5000_cpanel_device::process_command()
 
 ### Button State Reporting Format
 
-Buttons are organized in segments of 8 buttons each:
+Buttons are organized in 11 segments per panel, with 8 buttons per segment.
 
-```cpp
-uint8_t kn5000_cpanel_device::get_button_segment(int segment)
-{
-    // Read from MAME input ports
-    // Map segment index to physical button group
+#### Control Panel Right (CPR) Button Mapping
 
-    // Example mapping for left panel segments:
-    // Segment 0x04: CPL_SEG4 = AUTO PLAY CHORD + SPLIT POINT + VARIATION 4 + VARIATION 3
-    // Segment 0x06: CPL_SEG6 = SHOWTIME & TRAD DANCE + PARTY TIME + MARCH & WALTZ
+| Segment | Bit 0 | Bit 1 | Bit 2 | Bit 3 | Bit 4 | Bit 5 | Bit 6 | Bit 7 |
+|---------|-------|-------|-------|-------|-------|-------|-------|-------|
+| **CPR_SEG0** | - | - | - | - | - | TRANSPOSE - | TRANSPOSE + | - |
+| **CPR_SEG1** | ORGAN & ACCORDION | ORCHESTRAL PAD | SYNTH | BASS | DIGITAL DRAWBAR | ACCORDION REGISTER | GM SPECIAL | DRUM KITS |
+| **CPR_SEG2** | PIANO | GUITAR | STRINGS & VOCAL | BRASS | FLUTE | SAX & REED | MALLET & ORCH PERC | WORLD PERC |
+| **CPR_SEG3** | SUSTAIN | DIGITAL EFFECT | DSP EFFECT | DIGITAL REVERB | ACOUSTIC ILLUSION | - | - | - |
+| **CPR_SEG4** | LEFT | RIGHT 2 | RIGHT 1 | ENTERTAINER | CONDUCTOR: LEFT | CONDUCTOR: RIGHT 2 | CONDUCTOR: RIGHT 1 | TECHNI CHORD |
+| **CPR_SEG5** | - | - | - | SEQUENCER: PLAY | SEQUENCER: EASY REC | SEQUENCER: MENU | - | - |
+| **CPR_SEG6** | PM 1 | PM 2 | PM 3 | PM 4 | PM 5 | PM 6 | PM 7 | PM 8 |
+| **CPR_SEG7** | PM: SET | PM: NEXT BANK | PM: BANK VIEW | - | - | - | - | - |
+| **CPR_SEG8** | - | - | - | R1/R2 OCTAVE - | R1/R2 OCTAVE + | START/STOP | SYNCHRO & BREAK | TAP TEMPO |
+| **CPR_SEG9** | - | - | - | - | - | - | MEMORY A | MEMORY B |
+| **CPR_SEG10** | - | - | MENU: SOUND | MENU: CONTROL | MENU: MIDI | MENU: DISK | - | - |
 
-    // Example mapping for right panel segments:
-    // Segment 0x01: CPR_SEG1 = GM SPECIAL + ACCORDION REGISTER + DIGITAL DRAWBAR
-    // Segment 0x06: CPR_SEG6 = PM 4 + PM 3 + PM 2 + PM 1 (Panel Memory buttons)
+#### Control Panel Left (CPL) Button Mapping
 
-    ioport_value port_value = m_button_ports[segment]->read();
-    return (uint8_t)(port_value & 0xFF);
-}
-```
+| Segment | Bit 0 | Bit 1 | Bit 2 | Bit 3 | Bit 4 | Bit 5 | Bit 6 | Bit 7 |
+|---------|-------|-------|-------|-------|-------|-------|-------|-------|
+| **CPL_SEG0** | STANDARD ROCK | R & ROLL & BLUES | POP & BALLAD | FUNK & FUSION | SOUL & MODERN DANCE | BIG BAND & SWING | JAZZ COMBO | - |
+| **CPL_SEG1** | COMPOSER: MEMORY | COMPOSER: MENU | SOUND ARRANGER: SET | SOUND ARRANGER: ON/OFF | MUSIC STYLIST | FADE IN | FADE OUT | - |
+| **CPL_SEG2** | FILL IN 1 | FILL IN 2 | INTRO & ENDING 1 | INTRO & ENDING 2 | - | - | PAGE DOWN | PAGE UP |
+| **CPL_SEG3** | DEMO | MSP BANK | MSP MENU | MSP STOP/RECORD | - | - | - | - |
+| **CPL_SEG4** | VARIATION 1 | VARIATION 2 | VARIATION 3 | VARIATION 4 | MUSIC STYLE ARRANGER | SPLIT POINT | AUTO PLAY CHORD | - |
+| **CPL_SEG5** | MSP 1 | MSP 2 | MSP 3 | MSP 4 | MSP 5 | MSP 6 | - | - |
+| **CPL_SEG6** | U.S. TRAD | COUNTRY | LATIN | MARCH & WALTZ | PARTY TIME | SHOWTIME & TRAD DANCE | WORLD | CUSTOM |
+| **CPL_SEG7** | RIGHT 5 | RIGHT 4 | DISPLAY HOLD | EXIT | DOWN 7 | UP 7 | DOWN 8 | UP 8 |
+| **CPL_SEG8** | RIGHT 3 | RIGHT 2 | RIGHT 1 | - | DOWN 5 | UP 5 | DOWN 6 | UP 6 |
+| **CPL_SEG9** | LEFT 5 | LEFT 4 | LEFT 3 | - | DOWN 3 | UP 3 | DOWN 4 | UP 4 |
+| **CPL_SEG10** | LEFT 2 | LEFT 1 | HELP | OTHER PARTS/TR | DOWN 1 | UP 1 | DOWN 2 | UP 2 |
 
 **Known button combinations (from firmware):**
 
 | Segment | Bitmask | Buttons | Effect |
 |---------|---------|---------|--------|
-| CPL+4 | 0x6C | AUTO PLAY CHORD + SPLIT POINT + VAR4 + VAR3 | Display software build numbers |
-| CPR+1 | 0x70 | GM SPECIAL + ACCORDION REGISTER + DIGITAL DRAWBAR | Display firmware version |
-| CPL+6 | 0x38 | SHOWTIME & TRAD DANCE + PARTY TIME + MARCH & WALTZ | Unknown function |
-| CPR+6 | 0x0F | PM 1 + PM 2 + PM 3 + PM 4 | Firmware update mode |
+| CPL_SEG4 | 0x6C | AUTO PLAY CHORD + SPLIT POINT + VAR4 + VAR3 | Display software build numbers |
+| CPR_SEG1 | 0x70 | GM SPECIAL + ACCORDION REGISTER + DIGITAL DRAWBAR | Display firmware version |
+| CPL_SEG6 | 0x38 | SHOWTIME & TRAD DANCE + PARTY TIME + MARCH & WALTZ | Unknown function |
+| CPR_SEG6 | 0x0F | PM 1 + PM 2 + PM 3 + PM 4 | Firmware update mode |
 
 ### LED Control Interface
 
@@ -502,6 +515,31 @@ void kn5000_cpanel_device::update_leds(int index, uint8_t pattern)
     }
 }
 ```
+
+#### Control Panel Right (CPR) LED Mapping
+
+| Row | Bit 0 | Bit 1 | Bit 2 | Bit 3 | Bit 4 | Bit 5 | Bit 6 | Bit 7 |
+|-----|-------|-------|-------|-------|-------|-------|-------|-------|
+| **0x00** | SUSTAIN | DIGITAL EFFECT | DSP EFFECT | DIGITAL REVERB | ACOUSTIC ILLUSION | SEQUENCER: PLAY | SEQUENCER: EASY REC | SEQUENCER: MENU |
+| **0x01** | PIANO | GUITAR | STRINGS & VOCAL | BRASS | FLUTE | SAX & REED | MALLET & ORCH PERC | WORLD PERC |
+| **0x02** | ORGAN & ACCORDION | ORCHESTRAL PAD | SYNTH | BASS | DIGITAL DRAWBAR | ACCORDION REGISTER | GM SPECIAL | DRUM KITS |
+| **0x03** | PM 1 | PM 2 | PM 3 | PM 4 | PM 5 | PM 6 | PM 7 | PM 8 |
+| **0x04** | PART: LEFT | PART: RIGHT 2 | PART: RIGHT 1 | ENTERTAINER | COND: LEFT | COND: RIGHT 2 | COND: RIGHT 1 | TECHNI CHORD |
+| **0x08** | MENU: SOUND | MENU: CONTROL | MENU: MIDI | MENU: DISK | - | - | - | - |
+| **0x0A** | MEMORY A | MEMORY B | - | - | - | - | - | - |
+| **0x0B** | SYNCHRO & BREAK | R1/R2 OCTAVE - | R1/R2 OCTAVE + | BANK VIEW | - | - | - | - |
+| **0x0C** | START/STOP BEAT 1 | START/STOP BEAT 2 | START/STOP BEAT 3 | START/STOP BEAT 4 | - | - | - | - |
+
+#### Control Panel Left (CPL) LED Mapping
+
+| Row | Bit 0 | Bit 1 | Bit 2 | Bit 3 | Bit 4 | Bit 5 | Bit 6 | Bit 7 |
+|-----|-------|-------|-------|-------|-------|-------|-------|-------|
+| **0xC0** | COMPOSER: MEMORY | COMPOSER: MENU | SOUND ARR: SET | SOUND ARR: ON/OFF | MUSIC STYLIST | FADE IN | FADE OUT | DISPLAY HOLD |
+| **0xC1** | U.S. TRAD | COUNTRY | LATIN | MARCH & WALTZ | PARTY TIME | SHOWTIME & TRAD DANCE | WORLD | CUSTOM |
+| **0xC2** | STANDARD ROCK | R & ROLL & BLUES | POP & BALLAD | FUNK & FUSION | SOUL & MODERN DANCE | BIG BAND & SWING | JAZZ COMBO | MSP: MENU |
+| **0xC3** | VARIATION 1 | VARIATION 2 | VARIATION 3 | VARIATION 4 | MUSIC STYLE ARRANGER | AUTO PLAY CHORD | - | - |
+| **0xC4** | FILL IN 1 | FILL IN 2 | INTRO & ENDING 1 | INTRO & ENDING 2 | SPLIT POINT (LEFT) | SPLIT POINT (CENTER) | SPLIT POINT (RIGHT) | TEMPO/PROGRAM |
+| **0xC8** | OTHER PARTS/TR | - | - | - | - | - | - | - |
 
 ### Rotary Encoder Format
 
@@ -730,15 +768,21 @@ The `CPanel_RX_MultiBytePacket` handler has complex decoding logic:
 - Uses bit 4 for mode selection
 - Purpose and expected data format unknown
 
-### Button-to-Segment Mapping
+### ~~Button-to-Segment Mapping~~ (RESOLVED)
 
-We know the segment addressing scheme but lack complete physical button mapping:
-- 16 segments per panel (right: 0-15, left: 16-31 via bit 6)
+**Complete button mapping now documented** - see "Button State Reporting Format" section above.
+- 11 segments per panel (CPR_SEG0-10 and CPL_SEG0-10)
 - Each segment holds 8 button states
-- Partial mapping known from button combo detection code
-- Full physical layout needs hardware verification
+- Full mapping extracted from MAME INPUT_PORTS definitions
 
-### Encoder Physical Mapping
+### ~~LED Row Mapping~~ (RESOLVED)
+
+**Complete LED mapping now documented** - see "LED Control Interface" section above.
+- Right panel: rows 0x00-0x0C
+- Left panel: rows 0xC0-0xC8
+- Full mapping extracted from MAME driver cpanel_leds_w function
+
+### Encoder Physical Mapping (RESOLVED)
 
 Six encoder IDs have dedicated processing handlers:
 - **ID 2**: Modulation wheel → `MIDI_CC_MODWHEEL_VALUE`
@@ -766,9 +810,72 @@ The serial channel switches between rates during operation:
 
 Note: Encoder handlers (0xFC6C80-0xFC6E41) have been fully disassembled.
 
+## 9. Configuration Switches
+
+### Main CPU Checking Device (CN11)
+
+| Setting | Value | Effect |
+|---------|-------|--------|
+| On | 0x00 | Enable diagnostic mode |
+| Off | 0x01 | Normal operation (default) |
+
+### Sub CPU Checking Device (CN12)
+
+| Setting | Value | Effect |
+|---------|-------|--------|
+| On | 0x00 | Enable diagnostic mode |
+| Off | 0x01 | Normal operation (default) |
+
+### Computer Interface Selection (COM_SELECT)
+
+Read from main CPU Port Z bits 4-7:
+
+| Value | Selection |
+|-------|-----------|
+| 0xE0 | MIDI |
+| 0xD0 | PC1 |
+| 0xB0 | PC2 |
+| 0x70 | Mac |
+
+### Area Selection
+
+Read from main CPU Port H:
+
+| Value | Regions |
+|-------|---------|
+| 0x02 | Thailand, Indonesia, Iran, U.A.E., Panama, Argentina, Peru, Brazil |
+| 0x04 | USA, Mexico |
+| 0x06 | All other regions (default) |
+
+**Complete region list (from service documentation):**
+
+| Code | Region |
+|------|--------|
+| (M) | U.S.A. |
+| (MC) | Canada |
+| (XM) | Mexico |
+| (EN) | Norway, Sweden, Denmark, Finland |
+| (EH) | Holland, Belgium |
+| (EF) | France, Italy |
+| (EZ) | Germany |
+| (EW) | Switzerland |
+| (EA) | Austria |
+| (EP) | Spain, Portugal, Greece, South Africa |
+| (EK) | United Kingdom |
+| (XL) | New Zealand |
+| (XR) | Australia |
+| (XS) | Malaysia |
+| (MD) | Saudi Arabia, Hong Kong, Kuwait |
+| (XT) | Taiwan |
+| (X) | Thailand, Indonesia, Iran, U.A.E., Panama, Argentina, Peru, Brazil |
+| (XP) | Philippines |
+| (XW) | Singapore |
+
 ## References
 
 - **Source Code**: `/home/fsanches/claude_jail/kn5000-roms-disasm/maincpu/kn5000_v10_program.asm`
 - **Protocol Analysis**: `/home/fsanches/claude_jail/kn5000-roms-disasm/docs/cpanel_protocol_analysis.txt`
 - **Hardware Architecture**: [Hardware Architecture Page]({{ site.baseurl }}/hardware-architecture/)
 - **Service Manual**: EMID971655 A5 (Schematics II-9 through II-38)
+- **MAME Driver**: `/home/fsanches/claude_jail/kn5000-roms-disasm/mame_driver/src/mame/matsushita/kn5000.cpp`
+- **MAME Control Panel HLE**: `/home/fsanches/claude_jail/kn5000-roms-disasm/mame_driver/src/mame/matsushita/kn5000_cpanel.cpp`

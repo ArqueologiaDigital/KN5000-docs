@@ -17,18 +17,19 @@ Things we don't know yet and need to investigate.
 - [ ] Are there error/retry mechanisms in the protocol?
 
 ### Button Handling
-- [ ] How many buttons are there total?
-- [ ] How are button banks organized?
+- [x] How many buttons are there total? **~150 buttons** across 22 segments (11 per panel, 8 bits each)
+- [x] How are button banks organized? **11 segments per panel (CPL_SEG0-10, CPR_SEG0-10)**, see [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/)
 - [ ] Is there debouncing in the MCU or main CPU?
 - [ ] How are simultaneous button presses handled?
 
 ### LED Control
-- [ ] How many LEDs are there total?
+- [x] How many LEDs are there total? **~119 LEDs** (69 on CPR, 50 on CPL)
 - [x] What is the addressing scheme? **Segment outputs SEG00-SEG15** via HD74LS07P drivers
 - [ ] Can LEDs be dimmed or only on/off?
 - [x] Is there multiplexing? **Yes**, MCU multiplexes via segment outputs
 - [ ] What do the 4 LED packet types (bits 4-5) represent? (Handlers at 0xFC6C80+ undisassembled)
 - [x] LED packet format? **Bits 4-5 select handler, bits 5-0 = row, bits 7-6 = panel select**
+- [x] LED row mapping? **CPR: rows 0x00-0x0C, CPL: rows 0xC0-0xC8** - see [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/)
 
 ### Rotary Encoders
 - [x] How many encoders are there? **6 active encoder IDs** (2, 5, 25, 26, 27, 31)
