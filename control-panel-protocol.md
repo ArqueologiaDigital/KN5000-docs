@@ -501,6 +501,36 @@ void kn5000_cpanel_device::process_encoder(int encoder_id, int8_t delta)
 }
 ```
 
+### MIDI Controller Output
+
+Encoder and analog input values are converted to MIDI Control Change messages and stored in RAM variables before being sent to the sound engine:
+
+**Controller Mapping:**
+
+| Variable | MIDI CC# | Controller Name |
+|----------|----------|-----------------|
+| `MIDI_CC_EXPRESSION_VALUE` | 0 | Bank Select MSB / Expression |
+| `MIDI_CC_MODWHEEL_VALUE` | 1 | Modulation Wheel |
+| `MIDI_CC_BREATH_VALUE` | 2 | Breath Controller |
+| `MIDI_CC_FOOT_VALUE` | 4 | Foot Controller |
+| `MIDI_CC_VOLUME_VALUE` | 7 | Volume (estimated) |
+
+**Change Detection:**
+
+The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "value changed" flag:
+- When an encoder/ADC value changes, bit 7 is set
+- The MIDI output routine checks bit 7, sends the value if set, then clears bit 7
+- This prevents redundant MIDI messages for unchanged values
+
+**MIDI Message Format (at 0x9127-0x912A):**
+
+| Address | Field | Example |
+|---------|-------|---------|
+| 0x9127 | Status byte | 0xB0 (Control Change, channel 0) |
+| 0x9128 | Controller # | 0x01 (Modulation) |
+| 0x9129 | Value | 0x00-0x7F |
+| 0x912A | Velocity/Range | 0x7F |
+
 ## 6. Memory Map
 
 ### Control Panel RAM Variables
@@ -529,6 +559,20 @@ void kn5000_cpanel_device::process_encoder(int encoder_id, int8_t delta)
 | 0x8E01 | `CPANEL_LED_TX_BUFFER` | 60 bytes | LED state TX buffer |
 | 0x8E4A | `STATE_OF_CPANEL_BUTTONS` | 16 bytes | Button state (right panel) |
 | 0x8E5A | `STATE_OF_CPANEL_BUTTONS_LEFT` | 16 bytes | Button state (left panel) |
+| 0x8EE0 | `MIDI_CC_MODWHEEL_PENDING` | byte | Modulation value with change flag (bit 7) |
+| 0x8EE2 | `MIDI_CC_EXPRESSION_PENDING` | byte | Expression value with change flag (bit 7) |
+| 0x8EE4 | `MIDI_CC_MODWHEEL_VALUE` | byte | Current modulation wheel value (CC#1) |
+| 0x8EE6 | `MIDI_CC_EXPRESSION_VALUE` | byte | Current expression value (CC#0) |
+| 0x8EE8 | `MIDI_CC_BREATH_VALUE` | byte | Breath controller value (CC#2?) |
+| 0x8EEA | `MIDI_CC_FOOT_VALUE` | byte | Foot controller value (CC#4?) |
+| 0x8EF4 | `MIDI_CC_VOLUME_VALUE` | byte | Volume controller value |
+| 0x8EFC | `ENCODER_0_LAST_VALUE` | byte | Previous encoder 0 reading |
+| 0x8EFE | `ENCODER_1_LAST_VALUE` | byte | Previous encoder 1 reading |
+| 0x8F04 | `ENCODER_0_STATUS` | byte | Encoder 0 flags (bit 3 = changed) |
+| 0x8F06 | `ENCODER_1_STATUS` | byte | Encoder 1 flags (bit 3 = changed) |
+| 0x8F10 | `ENCODER_0_OUTPUT` | 2 bytes | Encoder 0 output (value + flags) |
+| 0x8F16 | `ENCODER_1_OUTPUT` | 2 bytes | Encoder 1 output (value + flags) |
+| 0x8F18 | `ENCODER_STATE_BASE` | struct | Base of encoder state structure |
 | 0x8F38 | `CPANEL_LEDS__ROW_AND_PATTERN_BYTES` | word | Current LED row/pattern |
 
 ### Circular Buffer Parameters
