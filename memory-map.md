@@ -80,9 +80,33 @@ permalink: /memory-map/
 
 | Address | Variable | Description |
 |---------|----------|-------------|
-| `0x8D8C` | `CPANEL_SERIAL_FLAGS_A` | Serial protocol flags (byte) |
-| `0x8D92` | `CPANEL_SERIAL_FLAGS_B` | Serial protocol flags (byte) |
-| `0x8D93` | `CPANEL_SERIAL_FLAGS_C` | Serial protocol flags (byte) |
+| `0x8D8C` | `CPANEL_TX_RX_FLAGS` | TX/RX protocol flags (byte) |
+| `0x8D92` | `CPANEL_PROTOCOL_FLAGS` | Protocol state flags (byte) |
+| `0x8D93` | `CPANEL_PANEL_DETECT_FLAGS` | Panel detection flags (byte) |
+
+### MIDI Controller Values
+
+| Address | Variable | Description |
+|---------|----------|-------------|
+| `0x8EE0` | `MIDI_CC_MODWHEEL_PENDING` | Modulation value with change flag (bit 7) |
+| `0x8EE2` | `MIDI_CC_EXPRESSION_PENDING` | Expression value with change flag (bit 7) |
+| `0x8EE4` | `MIDI_CC_MODWHEEL_VALUE` | Current modulation wheel value (CC#1) |
+| `0x8EE6` | `MIDI_CC_EXPRESSION_VALUE` | Current expression value (CC#0) |
+| `0x8EE8` | `MIDI_CC_BREATH_VALUE` | Breath controller value (CC#2?) |
+| `0x8EEA` | `MIDI_CC_FOOT_VALUE` | Foot controller value (CC#4?) |
+| `0x8EF4` | `MIDI_CC_VOLUME_VALUE` | Volume controller value |
+
+### Encoder State
+
+| Address | Variable | Description |
+|---------|----------|-------------|
+| `0x8EFC` | `ENCODER_0_LAST_VALUE` | Previous encoder 0 reading (for delta) |
+| `0x8EFE` | `ENCODER_1_LAST_VALUE` | Previous encoder 1 reading (for delta) |
+| `0x8F04` | `ENCODER_0_STATUS` | Encoder 0 status flags (bit 3 = changed) |
+| `0x8F06` | `ENCODER_1_STATUS` | Encoder 1 status flags (bit 3 = changed) |
+| `0x8F10` | `ENCODER_0_OUTPUT` | Encoder 0 output buffer (2 bytes) |
+| `0x8F16` | `ENCODER_1_OUTPUT` | Encoder 1 output buffer (2 bytes) |
+| `0x8F18` | `ENCODER_STATE_BASE` | Base of encoder state structure |
 
 ## Sub CPU Address Space
 
