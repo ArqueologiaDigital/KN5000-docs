@@ -246,6 +246,22 @@ The main and sub CPUs communicate via a single-byte latch at `0x120000`.
 
 The sub CPU payload (`subcpu/kn5000_subprogram_v142.asm`) is 192KB.
 
+**Key State Variables:**
+
+| Address | Symbol | Description |
+|---------|--------|-------------|
+| 0x04FE | `PAYLOAD_LOADED_FLAG` | Shared with boot ROM (bit 6: ready, bit 7: complete) |
+| 0x10E8 | `DMA_XFER_STATE` | DMA transfer state: 0=idle, 1=single, 2=two-phase |
+| 0x10EA | `CMD_PROCESSING_STATE` | Command processing phase (0-4) |
+| 0x10EC | `BYTE_FROM_MAINCPU_LATCH` | Last received command byte |
+
+**MicroDMA Interrupt Handlers:**
+
+| Handler | Address | Description |
+|---------|---------|-------------|
+| `MICRODMA_CH0_HANDLER` | 0x020F1F | Latch reads, command dispatch |
+| `MICRODMA_CH2_HANDLER` | 0x020F01 | Payload transfers, state machine |
+
 **Layout to document:**
 - Entry point address
 - Interrupt vector table
