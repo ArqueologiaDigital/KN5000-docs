@@ -40,7 +40,7 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 | Sub CPU Boot | 128KB | **100%** | 0 | `subcpu_boot/kn5000_subcpu_boot.asm` |
 | Table Data | 2MB | 32.42% | 1,417,294 | `table_data/kn5000_table_data.asm` |
 | Custom Data | 1MB | - | - | No source yet |
-| HDAE5000 (HD Expansion) | 512KB | - | - | No source yet |
+| HDAE5000 (HD Expansion) | 512KB | **100%** | 0 | `hdae5000/hd-ae5000_v2_06i.asm` |
 
 ## Original ROM Files
 
