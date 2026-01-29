@@ -376,8 +376,228 @@ HALT_LOOP:
 
 ---
 
+## HD-AE5000 Initialization (Optional)
+
+If the HD-AE5000 hard disk expansion is detected (PE port bit 0 = 0), the main CPU calls its initialization routines.
+
+### Detection and Entry
+
+```
+Main CPU checks PE.0
+    │
+    ├─► PE.0 = 1: No HD-AE5000, skip
+    │
+    └─► PE.0 = 0: HD-AE5000 present
+            │
+            ▼
+        Validate ROM header at 0x280000
+        Check for "XAPR" magic string
+            │
+            ▼
+        CALL 0x280008 (Boot Init entry)
+```
+
+### HDAE5000_Boot_Init (0x28F576)
+
+The boot initialization performs these steps:
+
+| Step | Action | Details |
+|------|--------|---------|
+| 1 | Store workspace | Save main CPU workspace pointer at 0x23A1A2 |
+| 2 | Clear work buffer | Zero 62KB at 0x22A000 |
+| 3 | Register handlers | Register 12 callback handlers with main CPU |
+| 4 | Load palette | Load 256-entry VGA palette from ROM |
+| 5 | Copy VRAM data | Copy 76,800 bytes to 0x1A0000 and 0x1A9600 |
+| 6 | Init handler pointers | Store function pointers at 0x230ECC/ED2/ED6 |
+| 7 | RAM test | Fill/verify 32KB at 0x230F1C-0x238F1C |
+| 8 | Check HD presence | Detect hard disk, store result at 0x230EDA |
+| 9 | Register frame handler | Set up periodic update callback |
+
+### Workspace Dispatch System
+
+The main CPU provides a callback registration system that HDAE5000 uses to integrate with the UI framework:
+
+```
+WORKSPACE_PTR (0x23A1A2)
+    │
+    └──► Handler Table A (offset +0x0E0A)
+              │
+              ├──► Registration func (offset +0x00E4)
+              ├──► Display callback (offset +0x0124)
+              ├──► UI callbacks (offsets +0x0244, +0x0248, etc.)
+              │
+    └──► Handler Table B (offset +0x0E88)
+              │
+              └──► Audio/system callbacks
+```
+
+HDAE5000 registers 12 handlers using this system, each identified by a port address (0x0160000x) and handler ID.
+
+### Frame Handler (0x28F662)
+
+After initialization, the main CPU calls the frame handler periodically:
+
+1. Calculate display offset from handler states
+2. Check for state changes via callback dispatch
+3. Monitor status bit 2 for display refresh triggers
+4. Jump to PPORT handler for parallel port polling
+
+---
+
+## Subsystem Initialization Order
+
+After boot completes, subsystems initialize in this order:
+
+```
+Sub CPU Payload Loaded (E3 command)
+    │
+    ▼
+┌─────────────────────────────────────────────┐
+│         Main CPU Subsystem Init             │
+├─────────────────────────────────────────────┤
+│  1. Display System (VGA controller)         │
+│     - Configure MN89304 at 0x170000         │
+│     - Set 320×240 resolution                │
+│     - Load default palette                  │
+│                                             │
+│  2. Control Panel (Serial Channel 1)        │
+│     - 250kHz clock, 8-bit mode              │
+│     - Initialize button/encoder states      │
+│     - Start polling loop                    │
+│                                             │
+│  3. Floppy Disk Controller (0x110000)       │
+│     - Detect drive presence                 │
+│     - Initialize FDC state machine          │
+│                                             │
+│  4. HDAE5000 (if present)                   │
+│     - Call 0x280008 for initialization      │
+│     - Register frame handler                │
+│                                             │
+│  5. MIDI I/O                                │
+│     - Configure serial channels             │
+│     - Initialize message buffers            │
+└─────────────────────────────────────────────┘
+    │
+    ▼
+    Main Event Loop
+```
+
+---
+
+## System Runtime
+
+### Main Event Loop
+
+After all initialization completes, the main CPU enters its event loop:
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    MAIN EVENT LOOP                        │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
+│  │   Control   │    │   Display   │    │    MIDI     │  │
+│  │   Panel     │───►│   Update    │───►│  Processing │  │
+│  │   Poll      │    │             │    │             │  │
+│  └─────────────┘    └─────────────┘    └─────────────┘  │
+│         │                  │                  │          │
+│         ▼                  ▼                  ▼          │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
+│  │    FDC      │    │  HDAE5000   │    │   Audio     │  │
+│  │   Handler   │───►│   Frame     │───►│   Sync      │  │
+│  │             │    │   Handler   │    │             │  │
+│  └─────────────┘    └─────────────┘    └─────────────┘  │
+│                           │                              │
+│                           ▼                              │
+│                    Loop continues                        │
+└──────────────────────────────────────────────────────────┘
+```
+
+### Control Panel Communication
+
+The control panel uses a serial protocol at 250kHz:
+
+| Direction | Data | Purpose |
+|-----------|------|---------|
+| Main → Panel | Button LED states | Update indicator LEDs |
+| Panel → Main | Button presses | User input events |
+| Panel → Main | Encoder deltas | Rotary encoder changes |
+
+See [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) for detailed protocol documentation.
+
+### Inter-CPU Communication (Runtime)
+
+During runtime, the main CPU sends commands to the sub CPU for audio operations:
+
+| Command Range | Purpose |
+|---------------|---------|
+| 0x00-0x1F | DSP/audio control |
+| 0x20-0x3F | Audio parameters |
+| 0x40-0x5F | Tone generator |
+| 0x60-0x7F | Effects processing |
+| 0x80-0x9F | Serial port setup |
+| 0xA0-0xBF | Voice commands |
+| 0xC0-0xFF | System commands |
+
+### HDAE5000 PPORT Polling
+
+If HD-AE5000 is present, its frame handler checks for PC parallel port commands:
+
+1. Check PPORT status register at 0x239000
+2. If active, load parameters from 0x23900A-0x239010
+3. Call PPORT_Setup (0x29511C) and PPORT_Dispatch (0x2950CC)
+4. Process command from jump table at 0x2953E2
+
+Available PPORT commands include file transfers, HD formatting, and PC communication.
+
+---
+
+## Complete Boot Timeline
+
+```
+Time    Event
+─────   ─────────────────────────────────────────────────
+0ms     Power On
+        ├── Main CPU reset vector → hardware init
+        └── Sub CPU reset vector → hardware init
+
+1ms     Hardware configured
+        ├── Main CPU: Ports, memory controller, timers
+        └── Sub CPU: Serial, DMA, tone generator
+
+10ms    Memory tests complete
+        └── Sub CPU: RAM pattern test, ROM checksum
+
+15ms    Sub CPU waiting for payload
+        └── Main CPU: Begin payload transfer
+
+115ms   Payload loaded (192KB via DMA)
+        └── E3 command signals completion
+
+120ms   Sub CPU executing payload
+        ├── Audio engine active
+        └── Command dispatch ready
+
+150ms   Main CPU subsystem init
+        ├── Display initialized
+        ├── Control panel connected
+        └── FDC ready
+
+200ms   HDAE5000 init (if present)
+        ├── 32KB RAM test
+        ├── HD detection
+        └── Frame handler registered
+
+250ms   System Ready
+        └── Main event loop running
+```
+
+---
+
 ## See Also
 
 - [Memory Map]({{ site.baseurl }}/memory-map/) - Complete address space documentation
 - [Reverse Engineering]({{ site.baseurl }}/reverse-engineering/) - Technical details
 - [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) - Build status and known issues
+- [HDAE5000 Hard Disk Expansion]({{ site.baseurl }}/hdae5000/) - HD-AE5000 firmware details
+- [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) - Serial communication with control panel
