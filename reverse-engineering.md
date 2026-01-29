@@ -165,18 +165,18 @@ DMA registers are accessed via special `LDC` (Load Control) instructions. ASL do
 **Sub CPU Boot ROM DMA Usage:**
 - **Channel 0**: Latch reads (source=0x120000 fixed, dest=RAM incrementing)
 - **Channel 2**: Payload transfers (configurable source/dest)
-- **DMA_MODE_REG** (0x0102) = 0x16: Enables DMA, sets trigger mode
+- **DMA_BURST_CTRL** (0x0102) = 0x16: Enables DMA, sets trigger mode
 - **Trigger**: Write 0x0A to 0x0100, or set T01MOD bit 2
 
 **DMA Transfer Routines (Sub CPU Boot ROM):**
 
 | Routine | Address | Size | Function |
 |---------|---------|------|----------|
-| DMA_SEND_CHUNKED | 0xFF8604 | 69B | Sends data in 32-byte chunks |
-| DMA_SEND_BLOCK | 0xFF8649 | 99B | Single block with handshaking |
-| SEND_E3_CMD | 0xFF86AC | 48B | Payload ready signal |
-| WAIT_DMA_THEN_E2 | 0xFF86DC | 112B | Wait then send E2 command |
-| DMA_MULTI_STAGE | 0xFF874C | 211B | Two-phase transfer with E1 |
+| SendData_Chunked | 0xFF8604 | 69B | Sends data in 32-byte chunks |
+| SendData_Block | 0xFF8649 | 99B | Single block with handshaking |
+| SendCmd_E3 | 0xFF86AC | 48B | Payload ready signal |
+| SendParams_E2 | 0xFF86DC | 112B | Wait then send E2 command |
+| TwoPhase_Transfer | 0xFF874C | 211B | Two-phase transfer with E1 |
 
 ### Inter-CPU Communication (0x120000)
 
@@ -197,7 +197,7 @@ The main and sub CPUs communicate via a single-byte latch at `0x120000`.
 |-----|------|-------------|
 | 0 | SUB_READY | Sub CPU ready to receive |
 | 1 | COMPLETION | Transfer complete signal |
-| 2 | GATE | Processing gate for INT_HANDLER_9 |
+| 2 | GATE | Processing gate for InterCPU_RX_Handler |
 | 4 | MAIN_READY | Main CPU ready (polled by sub) |
 
 **Transfer Sequence (Sub CPU → Main CPU):**
@@ -224,7 +224,7 @@ The main and sub CPUs communicate via a single-byte latch at `0x120000`.
 1. Main CPU initializes after reset (see Reset Vector section)
 2. Sub CPU boot ROM runs from 0xFF8290 (BOOT_INIT)
 3. Sub CPU configures DMA for inter-CPU latch at 0x120000
-4. Sub CPU waits for payload via `INT_HANDLER_9` (serial receive)
+4. Sub CPU waits for payload via `InterCPU_RX_Handler` (serial receive)
 5. Main CPU sends payload via DMA transfers
 6. Sub CPU receives E3 command (payload ready signal)
 7. Sub CPU jumps to payload entry point via trampoline at 0x0400
@@ -238,9 +238,9 @@ The main and sub CPUs communicate via a single-byte latch at `0x120000`.
 | 0xFF846D | COPY_VECTORS | Copy trampolines to RAM (0x0400) |
 | 0xFF85AE | INIT_DMA_SERIAL | Configure DMA for latch |
 | 0xFF84A8 | INIT_TONE_GEN | Initialize tone generator at 0x130000 |
-| 0xFF881F | INT_HANDLER_9 | Serial receive interrupt |
-| 0xFF88B8 | INT_HANDLER_35 | Timer/processing interrupt |
-| 0xFF889A | INT_HANDLER_37 | DMA complete interrupt |
+| 0xFF881F | InterCPU_RX_Handler | Serial receive interrupt |
+| 0xFF88B8 | CMD_Dispatch_Handler | Timer/processing interrupt |
+| 0xFF889A | DMA_Complete_Handler | DMA complete interrupt |
 
 ### Payload Structure
 
@@ -358,9 +358,9 @@ The `INIT_TONE_GEN` routine writes initialization patterns to registers at 0x130
 - DEFAULT_HANDLER (0xFF8432) - Simple RETI
 - Vector trampolines (0xFF8F6C) - All 45 handlers
 - Interrupt vector table (0xFFFF00)
-- INT_HANDLER_9 (0xFF881F) - Serial receive interrupt
-- INT_HANDLER_35 (0xFF88B8) - Timer/processing interrupt
-- INT_HANDLER_37 (0xFF889A) - DMA complete interrupt
+- InterCPU_RX_Handler (0xFF881F) - Serial receive interrupt
+- CMD_Dispatch_Handler (0xFF88B8) - Timer/processing interrupt
+- DMA_Complete_Handler (0xFF889A) - DMA complete interrupt
 - DELAY_ROUTINE (0xFF89A9) - Variable delay routine
 - MEM_TEST_ROUTINE (0xFF89FC) - RAM test
 - ROM_CHECKSUM (0xFF8AB4) - Boot ROM integrity check
@@ -390,7 +390,7 @@ For commands `00-1F`, the command byte encodes both the handler index and data l
 
 #### Interrupt Handler Details
 
-**INT_HANDLER_9 (0xFF881F) - Serial Receive Interrupt**
+**InterCPU_RX_Handler (0xFF881F) - Serial Receive Interrupt**
 
 Triggered when data arrives from the main CPU via the inter-CPU latch.
 
@@ -408,7 +408,7 @@ Triggered when data arrives from the main CPU via the inter-CPU latch.
 6. Clear bit 1 of SC0BUF
 ```
 
-**INT_HANDLER_35 (0xFF88B8) - Timer/Processing Interrupt**
+**CMD_Dispatch_Handler (0xFF88B8) - Timer/Processing Interrupt**
 
 Main processing interrupt that handles received data after DMA completes.
 
@@ -434,7 +434,7 @@ Main processing interrupt that handles received data after DMA completes.
 4. Restore all registers
 ```
 
-**INT_HANDLER_37 (0xFF889A) - DMA Complete Interrupt**
+**DMA_Complete_Handler (0xFF889A) - DMA Complete Interrupt**
 
 Handles DMA transfer completion by advancing the state machine.
 
@@ -461,7 +461,7 @@ Handles DMA transfer completion by advancing the state machine.
               │    ┌────────────────────┘
               │    │
               ▼    ▼
-       INT_HANDLER_35 processes
+       CMD_Dispatch_Handler processes
               │
     ┌─────────┼─────────┬─────────┐
     │         │         │         │
@@ -477,15 +477,15 @@ from table  transfer           flag
        CMD_PROCESSING_STATE = 0 (Idle)
 ```
 
-#### DMA State Machine - `DMA_STATE` (0x0516)
+#### DMA State Machine - `DMA_XFER_STATE` (0x0516)
 
 Separate from the command state machine, tracks DMA transfer phases:
 
 | Value | State | Description |
 |-------|-------|-------------|
 | 0 | Idle | No transfer in progress |
-| 1 | Pending | Transfer initiated, waiting for completion |
-| 2 | In Progress | Multi-phase transfer, first phase complete |
+| 1 | Single | Single transfer pending, waiting for completion |
+| 2 | Two-Phase | E1 mode: phase 1 complete, phase 2 pending |
 
 #### DMA Register Encoding (LDC Instructions)
 
@@ -517,6 +517,50 @@ Byte 3: DMA register selector (see table above)
 ```
 
 **Example:** `LDC DMAD0, XWA` = `E8 2E 20` (load DMA destination 0 from XWA)
+
+#### MAME MicroDMA Implementation
+
+The TMP94C241 MicroDMA is implemented in MAME's `tmp94c241.cpp` driver. The implementation uses cycle-steal mode where one DMA transfer is performed per CPU instruction boundary.
+
+**DMAM Mode Register Format (TMP94C241):**
+
+| Bits | Field | Values |
+|------|-------|--------|
+| 7-6 | Transfer Mode | 00=Burst, 01=Cycle-steal, 10=Single (currently cycle-steal only) |
+| 5-4 | Source Addressing | 00=Fixed, 01=Increment, 10=Decrement |
+| 3-2 | Dest Addressing | 00=Fixed, 01=Increment, 10=Decrement |
+| 1-0 | Data Size | 00=Byte, 01=Word, 10=Long |
+
+**DMA Trigger Mechanism:**
+
+1. Software writes a start vector to `DMAVn` register (0x100-0x103)
+2. The start vector maps to an interrupt source
+3. When that interrupt's flag is set, DMA transfer triggers
+4. One transfer occurs per `tlcs900_check_hdma()` call (cycle-steal)
+5. After transfer, the triggering interrupt flag is cleared
+
+**Cycle Costs:**
+
+| Transfer Size | Cycles |
+|---------------|--------|
+| Byte (8-bit) | 8 |
+| Word (16-bit) | 8 |
+| Long (32-bit) | 12 |
+
+**Completion Interrupts:**
+
+When `DMACn` (transfer count) reaches zero:
+- `DMAVn` is cleared (disables channel)
+- Completion interrupt flag is set:
+  - Channel 0: `INTETC01` bit 0x08
+  - Channel 1: `INTETC01` bit 0x80
+  - Channel 2: `INTETC23` bit 0x08
+  - Channel 3: `INTETC23` bit 0x80
+
+**Key Functions:**
+
+- `tlcs900_check_hdma()`: Called each instruction, processes one DMA if pending
+- `tlcs900_process_hdma(channel)`: Executes single transfer for a channel
 
 ### Memory Test Routine (0xFF89FC)
 

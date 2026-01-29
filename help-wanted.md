@@ -108,7 +108,7 @@ LDA XIX, FONT_METRICS_TABLE
 - Routines: VerbNoun (`SendCommand`, `InitHardware`)
 - Data tables: NOUN_TABLE (`FONT_METRICS_TABLE`)
 - Constants: NOUN (`SYSTEM_TIMESTAMP`)
-- Flags: NOUN_FLAG (`DMA_READY_FLAG`)
+- Flags: NOUN_FLAG (`PAYLOAD_LOADED_FLAG`)
 
 ### Binary Include Splitting
 

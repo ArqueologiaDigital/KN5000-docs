@@ -143,11 +143,11 @@ The sub CPU (tone generator controller) has its own memory map, documented from 
 | `0x0000 - 0x00FF` | 256B | Special Function Registers (SFR) |
 | `0x0100 - 0x01FF` | 256B | Extended SFR / Memory Controller |
 | `0x0400 - 0x04E0` | 225B | Interrupt vector trampolines (copied from boot ROM) |
-| `0x04FE` | 1B | `DMA_READY_FLAG` - DMA ready indication (bit 7 set when DMA ready) |
+| `0x04FE` | 1B | `PAYLOAD_LOADED_FLAG` - Payload ready indication (bit 7 set when payload loaded) |
 | `0x0500 - 0x05A2` | ~160B | RAM / Stack area (stack init = 0x05A2) |
-| `0x0502` | 12B | `DMA_PARAM_BLOCK` - DMA parameter storage (XWA, XDE, BC values) |
+| `0x0502` | 12B | `DMA_SETUP_PARAMS` - DMA parameter storage (XWA, XDE, BC values) |
 | `0x0512` | 4B | `DMA_TARGET_ADDR` - Current DMA destination address |
-| `0x0516` | 2B | `DMA_SYNC_FLAG` - DMA synchronization (0=complete, 1=pending, 2=E1 mode) |
+| `0x0516` | 2B | `DMA_XFER_STATE` - DMA transfer state (0=idle, 1=single xfer, 2=two-phase E1 mode) |
 | `0x0518` | 2B | `CMD_PROCESSING_STATE` - Command processing state (0-4) |
 | `0x051A` | 1B | `LAST_CMD_BYTE` - Last received command byte from main CPU |
 | `0x051E` | 32B | `CMD_DATA_BUFFER` - Variable-length command data buffer |
@@ -188,7 +188,7 @@ The sub CPU (tone generator controller) has its own memory map, documented from 
 | `0x80` | T01MOD | Timer 0/1 Mode (not watchdog - real WD at 0x110) |
 | `0x81` | T01FFCR | Timer 0/1 Flip-Flop Control |
 | `0x82` | T8RUN | 8-bit Timer Run Control |
-| `0x102` | DMA_MODE_REG | DMA mode configuration register |
+| `0x102` | DMA_BURST_CTRL | DMA burst mode configuration register |
 
 ## Inter-CPU Communication
 
@@ -230,10 +230,10 @@ Example: Command `0x45` = handler 2 (`0x45 >> 5 = 2`), 6 bytes (`(0x45 & 0x1F) +
 
 ```
 1. Main CPU writes command byte to 0x120000
-2. Sub CPU INT_HANDLER_9 triggered
+2. Sub CPU InterCPU_RX_Handler triggered
 3. Sub CPU reads command, initiates DMA for data bytes
 4. DMA transfers remaining data to RAM buffer
-5. INT_HANDLER_35 processes command based on state machine
+5. CMD_Dispatch_Handler processes command based on state machine
 ```
 
 **Sub CPU → Main CPU (Response):**
@@ -251,7 +251,7 @@ Example: Command `0x45` = handler 2 (`0x45 >> 5 = 2`), 6 bytes (`(0x45 & 0x1F) +
 |---------|--------|-------------|
 | `0x04FE` | `SUBCPU_STATUS_FLAGS` | Bit 6: payload ready, Bit 7: transfer complete |
 | `0x0512` | `DMA_TARGET_ADDR` | Current DMA destination address (4 bytes) |
-| `0x0516` | `DMA_SYNC_FLAG` | 0=idle, 1=single xfer, 2=multi-stage (E1) |
+| `0x0516` | `DMA_XFER_STATE` | 0=idle, 1=single xfer, 2=two-phase (E1) |
 | `0x0518` | `CMD_PROCESSING_STATE` | 0-4, tracks command processing phase |
 | `0x051A` | `LAST_CMD_BYTE` | Most recent command byte received |
 | `0x051E` | `CMD_DATA_BUFFER` | Variable-length command data (32 bytes) |
@@ -290,9 +290,9 @@ Key routines identified in the boot ROM at 0xFF8000+:
 | `0xFF85AE` | `INIT_DMA_SERIAL` | DMA and serial initialization |
 | `0xFF8604-0xFF881E` | *DMA routines* | 539 bytes, fully disassembled (5 routines) |
 | `0xFF8956` | `INIT_MEMORY_TEST` | Memory test initialization |
-| `0xFF881F` | `INT_HANDLER_9` | Serial receive interrupt |
-| `0xFF889A` | `INT_HANDLER_37` | DMA complete interrupt |
-| `0xFF88B8` | `INT_HANDLER_35` | Timer/processing interrupt |
+| `0xFF881F` | `InterCPU_RX_Handler` | Inter-CPU receive interrupt |
+| `0xFF889A` | `DMA_Complete_Handler` | DMA complete interrupt |
+| `0xFF88B8` | `CMD_Dispatch_Handler` | Command dispatch interrupt |
 | `0xFF89A9` | `DELAY_ROUTINE` | Variable delay loop |
 | `0xFF89FC` | `MEM_TEST_ROUTINE` | RAM test routine |
 | `0xFF8AB4` | `ROM_CHECKSUM` | Boot ROM integrity check |

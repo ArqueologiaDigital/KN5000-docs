@@ -136,17 +136,17 @@ These routines handle DMA-based data transfer between the Sub CPU and Main CPU:
 
 | Routine | Address | Size | Description |
 |---------|---------|------|-------------|
-| `DMA_SEND_CHUNKED` | 0xFF8604 | 69 bytes | Send data in 32-byte chunks via DMA |
-| `DMA_SEND_BLOCK` | 0xFF8649 | 99 bytes | Send single data block via DMA |
-| `SEND_E3_CMD` | 0xFF86AC | 48 bytes | Send E3 (payload ready) command |
-| `WAIT_DMA_THEN_E2` | 0xFF86DC | 112 bytes | Wait for DMA, then send E2 command |
-| `DMA_MULTI_STAGE` | 0xFF874C | 211 bytes | Two-phase DMA with E1 command, 200-cycle delays |
+| `SendData_Chunked` | 0xFF8604 | 69 bytes | Send data in 32-byte chunks via DMA |
+| `SendData_Block` | 0xFF8649 | 99 bytes | Send single data block via DMA |
+| `SendCmd_E3` | 0xFF86AC | 48 bytes | Send E3 (payload ready) command |
+| `SendParams_E2` | 0xFF86DC | 112 bytes | Wait for DMA, then send E2 command |
+| `TwoPhase_Transfer` | 0xFF874C | 211 bytes | Two-phase DMA with E1 command, 200-cycle delays |
 
 **Inter-CPU Communication Protocol:**
 - Uses handshaking via `INTERCPU_STATUS` register at 0x34:
   - Bit 0: Sub CPU ready flag (set when ready, cleared when starting transfer)
   - Bit 1: Completion signal from interrupt handler
-  - Bit 2: Gate for command processing in INT_HANDLER_9
+  - Bit 2: Gate for command processing in InterCPU_RX_Handler
   - Bit 4: Main CPU ready flag (polled by sub CPU)
 - Commands sent via `INTER_CPU_LATCH` at 0x120000:
   - E1 command: Multi-stage DMA transfer (two-phase with 200-cycle delays)
@@ -155,12 +155,12 @@ These routines handle DMA-based data transfer between the Sub CPU and Main CPU:
   - Other: Low 5 bits = byte count-1, high 3 bits = handler index from table
 
 **Key memory locations discovered:**
-- `DMA_MODE_REG` (0x0102) - DMA mode control register
-- `DMA_READY_FLAG` (0x04FE) - DMA ready indication flag
-- `DMA_PARAM_BLOCK` (0x0502) - DMA parameter storage (XWA, XDE, BC)
-- `DMA_BUFFER_1` (0x050C) - First DMA buffer (multi-stage phase 1)
-- `DMA_SYNC_FLAG` (0x0516) - DMA sync state: 0=idle, 1=single xfer, 2=multi-stage
-- `DMA_BUFFER_2` (0x053E) - Second DMA buffer (multi-stage phase 2)
+- `DMA_BURST_CTRL` (0x0102) - DMA burst mode configuration register
+- `PAYLOAD_LOADED_FLAG` (0x04FE) - Payload ready indication flag
+- `DMA_SETUP_PARAMS` (0x0502) - DMA parameter storage (XWA, XDE, BC)
+- `E1_XFER_PARAMS` (0x050C) - E1 command transfer parameters (two-phase phase 1)
+- `DMA_XFER_STATE` (0x0516) - DMA transfer state: 0=idle, 1=single xfer, 2=two-phase
+- `E2_XFER_PARAMS` (0x053E) - E2 command transfer parameters (two-phase phase 2)
 - `AUDIO_HW_BASE` (0x100000) - Audio hardware registers (DSP/DAC)
 
 **Encoding fixes applied:**
