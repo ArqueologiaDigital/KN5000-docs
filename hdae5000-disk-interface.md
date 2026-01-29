@@ -10,14 +10,21 @@ This page documents the low-level hard disk interface used by the HD-AE5000 expa
 
 ## Overview
 
-The HD-AE5000 uses an **IDE/ATA compatible hard disk drive** with a custom interface bridged through an Intel 8255 PPI (Programmable Peripheral Interface). This architecture allows the main CPU to communicate with the hard disk controller without direct IDE bus access.
+The HD-AE5000 uses an **IDE/ATA compatible hard disk drive** with **direct memory-mapped registers**. The ATA registers are accessible at addresses 0x130010-0x130020 from the main CPU.
+
+A separate **Intel 8255 PPI** at 0x160000 provides a parallel port interface for communication with a PC running the HD-TechManager5000 software.
 
 ```
-┌──────────────────┐     ┌─────────────────┐     ┌──────────────────┐
-│   TMP94C241F     │     │   Intel 8255    │     │   IDE Hard Disk  │
-│   Main CPU       │◄───►│   PPI Bridge    │◄───►│   Controller     │
-│                  │     │   @ 0x160000    │     │                  │
-└──────────────────┘     └─────────────────┘     └──────────────────┘
+┌──────────────────┐                           ┌──────────────────┐
+│   TMP94C241F     │  Direct Memory Access     │   IDE Hard Disk  │
+│   Main CPU       │◄─────────────────────────►│   @ 0x130010     │
+│                  │                           │   (ATA Registers)│
+│                  │                           └──────────────────┘
+│                  │
+│                  │     ┌─────────────────┐
+│                  │◄───►│   Intel 8255    │◄───► PC Parallel Port
+└──────────────────┘     │   PPI @ 0x160000│
+                         └─────────────────┘
 ```
 
 ## IDE/ATA Background
@@ -26,20 +33,21 @@ The HD-AE5000 uses an **IDE/ATA compatible hard disk drive** with a custom inter
 
 **IDE (Integrated Drive Electronics)** and **ATA (AT Attachment)** are standards for connecting hard disk drives to computers. The HD-AE5000 uses a 2.5" laptop-style IDE drive with 1.08GB capacity, which was a substantial amount for 1996-era consumer electronics.
 
-### ATA Register Set
+### ATA Register Set (Firmware-Verified)
 
-The standard ATA interface provides 8 registers accessed through a parallel bus:
+The HD-AE5000 maps ATA registers directly to memory addresses. The register layout was verified by analyzing firmware code at 0x2974DD-0x297501 and 0x2976AB-0x297883:
 
-| Offset | Register | Read | Write |
-|--------|----------|------|-------|
-| 0x00 | Data | Data | Data |
-| 0x01 | Error | Error code | Features |
-| 0x02 | Sector Count | Sector count | Sector count |
-| 0x03 | LBA Low | LBA bits 0-7 / Sector | LBA bits 0-7 / Sector |
-| 0x04 | LBA Mid | LBA bits 8-15 / Cylinder Low | LBA bits 8-15 / Cylinder Low |
-| 0x05 | LBA High | LBA bits 16-23 / Cylinder High | LBA bits 16-23 / Cylinder High |
-| 0x06 | Device/Head | Device/Head select | Device/Head select |
-| 0x07 | Status | Status | Command |
+| Address | Register | Read | Write |
+|---------|----------|------|-------|
+| 0x130010 | Data (16-bit) | Sector data | Sector data |
+| 0x130012 | Error/Features | Error code | Features |
+| 0x130014 | Sector Count | Sector count | Sector count |
+| 0x130016 | Sector Number | Sector/LBA Low | Sector/LBA Low |
+| 0x130018 | Cylinder Low | Cylinder Low/LBA Mid | Cylinder Low/LBA Mid |
+| 0x13001A | Cylinder High | Cylinder High/LBA High | Cylinder High/LBA High |
+| 0x13001C | Device/Head | Device/Head | Device/Head (0xA0 \| head) |
+| 0x13001E | Status/Command | Status | Command |
+| 0x130020 | Device Control | - | Device Control |
 
 The HD-AE5000 firmware uses **CHS (Cylinder/Head/Sector)** addressing, as evidenced by debug strings in the ROM:
 - `hddtrck` - Track (cylinder) count
@@ -47,88 +55,112 @@ The HD-AE5000 firmware uses **CHS (Cylinder/Head/Sector)** addressing, as eviden
 - `hddsctr` - Sectors per track
 - `hddscby` - Bytes per sector (typically 512)
 
-### Common ATA Commands
+### ATA Commands Used by Firmware
 
-| Command | Hex | Description |
-|---------|-----|-------------|
-| Read Sectors | 0x20 | Read one or more sectors (PIO mode) |
-| Write Sectors | 0x30 | Write one or more sectors (PIO mode) |
-| Identify Device | 0xEC | Return 512-byte device info block |
-| Standby Immediate | 0xE0 | Spin down the drive |
-| Idle Immediate | 0xE1 | Set drive to idle state |
-| Set Features | 0xEF | Configure drive parameters |
+The following commands were identified by analyzing firmware writes to the Command Register (0x13001E):
 
-## PPI Bridge Architecture
+| Command | Hex | Address | Description |
+|---------|-----|---------|-------------|
+| Read Sectors | 0x20 | 0x29781D | Read one or more sectors (PIO mode) |
+| Write Sectors | 0x30 | 0x29772B | Write one or more sectors (PIO mode) |
+| Standby | 0x94 | 0x297501 | Spin down drive with timeout parameter |
+| Identify Device | 0xEC | 0x2978C3 | Return 512-byte device identification block |
 
-### Why Use a PPI Bridge?
+## PPI Parallel Port Interface
 
-The main CPU (TMP94C241F) doesn't have a direct IDE interface. Instead, the HDAE5000 expansion board includes an Intel 8255 PPI that acts as a bridge:
+### Purpose
 
-1. **Parallel Data Transfer**: The 8-bit Port A sends data to the HD controller
-2. **Status Monitoring**: Port B reads status from the HD controller
-3. **Control Signals**: Port C manages handshaking and control lines
+The Intel 8255 PPI at 0x160000 is **NOT** used for IDE communication - the IDE registers are directly memory-mapped. Instead, the PPI provides a **parallel port interface for PC communication** with the HD-TechManager5000 Windows software.
+
+This allows file transfer between a PC and the HDAE5000's hard disk via the PC's parallel port.
 
 ### PPI Port Assignments
 
 | Address | Port | Direction | Function |
 |---------|------|-----------|----------|
-| 0x160000 | Port A | Output | Data/Address bus to HD controller |
-| 0x160002 | Port B | Input | Status byte from HD controller |
-| 0x160004 | Port C | Output | Control signals (read/write strobes) |
-| 0x160006 | Control | Write | PPI mode configuration (0x82) |
-
-### PPI Control Register
-
-The PPI is configured with control byte **0x82**:
-- Bit 7 = 1: Mode set active
-- Port A: Mode 0, Output
-- Port B: Mode 0, Input
-- Port C: Both nibbles Output
+| 0x160000 | Port A | Bidirectional | Data byte to/from PC |
+| 0x160002 | Port B | Input | Status byte from PC |
+| 0x160004 | Port C | Output | Control signals to PC |
+| 0x160006 | Control | Write | PPI mode configuration |
 
 ## Disk Access Protocol
 
-Based on ROM analysis, the disk access follows this general pattern:
+Based on firmware analysis at 0x2974C7-0x297924, disk access follows this pattern:
 
-### 1. Initialize Drive
-
-```
-Check_HD_Present (0x2971A3):
-    1. Test RAM integrity (fill 32KB with 0x5A5A pattern)
-    2. Reset HD controller
-    3. Send Identify Device command (0xEC)
-    4. Read 512-byte identification block
-    5. Parse CHS parameters
-    6. Set drive ready flag
-```
-
-### 2. Read Sectors
+### 1. Wait for Drive Ready
 
 ```
-Read_FSB (0x2959F6):
-    1. Set up CHS address via PPI Port A
-    2. Send Read Sectors command (0x20)
-    3. Wait for DRQ (Data Request) status
-    4. Transfer sector data through PPI
-    5. Repeat for each sector
+Wait_HD_Ready (0x297438):
+    1. Read Status register (0x13001E)
+    2. Check bits: BSY=0 (bit 7), DRDY=1 (bit 6)
+    3. Mask with 0xC0, compare to 0x40
+    4. Repeat until ready or timeout (0x3FFFFF iterations)
 ```
 
-### 3. Write Sectors
+### 2. Initialize Drive (0x2974C7)
 
 ```
-Write_FSB (0x296294):
-    1. Set up CHS address via PPI Port A
-    2. Send Write Sectors command (0x30)
-    3. Wait for DRQ status
-    4. Transfer sector data through PPI
-    5. Wait for completion
+Init_HD:
+    1. Wait for drive ready
+    2. Write 0xFF to Features (0x130012)
+    3. Write 0x00 to Sector Count (0x130014)
+    4. Write 0xFF to Sector/Cyl Low/Cyl High (0x130016/18/1A)
+    5. Write 0xA0 to Device/Head (0x13001C)
+    6. Write 0x94 (Standby) to Command (0x13001E)
 ```
 
-### 4. Motor Control
+### 3. Read Sectors (0x297788)
 
 ```
-TurnHdMotorOff:
-    1. Send Standby Immediate command (0xE0)
-    2. Wait for drive spindown
+Read_Sectors:
+    1. Wait for drive ready (Status & 0xC0 == 0x40)
+    2. Write 0x01 to Sector Count (0x130014)
+    3. Write (0xA0 | head) to Device/Head (0x13001C)
+    4. Write cylinder low to 0x130018
+    5. Write cylinder high to 0x13001A
+    6. Write sector number to 0x130016
+    7. Write 0x20 (Read) to Command (0x13001E)
+    8. Wait for DRQ (Status & 0xC8 == 0x48)
+    9. Read 256 words from Data register (0x130010)
+    10. Wait for completion (Status & 0xC0 == 0x40)
+    11. Check error bit (Status & 0x01)
+```
+
+### 4. Write Sectors (0x29769B)
+
+```
+Write_Sectors:
+    1. Wait for drive ready
+    2. Write 0x01 to Sector Count (0x130014)
+    3. Write (0xA0 | head) to Device/Head (0x13001C)
+    4. Write CHS address to registers
+    5. Write 0x30 (Write) to Command (0x13001E)
+    6. Wait for DRQ
+    7. Write 256 words to Data register (0x130010)
+    8. Wait for completion
+    9. Check error bit
+```
+
+### 5. Identify Device (0x297884)
+
+```
+Identify_Device:
+    1. Wait for drive ready
+    2. Write 0xFF to all address registers
+    3. Write 0xA0 to Device/Head (0x13001C)
+    4. Write 0xEC (Identify) to Command (0x13001E)
+    5. Wait for DRQ
+    6. Read 256 words from Data register to 0x200000
+    7. Parse CHS geometry from identification data
+```
+
+### 6. Reset Controller (0x29747A)
+
+```
+Reset_HD:
+    1. Write 0x0E to Device Control (0x130020) - SRST + nIEN
+    2. Write 0x0A to Device Control (0x130020) - Clear reset, keep nIEN
+    3. Wait for drive ready
 ```
 
 ## Error Handling
@@ -226,20 +258,34 @@ Standard 512-byte sectors are used, as indicated by the `hddscby` (sector bytes)
 
 For MAME emulation, the HDAE5000 disk interface requires:
 
-1. **PPI Emulation**: Full 8255 PPI at 0x160000
-2. **IDE Drive Model**: CHR-addressed IDE drive simulation
-3. **Timing**: Appropriate delays for seek and data transfer
-4. **Status Bits**: Proper busy/ready/error flag handling
-5. **Custom Filesystem**: FSB/FGB/FEB structure parsing
+1. **Direct ATA Register Mapping**: ATA registers at 0x130010-0x130020
+   - Data register (16-bit): 0x130010
+   - Command block registers (8-bit): 0x130012-0x13001E
+   - Device Control (8-bit): 0x130020
+2. **PPI Emulation**: Full 8255 PPI at 0x160000 for PC communication (not for IDE)
+3. **IDE Drive Model**: CHS-addressed IDE drive simulation
+4. **Status Bits**: Proper BSY/DRDY/DRQ/ERR flag handling
+5. **PIO Mode**: All transfers are PIO (no DMA observed)
+6. **Custom Filesystem**: FSB/FGB/FEB structure parsing
+
+## Verified Implementation Details
+
+The following details were confirmed through firmware analysis:
+
+- **Base Address**: ATA registers start at 0x130010, not 0x130000
+- **Transfer Mode**: All data transfers use PIO mode via 16-bit Data register
+- **Sector Size**: 512 bytes (256 word transfers)
+- **Addressing**: CHS mode only (no LBA observed)
+- **Timeout**: Drive ready timeout uses 0x3FFFFF (~4M) iteration loop
+- **Status Polling**: Firmware polls Status register in tight loops (no interrupts)
 
 ## Further Research
 
 Areas requiring additional investigation:
-- Exact PPI-to-IDE signal mapping
-- Complete ATA command set used
-- Filesystem structure details
-- DMA vs PIO transfer modes
-- Exact timing requirements
+- Filesystem structure details (FSB/FGB/FEB layout)
+- PC parallel port protocol details
+- Error recovery procedures
+- Exact timing requirements for real hardware
 
 ## Related Documentation
 
