@@ -262,13 +262,82 @@ The sub CPU payload (`subcpu/kn5000_subprogram_v142.asm`) is 192KB.
 | `MICRODMA_CH0_HANDLER` | 0x020F1F | Latch reads, command dispatch |
 | `MICRODMA_CH2_HANDLER` | 0x020F01 | Payload transfers, state machine |
 
-**Layout to document:**
-- Entry point address
-- Interrupt vector table
-- Code segments
-- Data segments
-- Embedded wavetables or lookup data
-- Relationship to 128KB boot ROM
+**Command Dispatch Table (`CMD_DISPATCH_TABLE`):**
+
+The command byte received from main CPU uses bits 7-5 to select a handler:
+
+| Bits 7-5 | Range | Handler Address | Purpose |
+|----------|-------|-----------------|---------|
+| 0 | 0x00-0x1F | 0x034D5F | DSP/audio control |
+| 1 | 0x20-0x3F | 0x01FC7C | Audio parameters |
+| 2 | 0x40-0x5F | 0x01FC7F | Tone generator |
+| 3 | 0x60-0x7F | 0x035893 | Effects |
+| 4 | 0x80-0x9F | 0x01F890 | Serial port setup (38400 baud) |
+| 5 | 0xA0-0xBF | 0x03CFEE | Voice commands |
+| 6-7 | 0xC0-0xFF | 0x020C12 | System commands (shared) |
+
+Bits 4-0 encode the data length minus one (1-32 bytes).
+
+**Tone Generator Interface:**
+
+The payload accesses the tone generator at two address ranges:
+
+| Address | Register | Description |
+|---------|----------|-------------|
+| 0x110000 | Data | 16-bit voice data (note + velocity) |
+| 0x110002 | Status | Status register (bit 0: data ready, bit 1: mode) |
+| 0x130000 | Control | Dual DSP control registers |
+
+Port P6 bit 7 controls the A23 address line for tone generator access.
+
+**Tone Generator Routines (0x03D0xx):**
+
+| Routine | Address | Description |
+|---------|---------|-------------|
+| `ToneGen_Init` | 0x03D016 | Initialize tone gen (mode = 6) |
+| `ToneGen_Process_Notes` | 0x03D01E | Process incoming note events |
+| `ToneGen_Read_Voice_Data` | 0x03D0C5 | Read voice data with P6.7 control |
+| `ToneGen_Calc_Pitch` | 0x03D11F | Calculate pitch from note + tables |
+| `ToneGen_Poll_Init` | 0x03D1FB | Clear 8 voice buffers |
+| `ToneGen_Poll_All` | 0x03D217 | Poll all 16 channels |
+| `ToneGen_Compare_Voice` | 0x03D2AC | Compare 8-byte voice blocks |
+
+**Voice State Buffer:**
+
+| Address | Size | Description |
+|---------|------|-------------|
+| 0x4A42 | 1B | DMA command byte |
+| 0x4A43 | 1B | Note number |
+| 0x4A44 | 1B | Velocity |
+| 0x4A48 | 1B | Tone gen mode (0-6) |
+| 0x4A4A | 1B | DMA enabled flag |
+| 0x4A4C | 16B | Voice slot table (one per channel) |
+
+**Serial Port Routines:**
+
+| Routine | Address | Description |
+|---------|---------|-------------|
+| `INTTX1_HANDLER` | 0x01F765 | Serial TX interrupt |
+| `READ_BYTE_FROM_RING_BUFFER` | 0x01F7B9 | Ring buffer read |
+| `SAVE_BYTE_TO_RING_BUFFER` | 0x01F7DD | Ring buffer write |
+| `RING_BUFFER_HAS_OVERRUN` | 0x01F7AB | Check buffer empty |
+
+Ring buffer descriptor format (at XWA):
+- +0x00: buffer_start pointer
+- +0x04: buffer_end pointer
+- +0x08: write_pointer
+- +0x0C: read_pointer
+- +0x14: available_bytes count
+
+**Debug Output Routines:**
+
+| Routine | Address | Description |
+|---------|---------|-------------|
+| `Debug_Print_String` | 0x038365 | Print string via serial |
+| `Debug_Print_Byte` | 0x03836C | Print byte as hex |
+| `Debug_Print_Word` | 0x038375 | Print 16-bit word as hex |
+
+These call boot ROM serial routines at 0xFFFEA1 (string) and 0xFFFE86 (byte).
 
 ---
 

@@ -302,13 +302,40 @@ Key routines identified in the boot ROM at 0xFF8000+:
 
 ## Tone Generator
 
-The tone generator hardware is accessed at `0x130000`.
+The tone generator hardware uses two address ranges:
+
+**Data/Status Registers (accessed via P6.7 control):**
+
+| Address | Register | Description |
+|---------|----------|-------------|
+| `0x110000` | Data | 16-bit voice data (note in low byte, velocity in high byte) |
+| `0x110002` | Status | Status register (bit 0: data ready, bit 1: mode flag) |
+
+Port P6 bit 7 controls the A23 address line - SET for status read, RES for data read.
+
+**DSP Control Registers:**
 
 | Address | Description |
 |---------|-------------|
-| `0x130000` | Tone Generator Base Address |
+| `0x130000` | Dual DSP control base address |
 
-The sub CPU boot ROM initializes tone generator registers with patterns starting at this address. Each voice appears to use a 32-byte register block.
+The sub CPU boot ROM initializes tone generator registers with patterns starting at this address. Each voice appears to use a 32-byte register block. The system has 8 voices across 16 MIDI channels.
+
+**Voice State Buffer (Sub CPU RAM):**
+
+| Address | Size | Description |
+|---------|------|-------------|
+| `0x4A42` | 3B | DMA command buffer (cmd, note, velocity) |
+| `0x4A48` | 1B | Tone generator mode (0-6) |
+| `0x4A4A` | 1B | DMA enabled flag |
+| `0x4A4C` | 16B | Voice slot table |
+
+**DSP State Buffers:**
+
+| Address | Size | Description |
+|---------|------|-------------|
+| `0x041342` | 38B | DSP state buffer 1 |
+| `0x041368` | 7462B | DSP state buffer 2 |
 
 ## HDAE5000 Hard Disk Expansion
 

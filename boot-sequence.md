@@ -304,9 +304,23 @@ Main CPU                          Sub CPU
 | Address | Description |
 |---------|-------------|
 | 0x100000 | Audio hardware registers (DSP/DAC) |
-| 0x110000 | Keyboard/control panel latches |
+| 0x110000 | Tone generator data/status (P6.7 controlled) |
 | 0x120000 | Inter-CPU communication latch |
-| 0x130000 | Tone generator registers |
+| 0x130000 | Tone generator DSP control registers |
+
+### Sub CPU Payload Command Dispatch
+
+After payload loading, the `MICRODMA_CH0_HANDLER` at 0x020F1F processes commands using `CMD_DISPATCH_TABLE`:
+
+| Handler | Command Range | Address | Purpose |
+|---------|---------------|---------|---------|
+| 0 | 0x00-0x1F | 0x034D5F | DSP/audio control |
+| 1 | 0x20-0x3F | 0x01FC7C | Audio parameters |
+| 2 | 0x40-0x5F | 0x01FC7F | Tone generator |
+| 3 | 0x60-0x7F | 0x035893 | Effects processing |
+| 4 | 0x80-0x9F | 0x01F890 | Serial port setup |
+| 5 | 0xA0-0xBF | 0x03CFEE | Voice commands |
+| 6-7 | 0xC0-0xFF | 0x020C12 | System commands |
 
 ---
 
