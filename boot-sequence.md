@@ -22,13 +22,20 @@ Power On
 │  (IC10)         │     │   (IC27)        │
 └────────┬────────┘     └────────┬────────┘
          │                       │
-         │  1. Reset vector      │  1. Reset vector
-         │     0xFFFEE0          │     0xFFFEE0
+         │  1. Table Data ROM    │  1. Boot ROM
+         │     First-stage boot  │     0xFF8290
          │                       │
          ▼                       ▼
-    Init Hardware           Init Hardware
-    Load Sub CPU            Wait for payload
-    Payload (192KB)         at 0x0400
+    Memory Remap            Init Hardware
+    Program ROM → 0xE00000  Wait for payload
+         │                       │
+         │  2. Program ROM       │
+         │     RESET_HANDLER     │
+         │                       │
+         ▼                       ▼
+    Init Hardware           Receive payload
+    Load Sub CPU            at 0x0400
+    Payload (192KB)              │
          │                       │
          │   ◄─── DMA ───►       │
          │   (0x120000 latch)    │
@@ -45,13 +52,74 @@ Power On
 
 ## Main CPU Boot Sequence
 
-### 1. Reset Vector (0xFFFEE0)
+### Discovery: Two-Stage Boot Process
 
-The TMP94C241F CPU fetches its reset vector from address `0xFFFEE0`. This points to `RESET_HANDLER` in the main program ROM.
+**Important finding**: The Main CPU uses a **two-stage boot process**. On reset, the **Table Data ROM** is initially mapped at 0xE00000-0xFFFFFF and contains a first-stage bootloader. This bootloader configures the memory controller to remap the Program ROM to 0xE00000, then jumps to the main firmware.
 
-### 2. Hardware Initialization
+### Stage 1: Table Data ROM Bootloader
 
-The reset handler performs essential hardware setup:
+#### Reset Vector (0xFFFEE0)
+
+On CPU reset, the Table Data ROM is mapped at 0xE00000-0xFFFFFF. The reset vector at 0xFFFEE0 (table_data offset 0x1FFEE0) contains:
+
+```asm
+JP 0x00FFB4E8    ; Jump to first-stage boot code
+```
+
+#### First-Stage Boot Code (0xFFB4E8)
+
+The table_data bootloader at 0xFFB4E8 performs critical memory controller configuration:
+
+```asm
+; Memory Start Address Registers - define where each block appears
+LD (MSAR0), 0x1E    ; Block 0 → 0x1E0000 (SRAM)
+LD (MSAR1), 0x10    ; Block 1 → 0x100000 (I/O)
+LD (MSAR2), 0xC0    ; Block 2 → 0xC00000
+LD (MSAR3), 0x00    ; Block 3 → 0x000000 (DRAM)
+LD (MSAR4), 0x80    ; Block 4 → 0x800000 (Table Data - NEW location)
+LD (MSAR5), 0x00    ; Block 5 → 0x000000
+
+; Memory Address Mask Registers - define block sizes
+LD (MAMR0), 0x0F    ; Block 0 mask
+LD (MAMR1), 0x3F    ; Block 1 mask
+LD (MAMR2), 0x7F    ; Block 2 mask
+LD (MAMR3), 0x1F    ; Block 3 mask
+LD (MAMR4), 0xFF    ; Block 4 mask
+LD (MAMR5), 0xFF    ; Block 5 mask
+
+; DRAM Controller initialization
+LD (DRAM1REF), 0x81
+LD (DRAM1CRL), 0x8B
+LD (DRAM1CRH), 0x58
+LD (PMEMCR), 0xF1
+```
+
+After this configuration:
+- **Table Data ROM** is remapped to 0x800000-0x9FFFFF
+- **Program ROM** becomes visible at 0xE00000-0xFFFFFF
+- The bootloader jumps to the Program ROM's `RESET_HANDLER` at 0xEF03C6
+
+#### Evidence
+
+The table_data ROM contains a complete interrupt vector table at offset 0x1FFF00:
+
+| Vector | Address | Target | Description |
+|--------|---------|--------|-------------|
+| 0 (Reset) | 0xFFFEE0 | 0xFFB4E8 | First-stage boot code |
+| 1-7 | 0xFFB705 | Handler | Common interrupt handler |
+| 11 | 0xFFEAB2 | Handler | Specific handler |
+
+The memory controller values in the table_data bootloader are **identical** to those in the Program ROM boot code (lines 134224-134235 of `kn5000_v10_program.asm`), confirming this is the intended configuration.
+
+### Stage 2: Program ROM Main Boot
+
+#### Reset Handler (0xEF03C6)
+
+After memory remapping, execution continues at `RESET_HANDLER` in the Program ROM. The TMP94C241F CPU now sees the Program ROM at 0xE00000-0xFFFFFF.
+
+#### Hardware Initialization
+
+The reset handler performs additional hardware setup (note: memory controller is already configured by Stage 1):
 
 | Step | Description | Key Registers |
 |------|-------------|---------------|
@@ -63,7 +131,7 @@ The reset handler performs essential hardware setup:
 | 6 | Configure timers | T01MOD, T4MOD, etc. |
 | 7 | Initialize stack | XSP = stack address |
 
-### 3. Sub CPU Payload Loading
+#### Sub CPU Payload Loading
 
 After hardware initialization, the main CPU loads a 192KB firmware payload to the sub CPU via DMA through the inter-CPU latch at `0x140000` (main CPU side) / `0x120000` (sub CPU side).
 
@@ -95,7 +163,7 @@ RESET_HANDLER (0xEF03C6)
 
 See [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for detailed protocol documentation.
 
-### 4. Subsystem Initialization
+#### Subsystem Initialization
 
 After the sub CPU payload is loaded:
 
@@ -107,7 +175,7 @@ After the sub CPU payload is loaded:
 | MIDI | External MIDI I/O |
 | HDAE5000 | Hard disk expansion (if present) at 0x160000 |
 
-### 5. Main Loop
+#### Main Loop
 
 The main CPU enters its event loop, handling:
 - User interface events
@@ -115,6 +183,91 @@ The main CPU enters its event loop, handling:
 - MIDI I/O
 - Disk operations
 - Display updates
+
+### Complete Boot Flow Diagram
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         POWER ON / RESET                              │
+│                                                                       │
+│  Initial Memory Map:                                                  │
+│    0xE00000-0xFFFFFF = Table Data ROM (contains first-stage boot)    │
+│    Program ROM not yet visible                                        │
+└──────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                   STAGE 1: TABLE DATA BOOTLOADER                      │
+│                                                                       │
+│  1. CPU fetches reset vector from 0xFFFF00 (table_data @ 0x1FFF00)   │
+│  2. Vector points to 0xFFFEE0 → JP 0xFFB4E8                          │
+│  3. Boot code configures MSAR0-5, MAMR0-5, DRAM controller           │
+│  4. Memory remap: Table Data → 0x800000, Program ROM → 0xE00000      │
+│  5. Jump to Program ROM entry point (0xEF03C6)                        │
+└──────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                    STAGE 2: PROGRAM ROM BOOT                          │
+│                                                                       │
+│  Final Memory Map:                                                    │
+│    0x000000-0x0FFFFF = DRAM (1MB)                                    │
+│    0x100000-0x1FFFFF = I/O (FDC, latches, VGA, SRAM)                 │
+│    0x300000-0x3FFFFF = Custom Data Flash                              │
+│    0x400000-0x7FFFFF = Rhythm Data ROM                                │
+│    0x800000-0x9FFFFF = Table Data ROM (remapped)                      │
+│    0xE00000-0xFFFFFF = Program ROM (now visible)                      │
+│                                                                       │
+│  1. RESET_HANDLER at 0xEF03C6                                         │
+│  2. Hardware initialization (redundant memory controller setup)       │
+│  3. Release Sub CPU from reset                                        │
+│  4. Send 192KB payload to Sub CPU                                     │
+│  5. Initialize subsystems and enter main loop                         │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Implications for MAME Emulation
+
+The discovery of the two-stage boot process has significant implications for accurate MAME emulation:
+
+#### Current Driver (Incorrect)
+
+The current MAME driver uses a static memory map:
+```cpp
+map(0x800000, 0x9fffff).rom().region("table_data", 0);
+map(0xe00000, 0xffffff).rom().region("program", 0);
+```
+
+This assumes the Program ROM is always at 0xE00000, which is only true **after** the memory controller is configured.
+
+#### Required Fix
+
+For accurate emulation, the MAME driver needs to:
+
+1. **On reset**: Map Table Data ROM at 0xE00000-0xFFFFFF
+2. **Emulate MSAR/MAMR register writes**: When the bootloader writes to memory controller registers (0x0142-0x0157), update the address mapping dynamically
+3. **After reconfiguration**: Program ROM becomes visible at 0xE00000, Table Data at 0x800000
+
+#### Workaround
+
+If implementing dynamic remapping is complex, a workaround might be to:
+- Pre-configure the memory map to the final state
+- Patch the table_data reset vector to jump directly to Program ROM's RESET_HANDLER
+
+However, this violates the project's strict accuracy policy and may cause issues with code that expects the original boot sequence.
+
+### Subprogram Location Mystery
+
+This discovery also explains why the Sub CPU payload is **not** found at table_data offset 0x30000:
+
+- During Stage 1 boot, table_data is at 0xE00000
+- Offset 0x30000 would be address 0xE30000 (table_data's own code)
+- After remap, 0x830000 points to table_data offset 0x30000
+- But the data there is table_data's own content, not the subprogram
+
+The actual subprogram storage location remains under investigation - it may be in:
+- Custom Data Flash (IC19) - possibly LZSS compressed
+- Loaded from floppy disk during system updates
 
 ---
 
