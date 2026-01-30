@@ -3,7 +3,7 @@ layout: home
 title: Home
 ---
 
-![Technics KN5000]({{ "/assets/images/hero-banner.png" | relative_url }}){: .hero-banner }
+![Technics KN5000]({{ "/assets/images/hero-banner.jpg" | relative_url }}){: .hero-banner }
 <small style="display: block; text-align: center; margin-top: -1rem; margin-bottom: 1rem; color: #666;">Photo: [Sound On Sound](https://www.soundonsound.com/reviews/technics-kn5000) (March 1998)</small>
 
 # Technics KN5000 Documentation
