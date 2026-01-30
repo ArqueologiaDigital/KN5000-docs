@@ -58,6 +58,8 @@ Power On
 
 ### Stage 1: Table Data ROM Bootloader
 
+> **Status**: The table_data boot code section (0xFFB4E8-0xFFFFFF, 19,224 bytes) is now **100% byte-matching**. See `table_data/kn5000_table_data.asm` and the reference disassembly at `original_ROMs/table_data_bootcode.unidasm`.
+
 #### Reset Vector (0xFFFEE0)
 
 On CPU reset, the Table Data ROM is mapped at 0xE00000-0xFFFFFF. The reset vector at 0xFFFEE0 (table_data offset 0x1FFEE0) contains:

@@ -38,7 +38,7 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 | Main CPU | 2MB | 99.99% | 177 | `maincpu/kn5000_v10_program.asm` |
 | Sub CPU Payload | 192KB | **100%** | 0 | `subcpu/kn5000_subprogram_v142.asm` |
 | Sub CPU Boot | 128KB | **100%** | 0 | `subcpu_boot/kn5000_subcpu_boot.asm` |
-| Table Data | 2MB | 32.42% | 1,417,294 | `table_data/kn5000_table_data.asm` |
+| Table Data | 2MB | 33.30% | 1,398,882 | `table_data/kn5000_table_data.asm` |
 | Custom Data | 1MB | - | - | No source yet |
 | HDAE5000 (HD Expansion) | 512KB | **100%** | 0 | `hdae5000/hd-ae5000_v2_06i.asm` |
 
@@ -191,11 +191,30 @@ These routines handle DMA-based data transfer between the Sub CPU and Main CPU:
 
 This marks the second 100% complete ROM in the project, after Sub CPU Payload!
 
-### Table Data (67.58% incorrect)
+### Table Data (66.70% incorrect)
 
-This ROM contains mostly binary data (images, sound samples, lookup tables). The divergences are likely due to:
-- Missing or incorrect binary includes
-- Endianness issues in data definitions
+The Table Data ROM contains the first-stage bootloader, Feature Demo presentation data, and various lookup tables.
+
+**First-Stage Bootloader (100% matching):**
+
+The boot code section (0x9FB4E8-0x9FFFFF, 19,224 bytes) is now **100% byte-matching**. This includes:
+
+| Component | Address | Description |
+|-----------|---------|-------------|
+| `Boot_Init` | 0x9FB4E8 | CPU/memory controller initialization |
+| `EMPTY_HANDLER` | 0x9FB705 | Default interrupt handler (RETI) |
+| Boot routines | 0x9FB709-0x9FFEE0 | Flash update, FDC, display utilities |
+| `RESET_HANDLER` | 0x9FFEE0 | Entry vector (JP to Boot_Init) |
+| Interrupt vectors | 0x9FFF00 | TMP94C241F vector table |
+
+**Key discovery:** The interrupt vector table contains boot-time addresses (0xFFxxxx) because at reset the table_data ROM is mapped at 0xE00000-0xFFFFFF, not 0x800000-0x9FFFFF. The bootloader reconfigures the memory controller to remap the ROMs.
+
+**Reference disassembly:** `original_ROMs/table_data_bootcode.unidasm` (6,704 lines)
+
+**Remaining work:**
+- Feature Demo XML and BMP images (documented but not all extracted)
+- LZSS-compressed Sub CPU payload at 0x8E0000
+- Various lookup tables and data structures
 
 ## Technical Notes
 
