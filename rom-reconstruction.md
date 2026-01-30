@@ -197,24 +197,49 @@ The Table Data ROM contains the first-stage bootloader, Feature Demo presentatio
 
 **First-Stage Bootloader (100% matching):**
 
-The boot code section (0x9FB4E8-0x9FFFFF, 19,224 bytes) is now **100% byte-matching**. This includes:
+The boot code section (0x9FB4D2-0x9FFFFF, 19,246 bytes) is now **100% byte-matching**. This includes:
 
-| Component | Address | Description |
-|-----------|---------|-------------|
-| `Boot_Init` | 0x9FB4E8 | CPU/memory controller initialization |
-| `EMPTY_HANDLER` | 0x9FB705 | Default interrupt handler (RETI) |
-| Boot routines | 0x9FB709-0x9FFEE0 | Flash update, FDC, display utilities |
-| `RESET_HANDLER` | 0x9FFEE0 | Entry vector (JP to Boot_Init) |
-| Interrupt vectors | 0x9FFF00 | TMP94C241F vector table |
+| Component | Address Range | Size | Description |
+|-----------|---------------|------|-------------|
+| `Boot_BitMaskTable` | 0x9FB4D2-0x9FB4E7 | 22 bytes | Initialization data tables |
+| `Boot_Init` | 0x9FB4E8-0x9FB704 | 540 bytes | CPU/memory controller initialization |
+| `Boot_EnterHalt` | 0x9FB705-0x9FB73F | 59 bytes | HALT handler and interrupt dispatcher |
+| `Boot_ClearRAM` | 0x9FB740-0x9FB7F1 | 178 bytes | RAM initialization and data copy |
+| Boot routines (pre-LZSS) | 0x9FB7F2-0x9FC8C1 | 4,304 bytes | Flash update, FDC, display utilities |
+| **LZSS Decoder Suite** | 0x9FC8C2-0x9FCA4F | 872 bytes | Complete decompression subsystem |
+| Boot routines (post-LZSS) | 0x9FCC2A-0x9FFEE0 | 12,982 bytes | Remaining boot utilities |
+| `RESET_HANDLER` | 0x9FFEE0-0x9FFEFF | 32 bytes | Entry vector (JP to Boot_Init) |
+| Interrupt vectors | 0x9FFF00-0x9FFFFF | 256 bytes | TMP94C241F vector table |
+
+**LZSS Decoder Routines (fully disassembled):**
+
+| Routine | Address | Size | Purpose |
+|---------|---------|------|---------|
+| `LZSS_ReadByte` | 0x9FC8C2 | 115 bytes | Read from compressed stream with sector buffering |
+| `LZSS_OutputByte` | 0x9FC935 | 63 bytes | Write decompressed bytes with 32-bit batching |
+| `LZSS_OutputByte_Alt` | 0x9FC974 | 63 bytes | Alternative output for flash update mode |
+| `LZSS_ParseHeader` | 0x9FC9B3 | 157 bytes | Parse/validate firmware header, setup source |
+| `LZSS_Decompress` | 0x9FCA50 | 474 bytes | Main decompression loop with sliding window |
+
+The LZSS decoder uses the SLIDE4K format (4KB sliding window, 12-bit offset, 4-bit length) and is invoked during flash firmware updates to decompress packed firmware files.
 
 **Key discovery:** The interrupt vector table contains boot-time addresses (0xFFxxxx) because at reset the table_data ROM is mapped at 0xE00000-0xFFFFFF, not 0x800000-0x9FFFFF. The bootloader reconfigures the memory controller to remap the ROMs.
+
+**Compressed Data Identified:**
+
+| Address | Contents | Format |
+|---------|----------|--------|
+| 0x8E0000 | Compressed Sub CPU Payload | SLIDE4K LZSS |
+| 0x9FA000 | Update file type headers | "SLIDE" markers |
+| 0x9FA150 | Flash update UI bitmaps | Compressed graphics |
 
 **Reference disassembly:** `original_ROMs/table_data_bootcode.unidasm` (6,704 lines)
 
 **Remaining work:**
 - Feature Demo XML and BMP images (documented but not all extracted)
-- LZSS-compressed Sub CPU payload at 0x8E0000
+- Decompression of Sub CPU payload at 0x8E0000 for analysis
 - Various lookup tables and data structures
+- Boot routines in `bootcode_pre_lzss.bin` and `bootcode_post_lzss.bin`
 
 ## Technical Notes
 

@@ -125,11 +125,23 @@ Boot_ClearRAM:
 
 The bit mask table at 0x1044 is used for bit manipulation operations throughout the firmware. The initialization parameters at 0x9998 appear to be related to stack/display setup.
 
-#### LZSS Decompressor (0xFFCA50)
+#### LZSS Decompressor Suite (0xFFC8C2-0xFCCA4F)
 
-The bootloader includes an LZSS decompressor for compressed data stored in the table_data ROM. This is the same "SLIDE4K" format used by the firmware update system.
+The bootloader includes a complete LZSS decompression subsystem for handling compressed firmware data. This is the "SLIDE4K" format used by the firmware update system.
 
-**Decompressor Characteristics:**
+> **Status**: All LZSS routines (872 bytes total) are now **100% byte-matching** disassembly in `table_data/kn5000_table_data.asm`.
+
+##### Decompressor Routines
+
+| Routine | Address | Size | Purpose |
+|---------|---------|------|---------|
+| `LZSS_ReadByte` | 0xFFC8C2 | 115 bytes | Read from compressed stream with sector buffering |
+| `LZSS_OutputByte` | 0xFFC935 | 63 bytes | Write decompressed bytes with 32-bit batching |
+| `LZSS_OutputByte_Alt` | 0xFFC974 | 63 bytes | Alternative output for flash update mode |
+| `LZSS_ParseHeader` | 0xFFC9B3 | 157 bytes | Parse/validate firmware header, setup source |
+| `LZSS_Decompress` | 0xFFCA50 | 474 bytes | Main decompression loop with sliding window |
+
+##### Format Characteristics
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
@@ -137,25 +149,75 @@ The bootloader includes an LZSS decompressor for compressed data stored in the t
 | Pre-fill | 0x00 for first 4078 bytes | Window positions 0-0x0FED |
 | Initial Position | 0x0FEE | First write position |
 | Offset Bits | 12 bits | Masked with 0x0FFF |
-| Length Bits | 4 bits | Stored in high nibble |
+| Length Bits | 4 bits | Stored in high nibble of second byte |
 | Flag Byte | High bit = sentinel | Bit 0: 1=literal, 0=back-ref |
+| Header | "SLIDE4K" + size | 11+ byte header with magic and decompressed size |
 
-**Algorithm Flow:**
+##### RAM Variables (0x0C20-0x0C38)
+
+| Address | Name | Purpose |
+|---------|------|---------|
+| 0x0C20 | Expected Size | Target decompressed size (3 bytes LE) |
+| 0x0C24 | Output Position | Current output byte count |
+| 0x0C28 | Dest Address | Destination pointer for decompressed data |
+| 0x0C2C | Buffer Pointer | Sector read buffer (typically 0x0099A4) |
+| 0x0C30 | Display X | Progress indicator X coordinate |
+| 0x0C32 | Display Y | Progress indicator Y coordinate |
+| 0x0C34 | Sector Offset | Current sector read offset |
+| 0x0C36 | Byte Counter | Output byte counter (0-3 for 32-bit writes) |
+| 0x0C38 | Source Address | Compressed data source pointer |
+
+##### Decompression Algorithm
 
 ```
-1. Allocate 4KB window buffer
+1. Allocate 4KB window buffer (via malloc at 0xFFFB56)
 2. Pre-fill window[0..0xFED] with 0x00
 3. Set window_pos = 0x0FEE
-4. Loop:
+4. Read 8-byte header, then 3-byte size (little-endian)
+5. Main Loop:
    a. Shift flag byte right
-   b. If bit 8 clear, read new flag byte
-   c. If bit 0 = 1: read literal byte, output
-   d. If bit 0 = 0: read offset+length, copy from window
+   b. If bit 8 clear, read new flag byte (set bit 8 as sentinel)
+   c. If bit 0 = 1: read literal byte, output to dest and window
+   d. If bit 0 = 0:
+      - Read offset low byte (8 bits)
+      - Read offset high + length byte
+      - Offset = (high_nibble << 8) | low_byte (12 bits)
+      - Length = low_nibble + 2
+      - Copy (length) bytes from window[offset] to output
    e. Update window_pos (masked to 12 bits)
-5. Continue until output_size reached
+6. Continue until output_size reached
+7. Free window buffer (via free at 0xFFFCDD)
 ```
 
-The compressed sub CPU payload at offset 0x8E0000 in table_data begins with the signature "SLIDE4K" followed by compressed size and data.
+##### Compressed Data Locations
+
+| Location | Address | Contents | Header |
+|----------|---------|----------|--------|
+| **Table Data ROM** | 0x8E0000 | Compressed Sub CPU Program | `"SLIDE4K", 0x00, 0x00, 0x95...` |
+| **Boot Headers** | 0x9FA000 | Update file type signatures | `"SLIDE"` markers |
+| **Boot UI** | 0x9FA150 | Flash update UI bitmaps | `"SLIDE"` marker + bitmap |
+
+##### Callers of LZSS Decoder
+
+The LZSS decoder is invoked during flash firmware updates:
+
+| Routine | Address | File Type | Source |
+|---------|---------|-----------|--------|
+| `HANDLE_UPDATE_FILE_TYPE_ID_007h` | 0xEF47FA | Program DATA FILE PCK | 0x3E0000, 0x3F0000 |
+| `HANDLE_UPDATE_FILE_TYPE_ID_008h` | 0xEF481E | Table DATA FILE PCK | Table Data ROM |
+| `LZSS_ParseHeader` | 0xFFC9B3 | Flash update mode | 0x3E0000 (boot context) |
+
+##### Update File Types
+
+The firmware update system recognizes these LZSS-compressed file types:
+
+| ID | File Type String | Description |
+|----|-----------------|-------------|
+| 0x07 | `"Technics KN5000 Program  DATA FILE PCK"` | Compressed program ROM |
+| 0x08 | `"Technics KN5000 Table    DATA FILE PCK"` | Compressed table data |
+| - | `"Technics KN5000 CMPCUSTOMDATA FILE"` | Compressed custom data |
+
+The `PCK` suffix indicates LZSS-compressed content using the SLIDE4K format.
 
 #### Evidence
 
@@ -314,18 +376,36 @@ If implementing dynamic remapping is complex, a workaround might be to:
 
 However, this violates the project's strict accuracy policy and may cause issues with code that expects the original boot sequence.
 
-### Subprogram Location Mystery
+### Subprogram Storage Location (RESOLVED)
 
-This discovery also explains why the Sub CPU payload is **not** found at table_data offset 0x30000:
+The Sub CPU payload storage has been identified:
+
+**Primary Location: Table Data ROM at 0x8E0000**
+
+The compressed Sub CPU program is stored in the Table Data ROM at offset 0x0E0000 (address 0x8E0000 after remap). It uses the SLIDE4K LZSS compression format:
+
+```
+Address: 0x8E0000 (Table Data ROM)
+Header:  "SLIDE4K" + 0x00 + 0x00 + 0x95 + 0x00 + "}Z" + 0xEE + 0xF0
+Format:  LZSS SLIDE4K compressed
+Content: kn5000_subprogram_v142 (192KB uncompressed)
+```
+
+**Why Previous Search Failed:**
 
 - During Stage 1 boot, table_data is at 0xE00000
 - Offset 0x30000 would be address 0xE30000 (table_data's own code)
-- After remap, 0x830000 points to table_data offset 0x30000
-- But the data there is table_data's own content, not the subprogram
+- The actual subprogram is at offset 0x0E0000, not 0x030000
+- After remap, 0x8E0000 points to the compressed payload
 
-The actual subprogram storage location remains under investigation - it may be in:
-- Custom Data Flash (IC19) - possibly LZSS compressed
-- Loaded from floppy disk during system updates
+**Decompression Flow:**
+
+1. Flash update handler sets source address to 0x3E0000 (boot context) or 0x8E0000 (runtime)
+2. `LZSS_ParseHeader` validates the "SLIDE4K" header
+3. `LZSS_Decompress` decompresses to destination buffer
+4. Decompressed payload is written to flash or loaded to Sub CPU RAM
+
+The label `Compressed_data` at 0x8E0000 in `table_data/kn5000_table_data.asm` marks this location.
 
 ---
 
