@@ -46,7 +46,7 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 
 The diagram below shows the disassembly status of each ROM component. Colors indicate the type of content at each address:
 
-![ROM Status Diagram]({{ "/assets/images/rom-status-diagram.svg" | relative_url }})
+![ROM Status Diagram]({{ "/assets/images/rom-status-diagram.png" | relative_url }})
 
 **Legend:**
 - **Green** = Disassembled code (symbolic instructions with meaningful labels)
