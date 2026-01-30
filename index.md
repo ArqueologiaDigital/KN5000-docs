@@ -14,6 +14,15 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 >
 > This project preserves technical knowledge of the KN5000 through detailed reverse engineering. As physical hardware becomes scarce, accurate documentation ensures these instruments remain accessible for emulation, repair, and homebrew development.
 
+## Project Goals
+
+| Goal | Description |
+|------|-------------|
+| **ROM Reconstruction** | Create buildable source code that produces byte-identical ROMs |
+| **MAME Emulation** | Full system emulation in the MAME framework |
+| **Homebrew Development** | Enable custom software development for the hardware |
+| **Compiler Development** | LLVM backend for the TLCS-900/H2 architecture |
+
 ## Start Here
 
 **New to the project?** Begin with the [System Overview]({{ site.baseurl }}/system-overview/) to understand how all the components work together.
@@ -99,12 +108,15 @@ Choose based on your goal:
 
 ### ROM Reconstruction Progress
 
+**Overall ROM-set Progress: 59.54%** (2,466,047 bytes remaining)
+
 | Component | Size | Match | Status |
 |-----------|------|-------|--------|
 | Main CPU Program | 2MB | 99.99% | 177 bytes divergent |
 | Sub CPU Payload | 192KB | **100%** | Complete |
 | Sub CPU Boot ROM | 128KB | **100%** | Complete |
 | Table Data | 2MB | 32.42% | Mostly binary assets |
+| Custom Data | 1MB | 0% | User storage, not reconstructed |
 | HDAE5000 ROM | 512KB | **100%** | Complete, images extracted |
 
 ### MAME Emulation
@@ -117,12 +129,13 @@ Choose based on your goal:
 
 ## Quick Links
 
-- [Service Manual PDF]({{ site.baseurl }}/service_manual/technics_sx-kn5000.pdf) (26MB) - Schematics and board layouts
+- [Service Manual PDF]({{ site.baseurl }}/service_manual/technics_sx-kn5000.pdf) (26MB, EMID971655 A5) - Schematics and board layouts
 - [GitHub: ROM Disassembly](https://github.com/ArqueologiaDigital/kn5000-roms-disasm) - Source code
 - [GitHub: Homebrew](https://github.com/felipesanches/kn5000_homebrew/) - Custom software
 - [MAME Pull Request](https://github.com/mamedev/mame/pull/14558) - Emulation work
 - [Discussion Forum](https://forum.fiozera.com.br/t/technics-kn5000-homebrew-development/321)
 - [Firmware Archive](https://archive.org/details/technics-kn5000-system-update-disks) - All versions
+- [Keysoftservice HDAE5000 Page](http://keysoftservice.com/hd5000.htm) - Original HDAE5000 information
 
 ## About This Project
 
