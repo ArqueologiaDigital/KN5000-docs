@@ -125,6 +125,18 @@ Boot_ClearRAM:
 
 The bit mask table at 0x1044 is used for bit manipulation operations throughout the firmware. The initialization parameters at 0x9998 appear to be related to stack/display setup.
 
+#### Flash Programming Routines (0xFFB812-0xFFC8C1)
+
+The bootloader contains a complete set of flash programming routines for all target memories:
+
+| Routine Type | Address Range | Targets |
+|--------------|---------------|---------|
+| 16-bit flash routines | 0xFFB812-0xFFBC1C | HDAE5000 ROM, Custom Data Flash |
+| 32-bit flash routines | 0xFFBC1D-0xFFC0D2 | Table Data ROM (interleaved) |
+| Disk detection | 0xFFBFC4-0xFFC0D2 | Floppy disk header validation |
+
+> **See Also**: [Flash Programming]({{ site.baseurl }}/flash-programming/) for detailed protocol documentation and comparison with Program ROM flash routines.
+
 #### LZSS Decompressor Suite (0xFFC8C2-0xFCCA4F)
 
 The bootloader includes a complete LZSS decompression subsystem for handling compressed firmware data. This is the "SLIDE4K" format used by the firmware update system.
@@ -919,5 +931,6 @@ Time    Event
 - [Memory Map]({{ site.baseurl }}/memory-map/) - Complete address space documentation
 - [Reverse Engineering]({{ site.baseurl }}/reverse-engineering/) - Technical details
 - [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) - Build status and known issues
+- [Flash Programming]({{ site.baseurl }}/flash-programming/) - Flash memory programming routines and update system
 - [HDAE5000 Hard Disk Expansion]({{ site.baseurl }}/hdae5000/) - HD-AE5000 firmware details
 - [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) - Serial communication with control panel
