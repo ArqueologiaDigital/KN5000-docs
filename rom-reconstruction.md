@@ -42,6 +42,25 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 | Custom Data | 1MB | - | - | No source yet |
 | HDAE5000 (HD Expansion) | 512KB | **100%** | 0 | `hdae5000/hd-ae5000_v2_06i.asm` |
 
+### Disassembly Status Visualization
+
+The diagram below shows the disassembly status of each ROM component. Colors indicate the type of content at each address:
+
+![ROM Status Diagram]({{ "/assets/images/rom-status-diagram.svg" | relative_url }})
+
+**Legend:**
+- **Green** = Disassembled code (symbolic instructions with meaningful labels)
+- **Blue** = Known data structures (documented tables, configs)
+- **Cyan** = String data (text, messages, labels)
+- **Light Green** = Pointer/jump tables (address references)
+- **Purple** = Binary includes (external files not yet analyzed)
+- **Red** = Raw bytes with unknown meaning (needs investigation)
+- **Orange** = Raw bytes known to be code (awaiting disassembly)
+- **Gray** = Padding/unused (0x00 or 0xFF fill)
+- **Yellow** = Undetermined (not yet categorized)
+
+The width of each rectangle is proportional to the ROM's file size. This visualization is automatically regenerated via `make website` to stay in sync with disassembly progress.
+
 ## Original ROM Files
 
 The original firmware dumps are stored in `original_ROMs/`:
