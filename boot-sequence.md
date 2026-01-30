@@ -101,6 +101,62 @@ After this configuration:
 - **Program ROM** becomes visible at 0xE00000-0xFFFFFF
 - The bootloader jumps to the Program ROM's `RESET_HANDLER` at 0xEF03C6
 
+#### Boot_ClearRAM Routine (0xFFB740)
+
+The first-stage bootloader calls `Boot_ClearRAM` to initialize RAM and copy essential data from ROM:
+
+```asm
+Boot_ClearRAM:
+    ; Clear 35,146 bytes at RAM 0x104E (general RAM area)
+    LD XDE, 0x0000104E    ; Destination
+    LD XBC, 0x0000894A    ; Count
+    ; Uses LDIRW for efficient word-mode fill with zeros
+
+    ; Clear 1,091 bytes at RAM 0x0C00 (boot variables)
+    LD XDE, 0x00000C00
+    LD XBC, 0x00000443
+
+    ; Copy 10 bytes from ROM 0xFFB4D2 to RAM 0x1044
+    ; Data: 00 40 20 08 10 04 02 00 01 00 (bit mask table)
+
+    ; Copy 12 bytes from ROM 0xFFB4DC to RAM 0x9998
+    ; Data: 7E 00 10 00 00 00 80 00 00 00 00 00 (init params)
+```
+
+The bit mask table at 0x1044 is used for bit manipulation operations throughout the firmware. The initialization parameters at 0x9998 appear to be related to stack/display setup.
+
+#### LZSS Decompressor (0xFFCA50)
+
+The bootloader includes an LZSS decompressor for compressed data stored in the table_data ROM. This is the same "SLIDE4K" format used by the firmware update system.
+
+**Decompressor Characteristics:**
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Window Size | 4096 bytes (0x1000) | Standard SLIDE4K |
+| Pre-fill | 0x00 for first 4078 bytes | Window positions 0-0x0FED |
+| Initial Position | 0x0FEE | First write position |
+| Offset Bits | 12 bits | Masked with 0x0FFF |
+| Length Bits | 4 bits | Stored in high nibble |
+| Flag Byte | High bit = sentinel | Bit 0: 1=literal, 0=back-ref |
+
+**Algorithm Flow:**
+
+```
+1. Allocate 4KB window buffer
+2. Pre-fill window[0..0xFED] with 0x00
+3. Set window_pos = 0x0FEE
+4. Loop:
+   a. Shift flag byte right
+   b. If bit 8 clear, read new flag byte
+   c. If bit 0 = 1: read literal byte, output
+   d. If bit 0 = 0: read offset+length, copy from window
+   e. Update window_pos (masked to 12 bits)
+5. Continue until output_size reached
+```
+
+The compressed sub CPU payload at offset 0x8E0000 in table_data begins with the signature "SLIDE4K" followed by compressed size and data.
+
 #### Evidence
 
 The table_data ROM contains a complete interrupt vector table at offset 0x1FFF00:
