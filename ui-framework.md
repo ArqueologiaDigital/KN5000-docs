@@ -44,6 +44,39 @@ The KN5000 firmware includes a sophisticated UI framework that manages menu page
 
 ## Known Information
 
+### Internal Module Names (Developer Code Names)
+
+The firmware contains 11 UI subsystem modules with internal code names, likely named after the original Technics/Matsushita developers. These are initialized during boot via `InitializeObjectTable`:
+
+| Module Name | Init Routine | Address | Purpose (Presumed) |
+|-------------|--------------|---------|-------------------|
+| **Murai** | `InitializeMurai` | 0xFA9712 | Core UI framework |
+| **Toshi** | `InitializeToshi` | 0xFC0969 | Tone/sound selection UI |
+| **East** | `InitializeEast` | 0xF63DFC | Eastern region/style UI |
+| **Suna** | `InitializeSuna` | 0xF1B134 | Sound parameter UI |
+| **Cheap** | `InitializeCheap` | 0xF96F22 | Basic parameter editing |
+| **Scoop** | `InitializeScoop` | 0xF00658 | Display update manager |
+| **Yoko** | `InitializeYoko` | 0xF2877C | Horizontal layout/scrolling |
+| **Kubo** | `InitializeKubo` | 0xF2D2C4 | Grid/table layout |
+| **Hama** | `InitializeHama` | 0xF17E34 | List handling |
+| **KSS** | `InitializeKSS` | 0xFC09C7 | Keyboard/panel status |
+| **Naka** | `InitializeNaka` | 0xF05A7C | Central dispatch |
+
+These modules register "object tables" that define UI component hierarchies. The naming convention suggests this was an internal practice at Matsushita's development team, possibly using staff nicknames or project code names.
+
+**Initialization sequence** (from `InitializeObjectTable` at 0xFA40B3):
+```
+InitializeMurai  →  InitializeToshi  →  InitializeEast  →
+InitializeSuna   →  InitializeCheap  →  InitializeScoop →
+InitializeYoko   →  InitializeKubo   →  InitializeHama  →
+InitializeKSS    →  InitializeNaka
+```
+
+Related macros found in the source:
+- `RegObjTableHama` - Register object table (Hama variant)
+- `RegTitleHama` - Register title widget (Hama variant)
+- `HamaListProc` - List processing procedure
+
 ### UI Pages
 
 ROM strings reveal these page identifiers:
