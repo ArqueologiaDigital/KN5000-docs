@@ -240,22 +240,60 @@ Creating shared source code is **possible** but complex:
 
 **Recommendation:** Keep separate implementations but document the relationship thoroughly. The cost of potential errors from merging outweighs the maintenance benefit for ROM disassembly.
 
+## Boot ROM FDC Routines
+
+The Table Data Boot ROM contains simplified FDC routines for firmware updates:
+
+| Address | Function | Purpose |
+|---------|----------|---------|
+| 0x9FBF07 | `FDC_Reset` | Initialize FDC controller for update mode |
+| 0x9FBF37 | `FDC_ReadSector` | Read a single sector from floppy |
+| 0x9FBF92 | `FDC_MultiSectorRead` | Read multiple sectors with retry loop |
+| 0x9FBFC4 | `Detect_Disk_Type` | Check disk header signatures |
+
+### FDC_Reset (0x9FBF07)
+
+Initializes the FDC controller:
+- Allocates 16-byte stack frame
+- Sets up FDC parameters at 0x0C10
+- Calls FFE944 (FDC initialization)
+
+### FDC_ReadSector (0x9FBF37)
+
+Reads a single sector:
+- Entry: XWA = sector info, BC = sector number, XDE = destination buffer
+- Calculates head/track from sector number
+- Uses parameters at RAM 0x0C10
+
+### FDC_MultiSectorRead (0x9FBF92)
+
+Multi-sector read with retry:
+- Calls FDC_ReadSector in a loop
+- On failure, calls FDC_Reset and retries
+- Returns success in HL
+
 ## Disk Type Detection
 
 ### Boot ROM Detect_Disk_Type (0x9FBFC4)
 
 Checks floppy disk header against 8 signature strings at Table Data ROM 0x9FA000:
 
-| Type | Signature | Purpose |
-|------|-----------|---------|
-| 1 | "Technics KN5000 Program  DATA FILE 1/2" | Program ROM disk 1 |
-| 2 | "Technics KN5000 Program  DATA FILE 2/2" | Program ROM disk 2 |
-| 3 | "Technics KN5000 Table    DATA FILE 1/2" | Table Data disk 1 |
-| 4 | "Technics KN5000 Table    DATA FILE 2/2" | Table Data disk 2 |
-| 5 | "Technics KN5000 CMPCUSTOMDATA FILE" | Compressed custom data |
-| 6 | "Technics KN5000 HD-AEPRG DATA FILE" | HDAE5000 firmware |
-| 7 | "Technics KN5000 Program  DATA FILE PCK" | Compressed Program ROM |
-| 8 | "Technics KN5000 Table    DATA FILE PCK" | Compressed Table Data |
+| Type | ROM Offset | Signature | Purpose |
+|------|------------|-----------|---------|
+| 1 | 0x9FA000 | "Technics KN5000 Program  DATA FILE 1/2" | Program ROM disk 1 |
+| 2 | 0x9FA028 | "Technics KN5000 Program  DATA FILE 2/2" | Program ROM disk 2 |
+| 3 | 0x9FA078 | "Technics KN5000 Table    DATA FILE 1/2" | Table Data disk 1 |
+| 4 | 0x9FA0A0 | "Technics KN5000 Table    DATA FILE 2/2" | Table Data disk 2 |
+| 5 | 0x9FA0F0 | "Technics KN5000 CMPCUSTOMDATA FILE" | Compressed custom data |
+| 6 | 0x9FA118 | "Technics KN5000 HD-AEPRG DATA FILE" | HDAE5000 firmware |
+| 7 | 0x9FA050 | "Technics KN5000 Program  DATA FILE PCK" | Compressed Program ROM |
+| 8 | 0x9FA0C8 | "Technics KN5000 Table    DATA FILE PCK" | Compressed Table Data |
+
+**Detection algorithm:**
+1. Allocate 512-byte sector buffer
+2. Read first sector from floppy
+3. Compare sector data against each signature at ROM offsets (38 bytes each)
+4. Return type code (1-8) on match, or 0xFF if unknown
 
 ### Program ROM Detect_Disk_Type (0xEF42FE)
 
