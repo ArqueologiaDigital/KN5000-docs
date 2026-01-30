@@ -216,10 +216,123 @@ The PC parallel port (PPORT) protocol includes these disk-related commands:
 | 05 | Rcv FSB from PC | Receive FSB from PC |
 | 06 | Write FSB to HD | Write filesystem block |
 | 07 | Load HD to Memory | Load file into KN5000 RAM |
+| 08 | Send data to PC | Send data block to PC |
+| 10 | Rcv data from PC | Receive data from PC |
 | 11 | Save memory to HD | Save RAM contents to file |
 | 16 | Delete files | Remove files from disk |
 | 17 | Format HD | Low-level disk format |
 | 18 | Switch HD-motor off | Spin down drive motor |
+
+## PC Parallel Port Protocol
+
+The HD-TechManager5000 Windows software (ppkn50.dll) communicates with the HDAE5000 using a bidirectional parallel port protocol. This section documents the low-level handshaking derived from disassembly of ppkn50.dll.
+
+### Physical Interface
+
+**PC Parallel Port (Standard SPP):**
+
+| Port Address | Register | Direction | Function |
+|--------------|----------|-----------|----------|
+| base+0 (0x378) | Data | Bidirectional | 8-bit data byte |
+| base+1 (0x379) | Status | Input | Status signals from HDAE5000 |
+| base+2 (0x37A) | Control | Output | Control signals to HDAE5000 |
+
+**HDAE5000 PPI (Intel 8255 at 0x160000):**
+
+| Address | Port | Direction | Function |
+|---------|------|-----------|----------|
+| 0x160000 | Port A | Bidirectional | Data byte to/from PC |
+| 0x160002 | Port B | Input | Status from PC |
+| 0x160004 | Port C | Output | Control signals to PC |
+
+### Status Port Bits (base+1)
+
+| Bit | Name | Description |
+|-----|------|-------------|
+| 7 | BUSY | Inverted; 0=HDAE5000 busy, 1=ready |
+| 6 | ACK | Acknowledge signal |
+| 4 | SELECT | HDAE5000 online indicator |
+| 3 | ERROR | Error condition |
+
+**Note:** Bit 7 (BUSY) is inverted in hardware by the PC parallel port. The ppkn50.dll XORs with 0x80 after reading to compensate.
+
+### Control Port Bits (base+2)
+
+| Bit | Name | Description |
+|-----|------|-------------|
+| 3 | SELECT_IN | Select printer |
+| 2 | INIT | Initialize/reset |
+| 1 | AUTOFEED | Strobe acknowledge |
+| 0 | STROBE | Data strobe signal |
+
+### Byte Transfer Handshaking
+
+**Send Byte to HDAE5000:**
+
+```
+PC                          HDAE5000
+ |                              |
+ |-- Write Data to Data Port -->|
+ |-- Assert Strobe (bit 1) ---->|
+ |                              |
+ |<---- BUSY goes LOW ----------|  (data received)
+ |                              |
+ |-- Deassert Strobe ---------->|
+ |                              |
+ |<---- BUSY goes HIGH ---------|  (ready for next)
+```
+
+**Receive Byte from HDAE5000:**
+
+```
+PC                          HDAE5000
+ |                              |
+ |<---- BUSY goes LOW ----------|  (data available)
+ |                              |
+ |-- Read Data from Data Port --|
+ |-- Assert ACK (bit 1) ------->|
+ |                              |
+ |<---- BUSY goes HIGH ---------|  (acknowledged)
+ |                              |
+ |-- Deassert ACK ------------->|
+```
+
+### Timeout Values
+
+- **Byte transfer timeout**: 10,000ms (0x2710)
+- **Polling iterations**: 512 before time check
+- **Connection test retries**: 5 times with 1000ms delay
+
+### Error Codes (from ppkn50.dll)
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| -1 | DLL not initialized |
+| -2 | Port not open / connection failed |
+| -3 | Handshake timeout |
+| -4 | Transfer error |
+| -5 | Port busy |
+| -10 | Escape pressed |
+| -20 | Invalid port number |
+
+### DLL Exported Functions
+
+The ppkn50.dll exports these functions for PC applications:
+
+| Function | Command | Description |
+|----------|---------|-------------|
+| `InitializeTheDllPP50` | - | Initialize DLL |
+| `OpenThePortNumberPP50` | - | Select LPT port (1-3) |
+| `CloseThePortPP50` | - | Close parallel port |
+| `TestTheKNPPPP50` | 0x01 | Test connection |
+| `ReadFsbFromKnHdToKnMemPP50` | 0x03 | Read FSB from HD |
+| `SendFsbFromKnMemToPCPP50` | 0x04 | Transfer FSB to PC |
+| `SendFsbFromPCToKnMemPP50` | 0x05 | Transfer FSB to KN |
+| `LoadFileFromKnHdToKnMemPP50` | 0x07 | Load file HD→KN |
+| `DeleteFileOnKnHdPP50` | 0x16 | Delete file |
+| `FormatTheKn50HardDiskPP50` | 0x17 | Format HD |
+| `TurnOffTheKn50HdMotorPP50` | 0x18 | Spin down motor |
 
 ## RAM Variables
 
@@ -283,9 +396,11 @@ The following details were confirmed through firmware analysis:
 
 Areas requiring additional investigation:
 - Filesystem structure details (FSB/FGB/FEB layout)
-- PC parallel port protocol details
 - Error recovery procedures
 - Exact timing requirements for real hardware
+
+**Completed:**
+- PC parallel port protocol details (documented above from ppkn50.dll analysis)
 
 ## Related Documentation
 
@@ -298,3 +413,4 @@ Areas requiring additional investigation:
 - ATA/ATAPI-4 Specification (T13/1153D)
 - Intel 8255A PPI Datasheet
 - HDAE5000 ROM disassembly analysis
+- ppkn50.dll disassembly (HD-TechManager5000 parallel port DLL)
