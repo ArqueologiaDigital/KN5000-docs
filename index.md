@@ -6,87 +6,128 @@ title: Home
 ![Technics KN5000]({{ "/assets/images/hero-banner.png" | relative_url }}){: .hero-banner }
 <small style="display: block; text-align: center; margin-top: -1rem; margin-bottom: 1rem; color: #666;">Photo: [Sound On Sound](https://www.soundonsound.com/reviews/technics-kn5000) (March 1998)</small>
 
-# Technics KN5000 Reverse Engineering Project
+# Technics KN5000 Documentation
+
+Welcome to the comprehensive technical documentation for the Technics KN5000 music keyboard. This site documents the internal architecture, firmware, and protocols of this 1997-era professional arranger keyboard.
 
 > **A Digital Archaeology Project**
 >
-> This project is a labor of love for the Technics KN5000 instrument and a commitment to historical preservation of computer hardware through emulation. As physical hardware ages and becomes scarce, emulation ensures these remarkable instruments remain accessible to future generations of musicians, researchers, and enthusiasts.
->
-> **About This Documentation**
->
-> This documentation is being developed with the assistance of [Claude Code](https://claude.ai/code) AI agents, guided by Felipe Sanches. While every effort is made to ensure accuracy, some information may be incomplete or contain errors as the reverse engineering work progresses. All content is under continuous review and verification against actual hardware behavior. Contributions and corrections are welcome.
+> This project preserves technical knowledge of the KN5000 through detailed reverse engineering. As physical hardware becomes scarce, accurate documentation ensures these instruments remain accessible for emulation, repair, and homebrew development.
 
-This project aims to fully document and emulate the Technics KN5000 music keyboard. Join the discussion at the [Homebrew Development Forum](https://forum.fiozera.com.br/t/technics-kn5000-homebrew-development/321).
+## Start Here
 
-**Project Goals:**
+**New to the project?** Begin with the [System Overview]({{ site.baseurl }}/system-overview/) to understand how all the components work together.
 
-- **ROM Reconstruction** - Achieving 100% byte-matching rebuilds from disassembled source, gaining deeper insight into the device's inner workings to aid development of an accurate emulator
-- **MAME Emulation** - Enabling the keyboard to run in the MAME emulator
-- **Homebrew Development** - Creating custom software for the real hardware
-- **Compiler Development** *(long-term)* - Porting a higher-level compiler (potentially LLVM-based) to target the TMP94C241F CPU, enabling C/C++ development for the KN5000
+<div style="text-align: center; margin: 2rem 0;">
+<a href="{{ site.baseurl }}/system-overview/" style="background: #0366d6; color: white; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: 4px; font-weight: bold;">View System Overview</a>
+</div>
+
+## Documentation by Topic
+
+### Hardware & Memory
+
+| Page | Description |
+|------|-------------|
+| [System Overview]({{ site.baseurl }}/system-overview/) | Architecture diagram and subsystem guide |
+| [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) | Physical components from service manual |
+| [CPU Subsystem]({{ site.baseurl }}/cpu-subsystem/) | TMP94C241F dual-CPU design |
+| [Memory Map]({{ site.baseurl }}/memory-map/) | Complete address space layout |
+
+### Subsystems
+
+| Page | Status | Description |
+|------|--------|-------------|
+| [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) | Documented | Serial protocol for buttons, LEDs, encoders |
+| [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) | Placeholder | DSP, DAC, tone generation |
+| [Display Subsystem]({{ site.baseurl }}/display-subsystem/) | Placeholder | LCD controller, VGA interface |
+| [Storage Subsystem]({{ site.baseurl }}/storage-subsystem/) | Partial | Floppy, flash, Table Data ROM |
+| [MIDI Subsystem]({{ site.baseurl }}/midi-subsystem/) | Placeholder | MIDI I/O handling |
+| [UI Framework]({{ site.baseurl }}/ui-framework/) | Placeholder | Menu system, widgets |
+| [Sequencer]({{ site.baseurl }}/sequencer/) | Placeholder | 16-track MIDI sequencer |
+
+### Protocols
+
+| Page | Description |
+|------|-------------|
+| [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) | MCU serial communication |
+| [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) | Main/Sub CPU latch protocol |
+| [HDAE5000 Disk Interface]({{ site.baseurl }}/hdae5000-disk-interface/) | IDE/ATA and PC parallel port |
+
+### Firmware Analysis
+
+| Page | Description |
+|------|-------------|
+| [Boot Sequence]({{ site.baseurl }}/boot-sequence/) | Power-on to ready state |
+| [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) | Disassembly progress |
+| [FDC Subsystem]({{ site.baseurl }}/fdc-subsystem/) | Floppy disk handlers |
+| [HDAE5000]({{ site.baseurl }}/hdae5000/) | Hard disk expansion firmware |
+
+### Resources
+
+| Page | Description |
+|------|-------------|
+| [Image Gallery]({{ site.baseurl }}/image-gallery/) | 46+ extracted firmware graphics |
+| [ROM Strings]({{ site.baseurl }}/rom-strings/) | Extracted text resources |
+| [Reverse Engineering]({{ site.baseurl }}/reverse-engineering/) | Methodology and strategies |
+| [Help Wanted]({{ site.baseurl }}/help-wanted/) | Contribution guide |
+| [Open Questions]({{ site.baseurl }}/questions/) | Unsolved mysteries |
+| [Issues]({{ site.baseurl }}/issues/) | Project task tracker |
+
+## Learning Paths
+
+Choose based on your goal:
+
+### MAME Emulation Development
+1. [System Overview]({{ site.baseurl }}/system-overview/) - Understand the architecture
+2. [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) - Physical components
+3. [Memory Map]({{ site.baseurl }}/memory-map/) - Address space
+4. [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) - HLE for buttons/LEDs
+
+### Homebrew Development
+1. [CPU Subsystem]({{ site.baseurl }}/cpu-subsystem/) - TMP94C241F programming
+2. [Memory Map]({{ site.baseurl }}/memory-map/) - Available resources
+3. [Display Subsystem]({{ site.baseurl }}/display-subsystem/) - Graphics output
+4. [Help Wanted]({{ site.baseurl }}/help-wanted/) - Tool development needs
+
+### Reverse Engineering Research
+1. [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) - Current progress
+2. [Reverse Engineering]({{ site.baseurl }}/reverse-engineering/) - Techniques
+3. [Open Questions]({{ site.baseurl }}/questions/) - Areas needing investigation
+4. [Issues]({{ site.baseurl }}/issues/) - Specific tasks
 
 ## Project Status
 
-### ROM Reconstruction
+### ROM Reconstruction Progress
 
-**Overall ROM-set Progress: 59.54%** (2,466,047 bytes remaining across all components)
+| Component | Size | Match | Status |
+|-----------|------|-------|--------|
+| Main CPU Program | 2MB | 99.99% | 177 bytes divergent |
+| Sub CPU Payload | 192KB | **100%** | Complete |
+| Sub CPU Boot ROM | 128KB | **100%** | Complete |
+| Table Data | 2MB | 32.42% | Mostly binary assets |
+| HDAE5000 ROM | 512KB | **100%** | Complete, images extracted |
 
-| Component | Size | Match | Divergent Bytes | Notes |
-|-----------|------|-------|-----------------|-------|
-| Main CPU Program | 2MB | 99.99% | 177 | Near-complete disassembly |
-| Sub CPU Payload | 192KB | **100%** | 0 | Complete match |
-| Sub CPU Boot ROM | 128KB | **100%** | 0 | Complete match |
-| Table Data | 2MB | 32.42% | 1,417,294 | Mostly binary assets |
-| Custom Data | 1MB | 0% | 1,048,576 | User storage, not reconstructed |
-| HDAE5000 ROM | 512KB | **100%** | 0 | Complete rebuild, 4 images extracted |
+### MAME Emulation
 
-*Progress calculated from `compare_roms.py` byte-by-byte verification.*
+| Component | Status |
+|-----------|--------|
+| MAME Driver | [PR #14558](https://github.com/mamedev/mame/pull/14558) in progress |
+| Control Panel HLE | Protocol documented, implementation ongoing |
+| HDAE5000 Emulation | ATA and PPI interfaces implemented |
 
-### Emulation & Tools
+## Quick Links
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| MAME Driver | In progress | [PR #14558](https://github.com/mamedev/mame/pull/14558) |
-| Control Panel HLE | In progress | Protocol reverse engineering ongoing |
-| Hardware Documentation | Active | Service manual analyzed |
-| Image Extraction | Active | 46+ images extracted (42 main CPU, 4 HDAE5000) |
-
-## Hardware Overview
-
-- **Main CPU**: TMP94C241F (TLCS-900/H2 variant, 32-bit)
-- **Control Panel MCUs**: Mitsubishi M37471M2196S (8-bit, 740 series) - 2 units
-- **Program Flash**: 2MB at 0xE00000
-- **Control Panel**: Serial bus with SIN/SOUT/CLK signals
-
-See [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) for detailed documentation from service manual schematics.
-
-## Getting Started
-
-- [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) - Detailed hardware documentation from service manual
-- [ROM Reconstruction Status]({{ site.baseurl }}/rom-reconstruction/)
-- [Reverse Engineering Strategies]({{ site.baseurl }}/reverse-engineering/) - SubCPU/MicroDMA, embedded images
-- [HDAE5000 Hard Disk Expansion]({{ site.baseurl }}/hdae5000/) - HD-AE5000 firmware analysis
-- [Image Gallery]({{ site.baseurl }}/image-gallery/) - Extracted graphics from the firmware
-- [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/)
-- [Memory Map]({{ site.baseurl }}/memory-map/)
-- [How You Can Help]({{ site.baseurl }}/help-wanted/)
-- [Open Questions]({{ site.baseurl }}/questions/)
-- [Project Issues]({{ site.baseurl }}/issues/) - Full issue tracker (auto-generated)
-
-## Resources
-
-- [Service Manual PDF]({{ site.baseurl }}/service_manual/technics_sx-kn5000.pdf) (EMID971655 A5, 26MB) - Schematics, board layouts, IC pinouts
-- [System Update Disks Archive](https://archive.org/details/technics-kn5000-system-update-disks) - All official firmware versions (v5-v10) and HD-AE5000 updates
-- [HDAE5000 Hard Disk Expansion](https://www.keysoftservice.ch/hdae5000-e.htm) - Technical info about the HD-AE5000 accessory
-- [GitHub: ROM Disassembly](https://github.com/user/kn5000-roms-disasm) - Disassembled firmware sources
-- [GitHub: Homebrew Development](https://github.com/felipesanches/kn5000_homebrew/) - Custom software for the KN5000
-- [MAME Pull Request](https://github.com/mamedev/mame/pull/14558) - Emulation work in progress
+- [Service Manual PDF]({{ site.baseurl }}/service_manual/technics_sx-kn5000.pdf) (26MB) - Schematics and board layouts
+- [GitHub: ROM Disassembly](https://github.com/ArqueologiaDigital/kn5000-roms-disasm) - Source code
+- [GitHub: Homebrew](https://github.com/felipesanches/kn5000_homebrew/) - Custom software
+- [MAME Pull Request](https://github.com/mamedev/mame/pull/14558) - Emulation work
 - [Discussion Forum](https://forum.fiozera.com.br/t/technics-kn5000-homebrew-development/321)
+- [Firmware Archive](https://archive.org/details/technics-kn5000-system-update-disks) - All versions
 
-## Contact
+## About This Project
 
-**Felipe Sanches** - Project Lead | [Arqueologia Digital](https://github.com/ArqueologiaDigital)
+**Project Lead**: Felipe Sanches | [Arqueologia Digital](https://github.com/ArqueologiaDigital)
 
-This digital archaeology project uses AI-assisted reverse engineering with Claude Code agents to accelerate documentation and analysis. Human oversight ensures accuracy and guides the research direction.
+This documentation is developed with AI assistance from [Claude Code](https://claude.ai/code). All content is verified against actual hardware behavior and service documentation. Contributions and corrections are welcome via GitHub issues.
 
-We believe that preserving the technical knowledge of instruments like the KN5000 is essential for cultural heritage. If you share this passion and find errors or have corrections, please open an issue on GitHub.
+We believe preserving technical knowledge of instruments like the KN5000 is essential for cultural heritage. If you find errors or have additions, please contribute.

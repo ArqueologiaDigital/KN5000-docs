@@ -8,6 +8,8 @@ permalink: /hardware-architecture/
 
 Detailed hardware documentation extracted from the service manual schematics.
 
+> **See Also**: [System Overview]({{ site.baseurl }}/system-overview/) for a high-level architecture diagram showing how all subsystems connect.
+
 ## System Overview
 
 ```

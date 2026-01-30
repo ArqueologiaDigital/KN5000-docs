@@ -7,21 +7,27 @@ url: "https://arqueologiadigital.github.io"
 markdown: kramdown
 theme: minima
 
-# Navigation
+# Navigation - organized by learning progression
 header_pages:
+  # Introduction
   - index.md
+  - system-overview.md
+  # Hardware Layer
   - hardware-architecture.md
-  - rom-reconstruction.md
-  - reverse-engineering.md
-  - hdae5000.md
-  - image-gallery.md
-  - control-panel-protocol.md
+  - cpu-subsystem.md
   - memory-map.md
-  - rom-strings.md
-  - serial-debugging-journey.md
-  - issues.md
+  # Firmware Layer
+  - boot-sequence.md
+  - rom-reconstruction.md
+  # Subsystems & Protocols
+  - control-panel-protocol.md
+  - hdae5000.md
+  - storage-subsystem.md
+  # Resources
+  - image-gallery.md
+  - reverse-engineering.md
   - help-wanted.md
-  - questions.md
+  - issues.md
 
 # Collections for organized content
 collections:
