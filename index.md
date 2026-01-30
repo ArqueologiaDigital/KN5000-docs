@@ -75,7 +75,7 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 
 | Page | Description |
 |------|-------------|
-| [Image Gallery]({{ site.baseurl }}/image-gallery/) | 46+ extracted firmware graphics |
+| [Image Gallery]({{ site.baseurl }}/image-gallery/) | 46+ extracted graphics (42 main CPU, 4 HDAE5000) |
 | [ROM Strings]({{ site.baseurl }}/rom-strings/) | Extracted text resources |
 | [Reverse Engineering]({{ site.baseurl }}/reverse-engineering/) | Methodology and strategies |
 | [Help Wanted]({{ site.baseurl }}/help-wanted/) | Contribution guide |
@@ -135,7 +135,7 @@ Choose based on your goal:
 - [MAME Pull Request](https://github.com/mamedev/mame/pull/14558) - Emulation work
 - [Discussion Forum](https://forum.fiozera.com.br/t/technics-kn5000-homebrew-development/321)
 - [Firmware Archive](https://archive.org/details/technics-kn5000-system-update-disks) - All versions
-- [Keysoftservice HDAE5000 Page](http://keysoftservice.com/hd5000.htm) - Original HDAE5000 information
+- [Keysoftservice HDAE5000 Page](https://www.keysoftservice.ch/hdae5000-e.htm) - Original HDAE5000 information
 
 ## About This Project
 
