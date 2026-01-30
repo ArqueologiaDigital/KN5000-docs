@@ -65,17 +65,35 @@ The reset handler performs essential hardware setup:
 
 ### 3. Sub CPU Payload Loading
 
-After hardware initialization, the main CPU loads a 192KB firmware payload to the sub CPU via DMA through the inter-CPU latch at `0x120000`.
+After hardware initialization, the main CPU loads a 192KB firmware payload to the sub CPU via DMA through the inter-CPU latch at `0x140000` (main CPU side) / `0x120000` (sub CPU side).
 
-**Protocol:**
-1. Main CPU sends command byte with data length
-2. Sub CPU receives interrupt, sets up DMA
-3. Data transfers via latch
-4. Handshake via `INTERCPU_STATUS` register
-5. Repeat until 192KB transferred
-6. Send E3 command to signal completion
+**Main CPU Boot Sequence:**
+```
+RESET_HANDLER (0xEF03C6)
+    │
+    ├── LD (PA), 0xFE         ; Hold Sub CPU in reset (bit 0 = 0)
+    │
+    ├── ... hardware init ...
+    │
+    ├── SET 0, (PA)           ; Release Sub CPU from reset (0xEF05F3)
+    │
+    ├── CALL SubCPU_Init_DMA_Channels  ; Set up DMA at 0xEF329E
+    │
+    ├── EI 0                  ; Enable interrupts
+    │
+    └── CALR SubCPU_Send_Payload       ; Send 192KB payload at 0xEF068A
+```
 
-See [Inter-CPU Protocol](#inter-cpu-communication-protocol) for details.
+**E1 Transfer Protocol:**
+1. Main CPU waits for SSTAT1 high (Sub CPU ready)
+2. Main CPU sends E1 command byte (0xE1) to latch
+3. Main CPU sends 6-byte header (destination address + byte count)
+4. Main CPU sends actual data via DMA
+5. Repeat for each 64KB chunk
+6. Sub CPU receives E3 command, sets bit 6 of PAYLOAD_LOADED_FLAG
+7. Sub CPU boot ROM calls payload at 0x000400
+
+See [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for detailed protocol documentation.
 
 ### 4. Subsystem Initialization
 
@@ -133,16 +151,25 @@ Size: ~400 bytes
 | 12 | DRAM_* | Various | DRAM refresh/timing |
 | 13 | BxCSL, BxCSH | Various | Bus chip select |
 
-### 3. Copy Interrupt Vectors (COPY_VECTORS)
+### 3. Copy Interrupt Vectors (Boot_Copy_Vectors)
 
 ```
 Address: 0xFF846D
 Source: 0xFF8F6C (ROM)
 Destination: 0x0400 (RAM)
-Size: 225 bytes (45 handlers × 5 bytes)
+Size: 225 bytes (0xE1 bytes)
 ```
 
-The boot ROM copies 45 interrupt vector trampolines from ROM to RAM. Each trampoline is a 5-byte `JP` instruction that initially points back to the boot ROM's default handlers, but will be overwritten by the payload.
+The boot ROM copies interrupt vector trampolines from ROM to RAM. These are placeholder handlers that jump back to boot ROM until the actual payload overwrites them:
+
+```asm
+Boot_Copy_Vectors:             ; 0xFF846D
+    LD   XDE, 0x00000400       ; Destination: RAM at 0x0400
+    LD   XHL, 0x00FF8F6C       ; Source: ROM stub table
+    LD   XBC, 0x000000E1       ; Count: 225 bytes
+    LDIR                       ; Block copy
+    RET
+```
 
 ### 4. Enable Interrupts
 
