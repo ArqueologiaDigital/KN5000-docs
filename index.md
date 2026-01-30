@@ -21,7 +21,7 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 | **ROM Reconstruction** | Create buildable source code that produces byte-identical ROMs |
 | **MAME Emulation** | Full system emulation in the MAME framework |
 | **Homebrew Development** | Enable custom software development for the hardware |
-| **Compiler Development** | LLVM backend for the TLCS-900/H2 architecture |
+| **Compiler Development** | LLVM backend for TLCS-900/H2, enabling C/C++ development |
 
 ## Start Here
 
@@ -129,12 +129,12 @@ Choose based on your goal:
 
 ## Quick Links
 
-- [Service Manual PDF]({{ site.baseurl }}/service_manual/technics_sx-kn5000.pdf) (26MB, EMID971655 A5) - Schematics and board layouts
+- [Service Manual PDF]({{ site.baseurl }}/service_manual/technics_sx-kn5000.pdf) (26MB, EMID971655 A5) - Schematics, board layouts, IC pinouts
 - [GitHub: ROM Disassembly](https://github.com/ArqueologiaDigital/kn5000-roms-disasm) - Source code
 - [GitHub: Homebrew](https://github.com/felipesanches/kn5000_homebrew/) - Custom software
 - [MAME Pull Request](https://github.com/mamedev/mame/pull/14558) - Emulation work
 - [Discussion Forum](https://forum.fiozera.com.br/t/technics-kn5000-homebrew-development/321)
-- [Firmware Archive](https://archive.org/details/technics-kn5000-system-update-disks) - All versions
+- [Firmware Archive](https://archive.org/details/technics-kn5000-system-update-disks) - All versions (v5-v10, HD-AE5000 updates)
 - [Keysoftservice HDAE5000 Page](https://www.keysoftservice.ch/hdae5000-e.htm) - Original HDAE5000 information
 
 ## About This Project
