@@ -6,106 +6,256 @@ permalink: /audio-subsystem/
 
 # Audio Subsystem
 
-> **Documentation Status: Placeholder**
->
-> This page is a placeholder for future documentation. The audio subsystem has been
-> identified but not yet fully reverse-engineered.
-
-## Overview
-
-The KN5000 audio subsystem handles all sound generation, processing, and output. It is controlled by the Sub CPU (TMP94C241F) which receives commands from the Main CPU.
+The KN5000 audio subsystem handles all sound generation, processing, and output. The Sub CPU runs dedicated audio firmware that processes MIDI-like commands from the Main CPU and drives the DSP and DAC hardware.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      SUB CPU (TMP94C241F)                    │
-│                                                              │
-│  Boot ROM: 128KB @ 0xFE0000 (internal)                       │
-│  Payload: 192KB (loaded from Main CPU at boot)              │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    DSP / TONE GENERATOR                      │
-│                                                              │
-│  Waveform ROM: Multiple MB of PCM samples                   │
-│  Polyphony: 64 voices                                        │
-│  Effects: Reverb, Chorus, etc.                               │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                         DAC OUTPUT                           │
-│                                                              │
-│  Memory-mapped at: 0x100000                                 │
-│  Channels: Stereo L/R                                        │
-│  Sample Rate: 44.1kHz (presumed)                            │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                      MAIN CPU (TMP94C241F)                          │
+│                                                                     │
+│  Audio_Lock_Acquire ──► Audio_DMA_Transfer ──► Audio_Lock_Release   │
+│                              │                                      │
+│              Latch @ 0x120000 (Inter-CPU Communication)             │
+└─────────────────────────────────┬───────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                       SUB CPU (TMP94C241F)                          │
+│                                                                     │
+│  Boot ROM: 128KB @ 0xFE0000      Payload: 192KB (from Main CPU)     │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │                  AUDIO PROCESSING LOOP                       │   │
+│  │                                                              │   │
+│  │  ToneGen_Process_Notes ──► MIDI_Dispatch ──► Audio_Process_DSP │ │
+│  │         │                       │                    │        │   │
+│  │         ▼                       ▼                    ▼        │   │
+│  │   [Keyboard Input]      [Ring Buffer]         [DSP State]     │   │
+│  │   @ 0x110000            @ 0x2B0D              @ 0x3B60        │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────┬───────────────────────────────┘
+                                      │
+          ┌───────────────────────────┼───────────────────────────┐
+          ▼                           ▼                           ▼
+┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+│  TONE GENERATOR │       │   DUAL DSP      │       │      DAC        │
+│   @ 0x110000    │       │   @ 0x130000    │       │   @ 0x100000    │
+│                 │       │                 │       │                 │
+│  16 voice slots │       │  4 channels     │       │  Stereo L/R     │
+│  Keyboard input │       │  0x20 byte/ch   │       │  44.1kHz        │
+└─────────────────┘       └─────────────────┘       └─────────────────┘
 ```
 
-## Known Information
-
-### Hardware Components
+## Hardware Addresses
 
 | Component | Address | Description |
 |-----------|---------|-------------|
-| DAC Interface | 0x100000 | Digital-to-Analog converter control |
-| Sub CPU Latch | 0x120000 | Communication with Main CPU |
+| DAC Interface | 0x100000 | Digital-to-Analog converter (16-bit stereo) |
+| Tone Generator Status | 0x110002 | Keyboard input status register |
+| Tone Generator Data | 0x110000 | Voice data (note + velocity) |
+| Inter-CPU Latch | 0x120000 | Bidirectional data register |
+| DSP Registers | 0x130000 | 4 channels × 0x20 bytes each |
+| HDAE5000 PPI | 0x160000 | Parallel port interface (expansion) |
 
-### Sub CPU Firmware
+## Sub CPU Audio Processing
 
-The Sub CPU runs dedicated audio firmware:
+### Main Loop
 
-- **Boot ROM**: 128KB internal ROM at 0xFE0000
-- **Payload**: 192KB loaded from Main CPU during boot via DMA
-- **Status**: Both ROMs 100% reconstructed
-
-### Waveform Data
-
-The waveform ROMs contain:
-- Piano samples
-- Orchestral instruments
-- Synthesizer waveforms
-- Drum kits
-- GM/GS sound set
-
-**Note**: Waveform ROM contents not yet analyzed in detail.
-
-## Communication Protocol
-
-The Main CPU sends note and control data to the Sub CPU via the latch at 0x120000:
+The Sub CPU runs a continuous audio processing loop in the payload firmware:
 
 ```
-Main CPU                    Sub CPU
-    │                          │
-    │── Note On (ch, note, vel) ──►│
-    │                          │
-    │── Program Change ────────►│
-    │                          │
-    │── Control Change ────────►│
-    │                          │
-    │◄── Status/Acknowledge ───│
+Audio_System_Init:
+    CALL InterCPU_Latch_Setup     ; Configure DMA channels
+    CALL DSP_System_Init          ; Clear DSP state buffers
+    CALL DSP2_Init                ; Initialize second DSP
+    CALL DSP_Init_Channels        ; Configure 4 DSP channels
+    CALL ToneGen_Init             ; Set tone generator mode
+
+Main_Loop:
+    CALL ToneGen_Process_Notes    ; Read keyboard input
+    CALL MIDI_Dispatch            ; Process MIDI commands
+    CALL Audio_Process_DSP        ; Update DSP state
+    CALL Audio_Process_Final      ; Final audio update
+    JR Main_Loop
 ```
+
+### Command Dispatch Table
+
+Commands from the Main CPU are dispatched based on the upper 3 bits:
+
+| Cmd Range | Handler | Purpose |
+|-----------|---------|---------|
+| 0x00-0x1F | `Audio_CmdHandler_00_1F` | DSP/audio control - writes to ring buffer |
+| 0x20-0x3F | `Audio_CmdHandler_20_3F` | Extended audio control |
+| 0x40-0x5F | `Audio_CmdHandler_40_5F` | Audio parameters |
+| 0x60-0x7F | `Audio_CmdHandler_60_7F` | Voice/DSP configuration |
+| 0x80-0x9F | (Serial port setup) | 38400 baud configuration |
+| 0xA0-0xBF | `Audio_CmdHandler_A0_BF` | System audio commands |
+| 0xC0-0xFF | `Audio_CmdHandler_C0_FF` | Extended system commands |
+
+### Ring Buffer
+
+Audio commands use a 4KB circular ring buffer:
+
+| Variable | Address | Description |
+|----------|---------|-------------|
+| Write Pointer | 0x2B0D | 12-bit circular index |
+| Read Pointer | 0x2B0F | Current read position |
+| Byte Count | 0x2B11 | Bytes available |
+| Base Address | 0x2B13 | Buffer start |
+
+**Key Routines:**
+- `RingBuf_ReadByte` - Read single byte (returns 0xFFFF if empty)
+- `RingBuf_SkipToEnd` - Skip remaining bytes in current message
+
+## MIDI Message Processing
+
+The `MIDI_Dispatch` routine parses MIDI-like status bytes and routes to handlers:
+
+| Status | Handler | Voice Handler | Description |
+|--------|---------|---------------|-------------|
+| 0x80/0x90 | `MIDI_Status_NoteOn` | `Voice_NoteOn` | Note On/Off (velocity 0 = off) |
+| 0xB0 | `MIDI_Status_CtrlChange` | `Voice_CtrlChange` | Control Change |
+| 0xC0 | `MIDI_Status_ProgChange` | `Voice_ProgChange` | Program Change |
+| 0xD0 | `MIDI_Status_ChanPressure` | `Voice_ChanPressure` | Channel Aftertouch |
+| 0xE0 | `MIDI_Status_PitchBend` | `Voice_PitchBend` | Pitch Bend |
+| 0xF0 | `MIDI_Status_System` | `Voice_SystemMsg` | System messages |
+
+### Control Change Sub-handlers
+
+The `Voice_CtrlChange` handler supports these controllers:
+
+| CC# | Handler | Parameter |
+|-----|---------|-----------|
+| 0x01 | `Voice_CC_ModWheel` | Modulation Wheel |
+| 0x07 | `Voice_CC_Volume` | Main Volume |
+| 0x0A | `Voice_CC_Pan` | Pan/Balance |
+| 0x0B | `Voice_CC_Expression` | Expression |
+| 0x40 | `Voice_CC_Sustain` | Sustain Pedal |
+| 0x5B | `Voice_CC_Sostenuto` | Sostenuto Pedal |
+| 0x5D | `Voice_CC_Soft` | Soft Pedal |
+| 0x5E | `Voice_CC_Portamento` | Portamento |
+| 0x91 | `Voice_CC_91` | Reverb Depth |
+| 0x95 | `Voice_CC_95` | Chorus Depth |
+| 0x97-0x9D | `Voice_CC_97`-`Voice_CC_9D` | Proprietary effects |
+
+## DSP Configuration
+
+### Dual DSP Architecture
+
+The Sub CPU controls two DSP chips:
+
+- **DSP1**: Primary sound synthesis (initialized by `DSP_System_Init`)
+- **DSP2**: Additional processing (initialized by `DSP2_Init`)
+
+### DSP State Buffers
+
+| Buffer | Address | Size | Purpose |
+|--------|---------|------|---------|
+| DSP State 1 | 0x041342 | 38 bytes | Primary DSP state |
+| DSP State 2 | 0x041368 | 7462 bytes | Extended DSP state |
+| DSP Config | 0x045310-18 | 12 bytes | Configuration parameters |
+| DSP2 State | 0x3B60-64 | 6 bytes | Second DSP control |
+
+### DSP Channel Configuration
+
+Each of the 4 DSP channels has 0x20 bytes of register space at 0x130000:
+
+```
+Channel 0: 0x130000 - 0x13001F
+Channel 1: 0x130020 - 0x13003F
+Channel 2: 0x130040 - 0x13005F
+Channel 3: 0x130060 - 0x13007F
+```
+
+**Key Routines:**
+- `DSP_Init_Channels` - Initialize all 4 channels
+- `DSP_Write_Channel` - Write 8 bytes of config to a channel
+- `DSP_Send_Command` - Send command byte to DSP
+- `DSP_Send_Data` - Send data byte to DSP
+
+## Tone Generator
+
+The tone generator handles keyboard input at 0x110000:
+
+### Voice Slot Table
+
+16 voice slots at 0x4A4C-0x4A5C track active notes:
+- 0xFF = note active
+- 0x00 = slot available
+
+### Key Routines
+
+| Routine | Address | Description |
+|---------|---------|-------------|
+| `ToneGen_Init` | 0x03D016 | Set mode to 6, start polling |
+| `ToneGen_Process_Notes` | 0x03D01E | Process keyboard events |
+| `ToneGen_Read_Voice_Data` | 0x03D0C5 | Read note/velocity from hardware |
+| `ToneGen_Calc_Pitch` | 0x03D11F | Calculate pitch value |
+
+### Hardware Access
+
+- P6.7 controls A23 address line for tone generator access
+- Status read: 0x110002 (bit 0 = data ready)
+- Data read: 0x110000 (16-bit: low byte = note, high byte = velocity)
+
+## Sound Categories
+
+The Main CPU organizes sounds into 16 categories with pointers at 0xE023B0:
+
+| Index | Category |
+|-------|----------|
+| 0 | PIANO |
+| 1 | GUITAR |
+| 2 | STRINGS & VOCAL |
+| 3 | BRASS |
+| 4 | FLUTE |
+| 5 | SAX & REED |
+| 6 | MALLET & ORCH PERC |
+| 7 | WORLD PERC |
+| 8 | ORGAN & ACCORDION |
+| 9 | ORCHESTRAL PAD |
+| 10 | SYNTH |
+| 11 | BASS |
+| 12 | DIGITAL DRAWBAR |
+| 13 | ACCORDION REG. |
+| 14 | GM SPECIAL |
+| 15 | DRUM KITS |
+
+## Code References
+
+### Main CPU (`maincpu/kn5000_v10_program.asm`)
+
+| Routine | Address | Description |
+|---------|---------|-------------|
+| `Audio_Lock_Acquire` | 0xEF1FEE | Acquire inter-CPU lock |
+| `Audio_Lock_Release` | 0xEF1F0F | Release inter-CPU lock |
+| `Audio_DMA_Transfer` | 0xEF341B | Core DMA transfer |
+| `Audio_InitDMAChannels` | 0xEF329E | Initialize DMA channels |
+
+### Sub CPU (`subcpu/kn5000_subprogram_v142.asm`)
+
+| Routine | Address | Description |
+|---------|---------|-------------|
+| `Audio_System_Init` | 0x01FACB | Master audio initialization |
+| `MIDI_Dispatch` | 0x034D93 | MIDI message dispatcher |
+| `Audio_CmdHandler_00_1F` | 0x034D5F | Audio command handler |
+| `Voice_NoteOn` | 0x02CF97 | Note On processing |
+| `Voice_CtrlChange` | 0x02A282 | Control Change processing |
+| `DSP_System_Init` | 0x034C45 | DSP initialization |
+| `ToneGen_Init` | 0x03D016 | Tone generator init |
 
 ## Related Pages
 
-- [CPU Subsystem]({{ site.baseurl }}/cpu-subsystem/) - Main and Sub CPU details
-- [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) - Communication latch protocol
+- [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) - Communication details
 - [MIDI Subsystem]({{ site.baseurl }}/midi-subsystem/) - External MIDI handling
+- [CPU Subsystem]({{ site.baseurl }}/cpu-subsystem/) - Main and Sub CPU details
 - [System Overview]({{ site.baseurl }}/system-overview/) - Overall architecture
 
 ## Research Needed
 
-- [ ] Document DAC register interface at 0x100000
-- [ ] Analyze Sub CPU payload command handlers
-- [ ] Identify waveform ROM format and sample layout
-- [ ] Document DSP effects processing
-- [ ] Map voice allocation algorithm
-- [ ] Understand polyphony management
-
-## How to Contribute
-
-See [Help Wanted]({{ site.baseurl }}/help-wanted/) for contribution guidelines.
-
-The Sub CPU payload is fully disassembled at `subcpu/kn5000_subprogram_v142.asm` - analysis of audio-related routines would be valuable.
+- [ ] Document waveform ROM format and sample layout
+- [ ] Analyze DSP effects processing algorithms
+- [ ] Map remaining proprietary CC handlers (0x97-0x9D)
+- [ ] Document DAC register interface details
