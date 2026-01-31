@@ -2017,6 +2017,39 @@ Large binary includes that need analysis:
 
 ---
 
+## Semantic Label Naming
+
+A comprehensive analysis identified 200+ labels across 14 assembly files that need semantic names. The full recommendations are in `docs/label_rename_recommendations.md` in the disassembly repository.
+
+### Completed Renames
+
+**demo_routines.asm** - 23 labels renamed following pattern analysis:
+- Event handlers: `DemoStyle_InputHandler`, `DemoSound_EncoderHandler`, etc.
+- Dispatch tables: `DemoStyle_DispatchTable`, `DemoRhythm_DispatchTable`
+- Exit points: `DemoModeFunc_Exit`, `DemoStyleTtlFunc_Exit`
+
+### Naming Conventions
+
+| Category | Pattern | Examples |
+|----------|---------|----------|
+| Routines | VerbNoun | `FDC_Validate_Drive_Head`, `MIDI_RX_BYTE_DISPATCHER` |
+| Dispatch Tables | *_DispatchTable | `DemoStyle_DispatchTable`, `MIDI_CHANNEL_HANDLER_JUMP_TABLE` |
+| Exit Points | *_Exit, *_Return | `ExcDotFunc_InvalidIndex_Exit` |
+| Error Handlers | *_Error, *_Invalid | `FDC_WaitReady_TimeoutCheck` |
+| Data Tables | *_Table | `Voice_PolyphonyLimits_Table` |
+
+### High-Priority Renames (Pending)
+
+| File | Count | Key Labels |
+|------|-------|------------|
+| maincpu main | 30 | `InitSystemRAM_ReleaseMemoryLock`, `FormatString_PrintfLike` |
+| subcpu payload | 20 | `Audio_DMA_RingBuffer_To_Maincpu`, `Voice_EnvelopeRate_Lookup` |
+| midi_serial_routines | 15 | `MIDI_RX_BYTE_DISPATCHER`, `MIDI_QUEUE_EVENT_TO_SEQUENCER` |
+| fdc_routines | 15 | `FDC_Setup_DMA_Write_Mode`, `FDC_Exception_Status_Decoder` |
+| cpanel_routines | 15 | `CPanel_InterruptPoll_MainLoop`, `CPanel_PanelDetection` |
+
+---
+
 ## References
 
 - [Service Manual PDF]({{ site.baseurl }}/service_manual/technics_sx-kn5000.pdf)
