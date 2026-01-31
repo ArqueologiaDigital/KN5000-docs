@@ -35,10 +35,10 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 
 | ROM | Size | Match % | Bytes Off | Source File |
 |-----|------|---------|-----------|-------------|
-| Main CPU | 2MB | 99.99% | 177 | `maincpu/kn5000_v10_program.asm` |
+| Main CPU | 2MB | **100%** | 0 | `maincpu/kn5000_v10_program.asm` |
 | Sub CPU Payload | 192KB | **100%** | 0 | `subcpu/kn5000_subprogram_v142.asm` |
 | Sub CPU Boot | 128KB | **100%** | 0 | `subcpu_boot/kn5000_subcpu_boot.asm` |
-| Table Data | 2MB | 40.60% | 1,245,692 | `table_data/kn5000_table_data.asm` |
+| Table Data | 2MB | **100%** | 0 | `table_data/kn5000_table_data.asm` |
 | Custom Data | 1MB | - | - | No source yet |
 | HDAE5000 (HD Expansion) | 512KB | **100%** | 0 | `hdae5000/hd-ae5000_v2_06i.asm` |
 
@@ -90,11 +90,21 @@ The project uses **ASL (Alfred Arnold's Macro Assembler)** version 1.42 Beta.
 
 **Challenge**: ASL only supports TMP96C141, not TMP94C241F. Unsupported instructions are handled via macros in `tmp94c241.inc` that emit raw byte sequences.
 
-## Known Divergences
+## Milestone: 100% Byte-Matching ROMs
 
-### Main CPU (177 bytes)
+As of January 2026, **all five firmware ROMs** rebuild with 100% byte accuracy:
 
-**Source File Organization:**
+- **Main CPU** (2MB) - Complete disassembly with symbolic labels
+- **Sub CPU Payload** (192KB) - Full protocol implementation
+- **Sub CPU Boot** (128KB) - Boot ROM with VGA initialization
+- **Table Data** (2MB) - Feature demo, wallpapers, icons, bootloader
+- **HDAE5000** (512KB) - Hard disk expansion firmware
+
+The only remaining target is the **Custom Data** ROM (1MB), which contains user storage and doesn't require disassembly for emulation.
+
+## Source File Organization
+
+### Main CPU
 
 The Main CPU disassembly is organized into modular source files for maintainability:
 
@@ -173,34 +183,6 @@ The Main CPU disassembly is organized into modular source files for maintainabil
 
 **GUI Constants:**
 - `gui_constants.asm`: Display dirty flags (0x0205E4), offscreen buffer addresses (0x043C00, 0x056800, 0x05FE00, 0x069400), screen dimensions (320x240 @ 8bpp)
-
-All 177 divergent bytes are located in a small region (0xFDDE5F - 0xFDED63) and stem from a single root cause:
-
-**Root Cause: 24-bit vs 16-bit Address Encoding**
-
-At address 0xFDECB6, the instruction `LD C, (8D3Ah)` is encoded differently:
-- **Original ROM**: `C1 3A 8D 23` (4 bytes) - 16-bit address mode
-- **Rebuilt ROM**: `C2 3A 8D 00 23` (5 bytes) - 24-bit address mode (`:24` suffix)
-
-The extra byte causes all subsequent addresses to shift by +1, affecting:
-- 6 CALL/JP target addresses (showing F4→F5, 11→12 patterns)
-- ~170 bytes of shifted code in the FDECB5-FDED63 range
-
-**Why Simple Fix Doesn't Work**
-
-Removing the `:24` suffix saves 1 byte but makes the ROM 1 byte too short. The original ROM has some other instruction generating 1 extra byte elsewhere that balances the total. Finding this compensating difference requires analyzing the entire ROM's instruction encodings.
-
-**Divergent Regions (10 total):**
-
-| Region | Address Range | Bytes | Description |
-|--------|---------------|-------|-------------|
-| 1 | 0xFDDE5F | 1 | CALL target offset |
-| 2 | 0xFDDE63 | 1 | CALL target offset |
-| 3 | 0xFDDEDF | 1 | CALL target offset |
-| 4 | 0xFDDEE3 | 1 | CALL target offset |
-| 5 | 0xFDE00C | 1 | CALL target offset |
-| 6 | 0xFDE010 | 1 | CALL target offset |
-| 7-10 | 0xFDECB5-0xFDED63 | 171 | Instruction encoding + shifted code |
 
 **Palettes:**
 
