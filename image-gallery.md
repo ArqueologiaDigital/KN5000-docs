@@ -236,6 +236,50 @@ The wallpaper system uses multiple name getter routines for displaying wallpaper
 
 ---
 
+## UI Icons (Table Data ROM)
+
+The KN5000 uses 176 small icons for menu items and UI elements. These were discovered by analyzing the `DrawIcons` routine at `0xFABF9B`.
+
+**Technical details:**
+- Icon table at `0x938000` (Table Data ROM offset `0x138000`)
+- 173 standard icons: 12×24 pixels @ 8bpp (288 bytes each)
+- 3 large icons: 27×27 or 28×28 pixels
+- Color lookup table at `0xEAABF2` (Main CPU ROM) maps 8-bit indices to 16-bit framebuffer colors
+
+### Icon Sprite Sheet
+
+![Icon Sprite Sheet]({{ "/assets/images/gallery/IconSpriteSheet.png" | relative_url }})
+
+*192x264 pixels - 173 standard icons arranged in 16 columns × 11 rows*
+
+The sprite sheet shows all standard 12×24 pixel icons. Icon IDs are numbered left-to-right, top-to-bottom starting from 0. Known icons include:
+- Icon 0-1: Document/file icons
+- Icon 7: Appears to be related to Easter egg (worm reference in code)
+
+### Large Icons
+
+Three icons have non-standard dimensions:
+
+| Icon | Dimensions | Preview |
+|------|------------|---------|
+| 173 | 27×27 | ![Icon 173]({{ "/assets/images/gallery/Icon_173_Large.png" | relative_url }}) |
+| 174 | 27×27 | ![Icon 174]({{ "/assets/images/gallery/Icon_174_Large.png" | relative_url }}) |
+| 175 | 28×28 | ![Icon 175]({{ "/assets/images/gallery/Icon_175_Large.png" | relative_url }}) |
+
+### Icon Table Structure
+
+Each icon table entry is 8 bytes:
+
+| Offset | Size | Description |
+|--------|------|-------------|
+| 0 | 2 | Dimension 1 (width or height indicator) |
+| 2 | 2 | Dimension 2 (width or height indicator) |
+| 4 | 4 | Pointer to pixel data in ROM |
+
+For standard icons, dimensions are both `0x18` (24). The pixel data is stored sequentially, 12 pixels per row × 24 rows.
+
+---
+
 ## Image Format Notes
 
 - **Table Data BMP**: Standard Windows BMP format, 8-bit indexed color
