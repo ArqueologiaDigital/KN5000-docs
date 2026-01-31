@@ -242,6 +242,22 @@ The Table Data ROM contains 8 system update message bitmaps at `0x9FA156`. These
 
 **ROM Interleaving:** The Table Data ROM uses 16-bit **word-level** interleaving across two physical chips (odd.ic1 and even.ic3). The combined ROM file `kn5000_table_data.rom` is created by alternating 16-bit words from each chip, not individual bytes.
 
+**Shared Code with Main CPU (bootloader routines):**
+
+Analysis revealed that several bootloader routines in the Table Data ROM are **byte-identical** to utility routines in the Main CPU ROM. This indicates both ROMs were built from common source code.
+
+| Table Data | Main CPU | Size | Routine |
+|------------|----------|------|---------|
+| 0x9FCD9A-0x9FD7BD | 0xEF50DF-0xEF5B02 | 2,596 bytes | `VRAM_FillRect` and display routines |
+| 0x9FBC3C-0x9FBECF | 0xEF3CE0-0xEF3F73 | 660 bytes | Boot utility routines |
+| 0x9FB4F2-0x9FB622 | 0xEF03D0-0xEF0500 | 305 bytes | Boot initialization code |
+
+Total shared code: **3,561 bytes**
+
+The code is position-independent (uses relative jumps), allowing it to work at different addresses in each ROM. The Main CPU has these routines fully disassembled with meaningful labels like `VRAM_FillRect`, `Write_VGA_Register`, etc. The Table Data bootloader section contains the same code, often as raw `db` bytes with comments.
+
+**Future work:** Consider refactoring to share source code via include files, with each ROM using appropriate ORG statements to place the code at its required address.
+
 **Compressed Data Identified:**
 
 | Address | Contents | Format |
