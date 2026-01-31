@@ -355,14 +355,17 @@ Each ROM defines the required parameters before including the shared file.
 
 | Address | Contents | Format |
 |---------|----------|--------|
-| 0x8E0000 | Compressed Sub CPU Payload | SLIDE4K LZSS |
+| 0x8E0000 | Compressed preset/parameter data | SLIDE4K LZSS (~33KB decompressed) |
 | 0x9FA000 | Update file type headers | "SLIDE" markers |
+
+**Note:** The LZSS data at 0x8E0000 decompresses to ~33KB of parameter data, NOT the ~192KB Sub CPU executable. See [LZSS Compression](lzss-compression.md) for analysis.
 
 **Reference disassembly:** `original_ROMs/table_data_bootcode.unidasm` (6,704 lines)
 
 **Remaining work:**
 - Feature Demo XML and BMP images (documented but not all extracted)
-- Decompression of Sub CPU payload at 0x8E0000 for analysis
+- Analysis of decompressed parameter data from 0x8E0000
+- Trace Sub CPU payload transfer path during boot
 - Various lookup tables and data structures
 - Boot routines in `bootcode_pre_lzss.bin` and `bootcode_post_lzss.bin`
 

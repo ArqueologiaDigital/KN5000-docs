@@ -205,9 +205,11 @@ The bootloader includes a complete LZSS decompression subsystem for handling com
 
 | Location | Address | Contents | Header |
 |----------|---------|----------|--------|
-| **Table Data ROM** | 0x8E0000 | Compressed Sub CPU Program | `"SLIDE4K", 0x00, 0x00, 0x95...` |
+| **Table Data ROM** | 0x8E0000 | Compressed parameter data (~33KB) | `"SLIDE4K", 0x00, 0x00, 0x95...` |
 | **Boot Headers** | 0x9FA000 | Update file type signatures | `"SLIDE"` markers |
 | **Boot UI** | 0x9FA150 | Flash update UI bitmaps | `"SLIDE"` marker + bitmap |
+
+**Note:** The data at 0x8E0000 does NOT contain the Sub CPU executable. See [Subprogram Storage Location](#subprogram-storage-location-under-investigation) below.
 
 ##### Callers of LZSS Decoder
 
@@ -388,36 +390,41 @@ If implementing dynamic remapping is complex, a workaround might be to:
 
 However, this violates the project's strict accuracy policy and may cause issues with code that expects the original boot sequence.
 
-### Subprogram Storage Location (RESOLVED)
+### Subprogram Storage Location (UNDER INVESTIGATION)
 
-The Sub CPU payload storage has been identified:
+The Sub CPU payload transfer mechanism is complex due to memory map reconfiguration:
 
-**Primary Location: Table Data ROM at 0x8E0000**
+**LZSS Compressed Region at 0x8E0000:**
 
-The compressed Sub CPU program is stored in the Table Data ROM at offset 0x0E0000 (address 0x8E0000 after remap). It uses the SLIDE4K LZSS compression format:
+There is SLIDE4K compressed data at Table Data ROM offset 0x0E0000 (address 0x8E0000 after remap):
 
 ```
-Address: 0x8E0000 (Table Data ROM)
-Header:  "SLIDE4K" + 0x00 + 0x00 + 0x95 + 0x00 + "}Z" + 0xEE + 0xF0
+Address: 0x8E0000 (Table Data ROM, post-remap)
+Header:  "SLIDE4K" + 0x00 + 0x00 + 0x95 + 0x00 + "}Z" + 0xEE
 Format:  LZSS SLIDE4K compressed
-Content: kn5000_subprogram_v142 (192KB uncompressed)
 ```
 
-**Why Previous Search Failed:**
+**Important Finding:** This compressed region does **NOT** contain the Sub CPU executable:
+- Decompresses to ~33KB of parameter-like data
+- Sub CPU ROM (`kn5000_subprogram_v142.rom`) is ~192KB
+- Decompressed bytes are mostly MIDI-range values (0-127), not code
 
-- During Stage 1 boot, table_data is at 0xE00000
-- Offset 0x30000 would be address 0xE30000 (table_data's own code)
-- The actual subprogram is at offset 0x0E0000, not 0x030000
-- After remap, 0x8E0000 points to the compressed payload
+**Sub CPU Payload Transfer - Open Questions:**
 
-**Decompression Flow:**
+The `SubCPU_Send_Payload` routine in maincpu transfers data from multiple sources:
+- `0x830000-0x87FFFF` → Sub CPU RAM (uncompressed, 320KB)
+- `0x3E0000` (Stage 1) / `0x8E0000` (Stage 2) → Optional LZSS decompression
 
-1. Flash update handler sets source address to 0x3E0000 (boot context) or 0x8E0000 (runtime)
-2. `LZSS_ParseHeader` validates the "SLIDE4K" header
-3. `LZSS_Decompress` decompresses to destination buffer
-4. Decompressed payload is written to flash or loaded to Sub CPU RAM
+The memory map reconfiguration complicates analysis:
+- **Stage 1 boot:** Table Data ROM at `0xE00000-0xFFFFFF`
+- **Stage 2 boot:** Table Data ROM at `0x800000-0x9FFFFF`
 
-The label `Compressed_data` at 0x8E0000 in `table_data/kn5000_table_data.asm` marks this location.
+The same physical ROM offset appears at different CPU addresses depending on boot stage. The full Sub CPU payload transfer path requires further analysis of:
+1. What data is at `0x830000` (offset `0x30000` in table_data)
+2. How the ~192KB executable reaches Sub CPU RAM
+3. Whether Sub CPU has its own dedicated ROM chip
+
+See [LZSS Compression](lzss-compression.md) for decompression details.
 
 ---
 
