@@ -16,7 +16,7 @@ permalink: /memory-map/
 | `0x160000 - 0x160006` | 8B | HDAE5000 PPI (8255) |
 | `0x1A0000 - 0x1A7FFF` | 512KB | Video RAM (IC207 M5M44265CJ8S) |
 | `0x280000` | 512KB | HDAE5000 ROM |
-| `0x300000` | 1MB | Custom Data Flash (User Storage) |
+| `0x300000 - 0x3FFFFF` | 1MB | Custom Data Flash (User Storage) - see [Boot Sequence]({{ site.baseurl }}/boot-sequence/#lzss-preset-data-handling) for 0x3E0000 usage |
 | `0x3C0 - 0x3DA` | - | VGA Registers (LCD Controller IC206) |
 | `0x400000` | - | Rhythm Data ROM |
 | `0x800000` | 2MB | Table Data ROM |

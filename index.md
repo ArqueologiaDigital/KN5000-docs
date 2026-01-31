@@ -67,6 +67,7 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 | Page | Description |
 |------|-------------|
 | [Boot Sequence]({{ site.baseurl }}/boot-sequence/) | Power-on to ready state |
+| [Sub CPU Payload Transfer]({{ site.baseurl }}/boot-sequence/#subcpu_send_payload-details) | 192KB firmware loading mechanism |
 | [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) | Disassembly progress |
 | [FDC Subsystem]({{ site.baseurl }}/fdc-subsystem/) | Floppy disk handlers |
 | [HDAE5000]({{ site.baseurl }}/hdae5000/) | Hard disk expansion firmware |

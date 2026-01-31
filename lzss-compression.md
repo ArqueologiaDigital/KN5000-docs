@@ -50,6 +50,8 @@ Offset  Size  Content
 
 ---
 
+<a id="disputed-interpretations"></a>
+
 ### ⚠️ Disputed Interpretation - Requires Further Investigation
 
 > **AI/Human Disagreement:** The runtime destination and transfer mechanism described below was concluded by **Claude Code** (AI assistant) based on code analysis. However, **Felipe Sanches** believes this interpretation may be **incorrect** due to:

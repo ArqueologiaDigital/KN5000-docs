@@ -110,12 +110,12 @@ The KN5000 is organized into several interconnected subsystems. Click each link 
 
 1. **Reset Vector** (0xFFFEE0) - Main CPU starts executing
 2. **Hardware Init** - Initialize RAM, peripherals, interrupts
-3. **Sub CPU Boot** - Load 192KB payload via DMA to Sub CPU
+3. **Sub CPU Boot** - Load 192KB payload via `SubCPU_Send_Payload` ([details]({{ site.baseurl }}/boot-sequence/#subcpu_send_payload-details))
 4. **Subsystem Init** - Initialize UI, MIDI, FDC, audio
 5. **HDAE5000 Detection** - Check for hard disk expansion
 6. **Ready State** - Enter main event loop
 
-See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for detailed analysis.
+See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for detailed analysis, including the [Sub CPU payload transfer mechanism]({{ site.baseurl }}/boot-sequence/#sub-cpu-payload-loading).
 
 ### Runtime Event Loop
 

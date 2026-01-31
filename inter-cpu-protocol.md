@@ -321,14 +321,28 @@ SubCPU_Init_DMA_Channels:      ; 0xEF329E
 
 ### SubCPU_Send_Payload (0xEF068A)
 
-Sends the 192KB payload to Sub CPU in chunks:
+Sends the 192KB payload to Sub CPU in chunks. This is the core routine for loading the Sub CPU firmware during boot.
+
+> **See Also:**
+> - [Boot Sequence: SubCPU_Send_Payload Details]({{ site.baseurl }}/boot-sequence/#subcpu_send_payload-details) - Transfer sequence table, timing, error handling
+> - [LZSS Compression]({{ site.baseurl }}/lzss-compression/) - Optional preset data decompression
+
+**Source:** `maincpu/kn5000_v10_program.asm:134212`
 
 ```asm
 SubCPU_Send_Payload:           ; 0xEF068A
     PUSH XIZ
-    ; ... check conditions ...
+    CP   (0xFFFEEF), 0xFF      ; Check transfer enable flag
+    JRL  NZ, .skip_transfer
 
-    ; Send 64KB chunks from Table Data ROM
+    ; Initial timing delay (0x2000 iterations)
+    LD   XIZ, 0
+.delay_loop:
+    INC  1, XIZ
+    CP   XIZ, 0x2000
+    JR   C, .delay_loop
+
+    ; Send 64KB chunks from Table Data ROM (0x830000-0x870000)
     LD   XWA, 0x830000         ; Source: table_data + 0x30000
     LD   XBC, 0x10000          ; Count: 64KB
     LD   XDE, 0x050000         ; Dest: Sub CPU RAM
@@ -339,11 +353,26 @@ SubCPU_Send_Payload:           ; 0xEF068A
     LD   XDE, 0x060000
     CALL InterCPU_E1_Bulk_Transfer
 
-    ; ... more chunks ...
+    ; ... 3 more 64KB chunks (0x850000, 0x860000, 0x870000) ...
 
+    ; Optional LZSS decompression from 0x3E0000
+    CP   (0xFFFEED), 0xFF      ; Check decompression flag
+    JR   Z, .skip_decompress
+    CALL LABEL_EF41E3          ; Decompress SLIDE4K data
+    ; ... copy decompressed data to Sub CPU ...
+
+.skip_transfer:
     POP  XIZ
     RET
 ```
+
+**Transfer Summary:**
+
+| Chunk | Source | Sub CPU Dest | Size |
+|-------|--------|--------------|------|
+| 1-5 | 0x830000-0x870000 | 0x050000-0x090000 | 5 × 64KB |
+| 6-8 | Decompressed/Fallback | 0x00F000-0x02F000 | 3 × 64KB |
+| 9 | Buffer | 0x000400 | 256 bytes |
 
 ### InterCPU_E1_Bulk_Transfer (0xEF3457)
 

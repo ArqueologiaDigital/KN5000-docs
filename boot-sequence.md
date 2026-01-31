@@ -269,6 +269,18 @@ The reset handler performs additional hardware setup (note: memory controller is
 
 After hardware initialization, the main CPU loads a 192KB firmware payload to the sub CPU via DMA through the inter-CPU latch at `0x140000` (main CPU side) / `0x120000` (sub CPU side).
 
+> **Deep Dive: Sub CPU Payload Transfer**
+>
+> The payload transfer is handled by `SubCPU_Send_Payload` (0xEF068A) using the E1 bulk transfer protocol. This is one of the most complex boot operations, involving:
+> - Multiple 64KB chunk transfers from Table Data ROM
+> - Optional LZSS decompression of preset data
+> - Careful timing with delay loops
+>
+> **Quick Reference:**
+> - [`SubCPU_Send_Payload`](#subcpu_send_payload-details) - Main transfer routine (see below)
+> - [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/#subcpu_send_payload-0xef068a) - Full technical details with code examples
+> - [Open Questions](#sub-cpu-payload-transfer---open-questions) - Disputed interpretations about destination addresses
+
 **Main CPU Boot Sequence:**
 ```
 RESET_HANDLER (0xEF03C6)
@@ -286,7 +298,7 @@ RESET_HANDLER (0xEF03C6)
     └── CALR SubCPU_Send_Payload       ; Send 192KB payload at 0xEF068A
 ```
 
-**E1 Transfer Protocol:**
+**E1 Transfer Protocol Summary:**
 1. Main CPU waits for SSTAT1 high (Sub CPU ready)
 2. Main CPU sends E1 command byte (0xE1) to latch
 3. Main CPU sends 6-byte header (destination address + byte count)
@@ -390,11 +402,161 @@ If implementing dynamic remapping is complex, a workaround might be to:
 
 However, this violates the project's strict accuracy policy and may cause issues with code that expects the original boot sequence.
 
-### Subprogram Storage Location (UNDER INVESTIGATION)
+### SubCPU_Send_Payload Details
 
-The Sub CPU payload transfer mechanism is complex due to memory map reconfiguration:
+The `SubCPU_Send_Payload` routine at **0xEF068A** is responsible for transferring the Sub CPU firmware during boot. This section provides implementation details; see [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/#subcpu_send_payload-0xef068a) for full code examples.
 
-**LZSS Compressed Region at 0x8E0000:**
+#### Memory Map State at Execution
+
+When `SubCPU_Send_Payload` is called, the memory map has been configured by the Stage 1 bootloader with these settings:
+
+**Memory Controller Configuration (MSAR/MAMR Registers):**
+
+| Register | Value | Resulting Mapping |
+|----------|-------|-------------------|
+| MSAR0 | 0x1E | Block 0 starts at 0x1E0000 (SRAM) |
+| MSAR1 | 0x10 | Block 1 starts at 0x100000 (I/O) |
+| MSAR2 | 0xC0 | Block 2 starts at 0xC00000 |
+| MSAR3 | 0x00 | Block 3 starts at 0x000000 (DRAM) |
+| MSAR4 | 0x80 | Block 4 starts at 0x800000 (Table Data ROM) |
+| MSAR5 | 0x00 | Block 5 starts at 0x000000 |
+
+**Effective Memory Map:**
+
+| Address Range | Component | Notes |
+|---------------|-----------|-------|
+| 0x000000-0x0FFFFF | DRAM (1MB) | Main CPU working RAM |
+| 0x100000-0x1DFFFF | I/O Peripherals | FDC, LCD, Latch, etc. |
+| 0x1E0000-0x1EFFFF | SRAM | Static RAM |
+| 0x300000-0x3FFFFF | Custom Data Flash | External chip select (B1CS) |
+| 0x800000-0x9FFFFF | **Table Data ROM** | Contains Sub CPU payload at offset 0x30000 |
+| 0xE00000-0xFFFFFF | Program ROM | Currently executing code |
+
+**Address Resolution for Key Accesses:**
+
+- **0x830000** → Table Data ROM offset 0x30000 (Sub CPU firmware payload)
+- **0x8E0000** → Table Data ROM offset 0xE0000 (LZSS compressed preset data)
+- **0x3E0000** → Custom Data Flash offset 0xE0000 (firmware update staging area)
+
+#### Control Flags
+
+Two bytes in Program ROM control the payload transfer behavior:
+
+| Address | ROM Offset | Value | Effect |
+|---------|------------|-------|--------|
+| 0xFFFEEF | 0x1FFEEF | **0xFF** | Payload transfer proceeds |
+| 0xFFFEED | 0x1FFEED | **0xFF** | LZSS decompression is attempted |
+
+Both flags are 0xFF in the factory ROM, meaning:
+1. The full payload transfer executes
+2. The LZSS decompression from 0x3E0000 is attempted
+
+#### Transfer Sequence
+
+| Step | Source Address | Destination | Size | Notes |
+|------|----------------|-------------|------|-------|
+| 1-5 | 0x830000-0x870000 | Sub CPU 0x050000-0x090000 | 5 × 64KB | Main payload from Table Data ROM |
+| 6 | 0x3E0000 | Decompressed buffer | ~33KB | Optional LZSS preset data (see below) |
+| 7 | Buffer + 0x100 | Main CPU 0x0404 | 2 bytes | Copies word to Main CPU RAM |
+| 8-10 | Buffer/Fallback | Sub CPU 0x00F000-0x02F000 | 3 × 64KB | Additional data blocks |
+| 11 | Buffer | Sub CPU 0x000400 | 256 bytes | Entry point area |
+
+#### Timing
+
+The routine includes two delay loops for hardware timing:
+- **Initial delay**: 0x2000 iterations (~8,192 cycles) before first transfer
+- **Inter-chunk delay**: 0x100000 iterations (~1,048,576 cycles) between chunks
+
+#### LZSS Preset Data Handling
+
+After the main 5×64KB payload transfer, the routine attempts to load additional "preset" parameter data:
+
+**Code Flow:**
+```asm
+LD XIZ, TABLE_DATA_ROM__BASE_ADDR    ; Default: 0x800000
+CP (0xFFFEED), 0xFF                  ; Check decompression flag
+JR NZ, skip_decompress               ; Skip if flag != 0xFF
+
+; Attempt LZSS decompression from Custom Data Flash
+LD XIZ, 0x050000                     ; Output buffer (DRAM)
+LD XWA, 0x3E0000                     ; Source: Custom Data Flash!
+CALL LABEL_EF41E3                    ; Decompress
+CP HL, 0xFFFF                        ; Check for failure
+JR NZ, skip_decompress               ; Success: use decompressed data
+LD XIZ, TABLE_DATA_ROM__BASE_ADDR    ; Failure: fall back to ROM
+
+skip_decompress:
+; Use data at XIZ+0x100 for subsequent transfers
+```
+
+**Key Finding: Address 0x3E0000 is NOT in Table Data ROM**
+
+The address `0x3E0000` maps to **Custom Data Flash** (0x300000-0x3FFFFF), NOT Table Data ROM. This region is controlled by external chip select logic (B1CS), not the MSAR block memory controller.
+
+| Address | Maps To | Normal Boot State |
+|---------|---------|-------------------|
+| 0x3E0000 | Custom Data Flash offset 0xE0000 | User data / empty |
+| 0x8E0000 | Table Data ROM offset 0xE0000 | LZSS compressed preset data |
+
+**Implications:**
+
+1. **Normal boot**: Decompression from 0x3E0000 likely fails (Custom Data Flash doesn't contain valid LZSS data in factory state)
+2. **Fallback path**: Code falls back to `TABLE_DATA_ROM__BASE_ADDR` (0x800000), using raw ROM data at offset 0x100
+3. **Firmware update scenario**: During updates, LZSS data may be staged to Custom Data Flash at 0x3E0000
+
+The LZSS compressed data at Table Data ROM offset 0xE0000 (accessible as 0x8E0000) is **never directly referenced** by `SubCPU_Send_Payload`. This compressed data may be used by a different code path or firmware update routine.
+
+> **⚠️ DISPUTED:** The exact purpose and destination of the preset data transfer remains under investigation. See [Known Disputed Interpretations]({{ site.baseurl }}/lzss-compression/#disputed-interpretations) in the LZSS documentation.
+
+#### Related Routines
+
+| Routine | Address | Purpose |
+|---------|---------|---------|
+| `SubCPU_Init_DMA_Channels` | 0xEF329E | Must be called before payload transfer |
+| `InterCPU_E1_Bulk_Transfer` | 0xEF3457 | Underlying protocol for each 64KB chunk |
+| `SubCPU_Payload_Verify` | 0xEF092B | Verifies payload checksums after transfer |
+| `SubCPU_Payload_GetErrorFlag` | 0xEF096A | Returns error status for boot sequence |
+
+#### Error Handling
+
+If the payload transfer or verification fails:
+1. `SubCPU_Payload_Verify` sets error flag at `0x01E53E`
+2. Boot sequence reads flag via `SubCPU_Payload_GetErrorFlag`
+3. Non-zero result triggers "ERROR in CPU data transmission" dialog
+4. Error dialog defined at `ErrorDialog_CPUTransmissionError` (0xED66BA)
+
+#### Source Code Reference
+
+Assembly: `maincpu/kn5000_v10_program.asm:134212-134295`
+
+```asm
+; Entry point
+SubCPU_Send_Payload:                ; 0xEF068A
+    PUSH XIZ
+    CP (0xFFFEEF), 0xFF              ; Check if transfer should proceed
+    JRL NZ, LABEL_EF078B             ; Skip if not 0xFF
+    ; ... 5 x 64KB transfers via InterCPU_E1_Bulk_Transfer ...
+    ; ... LZSS decompression handling ...
+    ; ... Final data blocks to Sub CPU ...
+    POP XIZ
+    RET
+```
+
+### Subprogram Storage Location (RESOLVED)
+
+The Sub CPU firmware payload storage is now fully understood:
+
+**Primary Payload: Table Data ROM offset 0x30000**
+
+The main Sub CPU firmware (192KB, matching `kn5000_subprogram_v142.rom`) is stored **uncompressed** at:
+
+| Source | Address | ROM Offset | Size | Destination |
+|--------|---------|------------|------|-------------|
+| Table Data ROM | 0x830000-0x87FFFF | 0x30000-0x7FFFF | 320KB | Sub CPU 0x050000-0x090000 |
+
+This is the definitive source of the Sub CPU executable. The `SubCPU_Send_Payload` routine transfers 5×64KB chunks via `InterCPU_E1_Bulk_Transfer`.
+
+**LZSS Compressed Region at 0x8E0000 (Preset Parameters, NOT Executable):**
 
 There is SLIDE4K compressed data at Table Data ROM offset 0x0E0000 (address 0x8E0000 after remap):
 
@@ -409,20 +571,24 @@ Format:  LZSS SLIDE4K compressed
 - Sub CPU ROM (`kn5000_subprogram_v142.rom`) is ~192KB
 - Decompressed bytes are mostly MIDI-range values (0-127), not code
 
-**Sub CPU Payload Transfer - Open Questions:**
+**Address 0x3E0000 Clarification:**
 
-The `SubCPU_Send_Payload` routine in maincpu transfers data from multiple sources:
-- `0x830000-0x87FFFF` → Sub CPU RAM (uncompressed, 320KB)
-- `0x3E0000` (Stage 1) / `0x8E0000` (Stage 2) → Optional LZSS decompression
+The code references `0x3E0000` for LZSS decompression, but this address maps to **Custom Data Flash** (not Table Data ROM):
 
-The memory map reconfiguration complicates analysis:
-- **Stage 1 boot:** Table Data ROM at `0xE00000-0xFFFFFF`
-- **Stage 2 boot:** Table Data ROM at `0x800000-0x9FFFFF`
+| Address | Memory Region | Typical Contents |
+|---------|---------------|------------------|
+| 0x3E0000 | Custom Data Flash (offset 0xE0000) | User data or empty |
+| 0x8E0000 | Table Data ROM (offset 0xE0000) | LZSS compressed preset data |
 
-The same physical ROM offset appears at different CPU addresses depending on boot stage. The full Sub CPU payload transfer path requires further analysis of:
-1. What data is at `0x830000` (offset `0x30000` in table_data)
-2. How the ~192KB executable reaches Sub CPU RAM
-3. Whether Sub CPU has its own dedicated ROM chip
+In normal factory boot, the LZSS decompression from 0x3E0000 likely fails (no valid data in Custom Data Flash), causing the code to fall back to `TABLE_DATA_ROM__BASE_ADDR`.
+
+**Remaining Open Questions:**
+
+1. ~~What data is at `0x830000`~~ **RESOLVED:** Sub CPU firmware payload
+2. ~~How the ~192KB executable reaches Sub CPU RAM~~ **RESOLVED:** Direct 5×64KB transfers
+3. ~~Whether Sub CPU has its own dedicated ROM chip~~ **RESOLVED:** Yes, the Sub CPU Boot ROM (128KB, IC30) contains the boot loader; the 192KB payload is transferred from Table Data ROM
+4. **NEW:** What is the purpose of the preset data at 0x8E0000, and when is it used?
+5. **NEW:** Under what conditions does the 0x3E0000 LZSS path succeed (firmware update mode)?
 
 See [LZSS Compression](lzss-compression.md) for decompression details.
 
