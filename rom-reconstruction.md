@@ -225,9 +225,9 @@ The LZSS decoder uses the SLIDE4K format (4KB sliding window, 12-bit offset, 4-b
 
 **Key discovery:** The interrupt vector table contains boot-time addresses (0xFFxxxx) because at reset the table_data ROM is mapped at 0xE00000-0xFFFFFF, not 0x800000-0x9FFFFF. The bootloader reconfigures the memory controller to remap the ROMs.
 
-**System Update Bitmaps (extracted):**
+**System Update Bitmaps (shared with Main CPU):**
 
-The Table Data ROM contains its own set of 8 system update message bitmaps at `0x9FA156`. These are 1-bit monochrome images (224x22 pixels, 616 bytes each) used during firmware updates:
+The Table Data ROM contains 8 system update message bitmaps at `0x9FA156`. These are 1-bit monochrome images (224x22 pixels, 616 bytes each) that are **byte-identical** to the Main CPU versions. The disassembly source shares the same bitmap files between both ROMs.
 
 | Address | Image | Purpose |
 |---------|-------|---------|
@@ -240,7 +240,7 @@ The Table Data ROM contains its own set of 8 system update message bitmaps at `0
 | 0x9FAFC6 | Illegal Disk | Invalid disk error |
 | 0x9FB22E | Turn On AGAIN | Restart instruction |
 
-**Important:** These bitmaps are NOT byte-identical to the Main CPU versions. The Table Data ROM uses a 16-bit interleaved bus (odd.ic1 + even.ic3), which causes different byte ordering when the graphics hardware accesses bitmap data. Both ROM components maintain separate copies of these images in their native formats.
+**ROM Interleaving:** The Table Data ROM uses 16-bit **word-level** interleaving across two physical chips (odd.ic1 and even.ic3). The combined ROM file `kn5000_table_data.rom` is created by alternating 16-bit words from each chip, not individual bytes.
 
 **Compressed Data Identified:**
 
