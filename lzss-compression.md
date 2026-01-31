@@ -50,22 +50,40 @@ Offset  Size  Content
 
 **Decompressed Data Structure:**
 
-| Section | Offset | Size | Description |
-|---------|--------|------|-------------|
-| Header | 0x0000-0x00AF | 176 bytes | Configuration data, mostly zeros |
-| Parameters | 0x00B0-0x808D | 32,734 bytes | Preset parameter records |
+| Section | Offset | Size | Runtime Destination |
+|---------|--------|------|---------------------|
+| Main CPU Header | 0x0000-0x00FF | 256 bytes | Main CPU (word at 0x100 → RAM 0x0404) |
+| Sub CPU Audio Params | 0x0100-0x808D | 32,654 bytes | Sub CPU address 0xF000+ |
 
-**Header Section (0x00-0xAF):**
+**Main CPU Header (0x00-0xFF):**
 - Mostly zero bytes with sparse configuration values
 - Key non-zero positions: 0x18-0x1B, 0x2E, 0x45, 0x57-0x5A, 0x61, 0x94-0x9E, 0xA4-0xA5
 - Contains record marker `00 03 01 00` at offset 0x94
+- Word at offset 0x100 is copied to Main CPU RAM 0x0404
 
-**Parameter Section (0xB0+):**
+**Sub CPU Audio Parameters (0x100+):**
+- **Destination**: Sub CPU address 0xF000 (overwrites ROM defaults)
 - Variable-length records, often starting with `00 03` marker
 - 24 occurrences of `00 03` record markers
 - Flag byte `0x80` indicates "value set" (actual value in next byte)
 - Pattern `18 XX` appears to indicate parameter type codes
 - Common sequence: `64 03 00 7F 20 00 70 80`
+- Most values are MIDI-range (0-127), suggesting voice/audio parameters
+
+**Sub CPU 0xF000 Area Usage:**
+
+The Sub CPU ROM (`kn5000_subprogram_v142`) contains default values at 0xF000+. These are audio engine configuration tables:
+
+| Address | Purpose |
+|---------|---------|
+| 0xF000-0xF01F | System configuration, counters |
+| 0xF010-0xF100 | Voice parameters (ADSR envelopes) |
+| 0xF100-0xF420 | Pitch tables, envelope lookups |
+| 0xF420-0xF434 | Runtime buffer initialization |
+| 0xF434-0xF460 | Serial buffer structures |
+| 0xF48C+ | Voice polyphony/index tables |
+
+The preset data overwrites these defaults during boot, configuring factory presets for the audio engine.
 
 **Open Questions - Sub CPU Payload Transfer:**
 
