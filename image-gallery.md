@@ -242,8 +242,9 @@ The KN5000 uses 176 small icons for menu items and UI elements. These were disco
 
 **Technical details:**
 - Icon table at `0x938000` (Table Data ROM offset `0x138000`)
-- 173 standard icons: 24×24 pixels @ 4bpp (288 bytes each)
-- 3 large icons: 27×27 or 28×28 pixels
+- **All 176 icons are 24×24 pixels** @ 4bpp (288 bytes each)
+- The `DrawIcons` routine has hardcoded loops: 12 bytes/row × 24 rows
+- The "dims" field in the table is the UI bounding box (for hit testing), NOT pixel dimensions
 - 4bpp format: 2 pixels per byte (high nibble first, low nibble second)
 - 16-color CGA/EGA-style palette from main ROM at `0xEB37DE`
 
@@ -272,21 +273,21 @@ The KN5000 uses 176 small icons for menu items and UI elements. These were disco
 
 ![Icon Sprite Sheet]({{ "/assets/images/gallery/IconSpriteSheet.png" | relative_url }})
 
-*384x264 pixels - 173 standard icons arranged in 16 columns × 11 rows*
+*384x264 pixels - all 176 icons arranged in 16 columns × 11 rows*
 
-The sprite sheet shows all standard 12×24 pixel icons. Icon IDs are numbered left-to-right, top-to-bottom starting from 0. Known icons include:
+The sprite sheet shows all 24×24 pixel icons. Icon IDs are numbered left-to-right, top-to-bottom starting from 0. Known icons include:
 - Icon 0-1: Document/file icons
 - Icon 7: Appears to be related to Easter egg (worm reference in code)
 
-### Large Icons
+### Icons with Non-Standard Bounding Boxes
 
-Three icons have non-standard dimensions:
+Three icons have larger bounding boxes for UI hit-testing purposes, but still use standard 24×24 pixel data:
 
-| Icon | Dimensions | Preview |
-|------|------------|---------|
-| 173 | 27×27 | ![Icon 173]({{ "/assets/images/gallery/Icon_173_Large.png" | relative_url }}) |
-| 174 | 27×27 | ![Icon 174]({{ "/assets/images/gallery/Icon_174_Large.png" | relative_url }}) |
-| 175 | 28×28 | ![Icon 175]({{ "/assets/images/gallery/Icon_175_Large.png" | relative_url }}) |
+| Icon | Bounding Box | Notes |
+|------|--------------|-------|
+| 173 | 27×27 | Standard 24×24 pixel data |
+| 174 | 27×27 | Standard 24×24 pixel data |
+| 175 | 28×28 | Standard 24×24 pixel data |
 
 ### Icon Table Structure
 
@@ -294,11 +295,11 @@ Each icon table entry is 8 bytes:
 
 | Offset | Size | Description |
 |--------|------|-------------|
-| 0 | 2 | Dimension 1 (width or height indicator) |
-| 2 | 2 | Dimension 2 (width or height indicator) |
+| 0 | 2 | Bounding box width (for UI hit testing, NOT pixel width) |
+| 2 | 2 | Bounding box height (for UI hit testing, NOT pixel height) |
 | 4 | 4 | Pointer to pixel data in ROM |
 
-For standard icons, dimensions are both `0x18` (24). The pixel data is stored sequentially, 12 pixels per row × 24 rows.
+Most icons have bounding box `0x18` × `0x18` (24×24). The `DrawIcons` routine ignores these values for rendering - it always draws 24×24 pixels using hardcoded loops (12 bytes/row × 24 rows).
 
 ---
 
