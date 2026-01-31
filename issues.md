@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 118 (97 open, 21 closed)
+**Total Issues:** 128 (107 open, 21 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (38) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (48) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
 
 ---
 
@@ -331,11 +331,203 @@ Main CPU ROM (kn5000_v10_program.rebuilt.rom) is at 99.99% match with 177 incorr
 
 ### Other {#other}
 
+#### 🔴 MAME: Create milestone tracking issue for emulator completion {#issue-kn5000-9lg}
+
+**ID:** `kn5000-9lg` | **Priority:** Critical | **Created:** 2026-01-30
+
+**Notes:** Master tracking issue for MAME emulator completion milestones.
+
+Current MAME PR: #14558 (in progress)
+
+**Phase 1 - Boot and Display** (blocks visual output):
+- [ ] VGA register emulation (kn5000-ezo)
+- [ ] Framebuffer rendering (kn5000-3c5)
+- [ ] LCD output working
+- [ ] Fix 177 divergent bytes (kn5000-5a0, kn5000-kqy)
+
+**Phase 2 - Audio** (blocks sound output):
+- [ ] DSP emulation or HLE (kn5000-1oy)
+- [ ] DAC output (kn5000-xel)
+- [ ] Basic sound synthesis (kn5000-tvq)
+
+**Phase 3 - Input** (blocks interaction):
+- [ ] Control panel HLE complete (kn5000-qhm)
+- [ ] Encoder/wheel input (kn5000-3c7)
+- [ ] Button response (kn5000-j3c)
+
+**Phase 4 - Storage** (blocks file operations):
+- [ ] FDC emulation (kn5000-ima)
+- [ ] HDAE5000 emulation (kn5000-kuu)
+- [ ] Custom data persistence (kn5000-bqe)
+
+**Phase 5 - Polish**:
+- [ ] Full UI framework (kn5000-4bt)
+- [ ] Sequencer playback
+- [ ] Feature demo mode (kn5000-h7o)
+
+---
+
+#### 🔴 Plan: Long-term project roadmap and phase tracking {#issue-kn5000-3go}
+
+**ID:** `kn5000-3go` | **Priority:** Critical | **Created:** 2026-01-30
+
+**Notes:** Master roadmap for KN5000 reverse engineering project.
+
+## Project Goals
+1. **100% ROM Reconstruction** - Byte-accurate rebuilds of all firmware
+2. **MAME Emulation** - Full system emulation for preservation
+3. **Homebrew Development** - Enable custom software creation
+4. **Documentation** - Complete technical reference
+
+## Phase Structure
+
+### Phase 1: Foundation (MAME Blockers)
+*Goal: Get basic emulator running with display and sound*
+
+**Display System:**
+- kn5000-ezo: VGA register documentation [P1]
+- kn5000-3c5: Framebuffer memory layout [P1]
+- kn5000-hy8: Pixel format and palette [P1]
+- kn5000-gln: Drawing primitives [P1]
+
+**Audio System:**
+- kn5000-1oy: DSP effects processing [P1]
+- kn5000-xv2: DSP IC311 documentation [P1]
+- kn5000-xel: DAC IC310 documentation [P1]
+
+**ROM Reconstruction:**
+- kn5000-5a0: Fix 177 divergent bytes [P1]
+- kn5000-d1x: Table Data ROM structure [P1]
+
+### Phase 2: Core Functionality
+*Goal: User interaction and file I/O working*
+
+**UI/Input:**
+- kn5000-kev: Font system [P2]
+- kn5000-5dc: Widget rendering [P2]
+- kn5000-qhm: Control panel HLE [P2]
+- kn5000-3c7: Analog controllers [P2]
+
+**Storage:**
+- kn5000-ima: FDC subsystem [P2]
+- kn5000-kuu: HDAE5000 ROM [P1]
+
+### Phase 3: Complete Documentation
+*Goal: All subsystems fully documented*
+
+**Audio Details:**
+- kn5000-81p: Technics SysEx format
+- kn5000-5ck: Proprietary CC handlers
+- kn5000-rlb: Voice allocation
+
+**Storage Details:**
+- kn5000-bqe: Custom Data Flash
+- kn5000-44c: HDAE5000 filesystem
+
+**Boot/Init:**
+- kn5000-mhj: Complete boot timeline
+- kn5000-izk: HDAE5000 detection
+
+### Phase 4: Quality & Polish
+*Goal: Production-ready emulation and homebrew support*
+
+**Symbol Cleanup:**
+- kn5000-9jq: Sub CPU symbols
+- kn5000-4bt: UI framework symbols
+- kn5000-aar: Naming convention guide
+
+**Tools:**
+- kn5000-waa: Slide viewer/editor
+- kn5000-87m: Update file parser
+- kn5000-pkx: Image converter
+
+**Documentation:**
+- kn5000-9a0: Website maintenance
+- kn5000-sf8: Code reference tables
+
+## Current Status (Jan 2026)
+- ROM reconstruction: 59.54% overall
+- Main CPU: 99.99% (177 bytes divergent)
+- Sub CPU: 100% complete
+- Table Data: 32.42%
+- MAME PR: #14558 in progress
+
+## Success Criteria
+- [ ] All ROMs 100% byte-matching
+- [ ] MAME driver merged upstream
+- [ ] All subsystems documented
+- [ ] Homebrew SDK available
+
+---
+
 #### 🔴 ROM Reconstruction: Achieve 100% byte-matching for all ROMs {#issue-kn5000-99f}
 
 **ID:** `kn5000-99f` | **Priority:** Critical | **Created:** 2026-01-25
 
 **Depends on:** [`kn5000-cfe`](#issue-kn5000-cfe), [`kn5000-kqy`](#issue-kn5000-kqy), [`kn5000-hlw`](#issue-kn5000-hlw)
+
+---
+
+#### 🟠 Audio: Analyze DSP effects processing algorithms {#issue-kn5000-1oy}
+
+**ID:** `kn5000-1oy` | **Priority:** High | **Created:** 2026-01-30
+
+**Notes:** DSP effects processing is critical for audio emulation.
+
+**Current state:** Dual DSP architecture documented, but register meanings and effect algorithms unknown.
+
+**Required work:**
+- Trace DSP register writes at 0x130000
+- Document effect parameter mapping
+- Analyze reverb, chorus, delay implementations
+- Map effect chain configuration
+
+**Phase:** 1 - Foundation (MAME Blockers)
+**Blocks:** Audio synthesis in MAME
+**Dependencies:** Audio hardware documentation
+**Related:** kn5000-xv2 (DSP IC311), kn5000-si0 (effects chain)
+
+---
+
+#### 🟠 Display: Document VGA register set for MN89304 controller {#issue-kn5000-ezo}
+
+**ID:** `kn5000-ezo` | **Priority:** High | **Created:** 2026-01-30
+
+**Notes:** The MN89304 VGA controller at 0x170000 needs complete register documentation.
+
+**Current state:** Hardware location known, but register meanings undocumented.
+
+**Required work:**
+- Identify VGA register port addresses (standard VGA at 0x3C0-0x3DF?)
+- Document initialization sequence from boot code
+- Map control registers for resolution, timing, color depth
+- Document any non-standard extensions
+
+**Phase:** 1 - Foundation (MAME Blockers)
+**Blocks:** Display rendering in MAME emulator
+**Dependencies:** None
+**Related:** kn5000-hy8 (color palette), kn5000-gln (drawing primitives)
+
+---
+
+#### 🟠 Display: Document framebuffer memory organization at 0x1A0000 {#issue-kn5000-3c5}
+
+**ID:** `kn5000-3c5` | **Priority:** High | **Created:** 2026-01-30
+
+**Notes:** Video RAM at 0x1A0000 (512KB) organization needs documentation.
+
+**Current state:** Address known, layout unknown.
+
+**Required work:**
+- Determine pixel storage format (linear? planar?)
+- Map screen regions to memory offsets
+- Document double-buffering if present
+- Identify any hardware scrolling/panning support
+
+**Phase:** 1 - Foundation (MAME Blockers)
+**Blocks:** MAME display rendering
+**Dependencies:** VGA register documentation (kn5000-ezo)
+**Related:** kn5000-rq0 (screen layout)
 
 ---
 
@@ -388,6 +580,26 @@ Analyze the KN5000 service manual (59 pages) to extract hardware architecture de
 
 ---
 
+#### 🟠 Fix 177 divergent bytes in Main CPU ROM (24-bit address encoding issue) {#issue-kn5000-5a0}
+
+**ID:** `kn5000-5a0` | **Priority:** High | **Created:** 2026-01-26
+
+**Notes:** 177 divergent bytes in Main CPU ROM must be fixed for 100% match.
+
+**Current state:** 99.99% match, 177 bytes differ due to 24-bit address encoding issues.
+
+**Required work:**
+- Analyze divergent byte locations
+- Fix ASL macro encodings in tmp94c241.inc
+- Verify instruction semantics match original
+
+**Phase:** 1 - Foundation (MAME Blockers)
+**Blocks:** 100% ROM reconstruction
+**Dependencies:** None
+**Related:** kn5000-kqy (same issue), kn5000-3o6 (ASL macros)
+
+---
+
 #### 🟠 MAME: Update HLE based on audio subsystem findings {#issue-kn5000-0o6}
 
 **ID:** `kn5000-0o6` | **Priority:** High | **Created:** 2026-01-30
@@ -408,6 +620,27 @@ Update mame_driver/ reference files:
 - Ensure CC handlers match discovered behavior
 
 Reference: audio-subsystem.md, midi-subsystem.md, inter-cpu-protocol.md
+
+---
+
+#### 🟠 Table Data: Document ROM internal structure and indexing {#issue-kn5000-d1x}
+
+**ID:** `kn5000-d1x` | **Priority:** High | **Created:** 2026-01-30
+
+**Notes:** Table Data ROM (2MB @ 0x800000) internal organization needs reverse engineering.
+
+**Current state:** 32.42% disassembled, mostly binary assets. Structure unknown.
+
+**Required work:**
+- Identify index tables for sound/style/demo data
+- Document header formats for embedded assets
+- Map data type regions within the ROM
+- Create tools to extract and catalog assets
+
+**Phase:** 1 - Foundation (MAME Blockers)
+**Blocks:** Full Table Data ROM disassembly, asset loading in emulator
+**Dependencies:** None
+**Related:** kn5000-hlw (improve match %), kn5000-16s (find images)
 
 ---
 
@@ -450,26 +683,6 @@ TODO: Document general encoding patterns for creating future macros.
 **ID:** `kn5000-xhi` | **Priority:** Medium | **Created:** 2026-01-25
 
 Block diagram shows ROTA and ROTB signals from control panel. Find the encoder circuit in schematics, determine: number of encoders, connection to MCU pins, any conditioning circuitry (pull-ups, filters). This helps understand encoder data format in protocol.
-
----
-
-#### 🟡 Audio: Analyze DSP effects processing algorithms {#issue-kn5000-1oy}
-
-**ID:** `kn5000-1oy` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** The Sub CPU controls dual DSP chips for effects processing. Need to understand:
-
-1. What effects are implemented (reverb, chorus, delay, etc.)
-2. How effect parameters map to DSP registers at 0x130000
-3. DSP command sequences for effect configuration
-4. How CC 0x91 (reverb) and 0x95 (chorus) control effect depth
-
-Key routines to analyze:
-- DSP_Send_Command, DSP_Send_Data
-- Audio_Process_DSP (main DSP update loop)
-- DSP state buffers at 0x041342 and 0x041368
-
-Reference: audio-subsystem.md for current DSP documentation.
 
 ---
 
@@ -602,6 +815,21 @@ Reference: SOUND_DATA_SECTION_PTRS at 0xE023B0 in maincpu.
 
 Based on protocol documentation, design the C++ interface for a MAME HLE device that emulates control panel MCU behavior. Define state machine, command handlers, and input/output bindings.
 
+**Notes:** MAME HLE device for control panel based on protocol reverse engineering.
+
+**Current state:** Protocol fully documented, HLE partially implemented in MAME PR.
+
+**Required work:**
+- Complete button input handling
+- Implement LED output state
+- Add encoder input support
+- Test with actual firmware execution
+
+**Phase:** 2 - Core Functionality
+**Blocks:** User input in emulator
+**Dependencies:** Control panel protocol (complete)
+**Related:** kn5000-9ye (protocol RE), kn5000-j3c (button mapping)
+
 **Depends on:** [`kn5000-p2c`](#issue-kn5000-p2c), [`kn5000-j3c`](#issue-kn5000-j3c), [`kn5000-ljl`](#issue-kn5000-ljl), [`kn5000-unb`](#issue-kn5000-unb)
 
 ---
@@ -706,20 +934,24 @@ Reference: kn5000_table_data.rom combination analysis
 
 ---
 
-#### 🟡 Fix 177 divergent bytes in Main CPU ROM (24-bit address encoding issue) {#issue-kn5000-5a0}
+#### 🟡 Input: Document analog controller processing (wheels, pedals) {#issue-kn5000-3c7}
 
-**ID:** `kn5000-5a0` | **Priority:** Medium | **Created:** 2026-01-26
+**ID:** `kn5000-3c7` | **Priority:** Medium | **Created:** 2026-01-30
 
-**Notes:** Root cause identified: At 0xFDECB6, 'LD C, (8D3Ah:24)' generates 5 bytes but original uses 4-byte 16-bit encoding. The extra byte shifts all subsequent addresses by +1.
+**Notes:** Pitch bend wheel, modulation wheel, and expression pedal processing needs documentation.
 
-Fix requires:
-1. Find the compensating instruction elsewhere that generates 1 byte less than expected
-2. Once found, remove ':24' suffix AND fix the other encoding
-3. Alternatively, analyze the entire ROM for instruction encoding mismatches
+**Current state:** Encoder IDs known from control panel protocol, processing unknown.
 
-Affected regions: 0xFDDE5F-0xFDED63 (10 divergent regions, 177 bytes total)
+**Required work:**
+- Trace A/D conversion routines
+- Document wheel position scaling/curves
+- Map pedal input handling
+- Document velocity/aftertouch processing if applicable
 
-See rom-reconstruction.md for detailed analysis.
+**Phase:** 2 - Core Functionality
+**Blocks:** Controller emulation accuracy
+**Dependencies:** Control panel protocol (complete)
+**Related:** kn5000-unb (encoder data format)
 
 ---
 
@@ -803,21 +1035,45 @@ Reference: rom-reconstruction.md "Shared Code with Main CPU" section
 
 ---
 
+#### 🟡 Storage: Document Custom Data Flash organization at 0x300000 {#issue-kn5000-bqe}
+
+**ID:** `kn5000-bqe` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** Custom Data Flash (1MB @ 0x300000) stores user settings and sequences.
+
+Current state: Address known, internal layout unknown.
+
+Required work:
+- Identify file/record structure
+- Document user settings storage format
+- Map custom sound/style save locations
+- Document sequence storage format
+
+Priority: Medium - needed for save/restore functionality
+Phase: 3 - Complete Documentation
+Dependencies: Sequencer format (for sequence storage)
+Related: Storage subsystem documentation
+
+---
+
 #### 🟡 Symbols: Apply semantic naming to FDC subsystem LABEL_* symbols {#issue-kn5000-ima}
 
 **ID:** `kn5000-ima` | **Priority:** Medium | **Created:** 2026-01-30
 
-**Notes:** Following the successful audio subsystem renaming, apply the same approach to FDC (Floppy Disk Controller) routines:
+**Notes:** FDC subsystem semantic naming and documentation.
 
-1. Identify all FDC-related LABEL_* symbols in maincpu
-2. Analyze each routine's purpose
-3. Create semantic names (FDC_ReadSector, FDC_WriteSector, etc.)
-4. Add documentation headers
-5. Update fdc-subsystem.md with code references
+**Current state:** Handler at 0x110000 identified, commands not documented.
 
-Pattern established: audio_subsystem_rename.sed can be used as template.
+**Required work:**
+- Rename LABEL_* symbols in FDC code
+- Document uPD72068 command sequences
+- Trace sector read/write implementation
+- Document error handling
 
-Search maincpu for: FDC_, 0x110000 references, floppy-related strings.
+**Phase:** 2 - Core Functionality
+**Blocks:** Floppy disk emulation
+**Dependencies:** None
+**Related:** kn5000-70b (FDC during update)
 
 ---
 
@@ -920,11 +1176,54 @@ This helps understand the full data flow.
 
 ---
 
+#### ⚪ Homebrew: Create SDK documentation and examples {#issue-kn5000-9zb}
+
+**ID:** `kn5000-9zb` | **Priority:** Low | **Created:** 2026-01-30
+
+**Notes:** Enable homebrew development for KN5000 hardware.
+
+**Current state:** Assembly knowledge accumulated, no SDK exists.
+
+**Required work:**
+- Create getting-started guide
+- Document essential APIs (display, audio, input)
+- Provide example programs
+- Document memory map for user code
+- Create build system templates
+
+**Phase:** 4 - Quality & Polish
+**Blocks:** Community homebrew development
+**Dependencies:** Complete subsystem documentation
+**Related:** All subsystem documentation issues
+
+---
+
 #### ⚪ Maintain documentation website {#issue-kn5000-9a0}
 
 **ID:** `kn5000-9a0` | **Priority:** Low | **Created:** 2026-01-25
 
 Keep the kn5000-docs Jekyll website in sync with reverse engineering progress. Update status, add findings, maintain open questions list. Website repo: claude_jail/kn5000-docs/
+
+---
+
+#### ⚪ Sequencer: Document event storage format and track organization {#issue-kn5000-wgc}
+
+**ID:** `kn5000-wgc` | **Priority:** Low | **Created:** 2026-01-30
+
+**Notes:** The 16-track MIDI sequencer data format needs reverse engineering.
+
+**Current state:** Basic capability known, internal format undocumented.
+
+**Required work:**
+- Locate sequence data in RAM/storage
+- Document event record format (note, CC, timing)
+- Trace track organization structure
+- Document timing resolution and sync
+
+**Phase:** 3 - Complete Documentation
+**Blocks:** Sequencer emulation
+**Dependencies:** MIDI subsystem
+**Related:** Custom Data Flash (kn5000-bqe)
 
 ---
 
@@ -951,6 +1250,28 @@ Prefixes used:
 - Encoder_* - Rotary encoder handling
 
 Add to CLAUDE.md so future work maintains consistency.
+
+---
+
+#### ⚪ LLVM: TLCS-900/H2 backend development tracking {#issue-kn5000-raw}
+
+**ID:** `kn5000-raw` | **Priority:** P4 | **Created:** 2026-01-30
+
+**Notes:** Long-term goal: LLVM compiler backend for TMP94C241F.
+
+**Current state:** Goal documented, no implementation started.
+
+**Required work:**
+- Study LLVM backend architecture
+- Document TLCS-900/H2 instruction set formally
+- Implement register allocation
+- Implement instruction selection
+- Create C/C++ support
+
+**Phase:** 5 - Future
+**Blocks:** High-level language homebrew
+**Dependencies:** Complete instruction documentation
+**Related:** kn5000-3o6 (ASL macros document encodings)
 
 ---
 
@@ -1082,11 +1403,72 @@ Table data ROM (kn5000_table_data.rebuilt.rom) is at 32.42% match with 1,417,294
 
 ### Video & Display {#video-display}
 
+#### 🟠 Video: Document pixel format and color palette {#issue-kn5000-hy8}
+
+**ID:** `kn5000-hy8` | **Priority:** High | **Created:** 2026-01-25
+
+Determine exact pixel format used by the display. Document: bits per pixel (likely 8bpp indexed), palette format and location, how palette is loaded, any direct color modes. Analyze extracted images to confirm format.
+
+**Notes:** Pixel format and color palette documentation is essential for display rendering.
+
+**Current state:** 8-bit indexed color known, palette location at 0xEB37DE documented.
+
+**Required work:**
+- Verify 6-bit per channel DAC (0x3C8/0x3C9 ports)
+- Document palette loading sequence
+- Map default system palette
+- Document any palette animation support
+
+**Phase:** 1 - Foundation (MAME Blockers)
+**Blocks:** Correct color rendering
+**Dependencies:** VGA register documentation (kn5000-ezo)
+**Related:** kn5000-gln (drawing primitives)
+
+---
+
+#### 🟠 Video: Reverse engineer drawing primitives {#issue-kn5000-gln}
+
+**ID:** `kn5000-gln` | **Priority:** High | **Created:** 2026-01-25
+
+Find and document graphics drawing routines in firmware: pixel plotting, line drawing, rectangle fill, bitmap blitting (BLT), text rendering. Document function addresses, parameters, and any hardware acceleration used.
+
+**Notes:** Drawing primitives are needed for UI rendering.
+
+**Current state:** VRAM_FillRect identified at 0xEF50DF, other routines unknown.
+
+**Required work:**
+- Trace graphics API entry points
+- Document line, rect, fill, blit operations
+- Map sprite/bitmap rendering
+- Document clipping and coordinate systems
+
+**Phase:** 1 - Foundation (MAME Blockers)
+**Blocks:** UI rendering in emulator
+**Dependencies:** Framebuffer documentation (kn5000-3c5)
+**Related:** kn5000-5dc (widget rendering), kn5000-kev (fonts)
+
+---
+
 #### 🟡 Video: Document UI widget rendering {#issue-kn5000-5dc}
 
 **ID:** `kn5000-5dc` | **Priority:** Medium | **Created:** 2026-01-25
 
 Analyze how UI elements are drawn: buttons, sliders, menus, piano keyboard display, waveform displays, level meters. Document widget drawing routines, any sprite system, and how interactive elements are updated.
+
+**Notes:** UI widget rendering is essential for menu display.
+
+**Current state:** Widget types partially cataloged, rendering unknown.
+
+**Required work:**
+- Identify widget type definitions
+- Trace widget draw routines
+- Document widget hierarchy and layout
+- Map parameter binding to widgets
+
+**Phase:** 2 - Core Functionality
+**Blocks:** Menu system in emulator
+**Dependencies:** Drawing primitives (kn5000-gln), fonts (kn5000-kev)
+**Related:** kn5000-x13 (widget catalog), kn5000-4bt (UI symbols)
 
 ---
 
@@ -1096,13 +1478,20 @@ Analyze how UI elements are drawn: buttons, sliders, menus, piano keyboard displ
 
 Analyze how text is rendered on the LCD. Document: font data location in ROM, font format (bitmap or vector), character encoding, font sizes available, text drawing routines, any internationalization support.
 
----
+**Notes:** Font system documentation is needed for text rendering.
 
-#### 🟡 Video: Document pixel format and color palette {#issue-kn5000-hy8}
+**Current state:** Font location unknown, rendering routines not traced.
 
-**ID:** `kn5000-hy8` | **Priority:** Medium | **Created:** 2026-01-25
+**Required work:**
+- Locate font data in ROM (likely in Table Data or Main CPU)
+- Document font format (bitmap? vector?)
+- Trace text rendering routines
+- Document character encoding (ASCII? Shift-JIS?)
 
-Determine exact pixel format used by the display. Document: bits per pixel (likely 8bpp indexed), palette format and location, how palette is loaded, any direct color modes. Analyze extracted images to confirm format.
+**Phase:** 2 - Core Functionality
+**Blocks:** Text display in emulator
+**Dependencies:** Drawing primitives (kn5000-gln)
+**Related:** kn5000-dj3 (extract fonts)
 
 ---
 
@@ -1111,14 +1500,6 @@ Determine exact pixel format used by the display. Document: bits per pixel (like
 **ID:** `kn5000-rq0` | **Priority:** Medium | **Created:** 2026-01-25
 
 Map the LCD screen layout: header area, main content area, status bar, any fixed regions. Document how different screens/modes use the display real estate. Create annotated screenshots showing region boundaries.
-
----
-
-#### 🟡 Video: Reverse engineer drawing primitives {#issue-kn5000-gln}
-
-**ID:** `kn5000-gln` | **Priority:** Medium | **Created:** 2026-01-25
-
-Find and document graphics drawing routines in firmware: pixel plotting, line drawing, rectangle fill, bitmap blitting (BLT), text rendering. Document function addresses, parameters, and any hardware acceleration used.
 
 ---
 
@@ -1173,10 +1554,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Priority | Count |
 |----------|-------|
-| Critical | 1 |
-| High | 16 |
-| Medium | 65 |
-| Low | 15 |
+| Critical | 3 |
+| High | 23 |
+| Medium | 63 |
+| Low | 17 |
+| P4 | 1 |
 
 ### By Category
 
@@ -1189,7 +1571,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
 | Main CPU ROM | 1 |
-| Other | 38 |
+| Other | 48 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Table Data ROM | 1 |
@@ -1197,4 +1579,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-30 23:39*
+*Last updated: 2026-01-30 23:58*
