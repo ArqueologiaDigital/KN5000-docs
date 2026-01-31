@@ -242,9 +242,31 @@ The KN5000 uses 176 small icons for menu items and UI elements. These were disco
 
 **Technical details:**
 - Icon table at `0x938000` (Table Data ROM offset `0x138000`)
-- 173 standard icons: 24×24 pixels @ 4bpp (288 bytes each, 16 grayscale levels)
+- 173 standard icons: 24×24 pixels @ 4bpp (288 bytes each)
 - 3 large icons: 27×27 or 28×28 pixels
 - 4bpp format: 2 pixels per byte (high nibble first, low nibble second)
+- 16-color CGA/EGA-style palette from main ROM at `0xEB37DE`
+
+**Color Palette:**
+
+| Nibble | Palette Index | Color |
+|--------|---------------|-------|
+| 0 | 0x00 | Black |
+| 1 | 0x01 | Dark Red |
+| 2 | 0x02 | Dark Green |
+| 3 | 0x03 | Olive |
+| 4 | 0x04 | Dark Blue |
+| 5 | 0x05 | Dark Magenta |
+| 6 | 0x06 | Dark Cyan |
+| 7 | 0x07 | Light Gray (background) |
+| 8 | 0xF8 | Dark Gray |
+| 9 | 0xF9 | Bright Red |
+| 10 | 0xFA | Bright Green |
+| 11 | 0xFB | Yellow |
+| 12 | 0xFC | Bright Blue |
+| 13 | 0xFD | Magenta |
+| 14 | 0xFE | Cyan |
+| 15 | 0xFF | White |
 
 ### Icon Sprite Sheet
 
