@@ -112,12 +112,14 @@ Choose based on your goal:
 
 | Component | Size | Match | Status |
 |-----------|------|-------|--------|
-| Main CPU Program | 2MB | 99.99% | 177 bytes divergent |
+| Main CPU Program | 2MB | **100%** | Complete |
 | Sub CPU Payload | 192KB | **100%** | Complete |
 | Sub CPU Boot ROM | 128KB | **100%** | Complete |
-| Table Data | 2MB | 32.42% | Mostly binary assets |
+| Table Data | 2MB | 33.30% | Mostly binary assets |
 | Custom Data | 1MB | 0% | User storage, not reconstructed |
 | HDAE5000 ROM | 512KB | **100%** | Complete, images extracted |
+
+**Code Organization:** The disassembly uses modular source files with 1,074 lines of shared code across 7 files in the `shared/` directory, plus extracted subsystem files (`fdc_constants.asm`, `fdc_routines.asm`, `gui_constants.asm`).
 
 ### MAME Emulation
 

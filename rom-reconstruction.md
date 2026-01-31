@@ -94,6 +94,31 @@ The project uses **ASL (Alfred Arnold's Macro Assembler)** version 1.42 Beta.
 
 ### Main CPU (177 bytes)
 
+**Source File Organization:**
+
+The Main CPU disassembly is organized into modular source files for maintainability:
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `maincpu/kn5000_v10_program.asm` | ~338,000 | Main source file (includes others) |
+| `maincpu/gui_constants.asm` | 57 | Display state variables, offscreen buffers |
+| `maincpu/fdc_constants.asm` | 75 | FDC I/O addresses, commands, status bits |
+| `maincpu/fdc_routines.asm` | 1,403 | FDC read/write/seek routines |
+
+**FDC (Floppy Disk Controller) Subsystem:**
+
+The FDC code has been extracted to separate files for clarity:
+
+- `fdc_constants.asm`: Memory-mapped I/O addresses (0x110000 base), command codes (uPD765-compatible), status register bit definitions
+- `fdc_routines.asm`: Complete FDC handler including `FDC_COMMAND_DISPATCHER`, `FDC_HANDLER_01` through `FDC_HANDLER_11`, `Reset_Floppy_Disk_Controller`, `Check_for_Floppy_Disk_Change`
+
+**GUI Constants:**
+
+Display-related RAM addresses are documented in `gui_constants.asm`:
+- Display dirty flags (0x0205E4) for efficient screen updates
+- Offscreen buffer addresses (0x043C00, 0x056800, 0x05FE00, 0x069400)
+- Screen dimensions (320x240 @ 8bpp)
+
 All 177 divergent bytes are located in a small region (0xFDDE5F - 0xFDED63) and stem from a single root cause:
 
 **Root Cause: 24-bit vs 16-bit Address Encoding**
@@ -244,19 +269,50 @@ The Table Data ROM contains 8 system update message bitmaps at `0x9FA156`. These
 
 **Shared Code with Main CPU (bootloader routines):**
 
-Analysis revealed that several bootloader routines in the Table Data ROM are **byte-identical** to utility routines in the Main CPU ROM. This indicates both ROMs were built from common source code.
+Analysis revealed that several bootloader routines in the Table Data ROM are **byte-identical** or **semantically identical** to utility routines in the Main CPU ROM. This indicates both ROMs were built from common source code.
+
+**Shared Source Files (in `shared/` directory):**
+
+The disassembly now uses actual shared source files that are included by both ROMs:
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `shared/vga_constants.asm` | 58 | VGA register addresses and constants |
+| `shared/vga_init_sequence.asm` | 135 | VGA initialization data tables |
+| `shared/vga_init_epilogue.asm` | 28 | VGA init completion code |
+| `shared/vga_io.asm` | 51 | VGA register I/O routines (byte-identical) |
+| `shared/boot_call_init_handlers.asm` | 87 | Init handler dispatch (conditional assembly) |
+| `shared/boot_code_routines.asm` | 630 | Boot initialization routines |
+| `shared/lzss_routines.asm` | 85 | LZSS compression decoder |
+
+**Total shared source: 1,074 lines across 7 files**
+
+**Shared Routine Mapping:**
 
 | Table Data | Main CPU | Size | Routine |
 |------------|----------|------|---------|
+| 0x9FCDFC-0x9FCE1D | 0xEF5141-0xEF515F | 30-34 bytes | `Write_VGA_Register`, `Read_VGA_Register` |
+| 0x9FB70A-0x9FB73F | 0xEF086F-0xEF08A3 | 53-54 bytes | `Boot_CallInitHandlers` |
 | 0x9FCD9A-0x9FD7BD | 0xEF50DF-0xEF5B02 | 2,596 bytes | `VRAM_FillRect` and display routines |
 | 0x9FBC3C-0x9FBECF | 0xEF3CE0-0xEF3F73 | 660 bytes | Boot utility routines |
 | 0x9FB4F2-0x9FB622 | 0xEF03D0-0xEF0500 | 305 bytes | Boot initialization code |
 
-Total shared code: **3,561 bytes**
+**Conditional Assembly:**
 
-The code is position-independent (uses relative jumps), allowing it to work at different addresses in each ROM. The Main CPU has these routines fully disassembled with meaningful labels like `VRAM_FillRect`, `Write_VGA_Register`, etc. The Table Data bootloader section contains the same code, often as raw `db` bytes with comments.
+Some shared routines have minor encoding differences between ROMs (e.g., byte vs word comparison, different helper addresses). These are handled with conditional assembly:
 
-**Future work:** Consider refactoring to share source code via include files, with each ROM using appropriate ORG statements to place the code at its required address.
+```asm
+; Example from boot_call_init_handlers.asm
+IF INIT_FLAG_COMPARE_WORD
+  ; table_data: CP (0xFFFEEE), 0xFFFF (7 bytes)
+  db 0D2h, 0EEh, 0FEh, 0FFh, 03Fh, 0FFh, 0FFh
+ELSE
+  ; maincpu: CP (0xFFFEEE), 0xFF (6 bytes)
+  db 0C2h, 0EEh, 0FEh, 0FFh, 03Fh, 0FFh
+ENDIF
+```
+
+Each ROM defines the required parameters before including the shared file.
 
 **Compressed Data Identified:**
 
