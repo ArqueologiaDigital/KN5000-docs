@@ -42,6 +42,60 @@ The KN5000 includes a full-featured 16-track MIDI sequencer with real-time and s
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Medley Playback System
+
+The KN5000 supports several medley playback modes for playing multiple songs in sequence.
+
+### Medley Types
+
+| Type | Function | Description |
+|------|----------|-------------|
+| Internal Medley | `FmmIntMedleyFunc` | Plays user-recorded sequences stored in SRAM |
+| Disk Medley | `FmmDiskMedleySelectFunc` | Plays sequences from floppy disk |
+| SMF Medley | `FmmSmfMedleyFunc` | Plays Standard MIDI Files |
+| Performance Data | `FmmPdMedleyFunc` | Plays performance data files |
+| Document Medley | `FmmDocMedleyFunc` | Plays document files |
+
+### Internal Medley Memory Layout
+
+Internal medley songs are stored in battery-backed SRAM:
+
+| Address | Size | Description |
+|---------|------|-------------|
+| `0xAB000` | 20KB | 10 song slots (0x800 bytes each) |
+| `0xF180` | 2KB | Current playback buffer |
+
+Each slot is 2048 bytes (0x800) and stores one user-recorded sequence.
+
+### Key Routines
+
+| Routine | Address | Purpose |
+|---------|---------|---------|
+| `LABEL_F2065A` | 0xF2065A | Check if slot has valid data |
+| `LABEL_F20BCE` | 0xF20BCE | Load and play a song from slot |
+| `LABEL_F20BFA` | 0xF20BFA | Copy slot to playback buffer (LDIR) |
+| `LABEL_F2076D` | 0xF2076D | Get current playback state |
+
+### Medley State Variables
+
+| Address | Name | Description |
+|---------|------|-------------|
+| `0x84FE` | Play flag | 0=stopped, 1=playing |
+| `0x889A` | Song count | Number of songs in playlist |
+| `0x889C` | Current index | Currently playing song |
+| `0x889E` | Repeat flag | 0=no repeat, 1=repeat |
+| `0x8890` | Order array | 10-byte play order (0xFF=unused, 0xFE=marked) |
+
+### Source Code
+
+The medley system is implemented in `maincpu/file_io/medley.asm` with ~4700 lines of disassembled code including:
+- Song selection UI handlers
+- Playback state machine
+- Repeat/shuffle logic
+- Multi-format file loading
+
+---
+
 ## Known Information
 
 ### Features
@@ -94,6 +148,7 @@ Sequences and styles can be stored:
 - [ ] Understand style format
 - [ ] Document chord recognition
 - [ ] Identify quantization algorithms
+- [x] Document medley playback system (see above)
 
 ## How to Contribute
 

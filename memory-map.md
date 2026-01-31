@@ -134,6 +134,41 @@ permalink: /memory-map/
 | `0xEDA402` | `ENCODER_LUT_FOOT` | Foot controller value lookup |
 | `0xEDA482` | `ENCODER_LUT_EXPRESSION` | Expression pedal value lookup |
 
+## Sequencer/Medley Memory
+
+The internal medley system stores user-recorded sequences in battery-backed SRAM.
+
+### Internal Medley Song Storage
+
+| Address | Size | Description |
+|---------|------|-------------|
+| `0xAB000` | 20KB | Internal medley song slots (10 slots × 0x800 bytes) |
+| `0xAB0D0` | - | Song slot 0 data start (0xAB000 + 0xD0 header offset) |
+| `0xF180` | 2KB | Current playback buffer (active song copied here) |
+
+Each song slot is 2048 bytes (0x800). The slot address is calculated as: `0xAB000 + (slot_index × 0x800)`.
+
+### Medley State Variables
+
+| Address | Variable | Description |
+|---------|----------|-------------|
+| `0x84FE` | `MEDLEY_PLAY_FLAG` | Play state: 0=stopped, 1=playing |
+| `0x8890` | `MEDLEY_ORDER_ARRAY` | Play order array (10 bytes, 0xFF=unused, 0xFE=marked) |
+| `0x889A` | `MEDLEY_SONG_COUNT` | Number of songs in current playlist |
+| `0x889C` | `MEDLEY_CURRENT_INDEX` | Currently playing song index |
+| `0x889E` | `MEDLEY_REPEAT_FLAG` | Repeat mode: 0=no repeat, 1=repeat all |
+
+### Key Medley Routines (ROM)
+
+| Address | Routine | Description |
+|---------|---------|-------------|
+| `0xF2065A` | `IntMed_CheckSlotValid` | Check if song slot has valid data |
+| `0xF20BCE` | `IntMed_LoadAndPlay` | Load and play song from slot |
+| `0xF20BFA` | `IntMed_CopyToBuffer` | LDIR copy from slot to playback buffer |
+| `0xF2076D` | `IntMed_GetPlaybackState` | Get current playback state |
+
+See [Sequencer]({{ site.baseurl }}/sequencer/) for complete medley system documentation.
+
 ## Sub CPU Address Space
 
 The sub CPU (tone generator controller) has its own memory map, documented from boot ROM disassembly.
