@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 140 (117 open, 23 closed)
+**Total Issues:** 140 (116 open, 24 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (59) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (58) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
 
 ---
 
@@ -1195,43 +1195,6 @@ All subsystems fully documented in the documentation website.
 
 ---
 
-#### 🟡 Refactor shared bootloader code between maincpu and table_data {#issue-kn5000-o0o}
-
-**ID:** `kn5000-o0o` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** Analysis revealed 3,561 bytes of byte-identical code between maincpu and table_data ROMs:
-
-**Shared regions:**
-| Table Data | Main CPU | Size | Content |
-|------------|----------|------|---------|
-| 0x9FCD9A-0x9FD7BD | 0xEF50DF-0xEF5B02 | 2,596 bytes | VRAM_FillRect, display routines |
-| 0x9FBC3C-0x9FBECF | 0xEF3CE0-0xEF3F73 | 660 bytes | Boot utility routines |
-| 0x9FB4F2-0x9FB622 | 0xEF03D0-0xEF0500 | 305 bytes | Boot initialization code |
-
-**Current state:**
-- maincpu: Fully disassembled with meaningful labels (VRAM_FillRect, Write_VGA_Register, etc.)
-- table_data: Same code as raw `db` bytes with comments
-
-**Refactoring approach:**
-1. Create shared include file(s) with the common source code
-2. Use position-independent code (already uses relative jumps JR, not absolute JP)
-3. Each ROM includes the shared file with appropriate ORG statement
-4. Resolve any label naming conflicts
-
-**Challenges:**
-- table_data lacks clean ORG boundaries at these regions
-- Build order dependency if extracting from assembled output
-- Need to maintain both ROMs building correctly
-
-**Benefits:**
-- Single source of truth for shared routines
-- Easier maintenance and documentation
-- Confirms original firmware was built from common codebase
-
-Reference: rom-reconstruction.md "Shared Code with Main CPU" section
-
----
-
 #### 🟡 Storage: Document Custom Data Flash organization at 0x300000 {#issue-kn5000-bqe}
 
 **ID:** `kn5000-bqe` | **Priority:** Medium | **Created:** 2026-01-30
@@ -1881,6 +1844,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-o0o` | Refactor shared bootloader code between maincpu and table... | 2026-01-31 |
 | `kn5000-9lg` | MAME: Create milestone tracking issue for emulator comple... | 2026-01-31 |
 | `kn5000-kqy` | maincpu: Fix 177 divergent bytes | 2026-01-31 |
 | `kn5000-jwk` | Document DATA/BCK serial interface pinout | 2026-01-26 |
@@ -1900,9 +1864,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-fmq` | SubCPU: Document MicroDMA registers on TMP94C241F | 2026-01-26 |
 | `kn5000-52e` | Boot: Document peripheral initialization order | 2026-01-26 |
 | `kn5000-cav` | Boot: Document memory initialization sequence | 2026-01-26 |
-| `kn5000-24m` | Boot: Document reset vector and early initialization | 2026-01-26 |
 
-*...and 3 more closed issues*
+*...and 4 more closed issues*
 
 ---
 
@@ -1914,7 +1877,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 3 |
 | High | 25 |
-| Medium | 68 |
+| Medium | 67 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1928,7 +1891,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 59 |
+| Other | 58 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Table Data ROM | 1 |
@@ -1936,4 +1899,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-31 00:08*
+*Last updated: 2026-01-31 00:56*
