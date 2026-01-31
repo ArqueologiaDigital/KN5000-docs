@@ -242,15 +242,15 @@ The KN5000 uses 176 small icons for menu items and UI elements. These were disco
 
 **Technical details:**
 - Icon table at `0x938000` (Table Data ROM offset `0x138000`)
-- 173 standard icons: 12×24 pixels @ 8bpp (288 bytes each)
+- 173 standard icons: 24×24 pixels @ 4bpp (288 bytes each, 16 grayscale levels)
 - 3 large icons: 27×27 or 28×28 pixels
-- Color lookup table at `0xEAABF2` (Main CPU ROM) maps 8-bit indices to 16-bit framebuffer colors
+- 4bpp format: 2 pixels per byte (high nibble first, low nibble second)
 
 ### Icon Sprite Sheet
 
 ![Icon Sprite Sheet]({{ "/assets/images/gallery/IconSpriteSheet.png" | relative_url }})
 
-*192x264 pixels - 173 standard icons arranged in 16 columns × 11 rows*
+*384x264 pixels - 173 standard icons arranged in 16 columns × 11 rows*
 
 The sprite sheet shows all standard 12×24 pixel icons. Icon IDs are numbered left-to-right, top-to-bottom starting from 0. Known icons include:
 - Icon 0-1: Document/file icons
