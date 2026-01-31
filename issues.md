@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 100 (79 open, 21 closed)
+**Total Issues:** 118 (97 open, 21 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (20) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Main CPU ROM](#main-cpu-rom) (1) · [Other](#other) (38) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
 
 ---
 
@@ -388,6 +388,29 @@ Analyze the KN5000 service manual (59 pages) to extract hardware architecture de
 
 ---
 
+#### 🟠 MAME: Update HLE based on audio subsystem findings {#issue-kn5000-0o6}
+
+**ID:** `kn5000-0o6` | **Priority:** High | **Created:** 2026-01-30
+
+**Notes:** The audio subsystem reverse engineering provides new information for MAME HLE:
+
+Key findings for emulation:
+1. Command dispatch table with 8 handler ranges
+2. Ring buffer at 0x2B0D for MIDI-like commands
+3. MIDI status byte parsing (0x80-0xF0)
+4. Voice parameter handlers for each message type
+5. Control Change handlers including proprietary CCs
+6. DSP channel configuration at 0x130000
+
+Update mame_driver/ reference files:
+- Document command byte ranges in comments
+- Add state machine for MIDI parsing if not present
+- Ensure CC handlers match discovered behavior
+
+Reference: audio-subsystem.md, midi-subsystem.md, inter-cpu-protocol.md
+
+---
+
 #### 🟠 Trace CPanel_SM_* state machine handlers {#issue-kn5000-32b}
 
 **ID:** `kn5000-32b` | **Priority:** High | **Created:** 2026-01-25
@@ -430,6 +453,149 @@ Block diagram shows ROTA and ROTB signals from control panel. Find the encoder c
 
 ---
 
+#### 🟡 Audio: Analyze DSP effects processing algorithms {#issue-kn5000-1oy}
+
+**ID:** `kn5000-1oy` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** The Sub CPU controls dual DSP chips for effects processing. Need to understand:
+
+1. What effects are implemented (reverb, chorus, delay, etc.)
+2. How effect parameters map to DSP registers at 0x130000
+3. DSP command sequences for effect configuration
+4. How CC 0x91 (reverb) and 0x95 (chorus) control effect depth
+
+Key routines to analyze:
+- DSP_Send_Command, DSP_Send_Data
+- Audio_Process_DSP (main DSP update loop)
+- DSP state buffers at 0x041342 and 0x041368
+
+Reference: audio-subsystem.md for current DSP documentation.
+
+---
+
+#### 🟡 Audio: Document Technics SysEx message format {#issue-kn5000-81p}
+
+**ID:** `kn5000-81p` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** The KN5000 likely uses Technics-specific System Exclusive messages for:
+
+1. Bulk data dumps (sounds, sequences, settings)
+2. Parameter editing
+3. Remote control features
+4. Device identification
+
+Need to:
+1. Find SysEx handling in Main CPU MIDI code
+2. Document manufacturer ID and message structure
+3. Catalog known SysEx commands
+4. Test with external MIDI tools if possible
+
+Search maincpu for: 0xF0 (SysEx start), 0xF7 (SysEx end), manufacturer ID bytes.
+
+---
+
+#### 🟡 Audio: Document all command byte formats (0x00-0xFF) {#issue-kn5000-x95}
+
+**ID:** `kn5000-x95` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** The Sub CPU CMD_DISPATCH_TABLE routes commands by upper 3 bits:
+
+- 0x00-0x1F: Audio_CmdHandler_00_1F (writes to ring buffer) - DOCUMENTED
+- 0x20-0x3F: Audio_CmdHandler_20_3F - needs analysis
+- 0x40-0x5F: Audio_CmdHandler_40_5F - needs analysis
+- 0x60-0x7F: Audio_CmdHandler_60_7F - needs analysis
+- 0x80-0x9F: Serial port setup - partially known
+- 0xA0-0xBF: Audio_CmdHandler_A0_BF - needs analysis
+- 0xC0-0xFF: Audio_CmdHandler_C0_FF - needs analysis
+
+For each range, document:
+1. Expected byte format
+2. What parameters are affected
+3. Example command sequences
+
+Reference: CMD_DISPATCH_TABLE at line 576 in subcpu/kn5000_subprogram_v142.asm
+
+---
+
+#### 🟡 Audio: Document external MIDI I/O on Main CPU {#issue-kn5000-0vs}
+
+**ID:** `kn5000-0vs` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** The Main CPU handles external MIDI IN/OUT/THRU via serial ports. Need to document:
+
+1. Serial port addresses and configuration
+2. MIDI parser routines in maincpu
+3. MIDI routing logic (how external MIDI reaches Sub CPU)
+4. MIDI OUT generation (keyboard events, sequencer playback)
+5. MIDI THRU implementation (hardware vs software)
+
+This complements the internal MIDI processing already documented in midi-subsystem.md.
+
+Search maincpu for: Serial port init, MIDI-related strings, writes to Sub CPU for external events.
+
+---
+
+#### 🟡 Audio: Document proprietary CC handlers (0x97, 0x9B-0x9D) {#issue-kn5000-5ck}
+
+**ID:** `kn5000-5ck` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** The Voice_CtrlChange handler in Sub CPU has handlers for proprietary Control Change numbers:
+
+- Voice_CC_97 at 0x02A496
+- Voice_CC_9B at 0x02A4AB  
+- Voice_CC_9C at 0x02A4C0
+- Voice_CC_9D at 0x02A4D5
+
+These are not standard MIDI CCs. Need to:
+1. Trace what parameters they modify
+2. Determine if they control effects, filters, or other synthesis parameters
+3. Document in midi-subsystem.md
+
+Reference: subcpu/kn5000_subprogram_v142.asm around line 25167-25210
+
+---
+
+#### 🟡 Audio: Document tone generator voice allocation {#issue-kn5000-rlb}
+
+**ID:** `kn5000-rlb` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** The ToneGen_Process_Notes routine manages 16 voice slots at 0x4A4C-0x4A5C. Need to understand:
+
+1. Voice stealing algorithm (what happens when all 16 slots are full)
+2. Priority system (which notes get stolen first)
+3. How sustain pedal affects voice allocation
+4. Relationship between tone generator voices and DSP channels
+
+Key routines:
+- ToneGen_Process_Notes at 0x03D01E
+- ToneGen_Read_Voice_Data at 0x03D0C5
+- Voice slot table at 0x4A4C (16 bytes)
+
+Reference: audio-subsystem.md for current tone generator docs.
+
+---
+
+#### 🟡 Audio: Trace sound category data structures at 0xE023B0 {#issue-kn5000-8dy}
+
+**ID:** `kn5000-8dy` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** The Main CPU has a pointer table at 0xE023B0 with 16 sound categories:
+
+0: PIANO, 1: GUITAR, 2: STRINGS & VOCAL, 3: BRASS, 4: FLUTE,
+5: SAX & REED, 6: MALLET & ORCH PERC, 7: WORLD PERC, 8: ORGAN & ACCORDION,
+9: ORCHESTRAL PAD, 10: SYNTH, 11: BASS, 12: DIGITAL DRAWBAR,
+13: ACCORDION REG., 14: GM SPECIAL, 15: DRUM KITS
+
+Need to:
+1. Follow pointers to actual sound data
+2. Document sound data format (likely references to waveform ROM)
+3. Understand how sound selection maps to Sub CPU synthesis
+4. Document relationship to Program Change messages
+
+Reference: SOUND_DATA_SECTION_PTRS at 0xE023B0 in maincpu.
+
+---
+
 #### 🟡 Design MAME HLE device for control panel {#issue-kn5000-qhm}
 
 **ID:** `kn5000-qhm` | **Priority:** Medium | **Created:** 2026-01-25
@@ -445,6 +611,58 @@ Based on protocol documentation, design the C++ interface for a MAME HLE device 
 **ID:** `kn5000-kc5` | **Priority:** Medium | **Created:** 2026-01-26
 
 **Notes:** At address 0xF97D8D there's a jump table that references routines at F97696, F976E4, F97835, F97C21, F97C7C, F96BBF, F96BD0, F97984, F97C4B, F97C54, F97C5B, and F96D95. These routines are currently empty ORG labels. Need to disassemble the code at these addresses. Found via jump table pattern: JP T, XIX + WA with LDA XIX, LABEL_F97D8D.
+
+---
+
+#### 🟡 Disassemble table_data bootloader raw db bytes to proper assembly {#issue-kn5000-m1j}
+
+**ID:** `kn5000-m1j` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** The table_data bootloader contains many routines as raw db bytes with comments. These should be converted to proper assembly for readability and maintainability.
+
+Priority regions (matching maincpu routines):
+- Init_Display_Progress (0x9FCD9A) - currently db bytes, maincpu has VRAM_FillRect
+- Boot utility routines (0x9FBC3C)
+- Boot init routines (0x9FB4F2)
+
+Approach:
+1. Use maincpu disassembly as reference (has proper labels)
+2. Convert db bytes to proper TLCS-900 instructions
+3. Use macros from tmp94c241.inc for unsupported opcodes
+4. Add meaningful labels matching maincpu where applicable
+
+This will make the table_data bootloader easier to understand and maintain.
+
+Reference: maincpu VRAM_FillRect at 0xEF50DF, rom-reconstruction.md
+
+---
+
+#### 🟡 Document ROM interleaving formats for all ROM chips {#issue-kn5000-67g}
+
+**ID:** `kn5000-67g` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** Different ROM components use different interleaving formats. This caused confusion during table_data bitmap extraction.
+
+**Formats discovered:**
+
+| ROM | Interleaving | Notes |
+|-----|--------------|-------|
+| Main CPU | None (single chip) | 2MB linear |
+| Sub CPU Boot | None (single chip) | 128KB linear |
+| Sub CPU Payload | None (sent by maincpu) | 192KB linear |
+| Table Data | 16-bit WORD-level | odd.ic1 + even.ic3, alternating 16-bit words |
+| HDAE5000 | None (single chip) | 512KB linear |
+
+The table_data ROM is NOT byte-interleaved but WORD-interleaved:
+- Correct: even[0:2] + odd[0:2] + even[2:4] + odd[2:4] ...
+- Wrong: even[0] + odd[0] + even[1] + odd[1] ...
+
+This should be documented in:
+1. CLAUDE.md for developer reference
+2. rom-reconstruction.md (partially done)
+3. Hardware architecture docs
+
+Reference: kn5000_table_data.rom combination analysis
 
 ---
 
@@ -505,6 +723,31 @@ See rom-reconstruction.md for detailed analysis.
 
 ---
 
+#### 🟡 Investigate shared graphics data between maincpu and table_data {#issue-kn5000-0r5}
+
+**ID:** `kn5000-0r5` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** Analysis found ~40KB of shared graphics/image data between ROMs:
+
+| Table Data | Main CPU | Size | Density |
+|------------|----------|------|---------|
+| 0x91D0EA | 0xE90090 | 13,806 bytes | 100% |
+| 0x82CDA4 | 0xE93680 | 7,198 bytes | 100% |
+| 0x921176 | 0xE7C8B0 | 9,282 bytes | 83.8% |
+| 0x809AD6 | 0xEB8190 | 8,964 bytes | 93.7% |
+
+Tasks:
+1. Identify what graphics these regions contain (UI elements? fonts?)
+2. Check if they are already documented in maincpu
+3. Determine if sharing via binclude is feasible
+4. Update image-gallery.md if new images are found
+
+The data appears to be 8-bit indexed color (lots of 0xF7 bytes = likely background color).
+
+Reference: Investigation of ROM word-level interleaving fix
+
+---
+
 #### 🟡 Map LED indices to physical panel LEDs {#issue-kn5000-ljl}
 
 **ID:** `kn5000-ljl` | **Priority:** Medium | **Created:** 2026-01-25
@@ -520,6 +763,102 @@ Analyze CPANEL_LED_READ_PTR, CPANEL_LED_WRITE_PTR, and CPANEL_LED_TX_BUFFER to u
 **ID:** `kn5000-j3c` | **Priority:** Medium | **Created:** 2026-01-25
 
 Analyze STATE_OF_CPANEL_BUTTONS array and related code to understand how button states are indexed. Create a mapping from array index to physical button name/location on the KN5000 front panel.
+
+---
+
+#### 🟡 Refactor shared bootloader code between maincpu and table_data {#issue-kn5000-o0o}
+
+**ID:** `kn5000-o0o` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** Analysis revealed 3,561 bytes of byte-identical code between maincpu and table_data ROMs:
+
+**Shared regions:**
+| Table Data | Main CPU | Size | Content |
+|------------|----------|------|---------|
+| 0x9FCD9A-0x9FD7BD | 0xEF50DF-0xEF5B02 | 2,596 bytes | VRAM_FillRect, display routines |
+| 0x9FBC3C-0x9FBECF | 0xEF3CE0-0xEF3F73 | 660 bytes | Boot utility routines |
+| 0x9FB4F2-0x9FB622 | 0xEF03D0-0xEF0500 | 305 bytes | Boot initialization code |
+
+**Current state:**
+- maincpu: Fully disassembled with meaningful labels (VRAM_FillRect, Write_VGA_Register, etc.)
+- table_data: Same code as raw `db` bytes with comments
+
+**Refactoring approach:**
+1. Create shared include file(s) with the common source code
+2. Use position-independent code (already uses relative jumps JR, not absolute JP)
+3. Each ROM includes the shared file with appropriate ORG statement
+4. Resolve any label naming conflicts
+
+**Challenges:**
+- table_data lacks clean ORG boundaries at these regions
+- Build order dependency if extracting from assembled output
+- Need to maintain both ROMs building correctly
+
+**Benefits:**
+- Single source of truth for shared routines
+- Easier maintenance and documentation
+- Confirms original firmware was built from common codebase
+
+Reference: rom-reconstruction.md "Shared Code with Main CPU" section
+
+---
+
+#### 🟡 Symbols: Apply semantic naming to FDC subsystem LABEL_* symbols {#issue-kn5000-ima}
+
+**ID:** `kn5000-ima` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** Following the successful audio subsystem renaming, apply the same approach to FDC (Floppy Disk Controller) routines:
+
+1. Identify all FDC-related LABEL_* symbols in maincpu
+2. Analyze each routine's purpose
+3. Create semantic names (FDC_ReadSector, FDC_WriteSector, etc.)
+4. Add documentation headers
+5. Update fdc-subsystem.md with code references
+
+Pattern established: audio_subsystem_rename.sed can be used as template.
+
+Search maincpu for: FDC_, 0x110000 references, floppy-related strings.
+
+---
+
+#### 🟡 Symbols: Apply semantic naming to UI framework LABEL_* symbols {#issue-kn5000-4bt}
+
+**ID:** `kn5000-4bt` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** Following the successful audio subsystem renaming, apply the same approach to UI framework routines:
+
+1. Identify UI-related LABEL_* symbols (widget handlers, drawing, event dispatch)
+2. Analyze each routine's purpose
+3. Create semantic names (UI_DrawButton, Widget_HandleClick, etc.)
+4. Add documentation headers
+5. Update ui-framework.md with code references
+
+Many UI routines already have good names (Display_*, GridCheck_*, ClassProc_*).
+Focus on remaining LABEL_* symbols in UI code regions.
+
+Reference: ui-framework.md for existing documentation.
+
+---
+
+#### 🟡 Symbols: Rename remaining LABEL_* in Sub CPU audio code {#issue-kn5000-9jq}
+
+**ID:** `kn5000-9jq` | **Priority:** Medium | **Created:** 2026-01-30
+
+**Notes:** While major audio routines were renamed, many helper labels remain as LABEL_*:
+
+Sub CPU areas needing attention:
+- Voice helper routines (LABEL_02C6CD -> Voice_SetPitch, etc.) - some done, verify completeness
+- DSP helper routines in 0x035xxx-0x036xxx range
+- Ring buffer helper labels
+- Audio processing loop internal labels
+
+Approach:
+1. Grep for remaining LABEL_02* and LABEL_03* in subcpu asm
+2. Analyze context to determine purpose
+3. Create meaningful names
+4. Add to sed script and apply
+
+Reference: audio_subsystem_rename.sed for pattern.
 
 ---
 
@@ -541,11 +880,77 @@ After extracting info from service manual schematics, update kn5000-docs website
 
 ---
 
+#### ⚪ Docs: Add code reference tables to all subsystem pages {#issue-kn5000-sf8}
+
+**ID:** `kn5000-sf8` | **Priority:** Low | **Created:** 2026-01-30
+
+**Notes:** Following the pattern established in audio-subsystem.md, add Code Reference tables to all subsystem documentation pages:
+
+Pages needing code reference tables:
+- fdc-subsystem.md
+- display-subsystem.md  
+- cpu-subsystem.md
+- storage-subsystem.md
+- sequencer.md
+
+Each table should include:
+- Routine name (with semantic name if available)
+- Address
+- Brief description
+- Link to source file and line number if possible
+
+This makes documentation more useful for MAME development and homebrew.
+
+---
+
+#### ⚪ Docs: Cross-reference Main CPU and Sub CPU symbol names {#issue-kn5000-t2e}
+
+**ID:** `kn5000-t2e` | **Priority:** Low | **Created:** 2026-01-30
+
+**Notes:** Ensure consistent naming between Main CPU and Sub CPU for related functionality:
+
+1. Audio lock routines: Main CPU Audio_Lock_* should match Sub CPU understanding
+2. DMA transfer: Main CPU Audio_DMA_Transfer relates to Sub CPU InterCPU_* routines
+3. Command dispatch: Document which Main CPU routines send which command ranges
+
+Create a cross-reference table in inter-cpu-protocol.md showing:
+- Main CPU routine -> Command sent -> Sub CPU handler
+
+This helps understand the full data flow.
+
+---
+
 #### ⚪ Maintain documentation website {#issue-kn5000-9a0}
 
 **ID:** `kn5000-9a0` | **Priority:** Low | **Created:** 2026-01-25
 
 Keep the kn5000-docs Jekyll website in sync with reverse engineering progress. Update status, add findings, maintain open questions list. Website repo: claude_jail/kn5000-docs/
+
+---
+
+#### ⚪ Symbols: Create naming convention guide in CLAUDE.md {#issue-kn5000-aar}
+
+**ID:** `kn5000-aar` | **Priority:** Low | **Created:** 2026-01-30
+
+**Notes:** Document the naming conventions established during audio subsystem renaming:
+
+Prefixes used:
+- Audio_* - General audio subsystem routines
+- MIDI_* - MIDI message parsing/dispatch
+- Voice_* - Voice parameter manipulation
+- DSP_* / DSP2_* - DSP hardware control
+- RingBuf_* - Ring buffer operations
+- InterCPU_* - Inter-CPU communication
+- ToneGen_* - Tone generator (keyboard input)
+- HDAE5000_* - HDAE5000 expansion board
+- TableData_* - Table Data ROM operations
+- FDC_* - Floppy disk controller
+- UI_* / Widget_* - UI framework
+- Display_* - Display/video routines
+- CPanel_* - Control panel protocol
+- Encoder_* - Rotary encoder handling
+
+Add to CLAUDE.md so future work maintains consistency.
 
 ---
 
@@ -769,9 +1174,9 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 15 |
-| Medium | 51 |
-| Low | 12 |
+| High | 16 |
+| Medium | 65 |
+| Low | 15 |
 
 ### By Category
 
@@ -784,7 +1189,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
 | Main CPU ROM | 1 |
-| Other | 20 |
+| Other | 38 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Table Data ROM | 1 |
@@ -792,4 +1197,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-01-26 23:32*
+*Last updated: 2026-01-30 23:39*
