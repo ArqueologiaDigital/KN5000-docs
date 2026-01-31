@@ -12,6 +12,23 @@ Images extracted from the KN5000 firmware ROMs. These graphics are displayed on 
 
 These BMP images are used in the keyboard's feature demonstration mode.
 
+### System Update Bitmaps
+
+The Table Data ROM also contains 8 system update message bitmaps at address `0x9FA156`. These are 1-bit monochrome images (224x22 pixels) similar to those in the Main CPU ROM, but stored with different byte ordering due to the 16-bit interleaved ROM bus architecture.
+
+| Address | Image | Purpose |
+|---------|-------|---------|
+| 0x9FA156 | Flash Memory Update | Update in progress |
+| 0x9FA3BE | Now Erasing | Flash erase in progress |
+| 0x9FA626 | FD to Flash Memory | Copying from floppy |
+| 0x9FA88E | Completed | Operation complete |
+| 0x9FAAF6 | Please Wait | Processing |
+| 0x9FAD5E | Change FD 2 of 2 | Multi-disk prompt |
+| 0x9FAFC6 | Illegal Disk | Invalid disk error |
+| 0x9FB22E | Turn On AGAIN | Restart instruction |
+
+**Note:** These bitmaps are NOT byte-identical to the Main CPU versions despite showing the same text messages. The Table Data ROM uses a 16-bit bus with odd/even byte interleaving, which causes a different byte arrangement when the graphics hardware accesses the data. Both sets of images must be maintained separately to achieve byte-accurate ROM reconstruction.
+
 ### FTBMP01 - Demo Screen 1
 
 ![FTBMP01]({{ "/assets/images/gallery/FTBMP01.png" | relative_url }})
@@ -181,7 +198,8 @@ Small icon depicting a hard disk with magnetic head, used in UI elements.
 - **Table Data BMP**: Standard Windows BMP format, 8-bit indexed color
 - **Main CPU raw**: Custom format, raw pixel data without headers, uses RGBA palette at `0xEB37DE`
 - **HDAE5000 raw**: Raw pixel data, main images use palette at ROM offset `0x65dce`, icon uses halftone palette at `0x6158e`
-- **1-bit bitmaps**: Monochrome, 224x22 pixels (28 bytes per row)
+- **1-bit bitmaps (Main CPU)**: Monochrome, 224x22 pixels (28 bytes per row), standard byte ordering
+- **1-bit bitmaps (Table Data)**: Same visual content as Main CPU but different byte layout due to 16-bit interleaved ROM bus
 - **8-bit bitmaps**: 256-color indexed, dimensions vary by image
 - **LCD resolution**: 320x240 pixels (QVGA)
 - **LCD controller**: MN89304 with 4Mbit Video RAM (IC207)

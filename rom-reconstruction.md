@@ -225,13 +225,29 @@ The LZSS decoder uses the SLIDE4K format (4KB sliding window, 12-bit offset, 4-b
 
 **Key discovery:** The interrupt vector table contains boot-time addresses (0xFFxxxx) because at reset the table_data ROM is mapped at 0xE00000-0xFFFFFF, not 0x800000-0x9FFFFF. The bootloader reconfigures the memory controller to remap the ROMs.
 
+**System Update Bitmaps (extracted):**
+
+The Table Data ROM contains its own set of 8 system update message bitmaps at `0x9FA156`. These are 1-bit monochrome images (224x22 pixels, 616 bytes each) used during firmware updates:
+
+| Address | Image | Purpose |
+|---------|-------|---------|
+| 0x9FA156 | Flash Memory Update | Update in progress |
+| 0x9FA3BE | Now Erasing | Flash erase in progress |
+| 0x9FA626 | FD to Flash Memory | Copying from floppy |
+| 0x9FA88E | Completed | Operation complete |
+| 0x9FAAF6 | Please Wait | Processing |
+| 0x9FAD5E | Change FD 2 of 2 | Multi-disk prompt |
+| 0x9FAFC6 | Illegal Disk | Invalid disk error |
+| 0x9FB22E | Turn On AGAIN | Restart instruction |
+
+**Important:** These bitmaps are NOT byte-identical to the Main CPU versions. The Table Data ROM uses a 16-bit interleaved bus (odd.ic1 + even.ic3), which causes different byte ordering when the graphics hardware accesses bitmap data. Both ROM components maintain separate copies of these images in their native formats.
+
 **Compressed Data Identified:**
 
 | Address | Contents | Format |
 |---------|----------|--------|
 | 0x8E0000 | Compressed Sub CPU Payload | SLIDE4K LZSS |
 | 0x9FA000 | Update file type headers | "SLIDE" markers |
-| 0x9FA150 | Flash update UI bitmaps | Compressed graphics |
 
 **Reference disassembly:** `original_ROMs/table_data_bootcode.unidasm` (6,704 lines)
 
