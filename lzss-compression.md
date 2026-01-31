@@ -48,14 +48,29 @@ Offset  Size  Content
 - Contains repeating structural patterns (e.g., `0x80 XX` flags, `00 03` record markers)
 - Does NOT match the Sub CPU ROM byte patterns
 
-**Decompressed Data Structure:**
+---
+
+### ⚠️ Disputed Interpretation - Requires Further Investigation
+
+> **AI/Human Disagreement:** The runtime destination and transfer mechanism described below was concluded by **Claude Code** (AI assistant) based on code analysis. However, **Felipe Sanches** believes this interpretation may be **incorrect** due to:
+>
+> 1. Dynamic memory map reconfiguration during boot stages is not fully understood
+> 2. The `0x3E0000` address mapping mechanism is unclear
+> 3. Transfer sizes (64KB blocks) don't match the preset data size (~33KB)
+> 4. The fallback to `0x800000` produces `0xF7` padding bytes, not valid parameters
+>
+> **This section documents Claude's interpretation but should be treated as unverified.** Alternative interpretations are preserved below and require additional investigation.
+
+---
+
+**Decompressed Data Structure (Claude's interpretation):**
 
 | Section | Offset | Size | Runtime Destination |
 |---------|--------|------|---------------------|
 | Main CPU Header | 0x0000-0x00AF | 176 bytes | Main CPU only (word at 0x100 → RAM 0x0404) |
 | Sub CPU Audio Params | 0x00B0-0x808D | 32,734 bytes | Sub CPU address 0xF000+ |
 
-**Transfer Mechanism:**
+**Transfer Mechanism (Claude's interpretation):**
 
 The `SubCPU_Send_Payload` routine at `0xEF0692` handles the preset data transfer:
 
@@ -63,11 +78,16 @@ The `SubCPU_Send_Payload` routine at `0xEF0692` handles the preset data transfer
 2. **Word copy**: The word at offset `0x100` is copied to Main CPU RAM `0x0404`
 3. **Bulk transfer**: Data from `0x50100` is sent to Sub CPU via E1 protocol
 
-**Important**: The bulk transfers send 64KB blocks (much larger than the ~33KB of meaningful data). Only the first ~33KB sent to Sub CPU 0xF000 contains preset parameters; the remaining bytes are uninitialized RAM.
+**Anomalies noted by Felipe (reasons for skepticism):**
+- The bulk transfers send 64KB blocks (much larger than the ~33KB of meaningful data). Only the first ~33KB sent to Sub CPU 0xF000 contains preset parameters; the remaining bytes would be uninitialized RAM.
+- If LZSS decompression fails (returns 0xFFFF), the code falls back to reading directly from `TABLE_DATA_ROM__BASE_ADDR` (0x800000), though this produces mostly 0xF7 padding bytes from the ROM's initial data region - not valid parameter data.
+- The source address `0x3E0000` represents the LZSS data via an alternate memory mapping. The same data is at ROM offset `0xE0000`, which maps to `0x8E0000` in the standard Stage 2 boot configuration. The `0x3E0000` mapping mechanism is not understood.
 
-**Fallback Behavior**: If LZSS decompression fails (returns 0xFFFF), the code falls back to reading directly from `TABLE_DATA_ROM__BASE_ADDR` (0x800000), though this produces mostly 0xF7 padding bytes from the ROM's initial data region.
-
-**Memory Map Note**: The source address `0x3E0000` represents the LZSS data via an alternate memory mapping. The same data is at ROM offset `0xE0000`, which maps to `0x8E0000` in the standard Stage 2 boot configuration. The `0x3E0000` mapping may reflect a memory bank register setting during early boot.
+**Alternative interpretations to investigate:**
+- The data may have a completely different runtime destination
+- The `0x3E0000` memory mapping may point to different physical memory at different boot stages
+- There may be other ~33KB data transfers that are the actual destination for this data
+- The preset data may be used in a way not yet understood
 
 **Main CPU Header (0x00-0xAF):**
 - Mostly zero bytes with sparse configuration values
@@ -75,8 +95,8 @@ The `SubCPU_Send_Payload` routine at `0xEF0692` handles the preset data transfer
 - Contains record marker `00 03 01 00` at offset 0x94
 - Word at offset 0x100 is copied to Main CPU RAM 0x0404 before bulk transfer
 
-**Sub CPU Audio Parameters (0x100+):**
-- **Destination**: Sub CPU address 0xF000 (overwrites ROM defaults)
+**Sub CPU Audio Parameters (0x100+) - per Claude's interpretation:**
+- **Destination**: Sub CPU address 0xF000 (overwrites ROM defaults) - *DISPUTED*
 - Variable-length records, often starting with `00 03` marker
 - 24 occurrences of `00 03` record markers
 - Flag byte `0x80` indicates "value set" (actual value in next byte)
@@ -84,7 +104,7 @@ The `SubCPU_Send_Payload` routine at `0xEF0692` handles the preset data transfer
 - Common sequence: `64 03 00 7F 20 00 70 80`
 - Most values are MIDI-range (0-127), suggesting voice/audio parameters
 
-**Sub CPU 0xF000 Area Usage:**
+**Sub CPU 0xF000 Area Usage (IF Claude's interpretation is correct):**
 
 The Sub CPU ROM (`kn5000_subprogram_v142`) contains default values at 0xF000+. These are audio engine configuration tables:
 
@@ -97,7 +117,16 @@ The Sub CPU ROM (`kn5000_subprogram_v142`) contains default values at 0xF000+. T
 | 0xF434-0xF460 | Serial buffer structures |
 | 0xF48C+ | Voice polyphony/index tables |
 
-The preset data overwrites these defaults during boot, configuring factory presets for the audio engine.
+If the interpretation is correct, the preset data would overwrite these defaults during boot, configuring factory presets for the audio engine.
+
+**Open Questions - Preset Data Destination (Added due to AI/Human disagreement):**
+
+The following questions remain open regarding where the LZSS preset data actually ends up:
+
+1. **What does 0x3E0000 actually map to?** The memory bank configuration during boot needs investigation.
+2. **Are there other ~33KB transfers?** Search for data transfers matching the preset data size.
+3. **What happens to the "extra" bytes?** The 64KB transfer vs ~33KB data discrepancy is suspicious.
+4. **Why does fallback produce 0xF7 bytes?** This suggests the fallback path may never be intended to work.
 
 **Open Questions - Sub CPU Payload Transfer:**
 
