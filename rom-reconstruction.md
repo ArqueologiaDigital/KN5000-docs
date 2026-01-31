@@ -110,9 +110,11 @@ The Main CPU disassembly is organized into modular source files for maintainabil
 | `maincpu/cpanel_routines.asm` | 1,506 | Control panel serial protocol handlers |
 | `maincpu/sysex_routines.asm` | 239 | MIDI System Exclusive message handlers |
 | `maincpu/demo_routines.asm` | 290 | Feature Demo mode handlers |
+| `maincpu/computer_interface_config.asm` | 310 | Computer Interface connection configuration |
+| `maincpu/computer_interface_pcg.asm` | 703 | Computer Interface PCG (Program Change) output |
 | `maincpu/sequencer_reference.asm` | 163 | Sequencer function index (reference only) |
 
-**Total extracted code: ~4,250 lines across 11 files**
+**Total extracted code: ~5,250 lines across 13 files**
 
 **Subsystem Descriptions:**
 
@@ -133,6 +135,10 @@ The Main CPU disassembly is organized into modular source files for maintainabil
 
 **Feature Demo:**
 - `demo_routines.asm`: `DemoModeFunc`, `DemoStyleTtlFunc`, `DemoSoundTtlFunc`, `DemoRhyTtlFunc`
+
+**Computer Interface:**
+- `computer_interface_config.asm`: `TtComputerConnection`, `MdCmptCnctFunc`, `MdPcgModeFunc`, `MdDrumTypeFunc`, `MdSetupLoadFunc`
+- `computer_interface_pcg.asm`: `TtMdPcgOut`, `AcPcgOutGridBoxProc`, `PcgOutGridCheck`, `PcgOutSendFunc`, `MainPcgOutSend`
 
 **Sequencer (Reference Only):**
 - `sequencer_reference.asm`: Documents 61 sequencer functions scattered across the ROM (not extracted due to interleaving with other code)
