@@ -100,24 +100,45 @@ The Main CPU disassembly is organized into modular source files for maintainabil
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `maincpu/kn5000_v10_program.asm` | ~338,000 | Main source file (includes others) |
+| `maincpu/kn5000_v10_program.asm` | ~337,000 | Main source file (includes others) |
 | `maincpu/gui_constants.asm` | 57 | Display state variables, offscreen buffers |
 | `maincpu/fdc_constants.asm` | 75 | FDC I/O addresses, commands, status bits |
 | `maincpu/fdc_routines.asm` | 1,403 | FDC read/write/seek routines |
+| `maincpu/midi_encoder_constants.asm` | 85 | MIDI CC and encoder RAM/ROM addresses |
+| `maincpu/midi_encoder_routines.asm` | 268 | Encoder dispatch and MIDI CC processing |
+| `maincpu/cpanel_constants.asm` | 164 | Control panel state, buffers, button/LED mappings |
+| `maincpu/cpanel_routines.asm` | 1,506 | Control panel serial protocol handlers |
+| `maincpu/sysex_routines.asm` | 239 | MIDI System Exclusive message handlers |
+| `maincpu/demo_routines.asm` | 290 | Feature Demo mode handlers |
+| `maincpu/sequencer_reference.asm` | 163 | Sequencer function index (reference only) |
 
-**FDC (Floppy Disk Controller) Subsystem:**
+**Total extracted code: ~4,250 lines across 11 files**
 
-The FDC code has been extracted to separate files for clarity:
+**Subsystem Descriptions:**
 
+**FDC (Floppy Disk Controller):**
 - `fdc_constants.asm`: Memory-mapped I/O addresses (0x110000 base), command codes (uPD765-compatible), status register bit definitions
 - `fdc_routines.asm`: Complete FDC handler including `FDC_COMMAND_DISPATCHER`, `FDC_HANDLER_01` through `FDC_HANDLER_11`, `Reset_Floppy_Disk_Controller`, `Check_for_Floppy_Disk_Change`
 
-**GUI Constants:**
+**MIDI/Encoder:**
+- `midi_encoder_constants.asm`: MIDI CC value storage, raw encoder inputs, lookup table addresses
+- `midi_encoder_routines.asm`: `CPanel_EncoderDispatch`, `Encoder_ProcessModwheel`, `Encoder_ProcessVolume`, `Encoder_ProcessBreath`, `Encoder_ProcessFoot`, `Encoder_ProcessExpression`
 
-Display-related RAM addresses are documented in `gui_constants.asm`:
-- Display dirty flags (0x0205E4) for efficient screen updates
-- Offscreen buffer addresses (0x043C00, 0x056800, 0x05FE00, 0x069400)
-- Screen dimensions (320x240 @ 8bpp)
+**Control Panel:**
+- `cpanel_constants.asm`: State machine variables, RX/TX buffers, button state arrays with bit mappings, LED row/pattern mappings
+- `cpanel_routines.asm`: Serial protocol handlers (`CPanel_SM_*`), packet processors (`CPanel_RX_*`), LED control, buffer management
+
+**SysEx (System Exclusive):**
+- `sysex_routines.asm`: `ExcSendFunc`, `ExcPmemFunc` (Panel Memory), `ExcSmemFunc` (Sound Memory), `ExcCompFunc` (Composer), `ExcSeqFunc` (Sequence), `ExcMspFunc` (MSP)
+
+**Feature Demo:**
+- `demo_routines.asm`: `DemoModeFunc`, `DemoStyleTtlFunc`, `DemoSoundTtlFunc`, `DemoRhyTtlFunc`
+
+**Sequencer (Reference Only):**
+- `sequencer_reference.asm`: Documents 61 sequencer functions scattered across the ROM (not extracted due to interleaving with other code)
+
+**GUI Constants:**
+- `gui_constants.asm`: Display dirty flags (0x0205E4), offscreen buffer addresses (0x043C00, 0x056800, 0x05FE00, 0x069400), screen dimensions (320x240 @ 8bpp)
 
 All 177 divergent bytes are located in a small region (0xFDDE5F - 0xFDED63) and stem from a single root cause:
 
