@@ -113,9 +113,19 @@ The Main CPU disassembly is organized into modular source files for maintainabil
 | `maincpu/computer_interface_config.asm` | 310 | Computer Interface connection configuration |
 | `maincpu/computer_interface_pcg.asm` | 703 | Computer Interface PCG (Program Change) output |
 | `maincpu/midi_serial_routines.asm` | 995 | MIDI serial communication (SC0) |
+| `maincpu/sound_editor_routines.asm` | 629 | Sound Editor mode and title functions |
+| `maincpu/file_io/title_handlers.asm` | 349 | File I/O title entry handlers |
+| `maincpu/file_io/disk_operations.asm` | 1,297 | File copy, rename, format, disk info |
+| `maincpu/file_io/filename_password.asm` | 807 | Filename and password UI |
+| `maincpu/file_io/composer_filters.asm` | 968 | Composer load and filter operations |
+| `maincpu/file_io/smf_operations.asm` | 1,312 | Standard MIDI File operations |
+| `maincpu/file_io/wallpaper.asm` | 519 | Wallpaper loading |
+| `maincpu/file_io/single_load.asm` | 2,298 | Single file load operations |
+| `maincpu/file_io/medley.asm` | 4,690 | Medley playback (disk, internal, SMF, PD, doc) |
+| `maincpu/file_io/misc_ui.asm` | 969 | Jump insert, priority, setup, filename box |
 | `maincpu/sequencer_reference.asm` | 163 | Sequencer function index (reference only) |
 
-**Total extracted code: ~6,250 lines across 14 files**
+**Total extracted code: ~20,000 lines across 24 files**
 
 **Subsystem Descriptions:**
 
@@ -143,6 +153,20 @@ The Main CPU disassembly is organized into modular source files for maintainabil
 
 **MIDI Serial (SC0):**
 - `midi_serial_routines.asm`: `INTTX0_HANDLER`, `INTRX0_HANDLER`, `READ_COM_SELECT_SWITCH`, SC0 initialization
+
+**Sound Editor:**
+- `sound_editor_routines.asm`: 32 Sound Editor functions including `SeMenuModeFunc`, `SeMenuTitleFunc`, `SeEasyTitleFunc`, `SeTonTon1/2TitleFunc`, `SePitPit1TitleFunc`, `SeAmpAmp1/2TitleFunc`, `SeFilLpq1TitleFunc`, `SeDigEffTitleFunc`, `SeCtr2/3TitleFunc`, `SeCopyTitleFunc`, `SeWrtMemTitleFunc`, `SeWrtSndTitleFunc`
+
+**File I/O & Disk Operations** (in `maincpu/file_io/` subdirectory):
+- `title_handlers.asm`: Entry handlers (`LoadTtlJgFunc`, `SaveTtlJgFunc`, `SetupFlashFunc`, `FmmUtilityTitleFunc`)
+- `disk_operations.asm`: File operations (`FileCopyFunc`, `FileRenameFunc`, `FmmFormatFunc`, `DiskNameFunc`, `DiskInfoFunc`)
+- `filename_password.asm`: UI routines (`FmmPasswordFunc`, `FmmFileNameFunc`)
+- `composer_filters.asm`: Composer and filters (`FmmComposerLoadFunc`, `FmmLoadFilterFunc`, `FmmSaveFilterFunc`)
+- `smf_operations.asm`: Standard MIDI File (`FmmSmfLoadTitleFunc`, `SmfLoadAsFunc`, `FmmSmfFileNameFunc`)
+- `wallpaper.asm`: Wallpaper loading (`FmmWallpaperLoadFunc`)
+- `single_load.asm`: Single file load (`SingleLoadModeFunc`, `SingleLoadSrcFunc`, `SingleLoadDstFunc`)
+- `medley.asm`: All medley modes (`FmmIntMedleyFunc`, `FmmDiskMedley*Func`, `FmmSmfMedleyFunc`, `FmmDocMedleyFunc`)
+- `misc_ui.asm`: Utilities (`JumpInsertFunc`, `SetupOkFunc`, `PsFileNameBoxProc`)
 
 **Sequencer (Reference Only):**
 - `sequencer_reference.asm`: Documents 61 sequencer functions scattered across the ROM (not extracted due to interleaving with other code)

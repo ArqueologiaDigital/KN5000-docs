@@ -193,6 +193,49 @@ Small icon depicting a hard disk with magnetic head, used in UI elements.
 
 ---
 
+## Preset Wallpapers (Table Data ROM)
+
+These background wallpapers are built into the firmware for the LCD display. Discovered via the `SetWallPaper` routine which references a wallpaper table at `0xEAAE62`.
+
+**Technical details:**
+- Format: 320×240 pixels @ 8bpp (76,800 bytes each)
+- Uses the standard KN5000 256-color palette
+- The wallpaper table has 6 entries, but only entries 0-1 point to ROM data; entries 2-4 point to RAM addresses for user-loaded wallpapers
+
+### Wallpaper 0 - Blue Texture
+
+![Wallpaper 0]({{ "/assets/images/gallery/Wallpaper_0.png" | relative_url }})
+
+*320x240, 8-bit indexed color - Table Data ROM offset: 0x8ED000-0x8FFC00*
+
+Blue textured pattern resembling fabric or carpet.
+
+### Wallpaper 1 - Technics Branded
+
+![Wallpaper 1]({{ "/assets/images/gallery/Wallpaper_1.png" | relative_url }})
+
+*320x240, 8-bit indexed color - Table Data ROM offset: 0x900000-0x912C00*
+
+Blue textured pattern with subtle "Technics" watermark.
+
+### Wallpaper Routine Details
+
+The wallpaper system uses multiple name getter routines for displaying wallpaper names in the UI:
+
+| Routine | Address | Purpose |
+|---------|---------|---------|
+| `WP_GetConfigName` | 0xF8EDD2 | Get name from config at 0x1ED350 |
+| `WP_GetNameByOffset` | 0xF8EE00 | Get name with calculated offset |
+| `WP_GetPresetName1` | 0xF8EE30 | Lookup from ROM table 0xEA07AE |
+| `WP_GetPresetPtr` | 0xF8EE56 | Simple pointer lookup from 0xEA07EA |
+| `WP_GetBankMemName` | 0xF8EE65 | Get name with bank/memory selection |
+| `WP_GetPresetName3` | 0xF8EEB5 | Lookup from ROM table 0xEA08DA |
+| `WP_GetUserName1` | 0xF8EEDB | Get from structure at 0x1E0000 |
+| `WP_GetUserName2` | 0xF8EF08 | Get from RAM at 0x1E4980 |
+| `WP_GetUserName3` | 0xF8EF2C | Get from 0x1E4AA7 |
+
+---
+
 ## Image Format Notes
 
 - **Table Data BMP**: Standard Windows BMP format, 8-bit indexed color
