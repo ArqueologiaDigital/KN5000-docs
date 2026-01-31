@@ -2023,10 +2023,19 @@ A comprehensive analysis identified 200+ labels across 14 assembly files that ne
 
 ### Completed Renames
 
-**demo_routines.asm** - 23 labels renamed following pattern analysis:
-- Event handlers: `DemoStyle_InputHandler`, `DemoSound_EncoderHandler`, etc.
-- Dispatch tables: `DemoStyle_DispatchTable`, `DemoRhythm_DispatchTable`
-- Exit points: `DemoModeFunc_Exit`, `DemoStyleTtlFunc_Exit`
+**150+ labels renamed across 22 files** using sed scripts in `scripts/rename_labels/`:
+
+| File | Renames | Examples |
+|------|---------|----------|
+| demo_routines.asm | 23 | `DemoStyle_InputHandler`, `DemoRhythm_DispatchTable` |
+| sysex_routines.asm | 15 | `ExcSendFunc_InvalidParam_Exit`, `ExcDotFunc_HandlerJumpTable` |
+| midi_serial_routines.asm | 15 | `MIDI_RX_BYTE_DISPATCHER`, `MIDI_CHANNEL_HANDLER_JUMP_TABLE` |
+| cpanel_routines.asm | 16 | `CPanel_InterruptPoll_MainLoop`, `CPanel_PanelDetection` |
+| fdc_routines.asm | 15 | `FDC_Setup_DMA_Write_Mode`, `FDC_Exception_Status_Decoder` |
+| subcpu_boot.asm | 15 | `TONE_GEN_CHANNEL_INIT`, `DEBUG_OUTPUT_BYTE_HEX` |
+| subcpu_payload.asm | 20 | `Audio_DMA_RingBuffer_To_Maincpu`, `Voice_EnvelopeRate_Lookup` |
+| hdae5000.asm | 22 | `HDAE5000_Calculate_Row_Address`, `HDAE5000_PPORT_Cmd_LoadHDtoMemory` |
+| file_io/*.asm | 20 | `SelectPasswordMode`, `DisplaySmfFileList` |
 
 ### Naming Conventions
 
