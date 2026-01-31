@@ -52,14 +52,28 @@ Offset  Size  Content
 
 | Section | Offset | Size | Runtime Destination |
 |---------|--------|------|---------------------|
-| Main CPU Header | 0x0000-0x00FF | 256 bytes | Main CPU (word at 0x100 → RAM 0x0404) |
-| Sub CPU Audio Params | 0x0100-0x808D | 32,654 bytes | Sub CPU address 0xF000+ |
+| Main CPU Header | 0x0000-0x00AF | 176 bytes | Main CPU only (word at 0x100 → RAM 0x0404) |
+| Sub CPU Audio Params | 0x00B0-0x808D | 32,734 bytes | Sub CPU address 0xF000+ |
 
-**Main CPU Header (0x00-0xFF):**
+**Transfer Mechanism:**
+
+The `SubCPU_Send_Payload` routine at `0xEF0692` handles the preset data transfer:
+
+1. **Decompression**: LZSS data at `0x3E0000` is decompressed to Main CPU RAM at `0x50000`
+2. **Word copy**: The word at offset `0x100` is copied to Main CPU RAM `0x0404`
+3. **Bulk transfer**: Data from `0x50100` is sent to Sub CPU via E1 protocol
+
+**Important**: The bulk transfers send 64KB blocks (much larger than the ~33KB of meaningful data). Only the first ~33KB sent to Sub CPU 0xF000 contains preset parameters; the remaining bytes are uninitialized RAM.
+
+**Fallback Behavior**: If LZSS decompression fails (returns 0xFFFF), the code falls back to reading directly from `TABLE_DATA_ROM__BASE_ADDR` (0x800000), though this produces mostly 0xF7 padding bytes from the ROM's initial data region.
+
+**Memory Map Note**: The source address `0x3E0000` represents the LZSS data via an alternate memory mapping. The same data is at ROM offset `0xE0000`, which maps to `0x8E0000` in the standard Stage 2 boot configuration. The `0x3E0000` mapping may reflect a memory bank register setting during early boot.
+
+**Main CPU Header (0x00-0xAF):**
 - Mostly zero bytes with sparse configuration values
 - Key non-zero positions: 0x18-0x1B, 0x2E, 0x45, 0x57-0x5A, 0x61, 0x94-0x9E, 0xA4-0xA5
 - Contains record marker `00 03 01 00` at offset 0x94
-- Word at offset 0x100 is copied to Main CPU RAM 0x0404
+- Word at offset 0x100 is copied to Main CPU RAM 0x0404 before bulk transfer
 
 **Sub CPU Audio Parameters (0x100+):**
 - **Destination**: Sub CPU address 0xF000 (overwrites ROM defaults)
