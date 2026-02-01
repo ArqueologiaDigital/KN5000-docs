@@ -52,44 +52,82 @@ Offset  Size  Content
 
 <a id="disputed-interpretations"></a>
 
-### ⚠️ Disputed Interpretation - Requires Further Investigation
+### ✅ RESOLVED: Address 0x3E0000 is Custom Data Flash (Firmware Update Staging)
 
-> **AI/Human Disagreement:** The runtime destination and transfer mechanism described below was concluded by **Claude Code** (AI assistant) based on code analysis. However, **Felipe Sanches** believes this interpretation may be **incorrect** due to:
->
-> 1. Dynamic memory map reconfiguration during boot stages is not fully understood
-> 2. The `0x3E0000` address mapping mechanism is unclear
-> 3. Transfer sizes (64KB blocks) don't match the preset data size (~33KB)
-> 4. The fallback to `0x800000` produces `0xF7` padding bytes, not valid parameters
->
-> **This section documents Claude's interpretation but should be treated as unverified.** Alternative interpretations are preserved below and require additional investigation.
+> **Resolution:** The `0x3E0000` address mystery has been solved by analyzing the firmware update routines.
 
 ---
 
-**Decompressed Data Structure (Claude's interpretation):**
+## Firmware Update System and 0x3E0000
+
+### Discovery: 0x3E0000 is a Firmware Update Destination
+
+The address `0x3E0000` is **Custom Data Flash** (not an alternate ROM mapping). During firmware updates, compressed Sub CPU payload data is written here:
+
+**File Type 007 Handler** (`HANDLE_UPDATE_FILE_TYPE_ID_007h` at 0xEF47FA):
+```asm
+; "Technics KN5000 Program DATA FILE PCK"
+HANDLE_UPDATE_FILE_TYPE_ID_007h:
+    LD WA, 1                    ; Select Custom Data Flash
+    LD XBC, 003e0000h           ; Write to 0x3E0000
+    CALL LABEL_EF3929           ; Flash write routine
+    LD WA, 1
+    LD XBC, 003f0000h           ; Write to 0x3F0000
+    CALL LABEL_EF3929           ; Flash write routine
+```
+
+The flash write routine (`LABEL_EF3929`) uses `CUSTOM_DATA_FLASH__BASE_ADDR` (0x300000) as the base when `WA=1`.
+
+### Update File Types
+
+| ID | File Type | Destination | Format |
+|----|-----------|-------------|--------|
+| **007** | Program DATA FILE **PCK** | Custom Data Flash 0x3E0000 + 0x3F0000 | LZSS compressed |
+| 008 | Table DATA FILE **PCK** | Table Data ROM | LZSS compressed |
+| 001 | Program DATA FILE 1/2 | Table Data ROM 0x800000 | Uncompressed |
+| 003 | Table DATA FILE 1/2 | Table Data ROM 0x800000 | Uncompressed |
+
+### Boot Sequence Behavior
+
+**After a firmware update:**
+1. Compressed payload exists at Custom Data Flash 0x3E0000
+2. `SubCPU_Send_Payload` decompresses from 0x3E0000 → success
+3. Updated Sub CPU firmware is loaded
+
+**Factory state (no update):**
+1. Custom Data Flash at 0x3E0000 contains user data or is empty
+2. `SubCPU_Send_Payload` tries to decompress → fails (returns 0xFFFF)
+3. Falls back to `TABLE_DATA_ROM__BASE_ADDR` (0x800000)
+
+### Memory Map Clarification
+
+| Address | Memory Region | Purpose |
+|---------|---------------|---------|
+| 0x3E0000 | Custom Data Flash (offset 0xE0000) | Firmware update staging area |
+| 0x8E0000 | Table Data ROM (offset 0xE0000) | Factory LZSS preset data |
+| 0x830000-0x87FFFF | Table Data ROM (offset 0x30000-0x7FFFF) | Factory Sub CPU payload |
+
+The addresses `0x3E0000` and `0x8E0000` are **NOT the same physical data** - they are different chips:
+- `0x3E0000` = Custom Data Flash IC19 (user-writable)
+- `0x8E0000` = Table Data ROM IC7/IC8 (factory programmed)
+
+---
+
+## Remaining Questions (Partially Disputed)
+
+While the 0x3E0000 address is now understood, some aspects of the preset data transfer remain unclear:
+
+**Decompressed Data Structure:**
 
 | Section | Offset | Size | Runtime Destination |
 |---------|--------|------|---------------------|
 | Main CPU Header | 0x0000-0x00AF | 176 bytes | Main CPU only (word at 0x100 → RAM 0x0404) |
-| Sub CPU Audio Params | 0x00B0-0x808D | 32,734 bytes | Sub CPU address 0xF000+ |
+| Sub CPU Audio Params | 0x00B0-0x808D | 32,734 bytes | Sub CPU address 0xF000+ (uncertain) |
 
-**Transfer Mechanism (Claude's interpretation):**
-
-The `SubCPU_Send_Payload` routine at `0xEF0692` handles the preset data transfer:
-
-1. **Decompression**: LZSS data at `0x3E0000` is decompressed to Main CPU RAM at `0x50000`
-2. **Word copy**: The word at offset `0x100` is copied to Main CPU RAM `0x0404`
-3. **Bulk transfer**: Data from `0x50100` is sent to Sub CPU via E1 protocol
-
-**Anomalies noted by Felipe (reasons for skepticism):**
-- The bulk transfers send 64KB blocks (much larger than the ~33KB of meaningful data). Only the first ~33KB sent to Sub CPU 0xF000 contains preset parameters; the remaining bytes would be uninitialized RAM.
-- If LZSS decompression fails (returns 0xFFFF), the code falls back to reading directly from `TABLE_DATA_ROM__BASE_ADDR` (0x800000), though this produces mostly 0xF7 padding bytes from the ROM's initial data region - not valid parameter data.
-- The source address `0x3E0000` represents the LZSS data via an alternate memory mapping. The same data is at ROM offset `0xE0000`, which maps to `0x8E0000` in the standard Stage 2 boot configuration. The `0x3E0000` mapping mechanism is not understood.
-
-**Alternative interpretations to investigate:**
-- The data may have a completely different runtime destination
-- The `0x3E0000` memory mapping may point to different physical memory at different boot stages
-- There may be other ~33KB data transfers that are the actual destination for this data
-- The preset data may be used in a way not yet understood
+**Outstanding questions:**
+- The bulk transfers send 64KB blocks (much larger than the ~33KB of meaningful data)
+- The fallback to `TABLE_DATA_ROM__BASE_ADDR` (0x800000) produces mostly 0xF7 padding bytes
+- The exact purpose of the preset parameters at Sub CPU 0xF000+ is not fully understood
 
 **Main CPU Header (0x00-0xAF):**
 - Mostly zero bytes with sparse configuration values

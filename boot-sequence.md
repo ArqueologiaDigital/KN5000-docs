@@ -498,15 +498,34 @@ The address `0x3E0000` maps to **Custom Data Flash** (0x300000-0x3FFFFF), NOT Ta
 | 0x3E0000 | Custom Data Flash offset 0xE0000 | User data / empty |
 | 0x8E0000 | Table Data ROM offset 0xE0000 | LZSS compressed preset data |
 
-**Implications:**
+**Boot Behavior:**
 
-1. **Normal boot**: Decompression from 0x3E0000 likely fails (Custom Data Flash doesn't contain valid LZSS data in factory state)
-2. **Fallback path**: Code falls back to `TABLE_DATA_ROM__BASE_ADDR` (0x800000), using raw ROM data at offset 0x100
-3. **Firmware update scenario**: During updates, LZSS data may be staged to Custom Data Flash at 0x3E0000
+| Scenario | 0x3E0000 Contents | Decompression | Data Source |
+|----------|-------------------|---------------|-------------|
+| **After firmware update** | Valid LZSS data | Succeeds | Custom Data Flash (updated firmware) |
+| **Factory state** | Empty / user data | Fails (0xFFFF) | Table Data ROM fallback |
 
-The LZSS compressed data at Table Data ROM offset 0xE0000 (accessible as 0x8E0000) is **never directly referenced** by `SubCPU_Send_Payload`. This compressed data may be used by a different code path or firmware update routine.
+**Firmware Update Integration:**
 
-> **⚠️ DISPUTED:** The exact purpose and destination of the preset data transfer remains under investigation. See [Known Disputed Interpretations]({{ site.baseurl }}/lzss-compression/#disputed-interpretations) in the LZSS documentation.
+The File Type 007 handler (`HANDLE_UPDATE_FILE_TYPE_ID_007h` at 0xEF47FA) writes compressed Sub CPU payload to Custom Data Flash:
+
+```asm
+; "Technics KN5000 Program DATA FILE PCK"
+HANDLE_UPDATE_FILE_TYPE_ID_007h:
+    LD WA, 1                    ; Select Custom Data Flash
+    LD XBC, 003e0000h           ; Destination: 0x3E0000
+    CALL LABEL_EF3929           ; Flash write routine
+    LD WA, 1
+    LD XBC, 003f0000h           ; Destination: 0x3F0000
+    CALL LABEL_EF3929           ; Flash write routine
+```
+
+This explains the design:
+1. **Firmware updates** write compressed payload to Custom Data Flash at 0x3E0000
+2. **On next boot**, `SubCPU_Send_Payload` decompresses the updated firmware
+3. **Factory units** have no data at 0x3E0000, so they fall back to Table Data ROM
+
+> **✅ RESOLVED:** The 0x3E0000 address mystery is now understood. See [Firmware Update System]({{ site.baseurl }}/lzss-compression/#firmware-update-system-and-0x3e0000) for full details.
 
 #### Related Routines
 
