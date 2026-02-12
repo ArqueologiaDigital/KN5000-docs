@@ -8,7 +8,7 @@ permalink: /another-world-vm/
 
 A port of Delphine Software's **Another World** (1991) running natively on the Technics KN5000 keyboard. The game's original bytecode interpreter is reimplemented in TLCS-900/H2 assembly, executing the unmodified Amiga game data on the KN5000's hardware.
 
-> **Source:** [GitHub: kn5000-anotherworld](https://github.com/felipesanches/kn5000-anotherworld)
+> **Project Page:** [felipesanches.github.io/kn5000-anotherworld](https://felipesanches.github.io/kn5000-anotherworld/) | **Source:** [GitHub](https://github.com/felipesanches/kn5000-anotherworld)
 
 ## Overview
 
