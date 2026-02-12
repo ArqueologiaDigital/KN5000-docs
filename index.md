@@ -72,6 +72,12 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 | [FDC Subsystem]({{ site.baseurl }}/fdc-subsystem/) | Floppy disk handlers |
 | [HDAE5000]({{ site.baseurl }}/hdae5000/) | Hard disk expansion firmware |
 
+### Homebrew
+
+| Page | Description |
+|------|-------------|
+| [Another World VM]({{ site.baseurl }}/another-world-vm/) | Full game port: bytecode VM, polygon rendering, input, frame timing |
+
 ### Resources
 
 | Page | Description |
@@ -97,7 +103,8 @@ Choose based on your goal:
 1. [CPU Subsystem]({{ site.baseurl }}/cpu-subsystem/) - TMP94C241F programming
 2. [Memory Map]({{ site.baseurl }}/memory-map/) - Available resources
 3. [Display Subsystem]({{ site.baseurl }}/display-subsystem/) - Graphics output
-4. [Help Wanted]({{ site.baseurl }}/help-wanted/) - Tool development needs
+4. [Another World VM]({{ site.baseurl }}/another-world-vm/) - Full game port example
+5. [Help Wanted]({{ site.baseurl }}/help-wanted/) - Tool development needs
 
 ### Reverse Engineering Research
 1. [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) - Current progress

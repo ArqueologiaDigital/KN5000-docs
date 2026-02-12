@@ -23,6 +23,8 @@ header_pages:
   - control-panel-protocol.md
   - hdae5000.md
   - storage-subsystem.md
+  # Homebrew
+  - another-world-vm.md
   # Resources
   - image-gallery.md
   - reverse-engineering.md
