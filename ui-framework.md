@@ -117,8 +117,17 @@ The control panel protocol delivers events to the UI:
 
 See [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) for event format.
 
+## Presentation System (SSF)
+
+The firmware includes a full **XML-based presentation scripting system** used for the built-in Feature Demo. This is a separate subsystem from the general widget framework, with its own XML parser, event handlers (`EV_READPRESENTATION`, `EV_READACTION`, `EV_READSONG`), and tag vocabulary (`PRESENTATION`, `ACTION`, `SHOW`, `IMG`, `SONG`, `EXEC`, etc.).
+
+The presentation controller (`AcPresentationControlProc` at `0xF8450B`) dispatches actions via a jump table, and the Feature Demo script (`hkst_55.ssf`) drives a 27-step automated demonstration with bitmap images and instrument displays.
+
+See [Feature Demo & Presentation System]({{ site.baseurl }}/feature-demo/) for full documentation.
+
 ## Related Pages
 
+- [Feature Demo & Presentation System]({{ site.baseurl }}/feature-demo/) - SSF XML scripting system
 - [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) - Input handling
 - [Display Subsystem]({{ site.baseurl }}/display-subsystem/) - Screen rendering
 - [Image Gallery]({{ site.baseurl }}/image-gallery/) - UI graphics

@@ -70,6 +70,7 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 | [Sub CPU Payload Transfer]({{ site.baseurl }}/boot-sequence/#subcpu_send_payload-details) | 192KB firmware loading mechanism |
 | [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) | Disassembly progress |
 | [FDC Subsystem]({{ site.baseurl }}/fdc-subsystem/) | Floppy disk handlers |
+| [Feature Demo & Presentation System]({{ site.baseurl }}/feature-demo/) | SSF XML scripting, demo assets, planned-but-unshipped floppy loading |
 | [HDAE5000]({{ site.baseurl }}/hdae5000/) | Hard disk expansion firmware |
 
 ### Homebrew

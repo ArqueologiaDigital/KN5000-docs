@@ -185,7 +185,7 @@ See [HDAE5000]({{ site.baseurl }}/hdae5000/) and [HDAE5000 Disk Interface]({{ si
 
 ## System Update Procedure
 
-The KN5000 can receive firmware updates via floppy disk.
+The KN5000 can receive firmware updates via floppy disk. See [System Update Discs]({{ site.baseurl }}/system-update-discs/) for full format documentation.
 
 ### Update File Format
 
@@ -201,6 +201,10 @@ The KN5000 can receive firmware updates via floppy disk.
 3. Firmware detects update file
 4. Flash programming begins
 5. Verification and reboot
+
+### No Code Execution from Floppy
+
+The floppy subsystem is strictly a data transport. The firmware **never executes code loaded from floppy** — all 8 disc types write to flash memory, and standard file I/O handles only data formats (MIDI, styles, registrations). The boot sector is never read, and there is no disc type signature for executable content. Custom code can only be installed via flash update (replacing the entire Program ROM or Extension ROM). See [System Update Discs]({{ site.baseurl }}/system-update-discs/#no-code-execution-from-floppy) for full analysis.
 
 ## Related Pages
 

@@ -31,7 +31,9 @@ The boot sector uses standard FAT12 BIOS Parameter Block fields with OEM ID "Tec
 | 0x18 | 2 | Sectors/track | 18 |
 | 0x1A | 2 | Number of heads | 2 |
 | 0x1C | 4 | Hidden sectors | 0 |
-| 0x1E | 2 | Boot code | `EB FE` (infinite loop) |
+| 0x1E | 2 | Boot code | `EB FE` (see note below) |
+
+**Note on `EB FE`:** On x86, `EB FE` decodes as `JMP $` (an infinite loop), which is the standard boot code for non-bootable FAT floppies. However, on the KN5000's TLCS-900 CPU, these same bytes decode as `SLL A, XHL` (Shift Left Logical XHL by A bit positions) — a completely different instruction. This is irrelevant in practice because the **firmware never reads or executes sector 0** (see [No Code Execution from Floppy](#no-code-execution-from-floppy) below). The boot sector exists purely for PC compatibility.
 
 Bytes 32–511 are zero except byte 37 which is `0x01` on v10 discs (extended BPB "current head" field, non-functional).
 
@@ -228,6 +230,26 @@ python tools/make_update_disc.py out/extension.rom out/update_disc.img --type 6
 ```
 
 The tool creates byte-identical disc images (boot sector, FAT structure, file layout, fill bytes) matching the original Technics format.
+
+---
+
+## No Code Execution from Floppy
+
+An important architectural finding: **the KN5000 never executes code loaded from floppy disc.** All 8 disc types write data to flash memory; none load code into RAM for execution.
+
+### Evidence
+
+1. **Boot sector is never read.** All 9 calls to the FDC read routine (`LABEL_EF42CC`) use sector 33 or higher. The `Detect_Disk_Type` routine reads the data area to find the signature file — it never examines sector 0, the BPB, or any boot code.
+
+2. **All update handlers write to flash.** Every disc type handler (types 1–8) programs flash memory and then enters an infinite loop displaying "Turn On AGAIN!!" (`0xEF05E6`). No handler copies data to RAM and jumps to it.
+
+3. **No disc type for executable content.** The 8-entry signature table at `0x9FA000` covers firmware images (types 1–4, 7–8), custom data (type 5), and HDAE5000 extension firmware (type 6). There is no signature for an executable or loadable code disc.
+
+4. **Standard file I/O is data-only.** Beyond system updates, floppy I/O handles MIDI songs, registrations, styles, and sequencer data — all interpreted by existing firmware routines, never executed as native code.
+
+### Implications
+
+The floppy subsystem is strictly a data transport. Custom code can only be installed via flash update (replacing the entire Program ROM or Extension ROM), not loaded and run directly from disc. This is consistent with the KN5000's embedded architecture — there is no operating system with a program loader.
 
 ---
 
