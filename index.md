@@ -71,6 +71,7 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 | [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) | Disassembly progress |
 | [FDC Subsystem]({{ site.baseurl }}/fdc-subsystem/) | Floppy disk handlers |
 | [Feature Demo & Presentation System]({{ site.baseurl }}/feature-demo/) | SSF XML scripting, demo assets, planned-but-unshipped floppy loading |
+| [Floppy Security Analysis]({{ site.baseurl }}/floppy-security-analysis/) | Code injection vectors via crafted update discs |
 | [HDAE5000]({{ site.baseurl }}/hdae5000/) | Hard disk expansion firmware |
 
 ### Homebrew

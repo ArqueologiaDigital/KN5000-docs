@@ -259,6 +259,7 @@ The floppy subsystem is strictly a data transport. Custom code can only be insta
 - [Flash Programming](flash-programming.md) — Flash erase/program routines and update handlers
 - [FDC Subsystem](fdc-subsystem.md) — Floppy disk controller hardware and driver routines
 - [Storage Subsystem](storage-subsystem.md) — Overview of KN5000 storage architecture
+- [Floppy Security Analysis](floppy-security-analysis.md) — Code injection vectors via crafted update discs
 - [Internet Archive: Technics KN5000 System Update Disks](https://archive.org/details/technics-kn5000-system-update-disks) — Original disc images
 
 ---
