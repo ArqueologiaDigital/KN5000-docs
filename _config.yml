@@ -21,6 +21,7 @@ header_pages:
   - rom-reconstruction.md
   # Subsystems & Protocols
   - control-panel-protocol.md
+  - serial-firmware-compatibility.md
   - hdae5000.md
   - storage-subsystem.md
   # Homebrew
