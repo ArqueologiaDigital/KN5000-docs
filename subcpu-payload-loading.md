@@ -6,13 +6,13 @@ permalink: /subcpu-payload-loading/
 
 # SubCPU Payload Loading Investigation
 
-This page documents the investigation into SubCPU firmware payload loading in MAME emulation. The investigation uncovered multiple bugs in MAME's TMP94C241 emulation (LDC CR mapping, DMAM encoding, HDMA/IRQ priority) that prevented DMA transfers. All have been fixed, and the SubCPU payload now loads and executes successfully.
+This page documents the investigation into SubCPU firmware payload loading in MAME emulation. The investigation uncovered multiple bugs in MAME's TMP94C241 emulation that prevented DMA transfers and inter-CPU communication. All have been fixed, and the SubCPU payload now loads, executes, and communicates bidirectionally with the Main CPU.
 
-> **Status:** Payload transfer is **WORKING**. The SubCPU receives all 9 E1 blocks (524,358 HDMA transfers) and begins executing payload code. Four critical MAME bugs have been fixed: INT0 level-detect re-assertion, EI/RETI interrupt shadow, port read direction awareness, and DMAR burst DMA. Test Run 7 showed a 99% reduction in spurious INT0 dispatches (113K vs 12.2M). The SubCPU is now initializing normally (DSP memory clearing, debug output) but full boot hasn't been observed yet due to log verbosity. Awaiting Test Run 8 with reduced logging. See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for the overall boot flow and [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for latch communication details.
+> **Status: RESOLVED.** As of 2026-02-15, the SubCPU payload transfer and inter-CPU communication are **fully working**. The "Sound Name Error" messages are gone. The display shows voice names (Piano, Bigband Brass, Modern E.P.1), rhythm patterns, mixer levels, and menu navigation works correctly. This required 11 fixes to MAME's TMP94C241 emulation spanning DMA, interrupts, port I/O, and serial communication. See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for the overall boot flow and [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for latch communication details.
 
 ## Background
 
-After replacing the decompressed SubCPU payload ROMs with the compressed originals (LZSS SLIDE4K format at Custom Data Flash offset 0xE0000 = address 0x3E0000), the MAME driver shows "Sound Name Error" messages. This indicates the SubCPU's sound hardware initialization fails because the tone generator and DSP are not emulated.
+After replacing the decompressed SubCPU payload ROMs with the compressed originals (LZSS SLIDE4K format at Custom Data Flash offset 0xE0000 = address 0x3E0000), the MAME driver originally showed "Sound Name Error" messages. This indicated the SubCPU never received its firmware payload, so sound commands failed.
 
 The firmware's `SubCPU_Send_Payload` function (address `0xEF068A`) is responsible for:
 
@@ -439,30 +439,46 @@ After init, the SubCPU enters the main event loop (`LABEL_01FAE6`), which runs c
 - Ring buffers are empty (no serial data, no queued commands)
 - No DMA transfers are triggered on the first iterations
 
-### "Sound Name Error" Root Cause (Updated)
+### Fix 10: DMAR Single-Unit Transfer (Critical — Final Fix)
 
-The "Sound Name Error" is triggered by the Main CPU's `MainGetSoundName()` function (at `0xF98D3E`). It sends a sound name request to the SubCPU via the inter-CPU latch, then waits for a 32-byte response with a timeout of ~60,000 iterations. When the SubCPU never responds, the timeout fires and displays the error.
+**Root cause of corrupted DMA destinations and the "Sound Name Error":** The main CPU's INT0 handler writes `LD (DMAR), 001h` once per INT0 to transfer a single byte from the inter-CPU latch. Our software DMA implementation burst-transferred ALL remaining bytes at once, reading the same latch value repeatedly.
 
-**Multiple contributing factors identified:**
+The E1 protocol header is 6 bytes (4-byte destination + 2-byte count). With burst DMA, the first INT0 would read the same latch byte 6 times, filling the header with garbage (e.g., 0x64646464). The INTTC0 handler then used this garbage as the DMA destination for the bulk transfer, writing all subsequent data to unmapped memory.
 
-1. **DMAR burst DMA (Fix 6):** The SubCPU's `InterCPU_DMA_Send_Chunk` uses DMAR to trigger DMA channel 2 for sending responses. Without burst DMA support, responses silently fail and the SubCPU hangs in `DMA_Chunk_Wait`.
+**Fix:** Changed `tlcs900_process_software_dma()` to transfer ONE unit per DMAR write (matching HDMA behavior), with INTTC fired only when the count reaches zero. Each INT0 delivers one byte, DMAR transfers one byte, and the count decrements by one.
 
-2. **INT0 level-detect (Fix 7):** After the payload takes over from the boot ROM and sets DMA0V=0, INT0 must be delivered as CPU interrupts (not HDMA). Without level-detect re-assertion, INT0 fires once and never again -- the SubCPU stops receiving commands entirely.
+### Fix 11: SubCPU Peripheral Stubs
 
-3. **EI/RETI interrupt shadow (Fix 8):** The level-detect fix exposed the interrupt shadow bug. The SubCPU's `EI 0; NOP; EI 6` interrupt window pattern causes an infinite INT0 storm because MAME dispatches INT0 before the return-address instruction executes. The SubCPU is trapped and can never process commands.
+The SubCPU payload's main loop polls several unmapped hardware devices, generating millions of MAME "unmapped memory" warnings that flooded the log (500MB+) and severely degraded emulation speed.
 
-4. **Port read direction (Fix 9):** MAME's `port_r()` ignored the direction register, causing output bits to read as 0 (from unconnected callbacks) instead of reading back the output latch. This broke `DSP_Read_Status` (8000-iteration timeout loops per DSP call) AND broke MSTAT/SSTAT read-modify-write operations (SET/RES on Port Z/D lost previously-set output bits).
+**Fix:** Added `noprw` stubs in the SubCPU memory map:
 
-All four fixes must be in place for the SubCPU to successfully receive and respond to Main CPU commands. Even with all fixes, unimulated sound peripherals mean responses will contain no real audio data:
+| Address | Device | Chip |
+|---------|--------|------|
+| 0x100000-0x100003 | DAC interface | Audio DAC |
+| 0x110000-0x110003 | Tone generator | IC303 (TC183C230002) |
+| 0x130000-0x130003 | DSP1 registers | IC311 |
+| 0x1E0000-0x1EFFFF | Waveform/sample RAM | |
 
-| Device | Address | Chip | Status in MAME |
-|--------|---------|------|----------------|
-| Tone gen registers | 0x100000/0x100002 | IC303 (TC183C230002) | **Not mapped** -- writes go to void |
-| Tone gen keyboard | 0x110000/0x110002 | IC303 | **Commented out** -- reads return 0 |
-| DSP registers | 0x130000/0x130002 | IC310/IC311 | **Not mapped** -- writes go to void |
-| Serial1 (DAC/DSP control) | UART port 1 | IC313? (PCM69AU) | **No receiver** |
+### "Sound Name Error" Root Cause (Resolved)
 
-See [Tone Generator]({{ site.baseurl }}/tone-generator/) for the complete register map and chip inventory.
+The "Sound Name Error" was triggered by the Main CPU's `MainGetSoundName()` function (at `0xF98D3E`). It sends a sound name request to the SubCPU via the inter-CPU latch, then waits for a 32-byte response with a timeout of ~60,000 iterations. When the SubCPU never responds, the timeout fires and displays the error.
+
+**All contributing factors have been fixed:**
+
+1. **LDC CR mapping (Fix 1):** DMA config registers weren't being set due to wrong control register numbers
+2. **DMAM encoding (Fix 2):** DMA mode bits were decoded incorrectly
+3. **DMAR register (Fix 3):** Software DMA trigger wasn't mapped at all
+4. **HDMA priority (Fix 4):** DMA wasn't firing — IRQ handler consumed the interrupt first
+5. **CPU scheduling (Fix 5):** SubCPU wasn't getting enough cycles
+6. **DMAR burst DMA (Fix 6):** SubCPU response DMA silently failed without burst support
+7. **INT0 level-detect (Fix 7):** After boot, INT0 fired once and never again
+8. **EI/RETI interrupt shadow (Fix 8):** INT0 storm trapped SubCPU in infinite ISR loop
+9. **Port read direction (Fix 9):** Output bits read as 0, breaking DSP status and MSTAT/SSTAT handshake
+10. **DMAR single-unit (Fix 10):** Main CPU received garbage headers due to burst-reading same latch byte
+11. **Peripheral stubs (Fix 11):** Unmapped hardware warnings flooded the log
+
+**As of 2026-02-15, the "Sound Name Error" is GONE.** The display shows voice names, rhythm patterns, mixer levels, and menu navigation works correctly.
 
 ## Debugging Inner Thoughts
 
