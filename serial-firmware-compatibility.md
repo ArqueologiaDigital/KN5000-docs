@@ -6,9 +6,11 @@ permalink: /serial-firmware-compatibility/
 
 # Making the MAME Serial Driver Compatible with the Original KN5000 Firmware
 
-*February 2026*
+*February 2026 — RESOLVED*
 
-This report documents the ongoing effort to fix the MAME KN5000 driver's serial communication so the **original KN5000 program ROM** boots without the "ERROR in CPU data transmission" dialog. All fixes must simultaneously support the Another World VM custom ROM that uses the same serial hardware.
+> **Status: FULLY WORKING.** As of February 15, 2026, the original KN5000 firmware boots without errors and all control panel buttons (both left and right panels) produce correct LED and menu responses. The Another World VM also works with the same driver.
+
+This report documents the effort to fix the MAME KN5000 driver's serial communication so the **original KN5000 program ROM** boots without the "ERROR in CPU data transmission" dialog. All fixes simultaneously support the Another World VM custom ROM that uses the same serial hardware.
 
 ## Background
 
@@ -258,20 +260,80 @@ Time    CPU Firmware                     MAME Serial Device       Control Panel 
 
 **Rationale:** The firmware's TX sequence: phantom → phantom → REAL → phantom → REAL → phantom. The idle_detect timer starts when process_command() fires (after the 2nd real byte). The subsequent phantom (SM_TXDelay2) must NOT cancel it. The AW VM sends real dummy bytes, which correctly cancel the timer.
 
-**Result:** Pending testing.
+**Result:** Partial success — phantom byte cancellation still an issue (see later attempts).
 
-## Remaining Known Issues
+### Attempts 7-27: Iterative Serial Fixes (not individually documented)
 
-### SCLK Idle State
-After TX completes, the baud rate timer stops toggling SCLK. The pin stays at whatever state the last toggle left it — could be HIGH or LOW. On real hardware, SCLK has a pull-up resistor ensuring an idle HIGH state. CPanel_WaitTXReady checks `PF.6 == HIGH`; if SCLK is stuck LOW, the check fails on every retry.
+Multiple rounds of fixes addressed interconnected timing issues:
+- **Deferred tx_start flags:** MAME's synchronous execution model causes `tx_start` for byte N+1 to fire before byte N's last rising edge. Solution: pending values applied at byte boundaries.
+- **rx_waiting_for_start:** After completing a byte, orphan clock edges (from baud rate timer's internal RX completion) must be ignored until the next `tx_start` signals a new byte.
+- **Sliding idle_detect window:** Instead of starting/cancelling idle_detect in `tx_start`, retrigger the 50 µs timer on every `sioclk()` edge. This creates a sliding window that fires only after the LAST edge (including phantom bytes).
+- **LED commands must not generate responses:** Firmware sends LED data in rapid batches via the TX state machine. Queuing sync responses causes INTA delivery during the next TX command, setting IOC=1 and deadlocking the baud rate timer.
 
-**Potential fix:** Force SCLK HIGH when the serial channel goes idle (tx_clock_count reaches 0 and rx_clock_count returns to 8). Or add pull-up emulation to the port pin.
+### Attempt 41: Right Panel Button State Desynchronization
 
-### Double-Clocking in TO2 Mode
-When SC1MOD=0x00 (TO2 trigger), both the baud rate timer and TO2 drive SCLK. On real hardware, only TO2 should drive in TO2 mode. The double-clocking happens to work because the faster timer dominates, but it's technically incorrect and could cause subtle timing issues.
+**Problem:** Right panel buttons sometimes triggered the wrong LED.
+
+**Root cause:** A residual byte left in `SC1BUF` from a previous serial operation caused the firmware's `scNcr_w()` to start a phantom reception. The stale byte was treated as a valid response, desynchronizing the button state arrays.
+
+**Fix:** Cleared residual bytes in `scNcr_w()` and added timestamp-based debounce to the cpanel HLE.
+
+### Attempt 42: INTRX1 Missing from Compiled Binary
+
+**Problem:** Left panel buttons delivered bytes correctly via INTA self-clocking, but the firmware never processed them.
+
+**Root cause:** The compiled MAME binary had an older version of `tmp94c241_serial.cpp` that logged "RX byte received" (line 182) but was missing the `INTRX1` interrupt flagging code (line 187) — both in the same `if (m_rx_clock_count == 0)` block. The source was correct; the binary was stale.
+
+**Evidence:** 3,523 "RX byte received" log entries vs 0 "INTRX pending set" entries.
+
+**Fix:** Rebuild MAME with current source.
+
+### Attempt 43: Left Panel Header Encoding + Ghost Toggle Fix (FINAL FIX)
+
+**Problem 1 — Ghost button toggles:** MAME input ports momentarily return single-bit non-zero values that revert within one scan interval (7 ms). The global 100 ms debounce converted each glitch into a full press-release cycle, flooding the event queue with phantom events. Log analysis found 110 left panel events + 50 right panel events, ALL ghost toggles, ZERO real presses.
+
+**Fix 1:** Per-segment confirmation — state change must be stable for 2 consecutive scans (14 ms) before being reported.
+
+**Problem 2 — Left panel header encoding (ROOT CAUSE):** The button packet header for left panel used `0x40 | segment` (bits 7:6=01), which falls in a dead zone of the firmware's ROM lookup table at `0xEDA03C`. All left panel events mapped to index 0x1F (> 0x15), bypassing LED dispatch entirely.
+
+```
+ROM lookup table at 0xEDA03C:
+[0x00-0x0A]: 0B 0C 0D 0E 0F 10 11 12 13 14 15   → right (bits 7:6=00) ✓
+[0x20-0x2A]: all 1F                                → DEAD ZONE (bits 7:6=01) ✗
+[0x60-0x6A]: 00 01 02 03 04 05 06 07 08 09 0A     → left (bits 7:6=11) ✓
+```
+
+**Fix 2:** Changed left panel header from `0x40 | segment` to `0xC0 | segment`. Right panel kept at `segment` (already working).
+
+**Result:** Both panels fully working. Left panel buttons produce correct LED reactions. Right panel unchanged.
+
+## Remaining Minor Issues
 
 ### Baud Rate Half Speed
 The baud rate timer fires at `m_hz` but toggles SCLK, so the effective bit rate is `m_hz / 2`. At BR1CR=0x14 (250 kHz nominal), the actual SCLK frequency is 125 kHz. This doesn't break correctness but makes serial communication 2x slower than real hardware.
+
+## Resolution Summary
+
+The complete set of fixes required to make the original firmware's control panel fully functional in MAME:
+
+| Layer | Fix | Impact |
+|-------|-----|--------|
+| **CPU Serial** | Timer checks both TX and RX clock counts | Bytes complete correctly |
+| **CPU Serial** | Defer TX bit 0 output to next falling edge | No last-bit corruption |
+| **CPU Serial** | Capture RXD before forwarding clock | No race condition |
+| **CPU Serial** | Gate SCLK output on PFFC state | No phantom bytes to cpanel |
+| **CPU Serial** | Fix IOC bit check (bit 0, not bit 1) | Correct slave mode detection |
+| **CPU Serial** | Refined timer_callback gate | 250 kHz clock works in all modes |
+| **CPU Serial** | Gate TO2_trigger on TX/RX activity | Idle detection works |
+| **CPU Serial** | INTRX1 interrupt flag set on RX complete | Firmware gets RX notifications |
+| **CPanel HLE** | INTA mechanism with idle detect + self-clock | Bidirectional serial protocol |
+| **CPanel HLE** | Phantom byte filtering via tx_start | Command parser not corrupted |
+| **CPanel HLE** | Deferred tx_start flags at byte boundaries | No mid-byte flag application |
+| **CPanel HLE** | rx_waiting_for_start (orphan edge filter) | No byte boundary desync |
+| **CPanel HLE** | Sliding idle_detect window (50 µs retrigger) | Fires after last phantom byte |
+| **CPanel HLE** | LED commands produce no response | No INTA during TX batches |
+| **CPanel HLE** | Left panel header 0xC0 (not 0x40) | ROM lookup table valid zone |
+| **CPanel HLE** | Per-segment confirmation (14 ms) | Ghost toggles filtered |
 
 ## Key Delay Calculations
 

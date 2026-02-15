@@ -140,15 +140,19 @@ Requirements:
 
 | Feature | Status |
 |---------|--------|
-| All VM opcodes | Implemented |
+| All VM opcodes (0x00-0x1A) | Implemented |
 | Polygon rendering | Working |
 | Bitmap decompression | Working (ByteKiller) |
 | Palette management | Working (4-bit DAC) |
-| Frame timing | Working (hardware timer) |
-| Part switching | Working |
-| Input (directions + action) | Working |
+| Frame timing | Working (hardware timer, 12,500 Hz cascade) |
+| Part switching | Working (all protection checks bypassed) |
+| Input (directions + action) | Working (SC1 serial to cpanel HLE) |
+| MAME control panel | **Fully working** — both left and right panels |
+| Copy protection bypass | Working (var[0xBC], var[0xDC], var[0xF2]) |
 | Sound effects | Stub (consumes bytecode, no output) |
 | Music | Stub (consumes bytecode, no output) |
+
+The MAME KN5000 driver's control panel HLE (High Level Emulation) was developed alongside this VM. All serial communication bugs discovered during VM development were fixed while maintaining compatibility with the original KN5000 firmware. See the [Serial Firmware Compatibility]({{ site.baseurl }}/serial-firmware-compatibility/) report for details.
 
 ## Technical Challenges
 
@@ -162,7 +166,7 @@ The MN89304's RAMDAC is 4-bit (0-15), not 6-bit like standard VGA. The game's 4-
 The original game includes protection checks that read specific VM variables. These are bypassed by initializing `var[0xBC]`, `var[0xDC]`, and `var[0xF2]` to expected values at startup.
 
 ### FREEZE Semantics
-The VM's thread freeze mechanism must be one-shot: after applying a freeze/unfreeze request, the request is cleared. Without this, frozen threads (like the death handler) never unfreeze.
+The VM's thread freeze mechanism is **persistent**: `CHECK_THREAD_REQUESTS` applies `thread->state = thread->requested_state` every frame without clearing the request. The `REQUESTED_STATE` is initialized to `NOT_FROZEN`. `RESET_THREAD` type 0 = unfreeze, type 1 = freeze. This matches the reference implementation — threads stay frozen until explicitly unfrozen by another thread's opcode.
 
 ## Related Pages
 

@@ -158,19 +158,38 @@ Byte 0: [ X | X | Type2 | Type1 | Type0 | X | X | X ]
 ### Button State Packet Format (Types 0, 1)
 
 ```
-Byte 0: [ Panel | Type | Segment Index (bits 3-0 + bit 6) ]
+Byte 0: [ Panel[7:6] | Type[5:3] | Segment[3:0] ]
 Byte 1: [ Button bitmap - 8 buttons per segment ]
 ```
 
-**Segment index calculation:**
-- If bit 6 is set: `segment = (byte0 & 0x0F) + 0x10` (left panel offset)
-- Otherwise: `segment = byte0 & 0x0F`
+**Panel encoding (bits 7:6):**
 
-The handler at `CPanel_RX_ButtonPacket`:
-1. Extracts segment index: `W = byte0 & 0x4F`
-2. Calculates button array offset
+| Bits 7:6 | Value | Panel |
+|----------|-------|-------|
+| `00` | 0x00 | Right panel (CPR) |
+| `11` | 0xC0 | Left panel (CPL) |
+
+**Important:** Bits 7:6=`01` (0x40) and bits 7:6=`10` (0x80) fall in a dead zone of the firmware's ROM lookup table at `0xEDA03C`. Using 0x40 for left panel headers causes all left panel events to bypass LED dispatch entirely (index 0x1F > 0x15). This was a long-standing bug in early HLE implementations.
+
+**Firmware processing at `CPanel_RX_ButtonPacket` (0xFC4985):**
+1. Extracts panel/segment: `W = byte0 & 0x4F`
+2. Tests bit 6: if clear → right panel indices 0-10, if set → left panel (`SUB W, 0x30` → indices 16-26)
 3. XORs new state with previous to detect changes
 4. Stores result in `CPANEL_LAST_EVENT_VALUE` for edge detection
+
+**Event dispatch via ROM lookup table at 0xEDA03C:**
+
+The firmware translates header bytes to event indices using: `index = (header & 0xC0) >> 1 | (header & 0x1F)`
+
+```
+Table contents (128 entries):
+[0x00-0x0A]: 0B 0C 0D 0E 0F 10 11 12 13 14 15   → right panel event indices 11-21
+[0x0B-0x5F]: all 1F                                → dead zone (index 31)
+[0x60-0x6A]: 00 01 02 03 04 05 06 07 08 09 0A     → left panel event indices 0-10
+[0x6B-0x7F]: mostly 1F, with 0x16-0x19 at specific offsets (encoders/multi-byte)
+```
+
+Event indices ≤ 0x15 → LED dispatch (visible button reactions). Indices > 0x15 → pending array (no visible reaction). This is why header encoding must use exactly `00` (right) and `11` (left) in bits 7:6.
 
 ### Encoder Packet Format (Type 2)
 
@@ -218,6 +237,68 @@ The encoder dispatch routine `CPanel_EncoderDispatch` (0xFC6C5F):
 | Post-command wait | 6 system ticks | `DELAY_6_TICKS` (0xFC4213) |
 | Init command wait | 3000 loop iterations | `DELAY_3000_LOOPS` (0xFC4118) |
 | Ready check timeout | 200 attempts * 1500 loops | `CPanel_WaitTXReady` |
+
+### INTA Response Mechanism
+
+The control panel MCUs use a bidirectional serial protocol. The CPU is master for **transmitting** commands (drives SCLK), but the panels are masters for **responding** — they drive their own SCLK via the INTA (interrupt acknowledge) mechanism:
+
+```
+  CPU (firmware)                    Control Panel MCU
+  ──────────────                    ──────────────────
+  TX state machine sends command
+  (4 phantom + 2 real SC1BUF writes)
+  SCLK stops
+                                    Receives 2-byte command
+                                    Queues response (2 bytes)
+                                    Detects SCLK idle (~250 µs)
+                                    Asserts INTA on PE.5
+  ┌──────────────────────────────────────────────────┐
+  │ INTA_HANDLER:                                    │
+  │   IOC = 1 (slave mode — CPU receives only)       │
+  │   RXE = 1 (receive enable)                       │
+  │   State → SM_RXByte1                             │
+  └──────────────────────────────────────────────────┘
+                                    Self-clocks response at 250 kHz
+                                    ── SCLK edges ──►
+  SM_RXByte1: reads SC1BUF (header byte)
+  SM_RXByteN: reads SC1BUF (data byte)
+  Response complete → IDLE
+                                    Deasserts INTA
+```
+
+**INTA timing requirements:**
+- Idle detection timeout: **50 µs** sliding window (retriggered on every SCLK edge)
+- Self-clock startup delay: **20 µs** after INTA assertion (lets CPU enable slave mode)
+- Self-clock rate: **250 kHz** (matches firmware's baud rate)
+- Inter-packet pause: **20 µs** between 2-byte packets (firmware processes one packet per INTA cycle)
+
+This mechanism is essential for:
+- **Button change notifications**: Panel MCUs proactively push button state changes without being polled
+- **Multi-segment responses**: Init commands (0x2B, 0xEB) send 22 bytes (11 segments × 2 bytes each) via successive INTA cycles
+
+The firmware's steady-state polling only queries **one segment** (`E0 13` = right panel segment 3, approximately every 42 main loop iterations). All other button changes on all 22 segments (11 per panel) are delivered via INTA.
+
+### Proactive Button Change Detection
+
+The real panel MCUs continuously scan their button matrices and push change notifications to the CPU via INTA, independent of any command from the CPU. The HLE replicates this with a periodic **7 ms scan timer** (~143 Hz).
+
+**Per-segment confirmation** filters single-scan glitches ("ghost toggles"):
+
+```
+Scan N:   port reads 0x04 (differs from confirmed 0x00) → record as PENDING
+Scan N+1: port reads 0x04 (matches pending)              → CONFIRMED, report via INTA
+                  OR
+Scan N+1: port reads 0x00 (reverts to confirmed)          → clear pending, no report
+```
+
+A state change must be stable for **2 consecutive scans (14 ms)** before being reported. This filters MAME input port glitches where ports momentarily return single-bit non-zero values that revert within one scan interval. On real hardware, physical button presses last 50-100 ms minimum, so 14 ms confirmation is well within tolerance.
+
+**Ghost toggle pattern** (filtered by per-segment confirmation):
+1. Port reads 0xNN (single bit set) → would report button press
+2. Next scan: port reads 0x00 → would report button release
+3. Net effect: phantom press-release pair with no real user input
+
+Without filtering, these produce 2 INTA sessions per ghost toggle, flooding the firmware's event queue with phantom events.
 
 ## 4. State Machine
 
@@ -318,135 +399,196 @@ Located at `CPANEL_STATE_MACHINE_TABLE` (0xFC4489):
 ```cpp
 // kn5000_cpanel.h
 
-#ifndef MAME_TECHNICS_KN5000_CPANEL_H
-#define MAME_TECHNICS_KN5000_CPANEL_H
+#ifndef MAME_MATSUSHITA_KN5000_CPANEL_H
+#define MAME_MATSUSHITA_KN5000_CPANEL_H
 
 #pragma once
+#include <queue>
 
 class kn5000_cpanel_device : public device_t
 {
 public:
-    kn5000_cpanel_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+    kn5000_cpanel_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock = 0);
 
-    // Serial interface
-    void sin_w(int state);           // Serial data in (from main CPU)
-    int sout_r();                    // Serial data out (to main CPU)
-    void sclk_w(int state);          // Serial clock
-    void cntr_w(int state);          // Chip select / control
+    // Serial interface from main CPU
+    void rxd(int state);             // Serial data in (from CPU TXD)
+    void sioclk(int state);          // Serial clock
+    void tx_start(int state);        // Called when CPU starts a new byte (1=real, 0=phantom)
+
+    // Callbacks to main CPU
+    auto txd() { return m_txd_cb.bind(); }         // Serial data out (to CPU RXD)
+    auto sclk_out() { return m_sclk_out_cb.bind(); } // Self-clock output
+    auto inta() { return m_inta_cb.bind(); }        // Interrupt acknowledge
 
     // Configuration
-    auto sout_callback() { return m_sout_cb.bind(); }
-    auto irq_callback() { return m_irq_cb.bind(); }
+    void set_baudrate(uint16_t br);
+    void set_cpl_port(int n, ioport_port *port);    // Left panel segment 0-10
+    void set_cpr_port(int n, ioport_port *port);    // Right panel segment 0-10
 
 protected:
     virtual void device_start() override;
     virtual void device_reset() override;
-    virtual ioport_constructor device_input_ports() const override;
+
+    TIMER_CALLBACK_MEMBER(timer_callback);          // Baud rate timer (self-clock)
+    TIMER_CALLBACK_MEMBER(idle_detect_callback);    // SCLK idle → assert INTA
+    TIMER_CALLBACK_MEMBER(self_clock_callback);     // Drive SCLK for response delivery
+    TIMER_CALLBACK_MEMBER(button_scan_callback);    // Periodic button matrix scan (7 ms)
 
 private:
-    // Serial state
-    uint8_t m_rx_shift;              // Receive shift register
-    uint8_t m_tx_shift;              // Transmit shift register
-    int m_bit_count;                 // Bit counter
-    bool m_sclk_state;               // Previous clock state
+    // Serial RX state
+    uint8_t m_rx_clock_count;        // Bits remaining (8 = idle)
+    uint8_t m_rx_shift_register;
+    uint8_t m_rxd;                   // Current RXD line state
+    uint8_t m_sioclk_state;          // Previous clock state
+
+    // Serial TX state
+    uint8_t m_tx_clock_count;        // Bits remaining in current byte
+    uint8_t m_tx_shift_register;
+    std::queue<uint8_t> m_tx_queue;  // Pipelined TX bytes
 
     // Command processing
-    uint8_t m_cmd_buffer[2];         // 2-byte command buffer
-    int m_cmd_index;                 // Current command byte index
+    uint8_t m_cmd_buffer[2];
+    uint8_t m_cmd_index;
 
-    // Panel state
-    uint8_t m_button_state[16];      // 16 segments * 8 buttons
-    uint8_t m_led_state[60];         // LED array (60 bytes)
-    int8_t m_encoder_delta[8];       // Rotary encoder deltas
+    // Protocol state
+    bool m_initialized;
+    bool m_self_clocking;            // Currently driving SCLK for response
+    bool m_inta_asserted;            // PE.5 interrupt line state
+    bool m_accept_next_byte;         // false = skip phantom byte
+    bool m_tx_output_enabled;        // false = suppress TX during phantom edges
+    bool m_rx_waiting_for_start;     // Ignore edges until next tx_start
+
+    // Button change detection
+    uint8_t m_last_button_state[22];    // 11 segments × 2 panels (confirmed)
+    uint8_t m_pending_button_state[22]; // Per-segment confirmation buffer
 
     // Callbacks
-    devcb_write_line m_sout_cb;
-    devcb_write_line m_irq_cb;
+    devcb_write_line m_txd_cb;
+    devcb_write_line m_sclk_out_cb;
+    devcb_write_line m_inta_cb;
+
+    // Input port pointers (set by main driver)
+    ioport_port *m_cpl_ports[11];    // Left panel segments 0-10
+    ioport_port *m_cpr_ports[11];    // Right panel segments 0-10
+
+    // LED outputs
+    output_finder<50> m_cpl_leds;
+    output_finder<69> m_cpr_leds;
 
     // Internal methods
     void process_command();
-    void send_response(const uint8_t *data, int length);
-    uint8_t get_button_segment(int segment);
-    void update_leds(int index, uint8_t pattern);
+    void send_byte(uint8_t data);
+    void process_received_byte(uint8_t data);
+    void send_sync_packet();
+    void send_button_packet(int segment, bool is_left_panel);
+    void send_all_button_states(bool is_left_panel);
+    void process_led_command(uint8_t row, uint8_t data);
+    uint8_t read_button_segment(int segment, bool is_left_panel);
 };
 
 DECLARE_DEVICE_TYPE(KN5000_CPANEL, kn5000_cpanel_device)
 
-#endif // MAME_TECHNICS_KN5000_CPANEL_H
+#endif // MAME_MATSUSHITA_KN5000_CPANEL_H
 ```
 
 ### Key Callbacks to Implement
 
 ```cpp
-// Command processing
 void kn5000_cpanel_device::process_command()
 {
     uint8_t cmd = m_cmd_buffer[0];
-    uint8_t data = m_cmd_buffer[1];
-    uint8_t response[16];
-    int resp_len = 0;
+    uint8_t param = m_cmd_buffer[1];
 
-    // Determine packet type from high bits
-    bool is_right_panel = (cmd & 0xE0) >= 0x80;  // Bits 7-5 >= 4
+    // Panel selection: bits 7-5 >= 4 means right panel
+    bool is_right_panel = (cmd & 0xE0) >= 0x80;
 
     switch (cmd)
     {
-    // Initialization commands
-    case 0x1F:  // Init (left panel)
-    case 0x1D:
-    case 0x1E:
-    case 0xDD:  // Setup
-        // Acknowledge with sync packet
-        response[0] = 0x18 | (is_right_panel ? 0x80 : 0);  // Type 3 = sync
-        response[1] = 0x00;
-        resp_len = 2;
+    // Initialization commands — respond with sync
+    case 0x1F:  case 0x1D:  case 0x1E:  case 0xDD:
+        send_sync_packet();  // Type 3: 0x18, 0x00
+        m_initialized = true;
         break;
 
-    // Query commands
-    case 0x20:  // Query left panel
-    case 0xE0:  // Query right panel
-        if (data == 0x00) {
-            // Ping - respond with sync
-            response[0] = 0x18;
-            response[1] = 0x00;
-            resp_len = 2;
-        } else if (data == 0x0B || data == 0x10) {
-            // Button state query
-            // NOTE: Panel selection is via bit 6, NOT the type field!
-            // Bit 6 = 0: right panel, Bit 6 = 1: left panel
-            int segment = data & 0x0F;
-            response[0] = (is_right_panel ? 0x00 : 0x40) | segment;  // Bit 6 for left panel
-            response[1] = get_button_segment(segment + (is_right_panel ? 0 : 16));
-            resp_len = 2;
-        }
+    // Query commands (left panel variants)
+    case 0x20:  case 0x25:
+    {
+        int segment = param & 0x0F;
+        if (param == 0x00)
+            send_sync_packet();
+        else if (segment <= 0x0A)
+            send_button_packet(segment, true);   // left panel
+        else if (segment == 0x0B)
+            send_button_packet(segment, false);  // hardware status
+        else
+            send_sync_packet();
         break;
-
-    case 0x25:  // Left data command
-    case 0xE2:
-    case 0xE3:
-        // Extended data - respond appropriately
-        response[0] = 0x18;  // Sync
-        response[1] = data;
-        resp_len = 2;
-        break;
-
-    case 0x2B:  // Init state array (left)
-    case 0xEB:  // Init state array (right)
-        // Send all button segments
-        // NOTE: Bit 6 selects panel (0=right, 1=left)
-        for (int seg = 0; seg < 16; seg++) {
-            response[0] = seg | (is_right_panel ? 0x00 : 0x40);  // Bit 6 for left panel
-            response[1] = get_button_segment(seg + (is_right_panel ? 0 : 16));
-            send_response(response, 2);
-        }
-        return;
     }
 
-    if (resp_len > 0) {
-        send_response(response, resp_len);
+    // Query commands (right panel variants)
+    case 0xE0:  case 0xE2:  case 0xE3:
+    {
+        int segment = param & 0x0F;
+        if (param == 0x00)
+            send_sync_packet();
+        else if (segment <= 0x0B)
+            send_button_packet(segment, false);  // right panel
+        else
+            send_sync_packet();
+        break;
     }
+
+    // Init button state arrays — send all 11 segments
+    case 0x2B:  send_all_button_states(true);   break;  // left
+    case 0xEB:  send_all_button_states(false);  break;  // right
+
+    // LED control commands — NO response (silent processing)
+    // Right panel: rows 0x00, 0x01, 0x02, 0x03, 0x04, 0x08, 0x0A, 0x0B, 0x0C
+    // Left panel:  rows 0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC8
+    case 0x00: case 0x01: case 0x02: case 0x03: case 0x04:
+    case 0x08: case 0x0A: case 0x0B: case 0x0C:
+    case 0xC0: case 0xC1: case 0xC2: case 0xC3: case 0xC4: case 0xC8:
+        process_led_command(cmd, param);
+        break;
+
+    default:
+        // Unknown command — do NOT respond.
+        // Sending spurious sync responses triggers INTA delivery,
+        // disrupting the firmware's serial state machine.
+        break;
+    }
+
+    // Start idle detection for INTA-based response delivery
+    if (!m_self_clocking && (m_tx_clock_count > 0 || !m_tx_queue.empty()))
+        m_idle_detect_timer->adjust(attotime::from_usec(50));
+}
+
+void kn5000_cpanel_device::send_button_packet(int segment, bool is_left_panel)
+{
+    uint8_t state = read_button_segment(segment, is_left_panel);
+
+    // Header encoding: bits 7:6 select panel identity
+    //   Right panel: 00 (header = segment)
+    //   Left panel:  11 (header = 0xC0 | segment)
+    // WARNING: 0x40 (bits 7:6=01) falls in ROM lookup table dead zone!
+    uint8_t header = (segment & 0x0F);
+    if (is_left_panel)
+        header |= 0xC0;
+
+    send_byte(header);
+    send_byte(state);
+
+    // Update confirmed state for change detection
+    int state_idx = is_left_panel ? (segment + 11) : segment;
+    m_last_button_state[state_idx] = state;
+    m_pending_button_state[state_idx] = state;
 }
 ```
+
+**Critical implementation notes:**
+- **LED commands must NOT generate responses.** The firmware sends LED commands in rapid batches via the TX state machine. If the HLE queues sync responses, they accumulate during continuous clocking (idle_detect never fires). When finally delivered via INTA, they set IOC=1, blocking the baud rate timer and deadlocking the TX state machine.
+- **Phantom byte filtering:** The `tx_start` callback signals whether each byte is real (PFFC on) or phantom (PFFC off). The HLE uses deferred flag application to handle a MAME timing race where `tx_start` for byte N+1 fires before byte N's last rising edge.
+- **Idle detect sliding window:** Every SCLK edge retriggers the 50 µs timer. This ensures INTA fires only after the firmware's last phantom byte completes, not during the TX state machine's inter-byte gaps.
 
 ### Button State Reporting Format
 
@@ -755,7 +897,26 @@ The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "valu
 | 0xFC4265 | `CPanel_PollButtonState_Loop` | Main button polling loop |
 | 0xFC4289 | `CPanel_CheckEncoderState` | Check encoder value changes |
 
-## 8. Protocol Gaps (What We Don't Know)
+## 8. MAME Serial Bugs (Found and Fixed)
+
+The following bugs in MAME's TMP94C241 serial emulation were discovered and fixed during control panel HLE development. All fixes are compatible with the original KN5000 firmware.
+
+| Bug | Root Cause | Fix |
+|-----|-----------|-----|
+| **Timer stops early** | `timer_callback` only checked `m_tx_clock_count`, missing final rising edge for RX | Add `m_rx_clock_count != 8` condition |
+| **Queue byte corrupts last bit** | Loading next TX byte pre-output bit 0, overwriting bit 7 of previous byte | Use `tx_clock_count = 8`, defer bit 0 to next falling edge |
+| **Rising-edge race** | CPU's `sioclk()` forwarded clock to cpanel before sampling `m_rxd` | Capture `m_rxd` before forwarding clock |
+| **SCLK ignores PFFC** | Clock edges forwarded to cpanel even when PFFC disabled the pin | Gate `sclk_out_cb` with `ioc \|\| pffc_enabled` |
+| **TO2 checks wrong IOC bit** | `BIT(m_serial_control, 1)` checked SCLKS instead of IOC (bit 0) | `BIT(m_serial_control, 0)` |
+| **SC1MOD gate kills firmware** | Gating `timer_callback` on `SC1MOD!=1` disabled the 250 kHz clock | Gate on `(SC1MOD & 3)==0 && IOC==1` only |
+| **TO2 prevents idle detect** | Continuous TO2 at 12.5 kHz prevented cpanel idle detection (250 µs) | Gate TO2_trigger on TX/RX activity |
+| **Missing INTRX1 interrupt** | RX byte received but INTRX1 flag never set in compiled binary | Code existed in source, needed rebuild |
+| **Wrong header encoding** | Left panel used `0x40\|segment` (bits 7:6=01, dead zone) | Changed to `0xC0\|segment` (bits 7:6=11) |
+| **Ghost button toggles** | MAME input ports return momentary single-bit glitches | Per-segment confirmation (2 consecutive scans) |
+
+See also: [Serial Firmware Compatibility](/serial-firmware-compatibility/) for full debugging history.
+
+## 9. Protocol Gaps (What We Don't Know)
 
 ### LED Packet Format
 
@@ -975,9 +1136,9 @@ DemoModeFunc (0xF222DD)
 
 ## References
 
-- **Source Code**: `/home/fsanches/claude_jail/kn5000-roms-disasm/maincpu/kn5000_v10_program.asm`
-- **Protocol Analysis**: `/home/fsanches/claude_jail/kn5000-roms-disasm/docs/cpanel_protocol_analysis.txt`
+- **Firmware Disassembly**: [kn5000-roms-disasm](https://github.com/ArqueologiaDigital/kn5000-roms-disasm) — `maincpu/cpanel_routines.asm`
+- **MAME Driver Source**: `src/mame/matsushita/kn5000_cpanel.cpp` (HLE), `kn5000.cpp` (wiring)
+- **CPU Serial Emulation**: `src/devices/cpu/tlcs900/tmp94c241_serial.cpp`
 - **Hardware Architecture**: [Hardware Architecture Page]({{ site.baseurl }}/hardware-architecture/)
+- **Serial Debugging**: [Serial Firmware Compatibility]({{ site.baseurl }}/serial-firmware-compatibility/)
 - **Service Manual**: EMID971655 A5 (Schematics II-9 through II-38)
-- **MAME Driver**: `/home/fsanches/claude_jail/kn5000-roms-disasm/mame_driver/src/mame/matsushita/kn5000.cpp`
-- **MAME Control Panel HLE**: `/home/fsanches/claude_jail/kn5000-roms-disasm/mame_driver/src/mame/matsushita/kn5000_cpanel.cpp`

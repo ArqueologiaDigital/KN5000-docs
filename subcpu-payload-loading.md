@@ -236,56 +236,64 @@ Added comprehensive logging to trace the inter-CPU communication:
 - **Handshake signals**: MSTAT/SSTAT changes logged with old/new values
 - **Sub CPU reset**: Port A bit 0 changes logged
 - **DMA vectors**: DMAV register writes logged with channel and value
+- **DMA transfers**: Each HDMA transfer logged with source, destination, count, and mode
 - **DMA completion**: Logged when HDMA transfer count reaches zero
 
 Logging is controlled by `VERBOSE` flags in `kn5000.cpp` and uses MAME's `logmacro.h` system.
 
-## Research Plan
+### LDC Control Register Mapping Fix (Critical)
 
-### Step 1: Add Diagnostic Logging
+**Root cause of HDMA failure:** The TMP94C241 uses different control register (CR) numbers in the `LDC` instruction than the TMP96C141/TMP95C063. MAME's shared TLCS900 instruction decoder only had the old numbering, causing `LDC DMAD0, XWA` and `LDC DMAC0, WA` to silently write to a dummy register. The DMA destination address and transfer count were never set!
 
-Add MAME `LOG()` calls to trace the boot flow:
+**TMP94C241 vs TMP96C141 CR numbers:**
 
-| Location | What to Log |
-|----------|-------------|
-| `kn5000.cpp` latch write | Every byte written to `subcpu_latch` (Main→Sub) |
-| `kn5000.cpp` latch read | Every byte read from `subcpu_latch` (Sub reads) |
-| `kn5000.cpp` Port Z write | MSTAT changes |
-| `kn5000.cpp` Port D write | SSTAT changes |
-| `kn5000.cpp` Port A write | Sub CPU reset (bit 0) |
-| `tmp94c241.cpp` HDMA | DMA transfers (channel, src, dst, count) |
-| `tmp94c241.cpp` DMAV | DMA vector register writes |
+| Register | TMP96C141 CR | TMP94C241 CR | Size |
+|----------|-------------|-------------|------|
+| DMAS0-3 | 0x00-0x0C | 0x00-0x0C | 32-bit (same) |
+| DMAD0-3 | 0x10-0x1C | 0x20-0x2C | 32-bit (different!) |
+| DMAC0-3 | 0x20-0x2C | 0x40-0x4C | 16-bit (different!) |
+| DMAM0-3 | 0x22-0x2E | 0x42-0x4E | 8-bit (different!) |
 
-### Step 2: Analyze Log Output
+**Fix:** Added TMP94C241 CR numbers as additional cases in the shared LDC instruction decoder (`900tbl.hxx`). Since the numbers don't overlap within each register size class, this doesn't affect other TLCS900 variants. Also updated the disassembler (`dasm900.cpp`) to recognize the new CR numbers.
 
-Run MAME with verbose logging and check:
-- Does the Main CPU reach `SubCPU_Send_Payload`? (Look for E1 = `0xE1` in latch writes)
-- Does the Sub CPU receive INT0? (Look for latch read logs)
-- Do MSTAT/SSTAT signals toggle correctly?
-- Does HDMA process DMA transfers after DMAV0 is armed?
-- Are there timeout patterns (transfer aborting)?
+**Files modified:**
+- `mame_driver/src/devices/cpu/tlcs900/900tbl.hxx` — Added CR cases for p_CR8, p_CR16, p_CR32 (both p1 and p2 operands)
+- `mame_driver/src/devices/cpu/tlcs900/dasm900.cpp` — Added CR labels for O_CR8, O_CR16, O_CR32
 
-### Step 3: Investigate DMAR Register
+### DMAM Register Encoding Fix
 
-The DMAR register at `0x109` needs investigation:
-- Check the TMP94C241 datasheet for DMAR behavior
-- Determine if DMAR is needed for DMA triggering
-- If needed: add SFR mapping in `tmp94c241.cpp`
+**Second root cause:** The DMAM (DMA Mode) register encoding in `tlcs900_process_hdma()` was wrong. The implementation used independent source/destination direction bits, but the actual TMP94C241 (like TMP95C061) uses a combined mode encoding:
 
-### Step 4: Verify HDMA Interrupt Triggering
+| DMAM bits 4-0 | Source | Destination | Size |
+|---------------|--------|-------------|------|
+| 0x00 | Fixed | Increment | Byte |
+| 0x01 | Fixed | Increment | Word |
+| 0x02 | Fixed | Increment | Long |
+| 0x04 | Fixed | Decrement | Byte |
+| 0x08 | Increment | Fixed | Byte |
+| 0x10 | Fixed | Fixed | Byte |
 
-Verify that `tlcs900_check_hdma()` correctly processes INT0-triggered DMA:
-- How `generic_latch_8::read()` interacts with INT0 deassertion
-- Whether the interrupt flag is still set when `tlcs900_process_hdma()` checks it
-- Whether HDMA runs between CPU instruction boundaries correctly
+**Impact:** The Sub CPU boot ROM sets DMAM0 = 0 during `INIT_DMA_SERIAL`, which means "byte transfer, source fixed (latch), destination incrementing (buffer)". With the old decoding, DMAM=0 was interpreted as "both fixed", causing all received bytes to overwrite the same address.
 
-### Step 5: Fix Identified Issues
+**Fix:** Replaced the generic bit-field decoding with a switch-based implementation matching the proven TMP95C061 code in MAME.
 
-Based on findings, fix in priority order:
-1. **DMAR register**: Add SFR mapping for `0x109`
-2. **HDMA triggering**: Fix interrupt→DMA trigger chain if broken
-3. **Decompression**: Verify LZSS decompression works with compressed ROM
-4. **Timing**: Adjust if handshake timeouts occur
+## Investigation Log
+
+### Initial Analysis (Log from first test run)
+
+After adding diagnostic logging and the DMAR fix, MAME log analysis revealed:
+- E1 handshake works: SubCPU receives E1, arms DMA0V=0x0A, acknowledges
+- **Zero HDMA transfers**: No "HDMA ch0 complete" messages in 81,969-line log
+- "latch written before being read" warnings: Main CPU bytes overwrite each other
+- Root cause: LDC instructions for DMA registers silently fail due to wrong CR mapping
+
+## Remaining Investigation
+
+### Potential Issues Still to Verify
+
+1. **LZSS Decompression**: Once DMA works, verify the LZSS decompressor at `0x3E0000` produces valid SubCPU code
+2. **E3 Payload Ready Signal**: Verify the SubCPU receives the 0xE3 data command that triggers payload execution
+3. **Timing**: The Main CPU writes bytes in a tight loop; verify SubCPU HDMA can keep up in MAME's interleaved execution model
 
 ## Key Files
 
