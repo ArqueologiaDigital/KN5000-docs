@@ -34,29 +34,36 @@ The KN5000 audio subsystem handles all sound generation, processing, and output.
 │  │   [Keyboard Input]      [Ring Buffer]         [DSP State]     │   │
 │  │   @ 0x110000            @ 0x2B0D              @ 0x3B60        │   │
 │  └─────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────┬───────────────────────────────┘
-                                      │
-          ┌───────────────────────────┼───────────────────────────┐
-          ▼                           ▼                           ▼
-┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│  TONE GENERATOR │       │   DUAL DSP      │       │      DAC        │
-│   @ 0x110000    │       │   @ 0x130000    │       │   @ 0x100000    │
-│                 │       │                 │       │                 │
-│  16 voice slots │       │  4 channels     │       │  Stereo L/R     │
-│  Keyboard input │       │  0x20 byte/ch   │       │  44.1kHz        │
-└─────────────────┘       └─────────────────┘       └─────────────────┘
+└──────────┬─────────────────────┬──────────────────┬────────────────┘
+           │                     │                  │
+     [0x100000]            [Serial1]          [0x130000]
+     Register               UART               DSP
+     Config                Control             Config
+           │                     │                  │
+           ▼                     ▼                  ▼
+┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
+│  TONE GENERATOR │   │   DAC (IC313)   │   │   DUAL DSP      │
+│  IC303          │   │   PCM69AU       │   │   IC310 + IC311  │
+│                 │   │                 │   │                  │
+│  64 voices      │   │  18-bit stereo  │   │  4 channels      │
+│  28 params each │   │  (via serial)   │   │  0x20 bytes/ch   │
+└────────┬────────┘   └────────┬────────┘   └──────────────────┘
+         │                     │
+   [0x110000]            [BCK/SDOR/SDOF]
+   Keyboard Input        Serial Audio Bus
 ```
 
 ## Hardware Addresses
 
 | Component | Address | Description |
 |-----------|---------|-------------|
-| DAC Interface | 0x100000 | Digital-to-Analog converter (16-bit stereo) |
-| Tone Generator Status | 0x110002 | Keyboard input status register |
-| Tone Generator Data | 0x110000 | Voice data (note + velocity) |
+| Tone Gen Registers | 0x100000/0x100002 | Register-indirect config (64 voices, addr/data) |
+| Tone Gen Keyboard | 0x110000/0x110002 | Voice events (status + note/velocity data) |
 | Inter-CPU Latch | 0x120000 | Bidirectional data register |
-| DSP Registers | 0x130000 | 4 channels × 0x20 bytes each |
+| DSP Registers | 0x130000/0x130002 | Register-indirect config (4 channels, addr/data) |
 | HDAE5000 PPI | 0x160000 | Parallel port interface (expansion) |
+
+See [Tone Generator]({{ site.baseurl }}/tone-generator/) for the complete register map and chip inventory.
 
 ## Sub CPU Audio Processing
 
@@ -177,7 +184,12 @@ Channel 3: 0x130060 - 0x13007F
 
 ## Tone Generator
 
-The tone generator handles keyboard input at 0x110000:
+The tone generator (IC303, TC183C230002) is a custom Matsushita 64-voice wavetable synthesis LSI. It has two interfaces:
+
+- **Register config** at 0x100000/0x100002: Write voice parameters and global settings via register-indirect addressing (28 params per voice, 13 global registers)
+- **Keyboard input** at 0x110000/0x110002: Read voice events (note on/off with velocity)
+
+See [Tone Generator]({{ site.baseurl }}/tone-generator/) for the complete register map, initialization sequence, and chip inventory.
 
 ### Voice Slot Table
 
@@ -189,8 +201,10 @@ The tone generator handles keyboard input at 0x110000:
 
 | Routine | Address | Description |
 |---------|---------|-------------|
+| `ToneGen_Config_Init` | 0x02DFCF | Configure all 64 voices and global registers |
 | `ToneGen_Init` | 0x03D016 | Set mode to 6, start polling |
-| `ToneGen_Process_Notes` | 0x03D01E | Process keyboard events |
+| `ToneGen_Poll_Init` | 0x03D227 | Read initial voice state (16 slots) |
+| `ToneGen_Process_Notes` | 0x03D01E | Process keyboard events in main loop |
 | `ToneGen_Read_Voice_Data` | 0x03D0C5 | Read note/velocity from hardware |
 | `ToneGen_Calc_Pitch` | 0x03D11F | Calculate pitch value |
 
@@ -199,6 +213,7 @@ The tone generator handles keyboard input at 0x110000:
 - P6.7 controls A23 address line for tone generator access
 - Status read: 0x110002 (bit 0 = data ready)
 - Data read: 0x110000 (16-bit: low byte = note, high byte = velocity)
+- Register write: 0x100000 (address), 0x100002 (data) with P6.7 chip-select protocol
 
 ## Sound Categories
 
@@ -253,9 +268,34 @@ The Main CPU organizes sounds into 16 categories with pointers at 0xE023B0:
 - [CPU Subsystem]({{ site.baseurl }}/cpu-subsystem/) - Main and Sub CPU details
 - [System Overview]({{ site.baseurl }}/system-overview/) - Overall architecture
 
+## Serial Port 1 Interface
+
+The Sub CPU's serial port 1 connects to an audio peripheral (likely the DAC IC313 or one of the DSPs) for control commands. The "SA" designation in the service manual schematics refers to "Sub Address" bus lines, not a chip name.
+
+| Parameter | Value |
+|-----------|-------|
+| Mode | 8-bit UART (SC1MOD = 0x29) |
+| Baud Rate | ~500kHz (20MHz / 4 / 10) |
+| Sync Byte | 0xFE (sent at init and periodically) |
+| TX Buffer | 1024 bytes at 0x0A00-0x0DFF |
+| RX Buffer | 512 bytes at 0x0E16-0x1015 |
+
+See [Tone Generator]({{ site.baseurl }}/tone-generator/#serial-port-1-sa-interface) for details.
+
+## Related Pages
+
+- [Tone Generator]({{ site.baseurl }}/tone-generator/) -- Register map and chip inventory
+- [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) -- Communication details
+- [SubCPU Payload Loading]({{ site.baseurl }}/subcpu-payload-loading/) -- How firmware reaches the SubCPU
+- [MIDI Subsystem]({{ site.baseurl }}/midi-subsystem/) -- External MIDI handling
+- [CPU Subsystem]({{ site.baseurl }}/cpu-subsystem/) -- Main and Sub CPU details
+- [System Overview]({{ site.baseurl }}/system-overview/) -- Overall architecture
+
 ## Research Needed
 
 - [ ] Document waveform ROM format and sample layout
 - [ ] Analyze DSP effects processing algorithms
 - [ ] Map remaining proprietary CC handlers (0x97-0x9D)
-- [ ] Document DAC register interface details
+- [ ] Identify exact device on Serial Port 1 (trace PCB connections)
+- [ ] Decode tone generator register semantics (pitch, envelope, filter, etc.)
+- [ ] Analyze DSP1/DSP2 command sets

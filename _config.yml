@@ -21,6 +21,8 @@ header_pages:
   - subcpu-payload-loading.md
   - rom-reconstruction.md
   # Subsystems & Protocols
+  - audio-subsystem.md
+  - tone-generator.md
   - control-panel-protocol.md
   - serial-firmware-compatibility.md
   - hdae5000.md

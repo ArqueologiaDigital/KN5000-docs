@@ -252,24 +252,50 @@ Logging is controlled by `VERBOSE` flags in `kn5000.cpp` and uses MAME's `logmac
 - SubCPU initializes serial ports, configures interrupts from within payload code
 - "Checking device" LED stops blinking (SubCPU left boot ROM polling loop)
 
-## Remaining Issue: Sound Name Error
+## Remaining Issues
 
-The "Sound Name Error" persists because the SubCPU's payload code attempts to communicate with unimulated sound hardware:
+### Fix 6: DMAR Software-Triggered Burst DMA (Pending Test)
+
+Analysis of the SubCPU payload's main loop revealed that `InterCPU_DMA_Send_Chunk` (at `0x020CF3`) uses the `DMAR` register to trigger DMA channel 2 for sending data back to the Main CPU. After triggering, it waits in `DMA_Chunk_Wait` for `DMA_XFER_STATE` to be cleared by the `MICRODMA_CH2_HANDLER` interrupt (INTTC2 at vector `0x9C`).
+
+**Bug:** The previous `dmar_w()` implementation called `process_hdma()`, which requires a matching interrupt flag to be pending. Software-triggered DMA via DMAR should bypass the interrupt check and perform a burst transfer (all DMAC units at once), then fire INTTC on completion.
+
+**Fix:** Replaced `dmar_w()` to call a new `tlcs900_process_software_dma()` function that transfers the entire block without checking interrupt flags and fires the INTTC completion interrupt when done.
+
+Without this fix, every attempt by the SubCPU to send data back to the Main CPU would silently fail, and the `DMA_Chunk_Wait` loop would hang forever.
+
+### SubCPU Initialization Analysis
+
+Detailed analysis of the SubCPU payload init sequence revealed that **initialization does NOT hang** -- all init-phase loops are bounded by timeouts or complete harmlessly with unmapped hardware returning 0:
+
+| Loop | Location | Reads From | Bounded? | Behavior with Unmapped HW |
+|------|----------|-----------|----------|--------------------------|
+| `DSP_Send_Command` wait | 0x036331 | Port PH bit 0 | Yes (8,000 iter) | PH output latch reads back 1 -- exits immediately |
+| `DSP_Send_Data` wait | 0x0367EE | Port PH bit 0 | Yes (8,000 iter) | Same as above |
+| `ToneGen_Poll_Delay` | 0x03D227 | Nothing (pure delay) | Yes (10,000 iter) | Runs 160,000 iterations total, completes |
+| `ToneGen_Poll_Read` | 0x03D239 | 0x110002 / 0x110000 | Single read | Returns 0, processes 16 fake note-off events |
+
+After init, the SubCPU enters the main event loop (`LABEL_01FAE6`), which runs continuously. The main loop does NOT hang because:
+- `ToneGen_Process_Notes` reads 0 from unmapped 0x110002 (no notes available)
+- Ring buffers are empty (no serial data, no queued commands)
+- No DMA transfers are triggered on the first iterations
+
+### "Sound Name Error" Root Cause
+
+The "Sound Name Error" is triggered by the Main CPU's `MainGetSoundName()` function (at `0xF98D3E`). It sends a sound name request to the SubCPU via the inter-CPU latch, then waits for a 32-byte response with a timeout of ~60,000 iterations. When the SubCPU never responds, the timeout fires and displays the error.
+
+The SubCPU doesn't respond because of the broken DMAR implementation: when the Main CPU sends a command via the latch, the SubCPU receives it (via HDMA on channel 0), processes it, and tries to send a response via DMA channel 2 using DMAR. But the software-triggered DMA silently fails, `MICRODMA_CH2_HANDLER` never fires, `DMA_XFER_STATE` is never cleared, and the SubCPU hangs in `DMA_Chunk_Wait` forever.
+
+**Expected resolution:** The DMAR burst DMA fix should allow the SubCPU to respond to Main CPU requests. However, unimulated sound peripherals mean the responses will contain no real audio data:
 
 | Device | Address | Chip | Status in MAME |
 |--------|---------|------|----------------|
-| Tone generator | 0x110000 | IC303 | **Commented out** in memory map |
-| DSP | 0x130000 | IC311 | **Unmapped** |
-| SA chip | Serial port 1 | Via SIO | **No emulated receiver** |
+| Tone gen registers | 0x100000/0x100002 | IC303 (TC183C230002) | **Not mapped** -- writes go to void |
+| Tone gen keyboard | 0x110000/0x110002 | IC303 | **Commented out** -- reads return 0 |
+| DSP registers | 0x130000/0x130002 | IC310/IC311 | **Not mapped** -- writes go to void |
+| Serial1 (DAC/DSP control) | UART port 1 | IC313? (PCM69AU) | **No receiver** |
 
-The SubCPU payload initializes successfully and begins executing, but gets stuck during sound hardware initialization because:
-1. Writes to the tone generator at 0x110000 go nowhere
-2. Reads from the DSP at 0x130000 return open bus
-3. Serial communication with the SA chip has no receiver
-
-As a result, zero SubCPU→MainCPU latch writes occur after the payload starts, meaning the SubCPU never responds to main CPU sound requests.
-
-**This is a different problem scope** from the original payload transfer investigation. Fixing this requires emulation of the KN5000's sound synthesis hardware.
+See [Tone Generator]({{ site.baseurl }}/tone-generator/) for the complete register map and chip inventory.
 
 ## Key Files
 
