@@ -218,6 +218,28 @@ m_maincpu->porta_write().set([this] (u8 data) {
 
 `SET 0, (PA)` at `0xEF05F3` releases the Sub CPU before payload transfer. A delay loop of 0x2000 iterations follows before the first E1 transfer, allowing the Sub CPU boot ROM to initialize.
 
+## Fixes Applied
+
+### DMAR Register Implementation (0x109)
+
+The DMAR register at SFR address `0x109` was missing from the MAME `tmp94c241` device. This register provides software-triggered DMA: writing bit N triggers an immediate DMA transfer on channel N.
+
+**Fix:** Added `dmar_w()` handler at address `0x109` in the SFR address map. When a bit is set, it calls `tlcs900_process_hdma()` for the corresponding channel, performing an immediate DMA transfer.
+
+This register is used by the Main CPU's INT0 handler (`LD (DMAR), 001h` at `0xEF352D`) to trigger DMA channel 0 when receiving data from the Sub CPU. Without this fix, reverse communication (Sub CPU → Main CPU) via DMA was broken.
+
+### Diagnostic Logging
+
+Added comprehensive logging to trace the inter-CPU communication:
+
+- **Latch writes**: Command bytes (E1/E2/E3) logged with PC address; data bytes logged at verbose level
+- **Handshake signals**: MSTAT/SSTAT changes logged with old/new values
+- **Sub CPU reset**: Port A bit 0 changes logged
+- **DMA vectors**: DMAV register writes logged with channel and value
+- **DMA completion**: Logged when HDMA transfer count reaches zero
+
+Logging is controlled by `VERBOSE` flags in `kn5000.cpp` and uses MAME's `logmacro.h` system.
+
 ## Research Plan
 
 ### Step 1: Add Diagnostic Logging
