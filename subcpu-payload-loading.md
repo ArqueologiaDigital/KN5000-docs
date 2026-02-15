@@ -8,7 +8,7 @@ permalink: /subcpu-payload-loading/
 
 This page documents the investigation into SubCPU firmware payload loading in MAME emulation. The investigation uncovered multiple bugs in MAME's TMP94C241 emulation (LDC CR mapping, DMAM encoding, HDMA/IRQ priority) that prevented DMA transfers. All have been fixed, and the SubCPU payload now loads and executes successfully.
 
-> **Status:** Payload transfer is **WORKING**. The SubCPU receives all 9 E1 blocks (524,358 HDMA transfers) and begins executing payload code. The remaining "Sound Name Error" is caused by unimulated SubCPU sound peripherals (tone generator IC303, DSP IC311), not by the payload transfer itself. See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for the overall boot flow and [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for latch communication details.
+> **Status:** Payload transfer is **WORKING**. The SubCPU receives all 9 E1 blocks (524,358 HDMA transfers) and begins executing payload code. Active investigation continues on INT0-driven inter-CPU communication after boot -- fixes for level-detect re-assertion and EI/RETI interrupt shadow are being tested. See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for the overall boot flow and [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for latch communication details.
 
 ## Background
 
@@ -252,6 +252,33 @@ Logging is controlled by `VERBOSE` flags in `kn5000.cpp` and uses MAME's `logmac
 - SubCPU initializes serial ports, configures interrupts from within payload code
 - "Checking device" LED stops blinking (SubCPU left boot ROM polling loop)
 
+### Test Run 4: After DMAR burst DMA fix + INT0 level-detect re-assertion (545K line log)
+
+- **0 INT0 dispatches** -- the level-detect re-assertion was not yet active in this test
+- 524,374 HDMA transfers (payload loading phase works)
+- SubCPU goes silent after tone generator init -- no INT0 interrupts fire post-boot
+- 36 latch overflow warnings
+- "Sound Name Error" persists
+- **Theory confirmed:** Without level-detect re-assertion, INT0 fires once (consumed by HDMA during boot) but never again after the payload sets DMA0V=0 and expects ISR-based INT0 handling
+
+### Test Run 5: After INT0 level-detect re-assertion fix (3M line log)
+
+- **394,118 INT0 dispatches** (up from 0!) -- level-detect re-assertion IS working
+- 524,374 INT0 ASSERT events
+- **INT0 storm detected:** 91,391 INT0 dispatches from PC=`0x01FFF0` (the NOP between `EI 0` and `EI 6`)
+- Only 5 latch overflow warnings (down from 36)
+- Last HDMA ch0 complete at dst=`0x0010F1` (payload's own HDMA setup)
+- After that, INT0 storm begins and SubCPU is trapped in infinite ISR dispatch loop
+- Blinking patterns of the SubCPU checking device slightly different vs previous test
+- "Sound Name Error" still present
+- **Root cause identified:** Missing interrupt shadow after RETI allows INT0 to re-dispatch before the return-address instruction executes, preventing the `EI 0; NOP; EI 6` masking pattern from working. See Fix 8.
+
+### Test Run 6: After EI/RETI interrupt shadow fix (Pending)
+
+- Fix 8 applied: `m_irq_inhibit` flag defers interrupt acceptance by 1 instruction after EI and RETI
+- Expected outcome: INT0 storm at PC=`0x01FFF0` should be eliminated; the `EI 0; NOP; EI 6` pattern should work as designed
+- Files synced to `/mnt/shared/fix_payload/mame_driver/` for building
+
 ## Remaining Issues
 
 ### Fix 6: DMAR Software-Triggered Burst DMA (Pending Test)
@@ -263,6 +290,69 @@ Analysis of the SubCPU payload's main loop revealed that `InterCPU_DMA_Send_Chun
 **Fix:** Replaced `dmar_w()` to call a new `tlcs900_process_software_dma()` function that transfers the entire block without checking interrupt flags and fires the INTTC completion interrupt when done.
 
 Without this fix, every attempt by the SubCPU to send data back to the Main CPU would silently fail, and the `DMA_Chunk_Wait` loop would hang forever.
+
+### Fix 7: INT0 Level-Detect Re-assertion
+
+**Root cause:** On real TMP94C241 hardware, when IIMC bit 1 = 0 (level-detect mode for INT0), the interrupt flag in INTE0AD is continuously driven by the external input level. MAME's `check_irqs()` clears the flag when dispatching the interrupt, but on real hardware the flag immediately re-asserts if the input pin is still active.
+
+During boot, this doesn't matter because HDMA consumes INT0 (the flag is cleared but HDMA handles the data transfer). After boot, when the SubCPU payload takes over and configures DMA0V=0 (disabling HDMA for INT0), the ISR handles INT0 directly. Without level-detect re-assertion, INT0 fires once but never again -- the SubCPU stops receiving commands from the Main CPU.
+
+**Fix:** Added re-assertion logic in `check_irqs()`: after dispatching an INT0 interrupt and clearing its flag, if INT0 is in level-detect mode and the input is still ASSERT_LINE, immediately re-set the INTE0AD flag and schedule another `check_irqs`.
+
+```cpp
+// In check_irqs(), after clearing INT0's flag:
+if (tmp94c241_irq_vector_map[irq].reg == INTE0AD &&
+    tmp94c241_irq_vector_map[irq].iff == 0x08 &&
+    !(m_iimc & 0x02) &&
+    m_level[TLCS900_INT0] == ASSERT_LINE)
+{
+    m_int_reg[INTE0AD] |= 0x08;
+    m_check_irqs = 1;
+}
+```
+
+### Fix 8: EI/RETI Interrupt Shadow (Pending Test)
+
+**Root cause of INT0 storm:** Fix 7 exposed a second bug. The SubCPU payload uses a deliberate `EI 0; NOP; EI 6` pattern at address `0x01FFEE`-`0x01FFF1` to create a one-instruction interrupt window:
+
+```asm
+EI 0    ; 01FFEE - Enable all interrupts (IFF=0)
+NOP     ; 01FFF0 - One-instruction window for pending interrupts
+EI 6    ; 01FFF1 - Re-mask low-priority interrupts (IFF=6)
+```
+
+On real TLCS-900 hardware, both EI and RETI defer interrupt acceptance until after the next instruction executes (a "1-instruction interrupt shadow"). This means:
+1. `EI 0` enables interrupts, but the CPU executes NOP before accepting any
+2. INT0 dispatches from `0x01FFF1` (the address of `EI 6`)
+3. ISR handles INT0, returns via RETI
+4. RETI has its own shadow -- `EI 6` executes before another INT0 can fire
+5. IFF is now 6, masking INT0 (priority 1) -- storm prevented
+
+In MAME, `check_irqs()` runs at the START of the execution loop, BEFORE the instruction executes. After RETI restores IFF=0, `check_irqs` fires before the return-address instruction (NOP) gets a chance to execute. The ISR checks MSTAT0=1, exits without reading the latch, RETI returns to 01FFF0, and INT0 re-dispatches immediately -- an infinite storm of 91,391+ INT0 dispatches in the log.
+
+**Fix:** Added `m_irq_inhibit` flag to the TLCS900 base class. Both `op_EI()` and `op_RETI()` set this flag. In `execute_run()`, when `m_irq_inhibit` is set, interrupt checking is deferred by one instruction:
+
+```cpp
+// In execute_run():
+if ( m_check_irqs )
+{
+    if ( m_irq_inhibit )
+    {
+        // Interrupt shadow: defer until after next instruction
+        m_irq_inhibit = false;
+    }
+    else
+    {
+        tlcs900_check_irqs();
+        m_check_irqs = 0;
+    }
+}
+```
+
+**Files modified:**
+- `mame_driver/src/devices/cpu/tlcs900/tlcs900.h` -- Added `bool m_irq_inhibit` member
+- `mame_driver/src/devices/cpu/tlcs900/tlcs900.cpp` -- Shadow logic in `execute_run()`, init in `device_start()`/`device_reset()`
+- `mame_driver/src/devices/cpu/tlcs900/900tbl.hxx` -- Set `m_irq_inhibit = true` in `op_EI()` and `op_RETI()`
 
 ### SubCPU Initialization Analysis
 
@@ -280,13 +370,19 @@ After init, the SubCPU enters the main event loop (`LABEL_01FAE6`), which runs c
 - Ring buffers are empty (no serial data, no queued commands)
 - No DMA transfers are triggered on the first iterations
 
-### "Sound Name Error" Root Cause
+### "Sound Name Error" Root Cause (Updated)
 
 The "Sound Name Error" is triggered by the Main CPU's `MainGetSoundName()` function (at `0xF98D3E`). It sends a sound name request to the SubCPU via the inter-CPU latch, then waits for a 32-byte response with a timeout of ~60,000 iterations. When the SubCPU never responds, the timeout fires and displays the error.
 
-The SubCPU doesn't respond because of the broken DMAR implementation: when the Main CPU sends a command via the latch, the SubCPU receives it (via HDMA on channel 0), processes it, and tries to send a response via DMA channel 2 using DMAR. But the software-triggered DMA silently fails, `MICRODMA_CH2_HANDLER` never fires, `DMA_XFER_STATE` is never cleared, and the SubCPU hangs in `DMA_Chunk_Wait` forever.
+**Multiple contributing factors identified:**
 
-**Expected resolution:** The DMAR burst DMA fix should allow the SubCPU to respond to Main CPU requests. However, unimulated sound peripherals mean the responses will contain no real audio data:
+1. **DMAR burst DMA (Fix 6):** The SubCPU's `InterCPU_DMA_Send_Chunk` uses DMAR to trigger DMA channel 2 for sending responses. Without burst DMA support, responses silently fail and the SubCPU hangs in `DMA_Chunk_Wait`.
+
+2. **INT0 level-detect (Fix 7):** After the payload takes over from the boot ROM and sets DMA0V=0, INT0 must be delivered as CPU interrupts (not HDMA). Without level-detect re-assertion, INT0 fires once and never again -- the SubCPU stops receiving commands entirely.
+
+3. **EI/RETI interrupt shadow (Fix 8):** The level-detect fix exposed the interrupt shadow bug. The SubCPU's `EI 0; NOP; EI 6` interrupt window pattern causes an infinite INT0 storm because MAME dispatches INT0 before the return-address instruction executes. The SubCPU is trapped and can never process commands.
+
+All three fixes must be in place for the SubCPU to successfully receive and respond to Main CPU commands. Even with all fixes, unimulated sound peripherals mean responses will contain no real audio data:
 
 | Device | Address | Chip | Status in MAME |
 |--------|---------|------|----------------|
@@ -297,19 +393,60 @@ The SubCPU doesn't respond because of the broken DMAR implementation: when the M
 
 See [Tone Generator]({{ site.baseurl }}/tone-generator/) for the complete register map and chip inventory.
 
+## Debugging Inner Thoughts
+
+This section captures the detailed reasoning process behind each investigation step, preserving the "how we got there" alongside the results.
+
+### Reasoning: INT0 Level-Detect Re-assertion (Fix 7)
+
+**Starting observation:** After applying DMAR burst DMA fix, log showed 0 INT0 dispatches post-boot. The payload loaded fine (524K HDMA transfers) but then the SubCPU went completely silent.
+
+**Key insight chain:**
+1. During boot, INT0 is consumed by HDMA (DMA0V=0x0A). After boot, the payload calls `InterCPU_Latch_Setup` which sets DMA0V=0x0A for receive and DMA2V for transmit -- but later the main loop's INT0 handler at `0x01F929` processes INT0 via ISR, NOT HDMA. When does DMA0V become 0?
+2. Searched the payload code: `InterCPU_Latch_Setup` (line 10964) sets `LDC DMA0V, 000Ah` -- armed for HDMA. But the INT0 handler at line 11247 checks MSTAT0 and if conditions are right, reads the latch byte directly. This means DMA0V stays armed for HDMA throughout, and the HDMA path handles most bytes, but the ISR handles command bytes.
+3. Wait -- if HDMA handles INT0, `check_hdma` processes it and clears the flag. But `check_irqs` re-assertion only fires when check_irqs dispatches INT0 to the ISR. In HDMA mode, `check_hdma` clears the flag and... does the level-detect re-assertion fire?
+4. **Root cause found:** `check_hdma` calls `process_hdma` which clears the INT0 flag at line 1106. But there's no re-assertion logic in `check_hdma` -- only in `check_irqs`. Since the latch is still pending (ASSERT_LINE), the flag should re-assert. But `execute_set_input`'s `update_int_reg` lambda only updates on level CHANGE (`if (level != m_level[input])`). Since the latch read triggers synchronous CLEAR followed by deferred ASSERT via `synchronize()`, the level does toggle -- but the ASSERT arrives as a callback AFTER the current instruction.
+5. The real issue is simpler: when `check_irqs` dispatches INT0, it clears the flag. On real hardware, level-detect means the flag stays set as long as the input is asserted. We need to re-assert immediately after clearing.
+
+### Reasoning: EI/RETI Interrupt Shadow (Fix 8)
+
+**Starting observation:** After Fix 7, log exploded to 3M lines with 394K INT0 dispatches. 91K of them were from PC=`0x01FFF0` -- an INT0 storm.
+
+**Key insight chain:**
+1. What's at `0x01FFF0`? It's a NOP instruction, sandwiched between `EI 0` (01FFEE) and `EI 6` (01FFF1). This is a deliberate pattern: enable all interrupts for exactly one instruction, then re-mask.
+2. Why does INT0 keep dispatching from `0x01FFF0` instead of letting NOP execute and reaching EI 6?
+3. Checked `execute_run()` flow: `check_irqs` runs at the START of the loop, BEFORE instruction execution. After RETI restores SR (with IFF=0), the next loop iteration runs `check_irqs` BEFORE executing the instruction at the return address.
+4. So the flow is: `RETI` → returns to `0x01FFF0` → loop starts → `check_irqs` fires (IFF=0, INT0 pending) → dispatches INT0 from `0x01FFF0` → NOP never executes!
+5. The ISR at this point checks MSTAT0 (PD bit 2). If MSTAT0=1, it exits without reading the latch (because the Main CPU is in the middle of a transfer phase). The latch stays pending, INT0 re-asserts (Fix 7), RETI returns to `0x01FFF0`, and the cycle repeats.
+6. **On real TLCS-900 hardware:** After RETI (and after EI), the CPU executes at least one instruction before accepting another interrupt. This is the "interrupt shadow" -- identical to the Z80's behavior after EI. The NOP absorbs one ISR call, then EI 6 at `0x01FFF1` raises IFF to 6, masking INT0 (priority 1).
+7. Checked `op_RETI` in `900tbl.hxx`: it sets `m_prefetch_clear = true` and `m_check_irqs = 1` but has NO interrupt shadow mechanism.
+8. **Fix:** Add `m_irq_inhibit` flag, set by EI and RETI, that causes `execute_run` to skip one `check_irqs` call.
+
+### DMA Macro Name Confusion (Side Investigation)
+
+During the INT0 investigation, discovered that several DMA macros in `tmp94c241.inc` had misleading names:
+- `LDC_DMAM0_WA` (bytes D8,2E,40) actually writes to CR 0x40 = DMAC0 (count register, NOT mode)
+- `LDC_DMAC0_A` (bytes C9,2E,42) actually writes to CR 0x42 = DMAM0 (mode register, NOT count)
+
+The names had DMAC and DMAM swapped. Fixed in commit b4ed825 -- all macros now correctly named, duplicates removed, and all call sites updated across all assembly files. Build still produces 100% byte-matching ROMs.
+
 ## Key Files
 
 | File | Purpose |
 |------|---------|
 | `mame_driver/src/mame/matsushita/kn5000.cpp` | Main MAME driver (latches, ports, memory map) |
-| `mame_driver/src/devices/cpu/tlcs900/tmp94c241.cpp` | CPU emulation (DMA, SFR, interrupts) |
+| `mame_driver/src/devices/cpu/tlcs900/tmp94c241.cpp` | CPU emulation (DMA, SFR, interrupts, INT0 re-assertion) |
 | `mame_driver/src/devices/cpu/tlcs900/tmp94c241.h` | CPU header (DMA state) |
-| `mame_driver/src/devices/cpu/tlcs900/900tbl.hxx` | Shared TLCS900 instruction decoder (LDC CR fix) |
+| `mame_driver/src/devices/cpu/tlcs900/tlcs900.cpp` | TLCS900 base class (execute_run, interrupt shadow) |
+| `mame_driver/src/devices/cpu/tlcs900/tlcs900.h` | TLCS900 base header (m_irq_inhibit) |
+| `mame_driver/src/devices/cpu/tlcs900/900tbl.hxx` | Shared instruction decoder (LDC CR, EI/RETI shadow) |
 | `mame_driver/src/devices/cpu/tlcs900/dasm900.cpp` | Disassembler (CR label fix) |
 | `maincpu/kn5000_v10_program.asm:134123` | `SubCPU_Send_Payload` |
 | `maincpu/kn5000_v10_program.asm:139166` | `InterCPU_E1_Bulk_Transfer` |
 | `maincpu/kn5000_v10_program.asm:139115` | `Audio_DMA_Transfer` |
 | `maincpu/kn5000_v10_program.asm:140484` | LZSS decompressor (`LABEL_EF41E3`) |
-| `subcpu/boot/kn5000_subcpu_boot.asm:1159` | `InterCPU_RX_Handler` (INT0 handler) |
+| `subcpu/kn5000_subprogram_v142.asm:10964` | `InterCPU_Latch_Setup` (payload DMA config) |
+| `subcpu/kn5000_subprogram_v142.asm:11247` | Payload INT0 handler |
+| `subcpu/boot/kn5000_subcpu_boot.asm:1159` | `InterCPU_RX_Handler` (boot ROM INT0 handler) |
 | `subcpu/boot/kn5000_subcpu_boot.asm:718` | `INIT_DMA_SERIAL` (DMA setup) |
 | `subcpu/boot/kn5000_subcpu_boot.asm:405` | Main loop (payload ready polling) |
