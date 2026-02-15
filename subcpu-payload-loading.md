@@ -273,11 +273,34 @@ Logging is controlled by `VERBOSE` flags in `kn5000.cpp` and uses MAME's `logmac
 - "Sound Name Error" still present
 - **Root cause identified:** Missing interrupt shadow after RETI allows INT0 to re-dispatch before the return-address instruction executes, preventing the `EI 0; NOP; EI 6` masking pattern from working. See Fix 8.
 
-### Test Run 6: After EI/RETI interrupt shadow fix (Pending)
+### Test Run 6: After EI/RETI interrupt shadow fix (14.8M line log)
 
-- Fix 8 applied: `m_irq_inhibit` flag defers interrupt acceptance by 1 instruction after EI and RETI
-- Expected outcome: INT0 storm at PC=`0x01FFF0` should be eliminated; the `EI 0; NOP; EI 6` pattern should work as designed
-- Files synced to `/mnt/shared/fix_payload/mame_driver/` for building
+- **EI/RETI shadow fix WORKED:** 0 INT0 dispatches from PC=`0x01FFF0` (old storm at boot ROM window eliminated)
+- **NEW INT0 storm emerged:** 12,203,435 INT0 dispatches (82% of all log lines), mostly from DSP_SEND_DATA loop (PCs `0x036828`-`0x03685E`)
+- 524,353 INT0 ASSERT / 524,354 CLEAR events → ~23 dispatches per ASSERT (level-detect amplification)
+- 22,719 INT0 dispatches from PC=`0x01FFF1` (EI 6 address) — these are the correctly-working EI windows
+- INTTC0 = 18 (payload DMA completions), **INTTC2 = 0** (SubCPU never sends data back)
+- 14 latch overflow warnings (in two clusters: post-boot + E2 command attempt)
+- Only 38 INTA + 82 INTRX1 + 157 INTTX1 on MainCPU (very little MainCPU activity)
+- Payload loading succeeded (all 9 E1 blocks, 524K HDMA transfers)
+- SubCPU payload booted (SSTAT 0→3 at PC=`0x01F986`)
+- **SubCPU stuck in `DSP_Send_Data` timeout loop** — DSP not emulated, `DSP_Read_Status` returns 0
+
+**Root cause chain identified:**
+1. `DSP_Read_Status` reads Port PH bit 0, which returns 0 (DSP "not ready") because `port_r()` ignores the direction register
+2. PH.0 is configured as OUTPUT (PHCR=0x07), so reading should return the output latch (1, set by `SET 0, (PH)`)
+3. The SubCPU's DSP init has ~40 `DSP_Send_Data` calls, each with an 8000-iteration timeout loop
+4. During timeout loops, IFF=0 (EI 0 in the function), so INT0 fires on every instruction
+5. The INT0 ISR checks MSTAT0=1 (MainCPU in data phase), exits without reading the latch
+6. Level-detect re-assertion causes INT0 to fire 23x per assertion, creating massive overhead
+7. The MainCPU's E2 command handshake check passes spuriously (SSTAT1 already 0 from a previous transfer, not from SubCPU acknowledgment)
+8. MainCPU sets MSTAT0=1 and starts sending data before SubCPU reads the command byte
+9. All data bytes overflow the latch (written before being read)
+
+### Test Run 7: After port_r direction-aware fix (Pending)
+
+- Fix 9 applied: `port_r()` now returns `(latch & dir) | (external & ~dir)` — output bits from latch, input bits from external callback
+- Expected outcome: `DSP_Read_Status` returns 1 (output latch), DSP init skips timeout loops, SubCPU enters main event loop quickly and processes commands before MainCPU's Sound Name Error timeout
 
 ## Remaining Issues
 
@@ -354,6 +377,32 @@ if ( m_check_irqs )
 - `mame_driver/src/devices/cpu/tlcs900/tlcs900.cpp` -- Shadow logic in `execute_run()`, init in `device_start()`/`device_reset()`
 - `mame_driver/src/devices/cpu/tlcs900/900tbl.hxx` -- Set `m_irq_inhibit = true` in `op_EI()` and `op_RETI()`
 
+### Fix 9: Port Read Direction Awareness (Pending Test)
+
+**Root cause of DSP timeout loops:** The `port_r()` function in `tmp94c241.cpp` always returns the external callback value, ignoring the port direction register (PXCR). On real TMP94C241 hardware, reading a port returns:
+- Output latch value for bits configured as output (PXCR bit = 1)
+- External pin level for bits configured as input (PXCR bit = 0)
+
+The SubCPU firmware configures Port PH bits 0-2 as output (`LD (PHCR), 007h`). The `DSP_Read_Status` function at `0x0383F7` does `SET 0, (PH)` then reads back PH.0 to check DSP ready status. Since PH.0 is output, the read should return 1 (what was just written). But MAME's `port_r()` called the external callback (unconnected for Port PH), returning 0.
+
+This caused all `DSP_Send_Data` and `DSP_Send_Command` calls to enter their timeout loops (0x1F40 = 8000 iterations each), severely delaying SubCPU initialization. During these long timeouts, INT0 level-detect re-assertion created a massive interrupt storm (12M+ dispatches).
+
+**Fix:** Made `port_r()` direction-aware:
+
+```cpp
+uint8_t dir = m_port_control[P];
+uint8_t external = m_port_read[P](0);
+return (m_port_latch[P] & dir) | (external & ~dir);
+```
+
+This fix improves ALL port reads:
+- **Port PH** (SubCPU): DSP status reads back output latch → DSP init completes instantly
+- **Port D** (SubCPU): SSTAT output bits read back from latch; MSTAT input bits from callback
+- **Port Z** (MainCPU): MSTAT output bits read back from latch; SSTAT input bits from callback
+
+**Files modified:**
+- `mame_driver/src/devices/cpu/tlcs900/tmp94c241.cpp` -- `port_r()` direction-aware implementation
+
 ### SubCPU Initialization Analysis
 
 Detailed analysis of the SubCPU payload init sequence revealed that **initialization does NOT hang** -- all init-phase loops are bounded by timeouts or complete harmlessly with unmapped hardware returning 0:
@@ -421,6 +470,23 @@ This section captures the detailed reasoning process behind each investigation s
 6. **On real TLCS-900 hardware:** After RETI (and after EI), the CPU executes at least one instruction before accepting another interrupt. This is the "interrupt shadow" -- identical to the Z80's behavior after EI. The NOP absorbs one ISR call, then EI 6 at `0x01FFF1` raises IFF to 6, masking INT0 (priority 1).
 7. Checked `op_RETI` in `900tbl.hxx`: it sets `m_prefetch_clear = true` and `m_check_irqs = 1` but has NO interrupt shadow mechanism.
 8. **Fix:** Add `m_irq_inhibit` flag, set by EI and RETI, that causes `execute_run` to skip one `check_irqs` call.
+
+### Reasoning: Port Read Direction & DSP Timeout (Fix 9)
+
+**Starting observation:** Test Run 6 showed the EI/RETI shadow fix worked (0 dispatches from PC=01FFF0), but a NEW INT0 storm emerged from DSP_SEND_DATA loop PCs. 12.2M INT0 dispatches with only 524K ASSERTs = 23x amplification.
+
+**Key insight chain:**
+1. The storm PCs (0x036828-0x03685E) are in `DSP_Send_Data_WaitLoop` and `DSP_Send_Data_Poll` — a bounded timeout loop (8000 iterations) that polls DSP readiness via `DSP_Read_Status`.
+2. `DSP_Read_Status` at 0x0383F7 does: `SET 0, (PH)` → `LDCF 0, (PH)` → return carry. It sets PH.0 high, then reads it back.
+3. The SubCPU firmware sets `PHCR = 0x07` (line 9318) — Port PH bits 0-2 are OUTPUT.
+4. On real hardware, reading an output bit returns the output latch. Since `SET 0, (PH)` just wrote 1, the read should return 1 (DSP "ready").
+5. But MAME's `port_r()` calls `m_port_read[P](0)` — the external callback. Port PH has no callback → returns 0.
+6. So `DSP_Read_Status` always returns 0 (not ready), causing 8000-iteration timeouts.
+7. `DSP_Send_Data` has `EI 0` / `EI 6` windowing — IFF=0 during the timeout loop body.
+8. With level-detect re-assertion, every pending latch byte causes INT0 to fire ~23 times per assertion (ISR checks MSTAT0=1, exits without reading, INT0 re-fires).
+9. The E2 handshake protocol race: MainCPU checks SSTAT1=0 (already low from a previous handshake), proceeds to set MSTAT0=1 before SubCPU reads the command.
+
+**The fix** is fundamental: make `port_r()` respect the direction register, combining output latch for output bits and external callback for input bits. This is correct for ALL ports, not just PH.
 
 ### DMA Macro Name Confusion (Side Investigation)
 
