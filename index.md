@@ -67,6 +67,7 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 | Page | Description |
 |------|-------------|
 | [Boot Sequence]({{ site.baseurl }}/boot-sequence/) | Power-on to ready state |
+| [SubCPU Payload Loading]({{ site.baseurl }}/subcpu-payload-loading/) | LZSS decompression, E1 bulk transfer, DMA investigation |
 | [Sub CPU Payload Transfer]({{ site.baseurl }}/boot-sequence/#subcpu_send_payload-details) | 192KB firmware loading mechanism |
 | [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) | Disassembly progress |
 | [FDC Subsystem]({{ site.baseurl }}/fdc-subsystem/) | Floppy disk handlers |

@@ -18,6 +18,7 @@ header_pages:
   - memory-map.md
   # Firmware Layer
   - boot-sequence.md
+  - subcpu-payload-loading.md
   - rom-reconstruction.md
   # Subsystems & Protocols
   - control-panel-protocol.md
