@@ -8,7 +8,7 @@ permalink: /subcpu-payload-loading/
 
 This page documents the investigation into SubCPU firmware payload loading in MAME emulation. The investigation uncovered multiple bugs in MAME's TMP94C241 emulation (LDC CR mapping, DMAM encoding, HDMA/IRQ priority) that prevented DMA transfers. All have been fixed, and the SubCPU payload now loads and executes successfully.
 
-> **Status:** Payload transfer is **WORKING**. The SubCPU receives all 9 E1 blocks (524,358 HDMA transfers) and begins executing payload code. Active investigation continues on INT0-driven inter-CPU communication after boot -- fixes for level-detect re-assertion and EI/RETI interrupt shadow are being tested. See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for the overall boot flow and [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for latch communication details.
+> **Status:** Payload transfer is **WORKING**. The SubCPU receives all 9 E1 blocks (524,358 HDMA transfers) and begins executing payload code. Four critical MAME bugs have been fixed: INT0 level-detect re-assertion, EI/RETI interrupt shadow, port read direction awareness, and DMAR burst DMA. Test Run 7 showed a 99% reduction in spurious INT0 dispatches (113K vs 12.2M). The SubCPU is now initializing normally (DSP memory clearing, debug output) but full boot hasn't been observed yet due to log verbosity. Awaiting Test Run 8 with reduced logging. See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for the overall boot flow and [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for latch communication details.
 
 ## Background
 
@@ -297,10 +297,30 @@ Logging is controlled by `VERBOSE` flags in `kn5000.cpp` and uses MAME's `logmac
 8. MainCPU sets MSTAT0=1 and starts sending data before SubCPU reads the command byte
 9. All data bytes overflow the latch (written before being read)
 
-### Test Run 7: After port_r direction-aware fix (Pending)
+### Test Run 7: After port_r direction-aware fix (2.7M line partial log — interrupted early)
 
 - Fix 9 applied: `port_r()` now returns `(latch & dir) | (external & ~dir)` — output bits from latch, input bits from external callback
-- Expected outcome: `DSP_Read_Status` returns 1 (output latch), DSP init skips timeout loops, SubCPU enters main event loop quickly and processes commands before MainCPU's Sound Name Error timeout
+- **INT0 dispatches: 113,017** (down from 12.2M — 99% reduction)
+- **Latch overflow: 0** (down from 14)
+- **INTTC0 dispatches: 0** (DMA ch0 completion never fired — transfer in progress or not yet started)
+- **INTTC2 dispatches: 0** (SubCPU never sent data back — still initializing)
+- **MSTAT values changed: 2↔3** (previously 0↔1 — CORRECT, see analysis below)
+- **Top INT0 PCs:** 0x034C6F (7460x = DSP_System_Init memory clearing loop), 0xFFFEC0-D1 (~1023x each = boot ROM debug utilities)
+- Log was interrupted before GUI loaded because file was growing too fast
+
+**Analysis of MSTAT 2↔3 behavior:**
+The port_r fix affects BOTH Port D (PDCR=0x63: bits 0-1=output) AND Port Z (PZCR=0x03: bits 0-1=output). Previously, SET/RES operations on these ports would lose other output bits during read-modify-write because port_r returned all-external-callback. Now output bits correctly preserve from the latch:
+- Old: `SET 0, (PZ)` + `SET 1, (PZ)` → MSTAT = 2 (bit 0 lost because SET 1 read PZ with bit 0 = 0)
+- New: `SET 0, (PZ)` + `SET 1, (PZ)` → MSTAT = 3 (bit 0 preserved from latch)
+- This is correct real hardware behavior — PZCR=0x03 is set during boot init (`LD (PZCR), 003h` in `shared/boot_hw_init.asm`)
+
+**Key finding: SubCPU still initializing.** The 7460 INT0 hits at 0x034C6F exactly match the `DSP_System_Init_Clear2_Loop` iteration count (clearing a 7,462-byte DSP state buffer). The boot ROM debug routine hits (~1023x at SUB_FEC1) are the payload calling boot ROM utility functions for diagnostic output. Both are normal initialization activity — the SubCPU hasn't reached the main event loop yet.
+
+### Test Run 8: After logging reduction (Pending)
+
+- Reduced INT0 dispatch logging to every 1000th occurrence
+- Reduced HDMA per-transfer logging to every 256th transfer
+- Expected: log small enough for full boot completion, allowing us to determine if Sound Name Error persists
 
 ## Remaining Issues
 
@@ -431,7 +451,9 @@ The "Sound Name Error" is triggered by the Main CPU's `MainGetSoundName()` funct
 
 3. **EI/RETI interrupt shadow (Fix 8):** The level-detect fix exposed the interrupt shadow bug. The SubCPU's `EI 0; NOP; EI 6` interrupt window pattern causes an infinite INT0 storm because MAME dispatches INT0 before the return-address instruction executes. The SubCPU is trapped and can never process commands.
 
-All three fixes must be in place for the SubCPU to successfully receive and respond to Main CPU commands. Even with all fixes, unimulated sound peripherals mean responses will contain no real audio data:
+4. **Port read direction (Fix 9):** MAME's `port_r()` ignored the direction register, causing output bits to read as 0 (from unconnected callbacks) instead of reading back the output latch. This broke `DSP_Read_Status` (8000-iteration timeout loops per DSP call) AND broke MSTAT/SSTAT read-modify-write operations (SET/RES on Port Z/D lost previously-set output bits).
+
+All four fixes must be in place for the SubCPU to successfully receive and respond to Main CPU commands. Even with all fixes, unimulated sound peripherals mean responses will contain no real audio data:
 
 | Device | Address | Chip | Status in MAME |
 |--------|---------|------|----------------|
@@ -487,6 +509,20 @@ This section captures the detailed reasoning process behind each investigation s
 9. The E2 handshake protocol race: MainCPU checks SSTAT1=0 (already low from a previous handshake), proceeds to set MSTAT0=1 before SubCPU reads the command.
 
 **The fix** is fundamental: make `port_r()` respect the direction register, combining output latch for output bits and external callback for input bits. This is correct for ALL ports, not just PH.
+
+### Reasoning: MSTAT 2↔3 and PZCR Configuration (Test Run 7 Analysis)
+
+**Starting observation:** Test Run 7 showed MSTAT values 2↔3 instead of the previous 0↔1. Is the handshake broken?
+
+**Key insight chain:**
+1. Checked `COM_SELECT` ioport default: 0xE0 = bits 0-1 are ZERO. com_select doesn't bleed into MSTAT.
+2. Searched MainCPU firmware for MSTAT usage: `SET 0, (PZ)` / `RES 0, (PZ)` for MSTAT0 AND `SET 1, (PZ)` / `RES 1, (PZ)` for MSTAT1. Both MSTAT bits are actively used in the protocol.
+3. Critical discovery: `LD (PZCR), 003h` exists in `shared/boot_hw_init.asm` — the MainCPU configures PZ bits 0-1 as OUTPUT during boot. Similarly, `LD (PDCR), 063h` configures PD bits 0-1 as OUTPUT on SubCPU.
+4. With port_r fix + PZCR=0x03: `SET 0, (PZ)` reads PZ → bits 0-1 from latch (preserving MSTAT), bits 2-7 from callback. This is CORRECT — on real hardware output bits read back from the latch.
+5. Without port_r fix: `SET 1, (PZ)` reads PZ → bit 0 from callback (=0), losing the previously-written MSTAT0. This is WRONG.
+6. **Conclusion:** MSTAT 2↔3 means MSTAT1 is set (signaling "transfer complete") and MSTAT0 is toggling. This is correct protocol behavior that was masked before because SET/RES clobbered the other bit.
+
+**Verified DMA ch2 infrastructure:** The SubCPU's `InterCPU_DMA_Send_Chunk` configures DMA ch2 with Timer 2 triggering (DMA2V=0x16, T23MOD=0x1D with T1 clock, TREG2=0x14). Timer 2 fires INTT2 every 2560 cycles (128µs), each triggering one HDMA byte transfer from RAM to maincpu latch. INTTC2 fires on completion, dispatching to `MICRODMA_CH2_HANDLER` at 0x020F01. All infrastructure is correctly implemented — INTTC2=0 simply means the SubCPU hasn't reached `InterCPU_DMA_Send` yet during the interrupted test.
 
 ### DMA Macro Name Confusion (Side Investigation)
 
