@@ -430,13 +430,64 @@ InterCPU_E1_Bulk_Transfer:     ; 0xEF3457
     RET
 ```
 
+## Command 0x2B: Sound Name Query
+
+The Main CPU uses command 0x2B to query the Sub CPU for the display name of the currently selected voice/sound in a given keyboard part. This is used to populate the on-screen voice name display.
+
+### Request Format (10 bytes, Main CPU → Sub CPU)
+
+| Offset | Value | Description |
+|--------|-------|-------------|
+| 0 | 0x2B | Command: sound/voice query |
+| 1 | 0x30–0x3F | Voice slot (0x30 = slot 0, 0x3F = slot 15) |
+| 2 | 0x7F | Parameter selector |
+| 3 | 0x20 | Address/routing byte |
+| 4–5 | 0x00 0x00 | Reserved |
+| 6 | 0x02 | Sub-command group |
+| 7 | 0x12–0x16 | Part identifier (see table below) |
+| 8 | XX | Voice/sound index within bank |
+| 9 | 0x00 | Padding/terminator |
+
+### Response Format (25 bytes, Sub CPU → Main CPU)
+
+| Offset | Value | Description |
+|--------|-------|-------------|
+| 0–7 | (echo) | Echo of request bytes 0–7 |
+| 8–23 | ASCII | 16-character sound name (space-padded) |
+| 24 | 0x10/0x20 | Status/category byte |
+
+### Part Identifiers (byte 7)
+
+| Value | Part | Default Voice (from trace) |
+|-------|------|----------------------------|
+| 0x12 | Right 1 | Modern E.P.1 (idx 0x06) |
+| 0x13 | Right 2 | Bigband Brass (idx 0x38) |
+| 0x14 | Left | Piano (idx 0x00) |
+| 0x15 | Right 1 (conductor) | Modern E.P.1 (idx 0x06) |
+| 0x16 | Right 2 (conductor) | Bigband Brass (idx 0x38) |
+
+### Sub CPU Handling
+
+- Processed in `Audio_Process_DSP` (0x035B36), not the standard command dispatch table
+- Sub-command 0x00 at offset 0x436B triggers sound name lookup from RAM tables at 0x041xxx
+- Names are pre-loaded during boot from Table Data ROM, not queried from tone generator
+- Response sent via `InterCPU_DMA_Send` with HDMA ch2
+
+### Example Exchange (from MAME trace)
+
+```
+Request:  2B 30 7F 20 00 00 02 14 00 00
+Response: 2B 30 7F 20 00 00 02 14 "Piano           " 10
+```
+
 ## Research Needed
 
 - [x] Document exact latch register bit layout - See Boot ROM Protocol above
 - [x] Analyze handshaking timing requirements - Uses 60,000 iteration timeout (~300ms)
 - [x] Document command 0x2D (DSP configuration) format — Complete: 4-layer protocol fully traced
 - [x] Document two ring buffers (0x2B0D for MIDI, 0x3B60 for DSP) — Complete
-- [ ] Document remaining ring buffer command formats (other than 0x2D)
+- [x] Document command 0x2B (sound name query) format — Complete
+- [ ] Document remaining ring buffer command formats (other than 0x2B, 0x2D)
 - [ ] Document handlers 2 (0x40-0x5F), 5 (0xA0-0xBF), 6-7 (0xC0-0xFF)
 - [ ] Map status response message formats
 - [ ] Determine actual subprogram storage location (table_data vs custom_data flash)
