@@ -36,7 +36,7 @@ PR 2 (EI/RETI shadow) ──┘
 
 ## PR 1: TLCS-900/H --- LDC Control Register Mapping for TMP94C241 DMA Registers
 
-**Branch:** `kn5000_pr1_ldc_cr_mapping`
+**Branch:** [`kn5000_pr1_ldc_cr_mapping`](https://github.com/felipesanches/mame/tree/kn5000_pr1_ldc_cr_mapping)
 
 ### Summary
 
@@ -96,7 +96,7 @@ The TMP94C241 control register map is documented in the Toshiba TMP94C241F Data 
 
 ## PR 2: TLCS-900/H --- EI/RETI Interrupt Acceptance Shadow
 
-**Branch:** `kn5000_pr2_irq_inhibit`
+**Branch:** [`kn5000_pr2_irq_inhibit`](https://github.com/felipesanches/mame/tree/kn5000_pr2_irq_inhibit)
 
 ### Summary
 
@@ -145,7 +145,7 @@ Toshiba TLCS-900/H Programming Manual, Section 8.2: "After the EI instruction or
 
 ## PR 3: TMP94C241 --- DMA Subsystem (HDMA + DMAR) and Port Read Fix
 
-**Branch:** `kn5000_pr3_dma_and_port`
+**Branch:** [`kn5000_pr3_dma_and_port`](https://github.com/felipesanches/mame/tree/kn5000_pr3_dma_and_port)
 
 **Depends on:** PR 1 + PR 2
 
@@ -194,7 +194,7 @@ TMP94C241F Data Sheet:
 
 ## PR 4: TMP94C241 --- Serial Port Sub-Device
 
-**Branch:** `kn5000_pr4_serial`
+**Branch:** [`kn5000_pr4_serial`](https://github.com/felipesanches/mame/tree/kn5000_pr4_serial)
 
 **Depends on:** PR 3
 
@@ -244,7 +244,7 @@ TMP94C241F Data Sheet:
 
 ## PR 5: KN5000 Driver --- Control Panel HLE, SubCPU Payload Transfer, Keybed HLE
 
-**Branch:** `kn5000_pr5_driver`
+**Branch:** [`kn5000_pr5_driver`](https://github.com/felipesanches/mame/tree/kn5000_pr5_driver)
 
 **Depends on:** PR 4
 
