@@ -287,15 +287,15 @@ The control panel MCUs communicate with the main CPU via a serial interface:
 ```
 Main CPU (TMP94C241F)          Control Panel MCU (M37471M2196S)
         │                               │
-        │◄──────── SOUT ───────────────│ (Data from panel)
+        │<──────── SOUT ───────────────│ (Data from panel)
         │                               │
-        │─────────► SIN ───────────────►│ (Data to panel)
+        │─────────> SIN ───────────────>│ (Data to panel)
         │                               │
-        │─────────► CLK ───────────────►│ (Clock)
+        │─────────> CLK ───────────────>│ (Clock)
         │                               │
-        │─────────► CNTR1 ─────────────►│ (Control)
+        │─────────> CNTR1 ─────────────>│ (Control)
         │                               │
-        │─────────► CMD0-4 ────────────►│ (Commands?)
+        │─────────> CMD0-4 ────────────>│ (Commands?)
 ```
 
 The exact protocol details must be reverse-engineered from the main CPU firmware disassembly.

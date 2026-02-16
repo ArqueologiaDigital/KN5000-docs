@@ -274,13 +274,13 @@ Waveform ROMs (IC304-307) ──> Tone Generator LSI (IC303)
                   Register       UART         DSP
                   Config        Control       Config
                         │             │             │
-                        ▼             ▼             ▼
+                        v             v             v
                   Tone Gen      DAC/DSP       DSP1/DSP2
                   (IC303)      (IC313?)      (IC310/311)
                                       │
                                 [Serial Audio: BCK, SDOR/SDOF]
                                       │
-                                      ▼
+                                      v
                                 DAC (IC313, PCM69AU)
                                       │
                                 Op-amps (IC312, IC314)

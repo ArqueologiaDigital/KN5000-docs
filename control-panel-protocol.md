@@ -259,7 +259,7 @@ The control panel MCUs use a bidirectional serial protocol. The CPU is master fo
   │   State → SM_RXByte1                             │
   └──────────────────────────────────────────────────┘
                                     Self-clocks response at 250 kHz
-                                    ── SCLK edges ──►
+                                    ── SCLK edges ──>
   SM_RXByte1: reads SC1BUF (header byte)
   SM_RXByteN: reads SC1BUF (data byte)
   Response complete → IDLE
@@ -314,41 +314,41 @@ State Transition Diagram:
     │  IDLE (0)                                                       │
     │    │                                                            │
     │    │ CPanel_SendCommand called                                  │
-    │    ▼                                                            │
-    │  ROUTINE_1 (1) ──► Start TX, check SCLK1                        │
+    │    v                                                            │
+    │  ROUTINE_1 (1) ──> Start TX, check SCLK1                        │
     │    │                │                                           │
     │    │ SCLK1=1        │ SCLK1=0 (panel talking)                   │
-    │    ▼                ▼                                           │
+    │    v                v                                           │
     │  ROUTINE_2 (2)    Back to IDLE (0)                              │
     │    │                                                            │
     │    │ TX byte, update LED index                                  │
-    │    ▼                                                            │
-    │  ROUTINE_3 (3) ──► Disable serial pins                          │
+    │    v                                                            │
+    │  ROUTINE_3 (3) ──> Disable serial pins                          │
     │    │                                                            │
-    │    ▼                                                            │
-    │  ROUTINE_4 (4) ──► Continue TX, count down STATE_0_TO_17        │
+    │    v                                                            │
+    │  ROUTINE_4 (4) ──> Continue TX, count down STATE_0_TO_17        │
     │    │                │                                           │
     │    │ count > 1      │ count <= 1                                │
-    │    ▼                ▼                                           │
+    │    v                v                                           │
     │  ROUTINE_3 (loop)  ROUTINE_5 (5)                                │
     │                      │                                          │
-    │                      ▼                                          │
-    │                    ROUTINE_6 (6) ──► Check if more LED data     │
+    │                      v                                          │
+    │                    ROUTINE_6 (6) ──> Check if more LED data     │
     │                      │       │                                  │
     │                      │ more  │ done                             │
-    │                      ▼       ▼                                  │
+    │                      v       v                                  │
     │                    ROUTINE_1  IDLE (0)                          │
     │                                                                 │
     │  ═══════════════════════════════════════════════════════════    │
     │                                                                 │
-    │  ROUTINE_7 (8) ──► RX phase 1, first byte from panel            │
+    │  ROUTINE_7 (8) ──> RX phase 1, first byte from panel            │
     │    │                                                            │
     │    │ Byte received, calculate STATE_0_TO_17                     │
-    │    ▼                                                            │
-    │  ROUTINE_8 (9) ──► RX phase 2, additional bytes                 │
+    │    v                                                            │
+    │  ROUTINE_8 (9) ──> RX phase 2, additional bytes                 │
     │    │                │                                           │
     │    │ count > 1      │ count <= 1                                │
-    │    ▼                ▼                                           │
+    │    v                v                                           │
     │  ROUTINE_8 (loop)  IDLE (0)                                     │
     │                                                                 │
     └─────────────────────────────────────────────────────────────────┘

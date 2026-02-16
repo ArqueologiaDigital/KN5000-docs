@@ -16,7 +16,7 @@ The KN5000 uses two TMP94C241F CPUs that communicate via a memory-mapped latch a
 │                                                                     │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐ │
 │  │ Audio_Lock_     │    │ Audio_DMA_      │    │ Audio_Lock_     │ │
-│  │ Acquire         │───►│ Transfer        │───►│ Release         │ │
+│  │ Acquire         │───>│ Transfer        │───>│ Release         │ │
 │  │ (0xEF1FEE)      │    │ (0xEF341B)      │    │ (0xEF1F0F)      │ │
 │  └─────────────────┘    └────────┬────────┘    └─────────────────┘ │
 │                                  │                                  │
@@ -24,7 +24,7 @@ The KN5000 uses two TMP94C241F CPUs that communicate via a memory-mapped latch a
 │         Linked list of waiting requests at 0x0487                   │
 └──────────────────────────────────┬──────────────────────────────────┘
                                    │
-                                   ▼
+                                   v
                     ┌──────────────────────────┐
                     │         LATCH            │
                     │       @ 0x120000         │
@@ -33,17 +33,17 @@ The KN5000 uses two TMP94C241F CPUs that communicate via a memory-mapped latch a
                     │  DMA-capable transfer    │
                     └──────────────────────────┘
                                    │
-                                   ▼
+                                   v
 ┌──────────────────────────────────────────────────────────────────────┐
 │                        SUB CPU (TMP94C241F)                          │
 │                                                                      │
 │  ┌──────────────────┐    ┌──────────────────┐    ┌────────────────┐ │
 │  │ InterCPU_Latch_  │    │ MicroDMA CH0/2   │    │ CMD_DISPATCH_  │ │
-│  │ Setup (0x020C15) │───►│ Handlers         │───►│ TABLE          │ │
+│  │ Setup (0x020C15) │───>│ Handlers         │───>│ TABLE          │ │
 │  └──────────────────┘    └──────────────────┘    └────────────────┘ │
 │                                                          │           │
 │                          ┌───────────────────────────────┘           │
-│                          ▼                                           │
+│                          v                                           │
 │  ┌────────────────────────────────────────────────────────────────┐ │
 │  │                    COMMAND HANDLERS                             │ │
 │  │                                                                 │ │

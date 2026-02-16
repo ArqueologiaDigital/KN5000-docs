@@ -16,7 +16,7 @@ This page provides a high-level view of the Technics KN5000 keyboard architectur
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────┐     Serial Bus      ┌──────────────────────────────────────┐
-│  CONTROL PANEL  │◄──────────────────►│            MAIN CPU                   │
+│  CONTROL PANEL  │<──────────────────>│            MAIN CPU                   │
 │                 │  SIN/SOUT/CLK       │         TMP94C241F                    │
 │  2x M37471M2    │                     │                                      │
 │  ├─ 150 Buttons │                     │  Program ROM: 2MB @ 0xE00000         │
@@ -25,7 +25,7 @@ This page provides a high-level view of the Technics KN5000 keyboard architectur
 └─────────────────┘                     │  ┌─────────────────────────────────┐ │
                                         │  │ Subsystem Handlers:             │ │
 ┌─────────────────┐     Latch           │  │  ├─ UI/Menu System              │ │
-│    SUB CPU      │◄──────────────────►│  │  ├─ MIDI Processing             │ │
+│    SUB CPU      │<──────────────────>│  │  ├─ MIDI Processing             │ │
 │   TMP94C241F    │  @ 0x120000         │  │  ├─ Sequencer                   │ │
 │                 │                     │  │  ├─ FDC Controller              │ │
 │  Boot: 128KB    │                     │  │  └─ HDAE5000 (if present)       │ │
@@ -35,9 +35,9 @@ This page provides a high-level view of the Technics KN5000 keyboard architectur
 │  ├─ DSP/DAC     │                                      │
 │  └─ Tone Gen    │                     ┌────────────────┴───────────────────┐
 └─────────────────┘                     │                                    │
-        │                               ▼                                    ▼
+        │                               v                                    v
         │                     ┌─────────────────┐              ┌─────────────────┐
-        ▼                     │   FDC           │              │   HDAE5000      │
+        v                     │   FDC           │              │   HDAE5000      │
 ┌─────────────────┐           │  uPD72068       │              │  Hard Disk Exp  │
 │  AUDIO OUTPUT   │           │                 │              │                 │
 │                 │           │  @ 0x110000     │              │  ROM: 512KB     │
@@ -125,21 +125,21 @@ See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for detailed analysis, in
 └──────────────────────────────────────────────────────────┘
                            │
         ┌──────────────────┼──────────────────┐
-        ▼                  ▼                  ▼
+        v                  v                  v
 ┌───────────────┐  ┌───────────────┐  ┌───────────────┐
 │ Control Panel │  │     MIDI      │  │   Timers &    │
 │   Polling     │  │   Messages    │  │   Callbacks   │
 └───────┬───────┘  └───────┬───────┘  └───────┬───────┘
         │                  │                  │
         └──────────────────┼──────────────────┘
-                           ▼
+                           v
                   ┌───────────────┐
                   │    Event      │
                   │   Dispatch    │
                   └───────┬───────┘
                           │
         ┌─────────────────┼─────────────────┐
-        ▼                 ▼                 ▼
+        v                 v                 v
 ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
 │  UI Updates   │ │ Sound Engine  │ │  Sequencer    │
 │  LCD Refresh  │ │  Note Events  │ │  Playback     │

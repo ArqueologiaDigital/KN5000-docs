@@ -39,7 +39,7 @@ PFFC off (SCLK disabled)  PFFC still off         PFFC ON (SCLK enabled)
 IOC = 0 (master mode)     Write SC1BUF           Write REAL byte 1
 Write SC1BUF (phantom)    (phantom)              from LED_TX_BUFFER
         │                       │                       │
-        └── INTTX1 ────────────┘── INTTX1 ─────────────┘── INTTX1 ──►
+        └── INTTX1 ────────────┘── INTTX1 ─────────────┘── INTTX1 ──>
 
     SM_TXDelay1           SM_SendByteN           SM_TXDelay2
     ───────────           ────────────           ───────────
@@ -49,7 +49,7 @@ Write SC1BUF (phantom)    (phantom)              from LED_TX_BUFFER
     Write SC1BUF           from LED_TX_BUFFER      Write SC1BUF
     (phantom)                     │                (phantom)
          │                        │                     │
-◄────────┘── INTTX1 ─────────────┘── INTTX1 ───────────┘── INTTX1 ──►
+<────────┘── INTTX1 ─────────────┘── INTTX1 ───────────┘── INTTX1 ──>
 
     SM_TXComplete
     ─────────────
@@ -80,7 +80,7 @@ After the firmware finishes transmitting, it waits for the panel to assert INTA:
   │   State → SM_RXByte1                        │
   └─────────────────────────────────────────────┘
                                     Self-clocks response at 250 kHz
-                                    ── SCLK edges ──►
+                                    ── SCLK edges ──>
   SM_RXByte1: reads SC1BUF
   SM_RXByteN: reads SC1BUF
   Response complete → IDLE
@@ -132,21 +132,21 @@ Time    CPU Firmware                     MAME Serial Device       Control Panel 
         │ BR1CR = 0x28 (31 kHz)          Timer adjusts to 31 kHz
         │ PFFC off, IOC = 0 (master)
         │ SC1BUF = phantom                                        tx_start(0), reject
-        │   └─INTTX1─►
+        │   └─INTTX1─>
         │ SM_StartTX: phantom SC1BUF                              tx_start(0), reject
-        │   └─INTTX1─►
+        │   └─INTTX1─>
         │ SM_SendByte1: REAL 0x1F         250 kHz                 tx_start(1), accept
-        │   └─INTTX1─►                                           cmd_buf[0] = 0x1F
+        │   └─INTTX1─>                                           cmd_buf[0] = 0x1F
         │ SM_TXDelay1: phantom SC1BUF     62.5 kHz                tx_start(0), reject
-        │   └─INTTX1─►
+        │   └─INTTX1─>
         │ SM_SendByteN: REAL 0xDA         250 kHz                 tx_start(1), accept
-        │   └─INTTX1─►                                           cmd_buf[1] = 0xDA
+        │   └─INTTX1─>                                           cmd_buf[1] = 0xDA
         │                                                         process_command()
         │                                                         → queue sync response
         │                                                         → start idle_detect
         │                                                            (250 µs timer)
         │ SM_TXDelay2: phantom SC1BUF     62.5 kHz                tx_start(0), reject
-        │   └─INTTX1─►                                       *** MUST NOT cancel
+        │   └─INTTX1─>                                       *** MUST NOT cancel
         │ SM_TXComplete → IDLE                                    idle_detect! ***
         │
 ~11 ms  DELAY_3000_LOOPS (~2 ms)                                 idle_detect fires
@@ -174,15 +174,15 @@ Time    CPU Firmware                     MAME Serial Device       Control Panel 
         │ Enable interrupts
         │
 ~40 ms  CPanel_PollStartup:
-        │ CPanel_WaitTXReady              ◄── Must pass all 4 checks
+        │ CPanel_WaitTXReady              <── Must pass all 4 checks
         │ SendCommand(0x20, 0x0B)
         │ DELAY_6_TICKS
         │ Process response
         │ ... (repeat until encoder stable)
         │
 ~55 ms  CPanel_InitButtonState:
-        │ WaitTXReady + Send(0x2B, 0x00)  ◄── Query all left segments (22 bytes response)
-        │ WaitTXReady + Send(0xEB, 0x00)  ◄── Query all right segments (22 bytes response)
+        │ WaitTXReady + Send(0x2B, 0x00)  <── Query all left segments (22 bytes response)
+        │ WaitTXReady + Send(0xEB, 0x00)  <── Query all right segments (22 bytes response)
         │ WaitTXReady + Send(0x20, 0x10)
         │ WaitTXReady + Send(0xE3, 0x10)
         │

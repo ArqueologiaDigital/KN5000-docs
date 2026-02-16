@@ -15,7 +15,7 @@ This page documents the complete boot sequence of the Technics KN5000, from powe
 ```
 Power On
     │
-    ▼
+    v
 ┌─────────────────┐     ┌─────────────────┐
 │   Main CPU      │     │    Sub CPU      │
 │  TMP94C241F     │     │   TMP94C241F    │
@@ -25,26 +25,26 @@ Power On
          │  1. Table Data ROM    │  1. Boot ROM
          │     First-stage boot  │     0xFF8290
          │                       │
-         ▼                       ▼
+         v                       v
     Memory Remap            Init Hardware
     Program ROM → 0xE00000  Wait for payload
          │                       │
          │  2. Program ROM       │
          │     RESET_HANDLER     │
          │                       │
-         ▼                       ▼
+         v                       v
     Init Hardware           Receive payload
     Load Sub CPU            at 0x0400
     Payload (192KB)              │
          │                       │
-         │   ◄─── DMA ───►       │
+         │   <─── DMA ───>       │
          │   (0x120000 latch)    │
          │                       │
-         ▼                       ▼
+         v                       v
     Start Subsystems        Execute Payload
     (UI, MIDI, FDC...)      (Audio Engine)
          │                       │
-         ▼                       ▼
+         v                       v
     ┌─────────────────────────────┐
     │     System Ready            │
     └─────────────────────────────┘
@@ -341,7 +341,7 @@ The main CPU enters its event loop, handling:
 │    Program ROM not yet visible                                        │
 └──────────────────────────────────────────────────────────────────────┘
                                    │
-                                   ▼
+                                   v
 ┌──────────────────────────────────────────────────────────────────────┐
 │                   STAGE 1: TABLE DATA BOOTLOADER                      │
 │                                                                       │
@@ -352,7 +352,7 @@ The main CPU enters its event loop, handling:
 │  5. Jump to Program ROM entry point (0xEF03C6)                        │
 └──────────────────────────────────────────────────────────────────────┘
                                    │
-                                   ▼
+                                   v
 ┌──────────────────────────────────────────────────────────────────────┐
 │                    STAGE 2: PROGRAM ROM BOOT                          │
 │                                                                       │
@@ -750,18 +750,18 @@ Bits 4-0: Data length - 1 (so 0x00 = 1 byte, 0x1F = 32 bytes)
 Main CPU                          Sub CPU
    │                                 │
    │  1. Write command to latch      │
-   │  ─────────────────────────────► │
+   │  ─────────────────────────────> │
    │                                 │  2. InterCPU_RX_Handler
    │                                 │     triggered
    │                                 │
    │  3. Wait for sub ready          │  4. Set up DMA
-   │  ◄───────────────────────────── │     destination
+   │  <───────────────────────────── │     destination
    │                                 │
    │  5. Send data bytes             │
-   │  ─────────────────────────────► │  6. DMA receives data
+   │  ─────────────────────────────> │  6. DMA receives data
    │                                 │
    │  7. Check completion            │  8. DMA_Complete_Handler
-   │  ◄───────────────────────────── │     clears state
+   │  <───────────────────────────── │     clears state
    │                                 │
 ```
 
@@ -909,15 +909,15 @@ If the HD-AE5000 hard disk expansion is detected (PE port bit 0 = 0), the main C
 ```
 Main CPU checks PE.0
     │
-    ├─► PE.0 = 1: No HD-AE5000, skip
+    ├─> PE.0 = 1: No HD-AE5000, skip
     │
-    └─► PE.0 = 0: HD-AE5000 present
+    └─> PE.0 = 0: HD-AE5000 present
             │
-            ▼
+            v
         Validate ROM header at 0x280000
         Check for "XAPR" magic string
             │
-            ▼
+            v
         CALL 0x280008 (Boot Init entry)
 ```
 
@@ -944,15 +944,15 @@ The main CPU provides a callback registration system that HDAE5000 uses to integ
 ```
 WORKSPACE_PTR (0x23A1A2)
     │
-    └──► Handler Table A (offset +0x0E0A)
+    └──> Handler Table A (offset +0x0E0A)
               │
-              ├──► Registration func (offset +0x00E4)
-              ├──► Display callback (offset +0x0124)
-              ├──► UI callbacks (offsets +0x0244, +0x0248, etc.)
+              ├──> Registration func (offset +0x00E4)
+              ├──> Display callback (offset +0x0124)
+              ├──> UI callbacks (offsets +0x0244, +0x0248, etc.)
               │
-    └──► Handler Table B (offset +0x0E88)
+    └──> Handler Table B (offset +0x0E88)
               │
-              └──► Audio/system callbacks
+              └──> Audio/system callbacks
 ```
 
 HDAE5000 registers 12 handlers using this system, each identified by a port address (0x0160000x) and handler ID.
@@ -975,7 +975,7 @@ After boot completes, subsystems initialize in this order:
 ```
 Sub CPU Payload Loaded (E3 command)
     │
-    ▼
+    v
 ┌─────────────────────────────────────────────┐
 │         Main CPU Subsystem Init             │
 ├─────────────────────────────────────────────┤
@@ -1002,7 +1002,7 @@ Sub CPU Payload Loaded (E3 command)
 │     - Initialize message buffers            │
 └─────────────────────────────────────────────┘
     │
-    ▼
+    v
     Main Event Loop
 ```
 
@@ -1021,18 +1021,18 @@ After all initialization completes, the main CPU enters its event loop:
 │                                                          │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
 │  │   Control   │    │   Display   │    │    MIDI     │  │
-│  │   Panel     │───►│   Update    │───►│  Processing │  │
+│  │   Panel     │───>│   Update    │───>│  Processing │  │
 │  │   Poll      │    │             │    │             │  │
 │  └─────────────┘    └─────────────┘    └─────────────┘  │
 │         │                  │                  │          │
-│         ▼                  ▼                  ▼          │
+│         v                  v                  v          │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
 │  │    FDC      │    │  HDAE5000   │    │   Audio     │  │
-│  │   Handler   │───►│   Frame     │───►│   Sync      │  │
+│  │   Handler   │───>│   Frame     │───>│   Sync      │  │
 │  │             │    │   Handler   │    │             │  │
 │  └─────────────┘    └─────────────┘    └─────────────┘  │
 │                           │                              │
-│                           ▼                              │
+│                           v                              │
 │                    Loop continues                        │
 └──────────────────────────────────────────────────────────┘
 ```

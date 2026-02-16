@@ -14,12 +14,12 @@ The KN5000 audio subsystem handles all sound generation, processing, and output.
 ┌─────────────────────────────────────────────────────────────────────┐
 │                      MAIN CPU (TMP94C241F)                          │
 │                                                                     │
-│  Audio_Lock_Acquire ──► Audio_DMA_Transfer ──► Audio_Lock_Release   │
+│  Audio_Lock_Acquire ──> Audio_DMA_Transfer ──> Audio_Lock_Release   │
 │                              │                                      │
 │              Latch @ 0x120000 (Inter-CPU Communication)             │
 └─────────────────────────────────┬───────────────────────────────────┘
                                   │
-                                  ▼
+                                  v
 ┌─────────────────────────────────────────────────────────────────────┐
 │                       SUB CPU (TMP94C241F)                          │
 │                                                                     │
@@ -28,9 +28,9 @@ The KN5000 audio subsystem handles all sound generation, processing, and output.
 │  ┌─────────────────────────────────────────────────────────────┐   │
 │  │                  AUDIO PROCESSING LOOP                       │   │
 │  │                                                              │   │
-│  │  ToneGen_Process_Notes ──► MIDI_Dispatch ──► Audio_Process_DSP │ │
+│  │  ToneGen_Process_Notes ──> MIDI_Dispatch ──> Audio_Process_DSP │ │
 │  │         │                       │                    │        │   │
-│  │         ▼                       ▼                    ▼        │   │
+│  │         v                       v                    v        │   │
 │  │   [Keyboard Input]      [Ring Buffer]         [DSP State]     │   │
 │  │   @ 0x110000            @ 0x2B0D              @ 0x3B60        │   │
 │  └─────────────────────────────────────────────────────────────┘   │
@@ -40,7 +40,7 @@ The KN5000 audio subsystem handles all sound generation, processing, and output.
      Register               UART               DSP
      Config                Control             Config
            │                     │                  │
-           ▼                     ▼                  ▼
+           v                     v                  v
 ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
 │  TONE GENERATOR │   │   DAC (IC313)   │   │   DUAL DSP      │
 │  IC303          │   │   PCM69AU       │   │   IC310 + IC311  │

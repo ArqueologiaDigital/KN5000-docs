@@ -540,25 +540,25 @@ Handles DMA transfer completion by advancing the state machine.
               │                         │
          E1/E2 cmd               Other cmd (00-1F)
               │                         │
-              ▼                         ▼
+              v                         v
   CMD_PROCESSING_STATE = 2/3    CMD_PROCESSING_STATE = 1
               │                         │
               │    ┌────────────────────┘
               │    │
-              ▼    ▼
+              v    v
        CMD_Dispatch_Handler processes
               │
     ┌─────────┼─────────┬─────────┐
     │         │         │         │
  State 1   State 2   State 3   State 4
     │         │         │         │
-    ▼         ▼         ▼         ▼
+    v         v         v         v
 Call handler  DMA    Set flags  Clear ready
 from table  transfer           flag
     │         │         │         │
     └─────────┴─────────┴─────────┘
                     │
-                    ▼
+                    v
        CMD_PROCESSING_STATE = 0 (Idle)
 ```
 
@@ -1325,19 +1325,19 @@ The KN5000 has a sophisticated sound generation system with dedicated processors
 Main CPU (TMP94C241F)
     │
     │ Commands via 0x120000 latches
-    ▼
-Sub CPU (IC27) ──────► Waveform ROM (IC306-307)
+    v
+Sub CPU (IC27) ──────> Waveform ROM (IC306-307)
     │                      │
     │ Audio data           │ Samples
-    ▼                      ▼
-DSP (IC311) ◄──────────────┘
+    v                      v
+DSP (IC311) <──────────────┘
     │
     │ Processed audio
-    ▼
+    v
 DAC (IC310)
     │
     │ Analog audio
-    ▼
+    v
 Output Jacks (Line, Headphones, Speakers)
 ```
 

@@ -41,9 +41,9 @@ The KN5000 uses a dual-CPU architecture with two identical TMP94C241F processors
 │  ├─ HDAE5000 management        │     │                                      │
 │  └─ Sub CPU coordination       │     │                                      │
 └─────────────────────────────────┘     └─────────────────────────────────────┘
-                    │                                     ▲
+                    │                                     ^
                     │         Communication Latch         │
-                    └───────────► @ 0x120000 ◄────────────┘
+                    └───────────> @ 0x120000 <────────────┘
 ```
 
 ## TMP94C241F Specifications

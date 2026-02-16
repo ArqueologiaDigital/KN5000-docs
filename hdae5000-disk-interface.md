@@ -17,12 +17,12 @@ A separate **Intel 8255 PPI** at 0x160000 provides a parallel port interface for
 ```
 ┌──────────────────┐                           ┌──────────────────┐
 │   TMP94C241F     │  Direct Memory Access     │   IDE Hard Disk  │
-│   Main CPU       │◄─────────────────────────►│   @ 0x130010     │
+│   Main CPU       │<─────────────────────────>│   @ 0x130010     │
 │                  │                           │   (ATA Registers)│
 │                  │                           └──────────────────┘
 │                  │
 │                  │     ┌─────────────────┐
-│                  │◄───►│   Intel 8255    │◄───► PC Parallel Port
+│                  │<───>│   Intel 8255    │<───> PC Parallel Port
 └──────────────────┘     │   PPI @ 0x160000│
                          └─────────────────┘
 ```

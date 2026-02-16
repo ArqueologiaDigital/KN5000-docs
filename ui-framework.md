@@ -35,7 +35,7 @@ The KN5000 firmware includes a sophisticated UI framework that manages menu page
 └─────────────────────────────────────────────────────────────┘
                               │
            ┌──────────────────┼──────────────────┐
-           ▼                  ▼                  ▼
+           v                  v                  v
    ┌───────────────┐  ┌───────────────┐  ┌───────────────┐
    │ Control Panel │  │ LCD Display   │  │ MIDI Input    │
    │   Buttons     │  │  Rendering    │  │  (external)   │

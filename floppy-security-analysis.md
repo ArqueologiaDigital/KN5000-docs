@@ -96,17 +96,17 @@ The firmware copies 61 KB from offset `0x100` of the decompressed data to RAM at
 ```
 Floppy Disc (Type 7: "Technics KN5000 Program  DATA FILE PCK")
     │
-    ├──▶ LABEL_EF4D95: Decompress → Table Data ROM (0x800000)
+    ├──> LABEL_EF4D95: Decompress → Table Data ROM (0x800000)
     │    [Attacker controls entire Table Data ROM content]
     │
-    └──▶ LABEL_EF4CF8: Decompress → Custom Data Flash (0x3E0000)
+    └──> LABEL_EF4CF8: Decompress → Custom Data Flash (0x3E0000)
          [Attacker controls SLIDE4K payload staged for next boot]
              │
-             ▼ (on next boot, version byte 0xFFFEED == 0xFF)
+             v (on next boot, version byte 0xFFFEED == 0xFF)
          LABEL_EF41E3: Decompress 0x3E0000 → RAM 0x050000
              │   [LZSS output size = attacker-controlled header value]
              │   [No bounds check on output buffer]
-             ▼
+             v
          Copy 61KB from (0x050000 + 0x100) → RAM 0x010000
              [Attacker controls firmware initialization data]
 ```

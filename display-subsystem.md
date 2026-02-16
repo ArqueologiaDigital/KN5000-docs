@@ -25,7 +25,7 @@ The KN5000 uses a 320x240 color LCD driven by an MN89304 VGA-compatible controll
 │  UI framework manages pages and widgets                     │
 └─────────────────────────────────────────────────────────────┘
                               │
-                              ▼
+                              v
 ┌─────────────────────────────────────────────────────────────┐
 │                    MN89304 VGA CONTROLLER                    │
 │                                                              │
@@ -35,7 +35,7 @@ The KN5000 uses a 320x240 color LCD driven by an MN89304 VGA-compatible controll
 │  DAC ports: 0x3C8 (index), 0x3C9 (RGB data)                 │
 └─────────────────────────────────────────────────────────────┘
                               │
-                              ▼
+                              v
 ┌─────────────────────────────────────────────────────────────┐
 │                      LCD PANEL                               │
 │                                                              │
