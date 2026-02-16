@@ -74,6 +74,18 @@ Additionally, the disassembler had all variants' CR register names hardcoded in 
 
 **None.** The CPU core change only adds new `case` entries to existing `switch` statements --- all existing cases are untouched and the new encodings do not overlap with any existing variant's register map. The disassembler refactoring is purely structural: the same register names are resolved for the same encodings, just driven by per-variant tables instead of a shared switch. No existing driver is affected.
 
+### Design Note: Why `900tbl.hxx` Is Not Model-Specific
+
+The disassembler's CR register names were moved to model-specific files, but the emulation-side CR register mapping in `900tbl.hxx` (`prepare_operands()`) was intentionally left as a shared switch with all variants' cases together. We considered the same model-specific split but decided against it for three reasons:
+
+1. **Performance.** `prepare_operands()` runs on every instruction in `execute_run()` --- it is the hottest path in the CPU emulation. The compiler optimizes the `switch` into a jump table. Replacing it with virtual dispatch or a table lookup would add overhead to every LDC instruction for no functional benefit.
+
+2. **No overlap.** The encoding values are disjoint between variants (TMP94C241 uses 0x42--0x4e for DMAM, TMP96C141 uses 0x22--0x2e). A TMP94C241 binary will never contain TMP96C141 encodings, and vice versa. Both sets of `case` entries coexist harmlessly in the same switch --- extra cases that are never reached have zero runtime cost.
+
+3. **Alternatives are worse.** Separating the behavior would require one of: (a) virtual method dispatch per LDC instruction, (b) a runtime table search, or (c) overriding the entire 2000+ line `prepare_operands()` in each variant, duplicating 99% shared logic. None of these improve correctness, and all add complexity or overhead.
+
+The disassembler refactoring was worthwhile because disassembly is not performance-critical and the model-specific symbol table pattern was already established. For the instruction decoder, extra `case` entries in a shared switch are the idiomatic MAME approach for handling variant differences in the TLCS-900 core.
+
 ### Datasheet Reference
 
 The TMP94C241 control register map is documented in the Toshiba TMP94C241F Data Sheet, Section 5 "DMA Controller", Table 5-1 "DMA Register Map". The offsets differ from TMP96C141 because the TMP94C241 has a larger internal register file with additional peripheral blocks occupying the 0x20-0x3F range.
