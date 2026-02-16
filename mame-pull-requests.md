@@ -82,7 +82,9 @@ The disassembler's CR register names were moved to model-specific files, but the
 
 2. **No overlap.** The encoding values are disjoint between variants (TMP94C241 uses 0x42--0x4e for DMAM, TMP96C141 uses 0x22--0x2e). A TMP94C241 binary will never contain TMP96C141 encodings, and vice versa. Both sets of `case` entries coexist harmlessly in the same switch --- extra cases that are never reached have zero runtime cost.
 
-3. **Alternatives are worse.** Separating the behavior would require one of: (a) virtual method dispatch per LDC instruction, (b) a runtime table search, or (c) overriding the entire 2000+ line `prepare_operands()` in each variant, duplicating 99% shared logic. None of these improve correctness, and all add complexity or overhead.
+3. **Alternatives are worse.** Separating the behavior would require one of: (a) virtual method dispatch per LDC instruction, (b) a runtime table search, (c) overriding the entire 2000+ line `prepare_operands()` in each variant, duplicating 99% shared logic, or (d) an `if (type() == TMP94C241)` guard before variant-specific switch blocks, which adds a runtime branch on every LDC and duplicates the shared DMAS0--3 cases into both branches. None of these improve correctness, and all add complexity or overhead.
+
+The encoding byte itself acts as an implicit variant discriminator --- a TMP94C241 binary will never emit encoding `0x22` for DMAM0, so the TMP96C141 case for `0x22` is simply never reached when running TMP94C241 firmware. The compiler merges all cases into a single jump table where unreachable entries cost nothing. Each `case` in the source is annotated with a comment identifying which variant(s) use that encoding, making the shared switch self-documenting.
 
 The disassembler refactoring was worthwhile because disassembly is not performance-critical and the model-specific symbol table pattern was already established. For the instruction decoder, extra `case` entries in a shared switch are the idiomatic MAME approach for handling variant differences in the TLCS-900 core.
 
