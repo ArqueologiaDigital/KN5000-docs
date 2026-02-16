@@ -47,10 +47,10 @@ The KN5000 uses two TMP94C241F CPUs that communicate via a memory-mapped latch a
 │  ┌────────────────────────────────────────────────────────────────┐ │
 │  │                    COMMAND HANDLERS                             │ │
 │  │                                                                 │ │
-│  │  0x00-0x1F: Audio_CmdHandler_00_1F (DSP/audio control)         │ │
-│  │  0x20-0x3F: Audio_CmdHandler_20_3F (Extended audio)            │ │
-│  │  0x40-0x5F: Audio_CmdHandler_40_5F (Audio parameters)          │ │
-│  │  0x60-0x7F: Audio_CmdHandler_60_7F (Voice/DSP config)          │ │
+│  │  0x00-0x1F: Audio_CmdHandler_00_1F (MIDI/notes → 0x2B0D)       │ │
+│  │  0x20-0x3F: Audio_CmdHandler_20_3F (Stub)                      │ │
+│  │  0x40-0x5F: Audio_CmdHandler_40_5F (...)                        │ │
+│  │  0x60-0x7F: Audio_CmdHandler_60_7F (Audio/DSP → 0x3B60)       │ │
 │  │  0x80-0x9F: Serial port setup (38400 baud)                     │ │
 │  │  0xA0-0xBF: Audio_CmdHandler_A0_BF (System audio)              │ │
 │  │  0xC0-0xFF: Audio_CmdHandler_C0_FF (Extended system)           │ │
@@ -118,22 +118,22 @@ The `InterCPU_Latch_Setup` routine configures the Sub CPU for DMA reception:
 Commands are dispatched based on upper 3 bits of the command byte:
 
 ```asm
-CMD_DISPATCH_TABLE:
-    dd Audio_CmdHandler_00_1F   ; 0x00-0x1F: DSP/audio control
-    dd Audio_CmdHandler_20_3F   ; 0x20-0x3F: Extended audio
-    dd Audio_CmdHandler_40_5F   ; 0x40-0x5F: Audio parameters
-    dd Audio_CmdHandler_60_7F   ; 0x60-0x7F: Voice/DSP config
-    dd LABEL_01F890             ; 0x80-0x9F: Serial port setup
-    dd Audio_CmdHandler_A0_BF   ; 0xA0-0xBF: System audio
-    dd Audio_CmdHandler_C0_FF   ; 0xC0-0xDF: Extended system
-    dd Audio_CmdHandler_C0_FF   ; 0xE0-0xFF: Extended system (shared)
+CMD_DISPATCH_TABLE:                         ; Address: 0x00F428
+    dd Audio_CmdHandler_00_1F   ; 0x00-0x1F: MIDI/note commands → ring buffer at 0x2B0D
+    dd Audio_CmdHandler_20_3F   ; 0x20-0x3F: Stub (returns 0)
+    dd Audio_CmdHandler_40_5F   ; 0x40-0x5F: (line 9619)
+    dd Audio_CmdHandler_60_7F   ; 0x60-0x7F: Audio/DSP commands → ring buffer at 0x3B60
+    dd Serial1_DataTransmit_Loop ; 0x80-0x9F: Serial port 1 data
+    dd Audio_CmdHandler_A0_BF   ; 0xA0-0xBF: (line 51502)
+    dd Audio_CmdHandler_C0_FF   ; 0xC0-0xDF: (line 10951)
+    dd Audio_CmdHandler_C0_FF   ; 0xE0-0xFF: Same as 0xC0-0xDF
 ```
 
 ## Audio Command Format
 
-Commands 0x00-0x1F write MIDI-like data to a 4KB ring buffer:
+### Ring Buffer at 0x2B0D (MIDI/Note Commands)
 
-### Ring Buffer Structure
+Commands 0x00-0x1F write MIDI-like data to a 4KB ring buffer:
 
 | Variable | Address | Description |
 |----------|---------|-------------|
@@ -142,6 +142,19 @@ Commands 0x00-0x1F write MIDI-like data to a 4KB ring buffer:
 | Byte Count | 0x2B11 | Bytes available |
 | Base Address | 0x2B13 | Buffer start |
 | Buffer Data | +0x06 | 4KB circular buffer |
+
+### Ring Buffer at 0x3B60 (DSP/Audio Config)
+
+Commands 0x60-0x7F write audio config data to a 2KB ring buffer:
+
+| Variable | Address | Description |
+|----------|---------|-------------|
+| Write Pointer | 0x3B60 | 11-bit circular index (wraps at 0x800) |
+| (reserved) | 0x3B62 | Padding |
+| Available Count | 0x3B64 | Bytes queued for processing |
+| Buffer Base | 0x3B66 | 3-byte pointer to actual data area |
+
+`Audio_Process_DSP` (called from main loop) reads commands from this buffer. The most important command is **0x2D** (DSP configuration change). See [Audio Subsystem — Command 0x2D Protocol]({{ site.baseurl }}/audio-subsystem/#inter-cpu-command-protocol-command-0x2d--dsp-configuration) for the full 4-layer protocol.
 
 ### Command Processing
 
@@ -421,6 +434,9 @@ InterCPU_E1_Bulk_Transfer:     ; 0xEF3457
 
 - [x] Document exact latch register bit layout - See Boot ROM Protocol above
 - [x] Analyze handshaking timing requirements - Uses 60,000 iteration timeout (~300ms)
-- [ ] Document all command byte formats for each handler
+- [x] Document command 0x2D (DSP configuration) format — Complete: 4-layer protocol fully traced
+- [x] Document two ring buffers (0x2B0D for MIDI, 0x3B60 for DSP) — Complete
+- [ ] Document remaining ring buffer command formats (other than 0x2D)
+- [ ] Document handlers 2 (0x40-0x5F), 5 (0xA0-0xBF), 6-7 (0xC0-0xFF)
 - [ ] Map status response message formats
 - [ ] Determine actual subprogram storage location (table_data vs custom_data flash)

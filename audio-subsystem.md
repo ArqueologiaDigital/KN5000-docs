@@ -224,21 +224,112 @@ The master dispatcher (`LABEL_037D6E`) calls 11 sub-routines sequentially:
 
 All 13 diagnostic format strings (at ROM 0x0122CC-0x012397) are triggered through this dispatcher. The strings are output via `Debug_Print_String` (0x038365) which sends characters through boot ROM serial output at `0xFFFEA1`.
 
+### Inter-CPU Command Protocol (Command 0x2D — DSP Configuration)
+
+The Main CPU sends DSP effect configuration changes to the Sub CPU via a layered protocol:
+
+**Layer 1 — Latch Protocol:**
+
+The Main CPU writes bytes to the inter-CPU latch at `0x120000`. The first byte is a header:
+
+| Bits | Meaning |
+|------|---------|
+| 7-5 | Handler index (0-7 into `CMD_DISPATCH_TABLE` at `0xF428`) |
+| 4-0 | Payload length minus 1 (DMA count = value + 1) |
+
+For DSP config changes, header byte `0x7F` is used:
+- Handler index = 3 → `Audio_CmdHandler_60_7F` (line 39422)
+- Payload = 32 bytes (0x1F + 1)
+
+The `INT0_HANDLER` (line 11247) reads the header byte directly, then sets up HDMA channel 0 to transfer the payload to buffer at `0x10F0`. After DMA completion, `MICRODMA_CH0_HANDLER` (line 11338) dispatches to the handler.
+
+| Handler | Range | Routine | Purpose |
+|---------|-------|---------|---------|
+| 0 | 0x00-0x1F | `Audio_CmdHandler_00_1F` | MIDI/note commands → ring buffer at `0x2B0D` |
+| 1 | 0x20-0x3F | `Audio_CmdHandler_20_3F` | Stub (unused) |
+| 2 | 0x40-0x5F | `Audio_CmdHandler_40_5F` | (function at line 9619) |
+| 3 | 0x60-0x7F | `Audio_CmdHandler_60_7F` | Audio/DSP commands → ring buffer at `0x3B60` |
+| 4 | 0x80-0x9F | `Serial1_DataTransmit_Loop` | Serial port 1 data |
+| 5 | 0xA0-0xBF | `Audio_CmdHandler_A0_BF` | (function at line 51502) |
+| 6 | 0xC0-0xDF | `Audio_CmdHandler_C0_FF` | (function at line 10951) |
+| 7 | 0xE0-0xFF | `Audio_CmdHandler_C0_FF` | Same as handler 6 |
+
+**Layer 2 — Ring Buffer:**
+
+`Audio_CmdHandler_60_7F` copies the 32-byte payload into a ring buffer at `0x3B60`:
+- Write pointer: `(3B60h)` — 11-bit, wraps at 0x800 (2KB)
+- Available count: `(3B64h)` — number of bytes queued
+- Buffer base: `(3B66h)` — pointer to actual data area
+
+Two consecutive 32-byte payloads give 64 bytes in the ring buffer for a single DSP config command.
+
+**Layer 3 — Command Processing:**
+
+`Audio_Process_DSP` (called from main loop) reads from the ring buffer. `LABEL_035997` (line 39522) reads 7 header bytes into RAM `4369h`-`436Fh`, plus the command byte at `4368h`.
+
+For command `0x2D` (DSP configuration), the 8-byte header is:
+
+| Byte | RAM Address | Description |
+|------|-------------|-------------|
+| 0 | 4368h | Command byte = `0x2D` |
+| 1 | 4369h | Sub-command (0 = normal config) |
+| 2 | 436Ah | EFF slot selector (0x0A-0x0E → slot 0-4) |
+| 3 | 436Bh | Reserved |
+| 4 | 436Ch | Reserved |
+| 5 | 436Dh | Reserved |
+| 6 | 436Eh | Data length (0x38 = 56 bytes) |
+| 7 | 436Fh | Update mode (0x00 = partial, 0xFF = full) |
+
+Then `LABEL_035A7E` (line 39626) reads 56 data bytes from the ring buffer into `4370h`-`43A7h`.
+
+**Layer 4 — EFF Slot Storage:**
+
+The 56-byte parameter block is compared against the current slot buffer at `4496h + slot × 0x38`:
+
+| EFF Slot | Buffer Address |
+|----------|---------------|
+| 0 | 0x4496 |
+| 1 | 0x44CE |
+| 2 | 0x4506 |
+| 3 | 0x453E |
+| 4 | 0x4576 |
+
+Each slot contains 28 word-sized parameters. Word[0] is the **algorithm ID** (e.g., 0x0014 = algorithm 20 = CONCERT REVERB 1). The remaining words are effect-type-specific parameter values.
+
+If any parameters changed, `LABEL_03616A` (line 40310) copies the full 290-byte DSP state (8-byte header + 5 × 56-byte slots) from `0x448E` to an allocated work buffer via `LABEL_038E31` (line 46177), which marks it as dirty and triggers processing by the DSP state dispatcher.
+
 ### DSP Data Tables
 
 The Sub CPU uses several lookup tables for DSP configuration:
 
-| Address | Description |
-|---------|-------------|
-| 0x1E496 | EFF header config table |
-| 0x1ED6D | Per-EFF type byte (current algorithm) |
-| 0x1ED7C | EFF change config table (per sub-change) |
-| 0x1EF0C | EFF data change config table |
-| 0x1F3BC | EFF mute config table |
-| 0x1F3D0 | DSP mute config table |
-| 0x1F3E0 | DSP unmute config table |
-| 0x1F3F0 | EFF disconnect config table |
-| 0x1F404 | EFF link config table |
+| Address | Size | Description |
+|---------|------|-------------|
+| 0x1E496 | variable | EFF header config table |
+| 0x1ED6D | 5 bytes | Per-EFF-slot DSP channel byte |
+| 0x1ED72 | 5 bytes | Per-EFF-slot parameter count limit |
+| 0x1ED7C | variable | EFF change config table (per sub-change) |
+| 0x1EF0C | variable | EFF data change config table |
+| 0x1F09C | N × 4 bytes | Per-algorithm register address table (pointers to register maps) |
+| 0x1F22C | N × 4 bytes | Per-algorithm parameter mapping table (pointers to param data) |
+| 0x1F3BC | variable | EFF mute config table |
+| 0x1F3D0 | variable | DSP mute config table |
+| 0x1F3E0 | variable | DSP unmute config table |
+| 0x1F3F0 | variable | EFF disconnect config table |
+| 0x1F404 | variable | EFF link config table |
+| 0x122A6 | 2 × 11 bytes | Sparse parameter update sequences (for algorithms 0x0F and 0x35) |
+| 0x12226 | variable | Per-algorithm byte (DSP channel assignment lookup) |
+
+**Parameter Translation Chain:**
+
+`LABEL_03C190` translates a parameter index + algorithm ID into DSP register writes:
+
+1. Look up `0x1F22C[algo_id]` → pointer to parameter mapping data (XDE)
+2. Look up `0x1F09C[algo_id]` → pointer to register address data (XBC)
+3. Call `LABEL_03C9E6` which uses 12-byte stride tables at those pointers
+4. `LABEL_03CAAE` reads 3 words per parameter from the mapping data
+5. Final DSP register writes go through tone generator at `0x130000`
+
+Special cases: algorithms 9 and 10 for EFF slot 1 use hardcoded tables at `0x1E17F`/`0x1E19E` and `0x1E40A`/`0x1E42D` respectively.
 
 The DSP write routines used by the dispatcher:
 
@@ -246,7 +337,9 @@ The DSP write routines used by the dispatcher:
 |---------|---------|-------------|
 | `LABEL_03C161` | 0x03C161 | Per-EFF DSP write (uses EFF-specific tables) |
 | `LABEL_03C181` | 0x03C181 | Generic DSP write (direct config) |
-| `LABEL_03C190` | 0x03C190 | Parameter-specific DSP write |
+| `LABEL_03C190` | 0x03C190 | Parameter-specific DSP write (algo-indexed tables) |
+| `LABEL_03C9E6` | 0x03C9E6 | Core DSP parameter write engine |
+| `LABEL_03CAAE` | 0x03CAAE | Per-parameter register translation (12-byte stride) |
 
 ## Tone Generator
 
@@ -571,10 +664,14 @@ See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) for the complete note
 - [ ] Document waveform ROM format and sample layout
 - [ ] Map remaining proprietary CC handlers (0x97-0x9D)
 - [ ] Decode tone generator register semantics (pitch, envelope, filter, etc.)
-- [ ] Map effect type indices to DSP register configurations (which registers are written for each effect)
+- [ ] Decode per-algorithm parameter mapping tables at `0x1F22C`/`0x1F09C` (12-byte stride entries)
+- [ ] Map MainCPU parameter indices (e.g., 33=REVERB TIME) to EFF block word positions per algorithm
 - [ ] Decode DSP register semantics per channel (what registers 0x10-0x17 control)
+- [ ] Document remaining inter-CPU command types (beyond 0x2D and 0xE1/E2/E3)
 - [x] ~~Identify exact device on Serial Port 1~~ — Likely DAC IC313 control interface
 - [x] ~~Analyze DSP1/DSP2 command sets~~ — Partial: 4 commands identified, preset structure decoded
 - [x] ~~Extract effect type names from ROM~~ — Complete: 100 named effect types at MainCPU 0xE32A7A
 - [x] ~~Extract effect parameter names from ROM~~ — Complete: 84 parameter names at MainCPU 0xE324D0
 - [x] ~~Document DSP state dispatcher architecture~~ — Complete: LABEL_037D6E and 11 sub-routines traced
+- [x] ~~Trace inter-CPU command 0x2D protocol~~ — Complete: 4-layer protocol fully documented
+- [x] ~~Map effect type indices to DSP register configurations~~ — Partial: translation chain traced through `LABEL_03C190` → `LABEL_03C9E6` → `LABEL_03CAAE`, but per-algorithm ROM tables not yet decoded
