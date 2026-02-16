@@ -33,6 +33,7 @@ header_pages:
   # Resources
   - image-gallery.md
   - reverse-engineering.md
+  - mame-pull-requests.md
   - help-wanted.md
   - issues.md
 
