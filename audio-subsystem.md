@@ -291,11 +291,92 @@ See [Tone Generator]({{ site.baseurl }}/tone-generator/#serial-port-1-sa-interfa
 - [CPU Subsystem]({{ site.baseurl }}/cpu-subsystem/) -- Main and Sub CPU details
 - [System Overview]({{ site.baseurl }}/system-overview/) -- Overall architecture
 
+## DSP Chip Identification
+
+The KN5000 uses two custom DSP chips for effects processing:
+
+| IC | Part Number | Manufacturer | Notes |
+|----|-------------|-------------|-------|
+| IC310 | MN19413 | Matsushita (Panasonic) | Custom ASIC, no public documentation |
+| IC311 | DS3613GF-3BA | Unknown origin | Custom ASIC, no public documentation |
+
+Both DSPs use an identical 8-bit parallel bus protocol with shared data lines but separate chip-select signals. They are NOT general-purpose DSPs — they are dedicated effects processors with a fixed command interface.
+
+### DSP Control Pin Mapping
+
+The Sub CPU controls both DSPs via GPIO pins:
+
+| Pin | Port | Function |
+|-----|------|----------|
+| P7.3 | Port 7 bit 3 | Write strobe (active low) |
+| P7.4 | Port 7 bit 4 | Read strobe (active low) |
+| P7.5 | Port 7 bit 5 | CS1 — DSP1 chip select (IC310, MN19413) |
+| P7.6 | Port 7 bit 6 | Command/Data select (1=command, 0=data) |
+| PE.6 | Port E bit 6 | CS2 — DSP2 chip select (IC311, DS3613GF-3BA) |
+| PH.0 | Port H bit 0 | Status input (busy/ready) |
+| PZ[7:0] | Port Z | 8-bit bidirectional data bus |
+
+**Handshake sequence** (DSP command write):
+1. Set PZ = data byte
+2. Set P7.6 = 1 (command mode) or 0 (data mode)
+3. Assert CS (P7.5 or PE.6 low)
+4. Assert write strobe (P7.3 low)
+5. Wait for PH.0 ready
+6. Deassert write/CS
+
+### DSP Preset Structure
+
+The 0x91-word (290-byte) block at SubCPU RAM address 0xF01E contains **effect parameter presets**, not DSP microcode. The structure is:
+
+| Offset | Size | Content |
+|--------|------|---------|
+| +0x00 | 20 words | Header / global effect config |
+| +0x28 | 5 × ~24 words | Effect parameter blocks |
+
+Each effect block contains parameters:
+- **Type** (effect algorithm selector: 1, 3, 4, 8)
+- **Level** (0-99)
+- **Depth** (0-99)
+- **Time** (0-99)
+- **Rate** (0-99)
+- **Mix** (dry/wet balance, 0-99)
+- **Feedback** (0-99)
+
+### Known Effect Types
+
+| Type ID | Likely Effect | KN5000 Manual Name |
+|---------|--------------|-------------------|
+| 1 | Chorus | DIGITAL EFFECT (chorus variants) |
+| 3 | Reverb | DIGITAL REVERB |
+| 4 | Delay | DSP EFFECT (delay-based) |
+| 8 | EQ/Filter | ACOUSTIC ILLUSION |
+
+These correlate with the KN5000 front panel effect buttons: SUSTAIN, DIGITAL EFFECT, DSP EFFECT, DIGITAL REVERB, and ACOUSTIC ILLUSION.
+
+### Known DSP Commands
+
+| Command | Direction | Description |
+|---------|-----------|-------------|
+| 0x01 | Write | Initialize/reset |
+| 0x03 | Write | Set mode/algorithm |
+| 0x30 | Write | Parameter update (followed by data bytes) |
+| 0x60 | Write | Bulk transfer start |
+
+## Keybed Architecture
+
+The physical keyboard (keybed) connects **directly** to the tone generator IC303, NOT to the Sub CPU. IC303 performs hardware key scanning internally and presents note events to the Sub CPU via the keyboard input interface at 0x110000.
+
+This means:
+- The CPU does **not** scan the keyboard matrix
+- IC303 handles debouncing, velocity detection, and polyphony assignment
+- The Sub CPU simply reads completed note events from IC303's output register
+
+See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) for the complete note flow, encoding format, and voice slot management.
+
 ## Research Needed
 
 - [ ] Document waveform ROM format and sample layout
-- [ ] Analyze DSP effects processing algorithms
 - [ ] Map remaining proprietary CC handlers (0x97-0x9D)
-- [ ] Identify exact device on Serial Port 1 (trace PCB connections)
 - [ ] Decode tone generator register semantics (pitch, envelope, filter, etc.)
-- [ ] Analyze DSP1/DSP2 command sets
+- [x] ~~Identify exact device on Serial Port 1~~ — Likely DAC IC313 control interface
+- [x] ~~Analyze DSP1/DSP2 command sets~~ — Partial: 4 commands identified, preset structure decoded

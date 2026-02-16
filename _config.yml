@@ -23,6 +23,7 @@ header_pages:
   # Subsystems & Protocols
   - audio-subsystem.md
   - tone-generator.md
+  - keybed-scanning.md
   - control-panel-protocol.md
   - serial-firmware-compatibility.md
   - hdae5000.md

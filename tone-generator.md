@@ -186,6 +186,39 @@ The DSP has 4 processing blocks at 0x20-byte spacing:
 
 Registers 0x50-0x57 are zeroed during boot for each block.
 
+### DSP Command Protocol
+
+Both DSP chips (IC310 MN19413, IC311 DS3613GF-3BA) share an 8-bit parallel bus protocol controlled via Sub CPU GPIO pins:
+
+| Pin | Port | Function |
+|-----|------|----------|
+| P7.3 | Port 7 bit 3 | Write strobe (active low) |
+| P7.4 | Port 7 bit 4 | Read strobe (active low) |
+| P7.5 | Port 7 bit 5 | CS1 — DSP1 chip select (IC310) |
+| P7.6 | Port 7 bit 6 | Command/Data select (1=command, 0=data) |
+| PE.6 | Port E bit 6 | CS2 — DSP2 chip select (IC311) |
+| PH.0 | Port H bit 0 | Status input (busy/ready) |
+| PZ[7:0] | Port Z | 8-bit bidirectional data bus |
+
+**Write handshake:**
+1. Set Port Z = data byte
+2. Set P7.6 high (command) or low (data)
+3. Assert chip select (P7.5 or PE.6 low)
+4. Assert write strobe (P7.3 low)
+5. Poll PH.0 until ready
+6. Deassert write strobe and chip select
+
+### Known DSP Commands
+
+| Command | Description |
+|---------|-------------|
+| 0x01 | Initialize / reset DSP |
+| 0x03 | Set processing mode / algorithm |
+| 0x30 | Parameter update (followed by data bytes) |
+| 0x60 | Bulk transfer start |
+
+See [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/#dsp-preset-structure) for the effect preset data format.
+
 ## Serial Port 1 ("SA" Interface)
 
 The Sub CPU's serial port 1 (UART mode, ~500kHz clock) connects to an audio peripheral for control commands. The "SA" designation found in the service manual schematics refers to "Sub Address" bus lines, not a chip name. The serial device is likely the DAC (IC313, PCM69AU) or one of the DSP chips.
@@ -261,15 +294,17 @@ Waveform ROMs (IC304-307) ──> Tone Generator LSI (IC303)
 
 | Component | Address | Status |
 |-----------|---------|--------|
-| Register Config (0x100000) | Write-only | **Not mapped** -- writes go to void |
-| Keyboard Input (0x110000) | Read-only | **Commented out** -- reads return 0 |
-| DSP Config (0x130000) | Write-only | **Not mapped** -- writes go to void |
-| Serial1 (SA interface) | UART | **No receiver** -- TX sends into void |
+| Register Config (0x100000) | Write-only | **Stub (`noprw`)** — writes harmlessly discarded |
+| Keyboard Input (0x110000) | Read-only | **HLE keybed** — injects note events from PC keyboard |
+| DSP Config (0x130000) | Write-only | **Stub (`noprw`)** — writes harmlessly discarded |
+| Serial1 (SA interface) | UART | **No receiver** — TX sends into void |
+| Waveform RAM (0x1E0000) | Read/Write | **Stub (`noprw`)** — no sample storage |
 
-The SubCPU firmware init completes without hanging because all init-phase loops are either bounded by timeouts or complete harmlessly with reads returning 0. However, the absence of these devices means:
-- No keyboard note events are generated
-- No sound synthesis occurs
-- The SubCPU has no data to send back to the Main CPU
+The keybed HLE device generates note-on/note-off events from MAME input ports (PC keyboard mapped to a 2-octave piano layout). Events are queued and read by `ToneGen_Read_Voice_Data` at 0x110000/0x110002 in the format expected by the firmware. The full bidirectional note flow works: keybed → subcpu → maincpu (for display/MIDI) → subcpu → IC303 (writes discarded).
+
+No sound is produced (DSP and DAC remain stubs), but key presses appear in the UI and MIDI output emits note events.
+
+See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) for the note encoding format and signal flow.
 
 ## Related Pages
 

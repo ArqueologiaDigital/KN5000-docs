@@ -47,7 +47,8 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 | Page | Status | Description |
 |------|--------|-------------|
 | [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) | Documented | Serial protocol for buttons, LEDs, encoders |
-| [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) | Placeholder | DSP, DAC, tone generation |
+| [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) | Partial | DSP, DAC, tone generation |
+| [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) | Documented | Hardware key scanning, note encoding, voice slots |
 | [Display Subsystem]({{ site.baseurl }}/display-subsystem/) | Placeholder | LCD controller, VGA interface |
 | [Storage Subsystem]({{ site.baseurl }}/storage-subsystem/) | Partial | Floppy, flash, Table Data ROM |
 | [MIDI Subsystem]({{ site.baseurl }}/midi-subsystem/) | Placeholder | MIDI I/O handling |
