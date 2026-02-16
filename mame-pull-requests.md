@@ -12,6 +12,9 @@ This page describes the planned series of pull requests to upstream MAME that im
 >
 > **See Also**: [SubCPU Payload Loading]({{ site.baseurl }}/subcpu-payload-loading/) for the investigation that identified these issues, [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for overall firmware flow, and [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) for the serial protocol implemented by the HLE.
 
+> **Review Status:** These PRs were drafted with AI assistance (Claude). Only **[PR 1](#pr1)** has been fully reviewed by the author (Felipe Sanches) and [submitted upstream](https://github.com/mamedev/mame/pull/14970). PRs 2--5 are still under review and may be tweaked before submission.
+{: .warning}
+
 ## Dependency Graph
 
 The PRs form a dependency chain. PR 1 and PR 2 are independent and can be reviewed simultaneously. Each subsequent PR builds on the previous.
