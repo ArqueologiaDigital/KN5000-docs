@@ -12,9 +12,6 @@ This page describes the planned series of pull requests to upstream MAME that im
 >
 > **See Also**: [SubCPU Payload Loading]({{ site.baseurl }}/subcpu-payload-loading/) for the investigation that identified these issues, [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for overall firmware flow, and [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) for the serial protocol implemented by the HLE.
 
-> **Review Status:** These PRs were drafted with AI assistance (Claude). Only **[PR 1](#pr1)** has been fully reviewed by the author (Felipe Sanches) and [submitted upstream](https://github.com/mamedev/mame/pull/14970). PRs 2--5 are still under review and may be tweaked before submission.
-{: .warning}
-
 ## Dependency Graph
 
 The PRs form a dependency chain. PR 1 and PR 2 are independent and can be reviewed simultaneously. Each subsequent PR builds on the previous.
@@ -38,6 +35,10 @@ PR 2 (EI/RETI shadow) ──┘
 ---
 
 ## PR 1: TLCS-900/H --- LDC Control Register Mapping for TMP94C241 DMA Registers {#pr1}
+
+<div style="background: #fff3cd; border: 3px solid #ffc107; border-radius: 8px; padding: 16px; margin: 16px 0; font-size: 1.1em;">
+<strong>&#9888;&#65039; REVIEW STATUS:</strong> All PRs on this page were drafted with AI assistance (Claude). <strong>Only this PR (PR 1) has been fully reviewed</strong> by the author (Felipe Sanches) and <a href="https://github.com/mamedev/mame/pull/14970">submitted upstream</a>. PRs 2&ndash;5 are still under human review and may be tweaked before submission.
+</div>
 
 **Branch:** [`kn5000_pr1_ldc_cr_mapping`](https://github.com/felipesanches/mame/tree/kn5000_pr1_ldc_cr_mapping)
 
