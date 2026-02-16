@@ -26,7 +26,7 @@ PR 2 (EI/RETI shadow) ──┘
 
 | PR | Scope | Files Changed | New Files | Risk Level |
 |----|-------|---------------|-----------|------------|
-| 1 | TLCS-900/H core | 900tbl.hxx, dasm900.cpp | --- | None (additive) |
+| 1 | TLCS-900/H core | 900tbl.hxx, dasm900.cpp, dasm900.h, tmp94c241.cpp, tmp95c061.cpp, tmp95c063.cpp, tmp96c141.cpp | --- | None (additive + structural refactor) |
 | 2 | TLCS-900/H core | 900tbl.hxx, tlcs900.cpp, tlcs900.h | --- | Low (all variants) |
 | 3 | TMP94C241 only | tmp94c241.cpp, tmp94c241.h | --- | None (TMP94C241 only) |
 | 4 | TMP94C241 only | tmp94c241.cpp, tmp94c241.h | tmp94c241_serial.cpp/h | None (TMP94C241 only) |
@@ -40,7 +40,7 @@ PR 2 (EI/RETI shadow) ──┘
 
 ### Summary
 
-Add TMP94C241 DMA control register encodings to the TLCS-900/H CPU core's `LDC` instruction handler and disassembler.
+Add TMP94C241 DMA control register encodings to the TLCS-900/H CPU core's `LDC` instruction handler, and refactor the disassembler's CR register name resolution from hardcoded switch blocks into model-specific symbol tables.
 
 ### Problem
 
@@ -56,15 +56,23 @@ MAME's existing implementation only handles the TMP96C141/TMP95C061/TMP95C063 en
 
 Without the TMP94C241 cases, `LDC cr,DMAMn` instructions write to a dummy register and DMA never configures correctly. This was the first bug identified in the KN5000 payload loading investigation --- the Main CPU's firmware uses `LDC` extensively to set up HDMA transfers for the 524KB SubCPU firmware payload.
 
+Additionally, the disassembler had all variants' CR register names hardcoded in the shared `dasm900.cpp`, which doesn't scale well as new variants are added. The existing SFR symbolic names already use a model-specific table pattern --- CR register names should follow the same approach.
+
 ### Changes
 
 - **`900tbl.hxx`**: Add TMP94C241 cases to the six existing `switch` blocks in `prepare_operands()` (three for operand 1, three for operand 2). Each block gains four new `case` entries mapping the TMP94C241 offsets to the same `m_dmam[]`, `m_dmac[]`, and `m_dmad[]` arrays. Existing TMP96C141/TMP95C061/TMP95C063 cases are unchanged.
 
-- **`dasm900.cpp`**: Add matching cases to the four disassembler `switch` blocks so that TMP94C241 DMA register operands display symbolic names (`DMAM0`, `DMAC2`, `DMAD1`, etc.) instead of `unknown`.
+- **`dasm900.h`**: Add a `cr_sym` struct (`{size, encoding, name}`) for model-specific control register names, a new constructor overload accepting a CR symbol table alongside the existing SFR symbol table, and a private `cr_name()` lookup helper.
+
+- **`dasm900.cpp`**: Replace six hardcoded `switch` blocks for `O_CR8`/`O_CR16`/`O_CR32` operands (two copies --- one for operand 1, one for operand 2) with table-driven lookups via `cr_name()`. This removes all variant-specific register names from the shared disassembler code.
+
+- **`tmp94c241.cpp`**: Define a `tmp94c241_cr_syms[]` table with TMP94C241 DMA register encodings and pass it to the disassembler constructor.
+
+- **`tmp96c141.cpp`**, **`tmp95c061.cpp`**, **`tmp95c063.cpp`**: Move their existing DMA CR register names (previously hardcoded in `dasm900.cpp`) into model-specific `*_cr_syms[]` tables, following the same pattern.
 
 ### Risk Assessment
 
-**None.** This change only adds new `case` entries to existing `switch` statements. All existing cases are untouched. The new encodings do not overlap with any existing variant's register map. No existing driver is affected.
+**None.** The CPU core change only adds new `case` entries to existing `switch` statements --- all existing cases are untouched and the new encodings do not overlap with any existing variant's register map. The disassembler refactoring is purely structural: the same register names are resolved for the same encodings, just driven by per-variant tables instead of a shared switch. No existing driver is affected.
 
 ### Datasheet Reference
 
