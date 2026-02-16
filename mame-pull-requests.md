@@ -26,15 +26,15 @@ PR 2 (EI/RETI shadow) ──┘
 
 | PR | Scope | Files Changed | New Files | Risk Level |
 |----|-------|---------------|-----------|------------|
-| 1 | TLCS-900/H core | 900tbl.hxx, dasm900.cpp, dasm900.h, tmp94c241.cpp, tmp95c061.cpp, tmp95c063.cpp, tmp96c141.cpp | --- | None (additive + structural refactor) |
-| 2 | TLCS-900/H core | 900tbl.hxx, tlcs900.cpp, tlcs900.h | --- | Low (all variants) |
-| 3 | TMP94C241 only | tmp94c241.cpp, tmp94c241.h | --- | None (TMP94C241 only) |
-| 4 | TMP94C241 only | tmp94c241.cpp, tmp94c241.h | tmp94c241_serial.cpp/h | None (TMP94C241 only) |
-| 5 | KN5000 driver | kn5000.cpp, kn5000.lay | kn5000_cpanel.cpp/h | None (KN5000 only) |
+| [1](#pr1) | TLCS-900/H core | 900tbl.hxx, dasm900.cpp, dasm900.h, tmp94c241.cpp, tmp95c061.cpp, tmp95c063.cpp, tmp96c141.cpp | --- | None (additive + structural refactor) |
+| [2](#pr2) | TLCS-900/H core | 900tbl.hxx, tlcs900.cpp, tlcs900.h | --- | Low (all variants) |
+| [3](#pr3) | TMP94C241 only | tmp94c241.cpp, tmp94c241.h | --- | None (TMP94C241 only) |
+| [4](#pr4) | TMP94C241 only | tmp94c241.cpp, tmp94c241.h | tmp94c241_serial.cpp/h | None (TMP94C241 only) |
+| [5](#pr5) | KN5000 driver | kn5000.cpp, kn5000.lay | kn5000_cpanel.cpp/h | None (KN5000 only) |
 
 ---
 
-## PR 1: TLCS-900/H --- LDC Control Register Mapping for TMP94C241 DMA Registers
+## PR 1: TLCS-900/H --- LDC Control Register Mapping for TMP94C241 DMA Registers {#pr1}
 
 **Branch:** [`kn5000_pr1_ldc_cr_mapping`](https://github.com/felipesanches/mame/tree/kn5000_pr1_ldc_cr_mapping)
 
@@ -94,7 +94,7 @@ The TMP94C241 control register map is documented in the Toshiba TMP94C241F Data 
 
 ---
 
-## PR 2: TLCS-900/H --- EI/RETI Interrupt Acceptance Shadow
+## PR 2: TLCS-900/H --- EI/RETI Interrupt Acceptance Shadow {#pr2}
 
 **Branch:** [`kn5000_pr2_irq_inhibit`](https://github.com/felipesanches/mame/tree/kn5000_pr2_irq_inhibit)
 
@@ -143,7 +143,7 @@ Toshiba TLCS-900/H Programming Manual, Section 8.2: "After the EI instruction or
 
 ---
 
-## PR 3: TMP94C241 --- DMA Subsystem (HDMA + DMAR) and Port Read Fix
+## PR 3: TMP94C241 --- DMA Subsystem (HDMA + DMAR) and Port Read Fix {#pr3}
 
 **Branch:** [`kn5000_pr3_dma_and_port`](https://github.com/felipesanches/mame/tree/kn5000_pr3_dma_and_port)
 
@@ -192,7 +192,7 @@ TMP94C241F Data Sheet:
 
 ---
 
-## PR 4: TMP94C241 --- Serial Port Sub-Device
+## PR 4: TMP94C241 --- Serial Port Sub-Device {#pr4}
 
 **Branch:** [`kn5000_pr4_serial`](https://github.com/felipesanches/mame/tree/kn5000_pr4_serial)
 
@@ -242,7 +242,7 @@ TMP94C241F Data Sheet:
 
 ---
 
-## PR 5: KN5000 Driver --- Control Panel HLE, SubCPU Payload Transfer, Keybed HLE
+## PR 5: KN5000 Driver --- Control Panel HLE, SubCPU Payload Transfer, Keybed HLE {#pr5}
 
 **Branch:** [`kn5000_pr5_driver`](https://github.com/felipesanches/mame/tree/kn5000_pr5_driver)
 
