@@ -189,7 +189,7 @@ Channel 3: 0x130060 - 0x13007F
 
 ### DSP State Dispatcher Architecture
 
-The Sub CPU firmware contains a master DSP state dispatcher at `LABEL_037D6E` that orchestrates all DSP configuration changes. It is called via this chain:
+The Sub CPU firmware contains a master DSP state dispatcher at `DSP_State_Dispatcher` that orchestrates all DSP configuration changes. It is called via this chain:
 
 ```
 Audio_System_Init (0x01FACB)        -- on boot
@@ -197,30 +197,30 @@ Audio_System_Init (0x01FACB)        -- on boot
     -> DSP_Reset (0x0360A3)
       -> LABEL_038E6E               -- full DSP reconfigure
         -> LABEL_036E3D              -- DSP state apply orchestrator
-          -> LABEL_037D6E            -- master DSP state dispatcher
+          -> DSP_State_Dispatcher    -- master DSP state dispatcher
 
 Audio_Main_Loop (0x01FAEB)          -- at runtime
   -> Audio_Process_DSP (0x035A7D)   -- reads ring buffer at 0x3B60
     -> command 0x2D dispatch
       -> LABEL_035F32                -- sub-command router
-        -> ... -> LABEL_036E3D -> LABEL_037D6E (same chain)
+        -> ... -> LABEL_036E3D -> DSP_State_Dispatcher (same chain)
 ```
 
-The master dispatcher (`LABEL_037D6E`) calls 11 sub-routines sequentially:
+The master dispatcher (`DSP_State_Dispatcher`) calls 11 sub-routines sequentially:
 
 | Step | Routine | Description | Debug String |
 |------|---------|-------------|--------------|
-| 1 | `LABEL_0377D8` | DSP reset loop (DSP 0,1) | "DSP %d reset." |
-| 2 | `LABEL_037760` | EFF mute loop (EFF 0-4) | "EFF %d mute." |
-| 3 | `LABEL_0377ED` | DSP mute loop (DSP 0,1) | "DSP %d mute." |
-| 4 | `LABEL_03783B` | Argo change check | "argo change %d" |
-| 5 | `LABEL_0380AB` | EFF header (for EFF 0) | "EFF %d headder" |
-| 6 | `LABEL_037D40` | EFF disconnect loop | "EFF %d disconnect." |
-| 7 | `LABEL_037814` | DSP antimute loop | "DSP %d antimute." |
-| 8 | `LABEL_037A67` | EFF header+change+data | "EFF %d change %d", "EFF %d data change %d" |
-| 9 | `LABEL_037AE6` | EFF link loop | "EFF %d link." |
-| 10 | `LABEL_037C25` | EFF volume loop | "EFF %d vol %d", "EFF %d para%d edit %d" |
-| 11 | `LABEL_037B3D` | Secondary EFF link | "EFF %d disconnect." |
+| 1 | `DSP_ResetLoop` | DSP reset loop (DSP 0,1) | "DSP %d reset." |
+| 2 | `EFF_MuteLoop` | EFF mute loop (EFF 0-4) | "EFF %d mute." |
+| 3 | `DSP_MuteLoop` | DSP mute loop (DSP 0,1) | "DSP %d mute." |
+| 4 | `DSP_AlgorithmChangeCheck` | Argo change check | "argo change %d" |
+| 5 | `EFF_WriteHeader` | EFF header (for EFF 0) | "EFF %d headder" |
+| 6 | `EFF_DisconnectLoop` | EFF disconnect loop | "EFF %d disconnect." |
+| 7 | `DSP_UnmuteLoop` | DSP antimute loop | "DSP %d antimute." |
+| 8 | `EFF_HeaderChangeDataLoop` | EFF header+change+data | "EFF %d change %d", "EFF %d data change %d" |
+| 9 | `EFF_LinkLoop` | EFF link loop | "EFF %d link." |
+| 10 | `EFF_VolumeLoop` | EFF volume loop | "EFF %d vol %d", "EFF %d para%d edit %d" |
+| 11 | `EFF_SecondaryLinkPath` | Secondary EFF link | "EFF %d disconnect." |
 
 All 13 diagnostic format strings (at ROM 0x0122CC-0x012397) are triggered through this dispatcher. The strings are output via `Debug_Print_String` (0x038365) which sends characters through boot ROM serial output at `0xFFFEA1`.
 
@@ -265,7 +265,7 @@ Two consecutive 32-byte payloads give 64 bytes in the ring buffer for a single D
 
 **Layer 3 — Command Processing:**
 
-`Audio_Process_DSP` (called from main loop) reads from the ring buffer. `LABEL_035997` (line 39522) reads 7 header bytes into RAM `4369h`-`436Fh`, plus the command byte at `4368h`.
+`Audio_Process_DSP` (called from main loop) reads from the ring buffer. `DSP_Cmd_DequeueHeader` reads 7 header bytes into RAM `4369h`-`436Fh`, plus the command byte at `4368h`.
 
 For command `0x2D` (DSP configuration), the 8-byte header is:
 
@@ -280,7 +280,7 @@ For command `0x2D` (DSP configuration), the 8-byte header is:
 | 6 | 436Eh | Data length (0x38 = 56 bytes) |
 | 7 | 436Fh | Update mode (0x00 = partial, 0xFF = full) |
 
-Then `LABEL_035A7E` (line 39626) reads 56 data bytes from the ring buffer into `4370h`-`43A7h`.
+Then `DSP_RingBuf_ReadAndCompare` (at 0x035A7E) reads 56 data bytes from the ring buffer into `4370h`-`43A7h`, comparing each byte with the existing slot buffer and counting changes.
 
 **Layer 4 — EFF Slot Storage:**
 
@@ -296,7 +296,7 @@ The 56-byte parameter block is compared against the current slot buffer at `4496
 
 Each slot contains 28 word-sized parameters. Word[0] is the **algorithm ID** (e.g., 0x0014 = algorithm 20 = CONCERT REVERB 1). The remaining words are effect-type-specific parameter values.
 
-If any parameters changed, `LABEL_03616A` (line 40310) copies the full 290-byte DSP state (8-byte header + 5 × 56-byte slots) from `0x448E` to an allocated work buffer via `LABEL_038E31` (line 46177), which marks it as dirty and triggers processing by the DSP state dispatcher.
+If any parameters changed, `DSP_ApplyConfig` (at 0x03616A) copies the full 290-byte DSP state (8-byte header + 5 × 56-byte slots) from `0x448E` to an allocated work buffer via `LABEL_038E31` (at 0x038E31), which marks it as dirty and triggers processing by the DSP state dispatcher.
 
 ### DSP Data Tables
 
@@ -321,12 +321,12 @@ The Sub CPU uses several lookup tables for DSP configuration:
 
 **Parameter Translation Chain:**
 
-`LABEL_03C190` translates a parameter index + algorithm ID into DSP register writes:
+`DSP_WriteParameter` (at 0x03C190) translates a parameter index + algorithm ID into DSP register writes:
 
 1. Look up `0x1F22C[algo_id]` → pointer to parameter mapping data (XDE)
 2. Look up `0x1F09C[algo_id]` → pointer to register address data (XBC)
-3. Call `LABEL_03C9E6` which uses 12-byte stride tables at those pointers
-4. `LABEL_03CAAE` reads 3 words per parameter from the mapping data
+3. Call `DSP_ParameterWriteEngine` (at 0x03C9E6) which uses 12-byte stride tables at those pointers
+4. The inner loop reads 3 words per parameter from the mapping data
 5. Final DSP register writes go through tone generator at `0x130000`
 
 Special cases: algorithms 9 and 10 for EFF slot 1 use hardcoded tables at `0x1E17F`/`0x1E19E` and `0x1E40A`/`0x1E42D` respectively.
@@ -335,11 +335,11 @@ The DSP write routines used by the dispatcher:
 
 | Routine | Address | Description |
 |---------|---------|-------------|
-| `LABEL_03C161` | 0x03C161 | Per-EFF DSP write (uses EFF-specific tables) |
-| `LABEL_03C181` | 0x03C181 | Generic DSP write (direct config) |
-| `LABEL_03C190` | 0x03C190 | Parameter-specific DSP write (algo-indexed tables) |
-| `LABEL_03C9E6` | 0x03C9E6 | Core DSP parameter write engine |
-| `LABEL_03CAAE` | 0x03CAAE | Per-parameter register translation (12-byte stride) |
+| `DSP_WriteEFFConfig` | 0x03C161 | Per-EFF DSP write (uses EFF-specific bytecode tables) |
+| `DSP_WriteGlobalConfig` | 0x03C181 | Global DSP write (direct bytecode config) |
+| `DSP_WriteParameter` | 0x03C190 | Parameter-specific DSP write (algo-indexed tables) |
+| `DSP_ParameterWriteEngine` | 0x03C9E6 | Core DSP parameter write engine |
+| `DSP_BytecodeInterpreter_Init` | 0x03C266 | Bytecode interpreter entry point |
 
 ## Tone Generator
 
@@ -482,6 +482,26 @@ The Sub CPU controls both DSPs via GPIO pins:
 4. Assert write strobe (P7.3 low)
 5. Wait for PH.0 ready
 6. Deassert write/CS
+
+### DSP Firmware / Microcode Loading
+
+**The DSP chips do NOT receive external microcode from the Sub CPU.** Investigation of the SubCPU firmware reveals that no large code blocks are ever uploaded to the DSPs. Instead:
+
+1. **DSPs are pre-programmed at manufacture** — The MN19413 (IC310) and DS3613GF-3BA (IC311) contain internal ROM with their instruction set already loaded. They are dedicated effects processors with a fixed command interface, not general-purpose programmable DSPs.
+
+2. **Sub CPU controls DSPs via register writes only** — All communication uses the 8-bit parallel bus handshake protocol (Port PZ data, Port P7 control lines). The Sub CPU sends:
+   - **Command bytes** (P7.6=1): Select DSP register or operation mode
+   - **Data bytes** (P7.6=0): Write parameter values to selected register
+
+3. **Configuration via bytecode interpreter** — The Sub CPU has a bytecode interpreter (`DSP_BytecodeInterpreter_Init` at 0x03C266) that reads compact bytecode programs from ROM and translates them into sequences of DSP command+data writes. This is a **Sub CPU-side** interpreter, not DSP microcode.
+
+**Evidence:** The `DSP_WriteEFFConfig` and `DSP_WriteGlobalConfig` routines both call `DSP_BytecodeInterpreter_Init` with ROM pointers to bytecode tables (at 0x14777 for EFF configs, 0x147B3 for global configs). These tables contain opcodes like:
+- `0x0-0x4`: DSP register write operations
+- `0x0D`: State change notification
+- `0x0E`: Send command+data sequence
+- `0x0F`: End of program
+
+**Implication for emulation:** The DSP chips must be emulated with their internal behavior intact. Since no dumps of the DSP internal ROMs exist, the DSP behavior must be reverse-engineered from the register interface (what the SubCPU writes) and the resulting audio output. This is the primary remaining challenge for accurate sound emulation.
 
 ### DSP Preset Structure
 
@@ -672,6 +692,10 @@ See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) for the complete note
 - [x] ~~Analyze DSP1/DSP2 command sets~~ — Partial: 4 commands identified, preset structure decoded
 - [x] ~~Extract effect type names from ROM~~ — Complete: 100 named effect types at MainCPU 0xE32A7A
 - [x] ~~Extract effect parameter names from ROM~~ — Complete: 84 parameter names at MainCPU 0xE324D0
-- [x] ~~Document DSP state dispatcher architecture~~ — Complete: LABEL_037D6E and 11 sub-routines traced
+- [x] ~~Document DSP state dispatcher architecture~~ — Complete: `DSP_State_Dispatcher` and 11 sub-routines traced
 - [x] ~~Trace inter-CPU command 0x2D protocol~~ — Complete: 4-layer protocol fully documented
-- [x] ~~Map effect type indices to DSP register configurations~~ — Partial: translation chain traced through `LABEL_03C190` → `LABEL_03C9E6` → `LABEL_03CAAE`, but per-algorithm ROM tables not yet decoded
+- [x] ~~Map effect type indices to DSP register configurations~~ — Partial: translation chain traced through `DSP_WriteParameter` → `DSP_ParameterWriteEngine`, but per-algorithm ROM tables not yet decoded
+- [x] ~~Determine if DSP microcode is loaded from ROM~~ — **No.** DSPs are pre-programmed; SubCPU only writes configuration via bytecode interpreter
+- [ ] Reverse-engineer DSP register semantics by analyzing bytecode programs at 0x14777/0x147B3
+- [ ] Determine if DSP internal ROM can be extracted (decapping, JTAG, etc.)
+- [ ] Document bytecode interpreter opcode set completely (opcodes 0x0-0xF)
