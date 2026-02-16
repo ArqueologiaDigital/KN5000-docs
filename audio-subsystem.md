@@ -163,7 +163,12 @@ The Sub CPU controls two DSP chips:
 | DSP State 1 | 0x041342 | 38 bytes | Primary DSP state |
 | DSP State 2 | 0x041368 | 7462 bytes | Extended DSP state |
 | DSP Config | 0x045310-18 | 12 bytes | Configuration parameters |
-| DSP2 State | 0x3B60-64 | 6 bytes | Second DSP control |
+| DSP Ring Buffer | 0x3B60-64 | 6 bytes | Command ring buffer for DSP |
+| EFF Mute Flags | 0x493A | 10 bytes | Per-DSP/EFF mute status (5 words) |
+| EFF State | 0x4940 | variable | Per-EFF dirty/change flags |
+| EFF Params | 0x4944 | variable | Per-EFF parameter dirty flags |
+| Argo Change Flag | 0x493E | 2 bytes | Algorithm/routing change pending |
+| EFF Type Table | 0x1ED6D | 5 bytes | Current effect type per EFF slot |
 
 ### DSP Channel Configuration
 
@@ -181,6 +186,67 @@ Channel 3: 0x130060 - 0x13007F
 - `DSP_Write_Channel` - Write 8 bytes of config to a channel
 - `DSP_Send_Command` - Send command byte to DSP
 - `DSP_Send_Data` - Send data byte to DSP
+
+### DSP State Dispatcher Architecture
+
+The Sub CPU firmware contains a master DSP state dispatcher at `LABEL_037D6E` that orchestrates all DSP configuration changes. It is called via this chain:
+
+```
+Audio_System_Init (0x01FACB)        -- on boot
+  -> DSP_System_Init (0x034C45)
+    -> DSP_Reset (0x0360A3)
+      -> LABEL_038E6E               -- full DSP reconfigure
+        -> LABEL_036E3D              -- DSP state apply orchestrator
+          -> LABEL_037D6E            -- master DSP state dispatcher
+
+Audio_Main_Loop (0x01FAEB)          -- at runtime
+  -> Audio_Process_DSP (0x035A7D)   -- reads ring buffer at 0x3B60
+    -> command 0x2D dispatch
+      -> LABEL_035F32                -- sub-command router
+        -> ... -> LABEL_036E3D -> LABEL_037D6E (same chain)
+```
+
+The master dispatcher (`LABEL_037D6E`) calls 11 sub-routines sequentially:
+
+| Step | Routine | Description | Debug String |
+|------|---------|-------------|--------------|
+| 1 | `LABEL_0377D8` | DSP reset loop (DSP 0,1) | "DSP %d reset." |
+| 2 | `LABEL_037760` | EFF mute loop (EFF 0-4) | "EFF %d mute." |
+| 3 | `LABEL_0377ED` | DSP mute loop (DSP 0,1) | "DSP %d mute." |
+| 4 | `LABEL_03783B` | Argo change check | "argo change %d" |
+| 5 | `LABEL_0380AB` | EFF header (for EFF 0) | "EFF %d headder" |
+| 6 | `LABEL_037D40` | EFF disconnect loop | "EFF %d disconnect." |
+| 7 | `LABEL_037814` | DSP antimute loop | "DSP %d antimute." |
+| 8 | `LABEL_037A67` | EFF header+change+data | "EFF %d change %d", "EFF %d data change %d" |
+| 9 | `LABEL_037AE6` | EFF link loop | "EFF %d link." |
+| 10 | `LABEL_037C25` | EFF volume loop | "EFF %d vol %d", "EFF %d para%d edit %d" |
+| 11 | `LABEL_037B3D` | Secondary EFF link | "EFF %d disconnect." |
+
+All 13 diagnostic format strings (at ROM 0x0122CC-0x012397) are triggered through this dispatcher. The strings are output via `Debug_Print_String` (0x038365) which sends characters through boot ROM serial output at `0xFFFEA1`.
+
+### DSP Data Tables
+
+The Sub CPU uses several lookup tables for DSP configuration:
+
+| Address | Description |
+|---------|-------------|
+| 0x1E496 | EFF header config table |
+| 0x1ED6D | Per-EFF type byte (current algorithm) |
+| 0x1ED7C | EFF change config table (per sub-change) |
+| 0x1EF0C | EFF data change config table |
+| 0x1F3BC | EFF mute config table |
+| 0x1F3D0 | DSP mute config table |
+| 0x1F3E0 | DSP unmute config table |
+| 0x1F3F0 | EFF disconnect config table |
+| 0x1F404 | EFF link config table |
+
+The DSP write routines used by the dispatcher:
+
+| Routine | Address | Description |
+|---------|---------|-------------|
+| `LABEL_03C161` | 0x03C161 | Per-EFF DSP write (uses EFF-specific tables) |
+| `LABEL_03C181` | 0x03C181 | Generic DSP write (direct config) |
+| `LABEL_03C190` | 0x03C190 | Parameter-specific DSP write |
 
 ## Tone Generator
 
@@ -342,16 +408,143 @@ Each effect block contains parameters:
 - **Mix** (dry/wet balance, 0-99)
 - **Feedback** (0-99)
 
-### Known Effect Types
+### Effect Type Name Table
 
-| Type ID | Likely Effect | KN5000 Manual Name |
-|---------|--------------|-------------------|
-| 1 | Chorus | DIGITAL EFFECT (chorus variants) |
-| 3 | Reverb | DIGITAL REVERB |
-| 4 | Delay | DSP EFFECT (delay-based) |
-| 8 | EQ/Filter | ACOUSTIC ILLUSION |
+The Main CPU ROM contains a 128-entry effect type name table at address `0xE32A7A` (pointer table) with 16-character padded strings at `0xE32C7A`-`0xE33579`. 100 entries are named; the rest are unused (`----------`).
 
-These correlate with the KN5000 front panel effect buttons: SUSTAIN, DIGITAL EFFECT, DSP EFFECT, DIGITAL REVERB, and ACOUSTIC ILLUSION.
+**Modulation Effects (0-6):**
+
+| Index | Name |
+|-------|------|
+| 0 | NO OPERATION |
+| 1 | CHORUS |
+| 2 | MODULATED CHORUS |
+| 3 | ENHANCER |
+| 4 | FLANGER |
+| 5 | PHASER |
+| 6 | ENSEMBLE |
+
+**Delay & Gated Effects (8-11):**
+
+| Index | Name |
+|-------|------|
+| 8 | GATED REVERB |
+| 9 | SINGLE DELAY |
+| 10 | MULTI TAP DELAY |
+| 11 | MODULATION DELAY |
+
+**Reverbs (15-27):**
+
+| Index | Name |
+|-------|------|
+| 15 | ROCK ROTARY |
+| 16 | ROOM REVERB 1 |
+| 17 | ROOM REVERB 2 |
+| 18 | PLATE REVERB 1 |
+| 19 | PLATE REVERB 2 |
+| 20 | CONCERT REVERB 1 |
+| 21 | CONCERT REVERB 2 |
+| 22 | DARK REVERB 1 |
+| 23 | DARK REVERB 2 |
+| 24 | BRIGHT REVERB 1 |
+| 25 | BRIGHT REVERB 2 |
+| 26 | WAVE REVERB 1 |
+| 27 | WAVE REVERB 2 |
+
+**Drive & Dynamics (32-39):**
+
+| Index | Name |
+|-------|------|
+| 32 | DISTORTION |
+| 33 | OVERDRIVE |
+| 34 | FUZZ |
+| 35 | EXCITER |
+| 36 | COMPRESSOR |
+| 37 | SLOW ATTACKER |
+| 38 | NOISE FLANGER |
+| 39 | PARAMETRIC EQ |
+
+**Special Effects (44-60, 63):**
+
+| Index | Name |
+|-------|------|
+| 44 | CEL |
+| 45 | CELM |
+| 48 | AUTO PAN |
+| 49 | PITCH SHIFTER |
+| 50 | VIBRATO |
+| 51 | PEDAL WAH |
+| 52 | AUTO WAH |
+| 53 | ROTARY SPEAKER |
+| 54 | RING MODULATOR |
+| 55 | HARS EFFECT |
+| 56 | MIX UP |
+| 57 | STANDARD |
+| 58 | PERCUSSIVE |
+| 59 | SYMPHONIC |
+| 60 | DEEP SPACE |
+| 63 | STRING |
+
+**Combination Effects (64-75, 79-81, 88-91, 96-99):**
+
+| Index | Name |
+|-------|------|
+| 64 | S.DELAY+CHORUS |
+| 65 | S.DELAY+S.DELAY |
+| 66 | S.DELAY+FLANGER |
+| 67 | S.DELAY+VIBRATO |
+| 68 | S.DELAY+PHASER |
+| 69 | PEDAL WAH+DELAY |
+| 70 | AUTO WAH+S.DELAY |
+| 71 | PEQ+CHORUS |
+| 72 | PEQ+S.DELAY |
+| 73 | PEQ+FLANGER |
+| 74 | PEQ+VIBRATO |
+| 75 | PEQ+COMPRESSOR |
+| 79 | GEQ |
+| 80 | DS_D |
+| 81 | OVER_D |
+| 88 | ROOM |
+| 89 | KARAOKE |
+| 90 | BATH ROOM |
+| 91 | STAGE |
+| 96 | PEQ+COMPR+DIST |
+| 97 | PEQ+COMPR+OVERDR |
+| 98 | PEQ+DIST+DELAY |
+| 99 | PEQ+OVERDR+DELAY |
+
+### Effect Parameter Names
+
+84 effect parameter names are stored at Main CPU ROM `0xE324D0`-`0xE32A6A`:
+
+| Index | Name | Index | Name |
+|-------|------|-------|------|
+| 0-1 | VOLUME | 33 | REVERB TIME |
+| 2 | REV SEND | 34 | PRE DELAY |
+| 3 | DRIVE | 35 | HIGH DAMP GAIN |
+| 4 | ADJUST | 36 | ER.LEVEL |
+| 5 | EMPHASIS GAIN | 37-38 | PITCH L/R |
+| 6 | DEPTH | 39 | THRESHOLD |
+| 7 | LFO SPEED | 40 | RATIO |
+| 8 | SLOW LFO SPEED | 41-42 | ATTACK/RELEASE SENS. |
+| 9 | FAST LFO BALANCE | 43-44 | ATTACK/RELEASE RATE |
+| 10 | RESONANCE | 45-46 | GATE/MASK TIME |
+| 11 | MANUAL | 47 | HARS TIME |
+| 12 | SLOW/FAST | 48-49 | LFO/OSC WAVEFORM |
+| 13 | TREBLE FAST | 50-52 | BAND EMPHASIS FC/Q/G |
+| 14 | SLOW | 53-54 | LOW/HIGH MIX |
+| 15-16 | WIND UP/DOWN | 55 | PHASE |
+| 17-18 | BASS FAST/SLOW | 56 | FEEDBACK |
+| 19 | VOLUME ADJUST | 57 | SWEEP RANGE |
+| 20 | OSC SPEED | 58 | WAH CENTER FC |
+| 21-22 | DELAY L/R | 59-60 | HARS TIME L/R |
+| 23-24 | FEEDBACK L/R | 61-62 | BALANCE L/R |
+| 25-28 | DRY/WET (various) | 63-64 | FAST LFO SPEED L/R |
+| 29-32 | EMPHASIS FC/G | 65 | MODULATION DEPTH |
+| 66-69 | DRY/WET (combos) | 82 | INTENSITY |
+| 70 | FAST LFO SPEED | 83 | EXCITE |
+| 71-73 | TREBLE/BASS DEPTH | 74-77 | DELAY 1-4 |
+| 78-81 | PAN 1-4 | | |
 
 ### Known DSP Commands
 
@@ -378,5 +571,10 @@ See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) for the complete note
 - [ ] Document waveform ROM format and sample layout
 - [ ] Map remaining proprietary CC handlers (0x97-0x9D)
 - [ ] Decode tone generator register semantics (pitch, envelope, filter, etc.)
+- [ ] Map effect type indices to DSP register configurations (which registers are written for each effect)
+- [ ] Decode DSP register semantics per channel (what registers 0x10-0x17 control)
 - [x] ~~Identify exact device on Serial Port 1~~ — Likely DAC IC313 control interface
 - [x] ~~Analyze DSP1/DSP2 command sets~~ — Partial: 4 commands identified, preset structure decoded
+- [x] ~~Extract effect type names from ROM~~ — Complete: 100 named effect types at MainCPU 0xE32A7A
+- [x] ~~Extract effect parameter names from ROM~~ — Complete: 84 parameter names at MainCPU 0xE324D0
+- [x] ~~Document DSP state dispatcher architecture~~ — Complete: LABEL_037D6E and 11 sub-routines traced
