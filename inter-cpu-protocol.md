@@ -98,20 +98,100 @@ Audio_DMA_Transfer:
 
 ## Sub CPU: Receiving Commands
 
-### DMA Configuration
+### Interrupt Configuration
 
-The `InterCPU_Latch_Setup` routine configures the Sub CPU for DMA reception:
+The `InterCPU_Latch_Setup` routine (0x020C15) configures the Sub CPU's interrupt controller for inter-CPU DMA reception:
 
-1. Sets interrupt priority for DMA channels 0-3
-2. Configures MicroDMA source address
-3. Initializes `DMA_XFER_STATE` and `CMD_PROCESSING_STATE` to 0
+```asm
+InterCPU_Latch_Setup:
+    LD (INTETC01), 005h    ; INTTC0 level = 5 (DMA ch0 completion)
+    LD (INTETC23), 005h    ; INTTC2 level = 5 (DMA ch2 completion)
+    LD (INTE0AD), 001h     ; INT0 level = 1 (latch data pending)
+```
+
+**Interrupt Priority Hierarchy:**
+
+| Interrupt | Level | Source | Purpose |
+|-----------|-------|--------|---------|
+| INT0 | 1 | Latch data_pending callback | New command byte available |
+| INTTC0 | 5 | HDMA ch0 transfer complete | Command payload received |
+| INTTC2 | 5 | HDMA ch2 transfer complete | Response data sent |
+
+The firmware normally runs with `EI 6` (IFF=6), which means only level 6+ interrupts are accepted. Since INT0 is at level 1, it only fires during brief `EI 0` windows. INTTC0/INTTC2 at level 5 are also normally masked — they fire during EI 0 windows or when the ISR handler lowers IFF.
+
+**INT0 Detection Mode:**
+
+The Sub CPU configures INT0 as **level-triggered** (IIMC bit 1 = 0). This means the interrupt flag is asserted whenever the latch `data_pending` signal is high, and deasserted when the latch is read (clearing `data_pending`).
+
+### HDMA-Based Command Reception Flow
+
+The complete flow for receiving a command from the Main CPU involves three interrupt sources working in sequence:
+
+```
+Main CPU writes command byte to latch (0x120000)
+    │
+    v
+generic_latch data_pending → set_input_line(INT0, ASSERT)
+    │
+    v
+┌──────────────────────────────────────────────────┐
+│  INT0 ISR (INT0_HANDLER at 0x020C47)             │
+│                                                   │
+│  1. Read command byte from latch (0x120000)       │
+│     → This clears data_pending → deasserts INT0   │
+│                                                   │
+│  2. Decode command type:                          │
+│     - E1: DMAD0=0x10E0, DMAC0=6                  │
+│     - E2: DMAD0=0x111C, DMAC0=10                 │
+│     - E3: Set PAYLOAD_LOADED_FLAG, return         │
+│     - Standard (0x00-0xDF):                       │
+│       DMAD0=0x10F0, DMAC0=(byte & 0x1F)+1        │
+│                                                   │
+│  3. Write DMA0V = 0x0A (INT0 vector)              │
+│     → Configures HDMA ch0 to steal future INT0    │
+│       triggers for automatic byte-by-byte xfer    │
+│                                                   │
+│  4. Return from interrupt                         │
+└──────────────────────────────────────────────────┘
+    │
+    v
+Main CPU writes data bytes to latch (one at a time)
+    │
+    v
+Each data_pending → INT0 flag set → HDMA ch0 steals it
+    (HDMA has priority over ISR dispatch)
+    │
+    v
+HDMA ch0 transfers: latch (DMAS0) → DMAD0++
+    DMAC0 decremented each transfer
+    │
+    v
+When DMAC0 reaches 0:
+    │
+    v
+┌──────────────────────────────────────────────────┐
+│  INTTC0 ISR (MICRODMA_CH0_HANDLER at 0x020F1F)  │
+│                                                   │
+│  1. DMA0V cleared automatically (HDMA disabled)   │
+│                                                   │
+│  2. Dispatch based on CMD_PROCESSING_STATE:       │
+│     - State 0: Standard command → dispatch via    │
+│       CMD_DISPATCH_TABLE (upper 3 bits)           │
+│     - State 2: E1 phase 1 → set up phase 2       │
+│     - State 3: E2 processing → handle ext. cmd    │
+│                                                   │
+│  3. Process command data from receive buffer      │
+└──────────────────────────────────────────────────┘
+```
+
+**Key design insight:** The INT0 ISR only fires for the **first byte** (the command header). After that, HDMA ch0 takes over and silently transfers remaining bytes without CPU intervention. The ISR configures `DMA0V = 0x0A` (INT0's DMA start vector) so that subsequent INT0 flag assertions trigger HDMA instead of the ISR.
 
 ### MicroDMA Handlers
 
 | Handler | Channel | Purpose |
 |---------|---------|---------|
-| `MICRODMA_CH0_HANDLER` | CH0 | Inter-CPU latch reads |
-| `MICRODMA_CH2_HANDLER` | CH2 | Payload data transfers |
+| `MICRODMA_CH0_HANDLER` | CH0 | Command payload reception (triggered by INTTC0) |
+| `MICRODMA_CH2_HANDLER` | CH2 | Response data transmission (triggered by INTTC2) |
 
 ### Command Dispatch
 
@@ -480,6 +560,44 @@ Request:  2B 30 7F 20 00 00 02 14 00 00
 Response: 2B 30 7F 20 00 00 02 14 "Piano           " 10
 ```
 
+## MAME Emulation Notes
+
+### Latch Pending State and INT0
+
+The MAME `generic_latch_8_device` tracks a `data_pending` flag that drives the Sub CPU's INT0 input. Two emulation issues were discovered and fixed:
+
+**Issue 1: Stale pending state blocking INT0 (latch write without read)**
+
+On real hardware, each latch write generates a new INT0 edge/level regardless of previous state. In MAME, `generic_latch`'s `data_pending_callback` only fires on state *changes* — if the latch is already marked "written" (because the previous value wasn't read due to a handshake flag check), subsequent writes silently update the value without triggering INT0.
+
+**Fix:** Force-clear the pending state (`acknowledge_w(0)`) before each latch write, then write the new data. This ensures `data_pending` transitions 0→1 and the callback fires.
+
+**Issue 2: INT0 level-detect re-assertion causing runaway ISR loop**
+
+The TMP94C241 uses level-triggered INT0 (IIMC bit 1 = 0). On real hardware, the ISR reads the latch, which deasserts INT0 within the same clock cycle. In MAME, `set_input_line(CLEAR_LINE)` goes through `synchronize()`, creating a multi-cycle window where `m_level[INT0]` remains `ASSERT_LINE` even though the latch has been read.
+
+If the interrupt dispatcher re-asserts the INT0 flag based on the stale `m_level`, INT0 fires again immediately — before the deferred `CLEAR_LINE` propagates. This creates a runaway loop where the ISR fires ~20 times, each reading stale/empty latch data, corrupting the command protocol.
+
+**Symptoms observed during boot:**
+1. Main CPU sends E2 command byte to latch
+2. INT0 fires correctly, ISR reads E2
+3. INT0 re-fires spuriously (stale `m_level`), ISR reads 0xFF
+4. ISR interprets 0xFF as standard command: count=(0xFF & 0x1F)+1=32, dest=0x10F0
+5. HDMA ch0 now expects 32 bytes, but only 10 data bytes follow E2
+6. DMAC0 reaches 21 (not 0), so INTTC0 never fires
+7. Sub CPU never processes the E2 command → never responds to Main CPU
+8. Main CPU times out after 10 seconds waiting at `0xFB770F`
+
+**Fix:** Do not re-assert INT0's interrupt flag after ISR dispatch. Let the deferred `CLEAR_LINE` naturally deassert INT0. New data from the Main CPU will re-assert INT0 through the normal latch callback path.
+
+### CPU Scheduling for Latch Transfers
+
+Each latch write must be followed by a context switch so the receiving CPU can process it via HDMA. Without this, the writing CPU continues its timeslice and writes multiple bytes before the receiver gets a chance to read, causing data loss.
+
+**Fix:** After each latch write:
+1. `machine().scheduler().perfect_quantum(100µs)` — ensures tight interleaving
+2. `writing_cpu->abort_timeslice()` — forces immediate context switch
+
 ## Research Needed
 
 - [x] Document exact latch register bit layout - See Boot ROM Protocol above
@@ -487,6 +605,9 @@ Response: 2B 30 7F 20 00 00 02 14 "Piano           " 10
 - [x] Document command 0x2D (DSP configuration) format — Complete: 4-layer protocol fully traced
 - [x] Document two ring buffers (0x2B0D for MIDI, 0x3B60 for DSP) — Complete
 - [x] Document command 0x2B (sound name query) format — Complete
+- [x] Document Sub CPU interrupt configuration (INTETC01, INTE0AD) — Complete
+- [x] Document HDMA-based command reception flow — Complete
+- [x] Document INT0 level-detect emulation issues — Complete
 - [ ] Document remaining ring buffer command formats (other than 0x2B, 0x2D)
 - [ ] Document handlers 2 (0x40-0x5F), 5 (0xA0-0xBF), 6-7 (0xC0-0xFF)
 - [ ] Map status response message formats

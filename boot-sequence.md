@@ -867,6 +867,13 @@ After payload loading, the `MICRODMA_CH0_HANDLER` at 0x020F1F processes commands
 - Typical chunk size: 32 bytes
 - Timeout: 60,000 iterations (~300ms at 20MHz)
 
+### MAME Emulation Timing
+
+Accurate emulation of the inter-CPU protocol requires careful CPU scheduling. See [Inter-CPU Protocol: MAME Emulation Notes]({{ site.baseurl }}/inter-cpu-protocol/#mame-emulation-notes) for details on:
+- Latch pending state management (force-clear before each write)
+- INT0 level-detect re-assertion prevention
+- CPU timeslice interleaving for latch transfers
+
 ---
 
 ## Error Handling
