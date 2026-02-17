@@ -574,9 +574,9 @@ On real hardware, each latch write generates a new INT0 edge/level regardless of
 
 **Issue 2: INT0 level-detect re-assertion causing runaway ISR loop**
 
-The TMP94C241 uses level-triggered INT0 (IIMC bit 1 = 0). On real hardware, the ISR reads the latch, which deasserts INT0 within the same clock cycle. In MAME, `set_input_line(CLEAR_LINE)` goes through `synchronize()`, creating a multi-cycle window where `m_level[INT0]` remains `ASSERT_LINE` even though the latch has been read.
+The TMP94C241 uses level-triggered INT0 (IIMC bit 1 = 0). On real hardware, the ISR reads the latch, which deasserts INT0 within the same clock cycle. In MAME, `set_input_line(CLEAR_LINE)` goes through `synchronize()` (see `diexec.cpp:663-691`), which defers the actual `execute_set_input()` call until **after the current timeslice ends**. This creates a window where `m_level[INT0]` remains `ASSERT_LINE` even though the latch has been read.
 
-If the interrupt dispatcher re-asserts the INT0 flag based on the stale `m_level`, INT0 fires again immediately — before the deferred `CLEAR_LINE` propagates. This creates a runaway loop where the ISR fires ~20 times, each reading stale/empty latch data, corrupting the command protocol.
+The TMP94C241's `check_irqs()` contains a level-detect re-assertion path: after dispatching an INT0 ISR, if `m_level[INT0] == ASSERT_LINE`, it re-sets the INT0 interrupt flag. With the stale `m_level`, this causes INT0 to fire again immediately — creating a runaway loop where the ISR fires ~20 times, each reading stale/empty latch data, corrupting the command protocol.
 
 **Symptoms observed during boot:**
 1. Main CPU sends E2 command byte to latch
@@ -588,7 +588,15 @@ If the interrupt dispatcher re-asserts the INT0 flag based on the stale `m_level
 7. Sub CPU never processes the E2 command → never responds to Main CPU
 8. Main CPU times out after 10 seconds waiting at `0xFB770F`
 
-**Fix:** Do not re-assert INT0's interrupt flag after ISR dispatch. Let the deferred `CLEAR_LINE` naturally deassert INT0. New data from the Main CPU will re-assert INT0 through the normal latch callback path.
+**Failed first approach:** Removing the re-assertion code entirely fixed boot but broke button input — both CPUs' INT0 lines are driven by latches, and the Main CPU needs re-assertion for processing Sub CPU responses during normal operation.
+
+**Fix:** Added `clear_int0_level()` public method to `tmp94c241_device` that synchronously updates `m_level[INT0]` and clears the INT0 interrupt flag. The driver's latch-read wrappers (`subcpu_latch_r()`, `maincpu_latch_r()`) call this immediately after `generic_latch::read()`, bypassing the deferred `synchronize()` mechanism.
+
+This is safe because:
+1. **Same-CPU context** — the latch read occurs during the CPU's own memory read (HDMA or instruction), so we're modifying the CPU's own state within its execution context
+2. **Idempotent** — the deferred `set_input_line(CLEAR)` callback runs later but `m_level` is already `CLEAR_LINE`, so `execute_set_input()` becomes a no-op
+3. **Re-assertion preserved** — the level-detect re-assertion code in `check_irqs()` stays intact, but now checks the *correct* `m_level` value
+4. **New ASSERT works normally** — when new data is written to the latch, `set_input_line(INT0, ASSERT)` fires through the normal deferred path
 
 ### CPU Scheduling for Latch Transfers
 
