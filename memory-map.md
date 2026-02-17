@@ -42,6 +42,55 @@ permalink: /memory-map/
 | `T0` - `T7` | - | 8-bit Timers |
 | `T8` - `TB` | - | 16-bit Timers |
 
+### DMA Registers
+
+| Register | Address | Size | Description |
+|----------|---------|------|-------------|
+| `DMAV0` - `DMAV3` | `0x100` - `0x103` | 8-bit | DMA start vector (matches interrupt vector to trigger HDMA) |
+| `DMAM0` - `DMAM3` | `0x104` - `0x107` | 8-bit | DMA mode (transfer size, direction, counter mode) |
+| `DMAR` | `0x109` | 8-bit | DMA software request (write bit N to trigger DMA ch N) |
+
+DMA source (DMAS), destination (DMAD), count (DMAC), and mode (DMAM) registers are accessed via the `LDC` instruction with control register (CR) numbers. **Note:** TMP94C241 uses different CR numbers than TMP96C141/TMP95C063:
+
+| Register | TMP96C141 CR | TMP94C241 CR | Size |
+|----------|-------------|-------------|------|
+| DMAS0-3 | 0x00-0x0C | 0x00-0x0C | 32-bit (same) |
+| DMAD0-3 | 0x10-0x1C | 0x20-0x2C | 32-bit (different) |
+| DMAC0-3 | 0x20-0x2C | 0x40-0x4C | 16-bit (different) |
+| DMAM0-3 | 0x22-0x2E | 0x42-0x4E | 8-bit (different) |
+
+**DMAM encoding (bits 4-0):**
+
+| Value | Source | Destination | Size |
+|-------|--------|-------------|------|
+| 0x00 | Fixed | Increment | Byte |
+| 0x01 | Fixed | Increment | Word |
+| 0x02 | Fixed | Increment | Long |
+| 0x04 | Fixed | Decrement | Byte |
+| 0x08 | Increment | Fixed | Byte |
+| 0x09 | Increment | Fixed | Word |
+| 0x0A | Increment | Fixed | Long |
+| 0x10 | Increment (counter only) | — | Byte |
+| 0x14 | Increment (counter only) | — | Byte |
+
+### Interrupt Control
+
+| Register | Address | Description |
+|----------|---------|-------------|
+| `INTE45` | `0xE0` | INT4/INT5 interrupt enable/level |
+| `INTE67` | `0xE2` | INT6/INT7 interrupt enable/level |
+| `INTE89` | `0xE4` | INT8/INT9 interrupt enable/level |
+| `INTEAB` | `0xE6` | INTA/INTB interrupt enable/level |
+| `INTET01` | `0xE8` | Timer 0/1 interrupt enable/level |
+| `INTET23` | `0xEA` | Timer 2/3 interrupt enable/level |
+| `INTET45` | `0xEC` | Timer 4/5 interrupt enable/level |
+| `INTET67` | `0xEE` | Timer 6/7 interrupt enable/level |
+| `INTE0AD` | `0xF0` | INT0/AD interrupt enable/level |
+| `IIMC` | `0xF6` | INT0 mode control (bit 1: 0=level, 1=edge) |
+| `INTETC01` | `0xF2` | DMA ch0/ch1 completion interrupt enable/level |
+| `INTETC23` | `0xF3` | DMA ch2/ch3 completion interrupt enable/level |
+| `INTCLR` | `0xF8` | Interrupt clear register |
+
 ### Interrupts
 
 | Vector | Handler | Description |

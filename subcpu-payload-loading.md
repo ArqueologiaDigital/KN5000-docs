@@ -8,7 +8,7 @@ permalink: /subcpu-payload-loading/
 
 This page documents the investigation into SubCPU firmware payload loading in MAME emulation. The investigation uncovered multiple bugs in MAME's TMP94C241 emulation that prevented DMA transfers and inter-CPU communication. All have been fixed, and the SubCPU payload now loads, executes, and communicates bidirectionally with the Main CPU.
 
-> **Status: RESOLVED.** As of 2026-02-15, the SubCPU payload transfer and inter-CPU communication are **fully working**. The "Sound Name Error" messages are gone. The display shows voice names (Piano, Bigband Brass, Modern E.P.1), rhythm patterns, mixer levels, and menu navigation works correctly. This required 11 fixes to MAME's TMP94C241 emulation spanning DMA, interrupts, port I/O, and serial communication. See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for the overall boot flow and [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for latch communication details.
+> **Status: RESOLVED.** As of 2026-02-17, the SubCPU payload transfer and inter-CPU communication are **fully working**. The "Sound Name Error" messages are gone. The display shows voice names (Piano, Bigband Brass, Modern E.P.1), rhythm patterns, mixer levels, and menu navigation works correctly. Button input is also functional. This required 12 fixes to MAME's TMP94C241 emulation spanning DMA, interrupts, port I/O, serial communication, and interrupt timing. See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for the overall boot flow and [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for latch communication details.
 
 ## Background
 
@@ -322,9 +322,9 @@ The port_r fix affects BOTH Port D (PDCR=0x63: bits 0-1=output) AND Port Z (PZCR
 - Reduced HDMA per-transfer logging to every 256th transfer
 - Expected: log small enough for full boot completion, allowing us to determine if Sound Name Error persists
 
-## Remaining Issues
+## Fixes Applied (continued)
 
-### Fix 6: DMAR Software-Triggered Burst DMA (Pending Test)
+### Fix 6: DMAR Software-Triggered Burst DMA
 
 Analysis of the SubCPU payload's main loop revealed that `InterCPU_DMA_Send_Chunk` (at `0x020CF3`) uses the `DMAR` register to trigger DMA channel 2 for sending data back to the Main CPU. After triggering, it waits in `DMA_Chunk_Wait` for `DMA_XFER_STATE` to be cleared by the `MICRODMA_CH2_HANDLER` interrupt (INTTC2 at vector `0x9C`).
 
@@ -340,7 +340,7 @@ Without this fix, every attempt by the SubCPU to send data back to the Main CPU 
 
 During boot, this doesn't matter because HDMA consumes INT0 (the flag is cleared but HDMA handles the data transfer). After boot, when the SubCPU payload takes over and configures DMA0V=0 (disabling HDMA for INT0), the ISR handles INT0 directly. Without level-detect re-assertion, INT0 fires once but never again -- the SubCPU stops receiving commands from the Main CPU.
 
-**Fix:** Added re-assertion logic in `check_irqs()`: after dispatching an INT0 interrupt and clearing its flag, if INT0 is in level-detect mode and the input is still ASSERT_LINE, immediately re-set the INTE0AD flag and schedule another `check_irqs`.
+**Fix:** Added re-assertion logic in `check_irqs()`: after dispatching an INT0 interrupt and clearing its flag, if INT0 is in level-detect mode and the input is still ASSERT_LINE, immediately re-set the INTE0AD flag and schedule another `check_irqs`. An HDMA guard prevents re-assertion when any DMA channel is configured for INT0's start vector (0x0A), since HDMA manages its own flag lifecycle.
 
 ```cpp
 // In check_irqs(), after clearing INT0's flag:
@@ -349,12 +349,22 @@ if (tmp94c241_irq_vector_map[irq].reg == INTE0AD &&
     !(m_iimc & 0x02) &&
     m_level[TLCS900_INT0] == ASSERT_LINE)
 {
-    m_int_reg[INTE0AD] |= 0x08;
-    m_check_irqs = 1;
+    // Skip re-assertion when HDMA is configured for INT0
+    bool hdma_steals_int0 = false;
+    for (int ch = 0; ch < 4; ch++)
+        if (m_dma_vector[ch] == 0x0a)
+            hdma_steals_int0 = true;
+    if (!hdma_steals_int0)
+    {
+        m_int_reg[INTE0AD] |= 0x08;
+        m_check_irqs = 1;
+    }
 }
 ```
 
-### Fix 8: EI/RETI Interrupt Shadow (Pending Test)
+**Note:** This re-assertion relies on `m_level[INT0]` being accurate. See Fix 12 for the stale `m_level` problem this creates and the solution.
+
+### Fix 8: EI/RETI Interrupt Shadow
 
 **Root cause of INT0 storm:** Fix 7 exposed a second bug. The SubCPU payload uses a deliberate `EI 0; NOP; EI 6` pattern at address `0x01FFEE`-`0x01FFF1` to create a one-instruction interrupt window:
 
@@ -397,7 +407,7 @@ if ( m_check_irqs )
 - `mame_driver/src/devices/cpu/tlcs900/tlcs900.cpp` -- Shadow logic in `execute_run()`, init in `device_start()`/`device_reset()`
 - `mame_driver/src/devices/cpu/tlcs900/900tbl.hxx` -- Set `m_irq_inhibit = true` in `op_EI()` and `op_RETI()`
 
-### Fix 9: Port Read Direction Awareness (Pending Test)
+### Fix 9: Port Read Direction Awareness
 
 **Root cause of DSP timeout loops:** The `port_r()` function in `tmp94c241.cpp` always returns the external callback value, ignoring the port direction register (PXCR). On real TMP94C241 hardware, reading a port returns:
 - Output latch value for bits configured as output (PXCR bit = 1)
@@ -460,6 +470,32 @@ The SubCPU payload's main loop polls several unmapped hardware devices, generati
 | 0x130000-0x130003 | DSP1 registers | IC311 |
 | 0x1E0000-0x1EFFFF | Waveform/sample RAM | |
 
+### Fix 12: INT0 Stale m_level Fix (clear_int0_level)
+
+**Root cause of boot timeout regression:** Fix 7's re-assertion logic checks `m_level[INT0] == ASSERT_LINE` to decide whether to re-assert the interrupt flag. However, `set_input_line(CLEAR_LINE)` in MAME goes through `synchronize()` (see `diexec.cpp:663-691`), which defers the actual `execute_set_input()` call until **after the current timeslice ends**. When the ISR reads the latch, `generic_latch::read()` calls `set_input_line(INT0, CLEAR)`, but `m_level` stays `ASSERT_LINE` until the deferred callback runs.
+
+The re-assertion code in `check_irqs()` runs within the same timeslice and sees stale `m_level`, causing ~20 spurious INT0 firings per latch read. Each spurious ISR reads garbage from the latch, corrupting the command protocol. During boot, this caused the SubCPU to misinterpret the E2 command header and hang waiting for bytes that never arrive.
+
+**Failed first approach:** Removing the re-assertion code entirely (reverting Fix 7) fixed boot but broke button input — both CPUs need re-assertion for processing responses during normal operation.
+
+**Fix:** Added `clear_int0_level()` public method to `tmp94c241_device` that synchronously clears `m_level[TLCS900_INT0]` and the INTE0AD interrupt flag. The driver's latch-read wrappers call this immediately after `generic_latch::read()`:
+
+```cpp
+uint8_t kn5000_state::subcpu_latch_r()
+{
+    uint8_t val = m_subcpu_latch->read();
+    m_subcpu->clear_int0_level();  // Bypass deferred synchronize()
+    return val;
+}
+```
+
+This is safe because: (1) same-CPU context — modifying the CPU's own state during its own memory read; (2) idempotent — the deferred callback becomes a no-op since m_level is already CLEAR; (3) re-assertion preserved — `check_irqs()` now checks the *correct* m_level; (4) new ASSERT works normally through the deferred path.
+
+**Files modified:**
+- `src/devices/cpu/tlcs900/tmp94c241.h` — `clear_int0_level()` declaration
+- `src/devices/cpu/tlcs900/tmp94c241.cpp` — `clear_int0_level()` implementation
+- `src/mame/matsushita/kn5000.cpp` — Call from `subcpu_latch_r()` and `maincpu_latch_r()`
+
 ### "Sound Name Error" Root Cause (Resolved)
 
 The "Sound Name Error" was triggered by the Main CPU's `MainGetSoundName()` function (at `0xF98D3E`). It sends a sound name request to the SubCPU via the inter-CPU latch, then waits for a 32-byte response with a timeout of ~60,000 iterations. When the SubCPU never responds, the timeout fires and displays the error.
@@ -477,8 +513,9 @@ The "Sound Name Error" was triggered by the Main CPU's `MainGetSoundName()` func
 9. **Port read direction (Fix 9):** Output bits read as 0, breaking DSP status and MSTAT/SSTAT handshake
 10. **DMAR single-unit (Fix 10):** Main CPU received garbage headers due to burst-reading same latch byte
 11. **Peripheral stubs (Fix 11):** Unmapped hardware warnings flooded the log
+12. **INT0 stale m_level (Fix 12):** Fix 7's re-assertion checked stale m_level due to deferred synchronize(), causing ~20 spurious ISR firings per latch read
 
-**As of 2026-02-15, the "Sound Name Error" is GONE.** The display shows voice names, rhythm patterns, mixer levels, and menu navigation works correctly.
+**As of 2026-02-17, the "Sound Name Error" is GONE and boot completes without timeout.** The display shows voice names, rhythm patterns, mixer levels, and menu navigation works correctly. Button input is also functional (both CPUs' INT0 re-assertion paths work correctly).
 
 ## Debugging Inner Thoughts
 

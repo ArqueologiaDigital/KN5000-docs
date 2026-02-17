@@ -869,9 +869,11 @@ After payload loading, the `MICRODMA_CH0_HANDLER` at 0x020F1F processes commands
 
 ### MAME Emulation Timing
 
+> **Status: Boot fully working** as of 2026-02-17. The SubCPU payload loads (524K HDMA transfers), executes, initializes audio hardware, and communicates bidirectionally with the Main CPU. Required 11 fixes to MAME's TMP94C241 emulation. See [SubCPU Payload Loading]({{ site.baseurl }}/subcpu-payload-loading/) for the full fix history.
+
 Accurate emulation of the inter-CPU protocol requires careful CPU scheduling. See [Inter-CPU Protocol: MAME Emulation Notes]({{ site.baseurl }}/inter-cpu-protocol/#mame-emulation-notes) for details on:
 - Latch pending state management (force-clear before each write)
-- INT0 level-detect re-assertion prevention
+- INT0 level-detect stale `m_level` fix (`clear_int0_level()`)
 - CPU timeslice interleaving for latch transfers
 
 ---

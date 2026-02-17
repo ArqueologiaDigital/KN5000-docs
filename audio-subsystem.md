@@ -679,6 +679,49 @@ This means:
 
 See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) for the complete note flow, encoding format, and voice slot management.
 
+## MAME Emulation Status
+
+The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. These provide logging of firmware-driven register writes, enabling reverse engineering of the audio pipeline. No audio output is produced yet — the DSP internal ROMs have not been dumped.
+
+### Audio Chip Device Classes
+
+| Device | Chip | IC | Interface | MAME Class | Status |
+|--------|------|----|-----------|------------|--------|
+| Tone Generator | TC183C230002 | IC303 | Memory-mapped (0x100000) | `tc183c230002_device` | Stub with config register logging, keybed event injection |
+| DSP1 | DS3613GF-3BA | IC311 | Memory-mapped (0x130000) | `ds3613gf3ba_device` | Stub with per-channel register logging, effect type/parameter name tables |
+| DSP2 | MN19413 | IC310 | Serial (GPIO bit-bang) | `mn19413_device` | Stub with serial bit sampling, command context tracking |
+
+**Tone Generator (TC183C230002):**
+- Register-indirect config interface (address port + data port)
+- 64 voices tracked with per-voice state (group, bank, channel, register, data)
+- Keyboard input interface with `inject_key_event()` for MAME input port integration
+- Logs all register writes with voice/register/data breakdown
+
+**DSP1 (DS3613GF-3BA):**
+- 4 channels × 32 registers (0x80 bytes total address space)
+- Logs register writes with channel, register offset, and semantic descriptions
+- Contains effect type name table (100 entries) and parameter name table (84 entries)
+- Tracks current effect type per channel for context-aware logging
+
+**DSP2 (MN19413):**
+- Serial interface via SubCPU GPIO (Port PF bit 0 = SDA, bit 2 = SCLK)
+- MSB-first serial data sampling on SCLK rising edge
+- Logs received commands with bit count and shift register state
+
+### Key Emulation Challenges
+
+1. **No DSP internal ROM dumps** — Both DSP chips contain internal ROM with their effects algorithms. Without dumps, audio processing cannot be accurately emulated.
+2. **Tone generator wavetable ROM** — IC303 contains internal wavetable samples. Without a dump, synthesized audio output is not possible.
+3. **Serial port 1 protocol** — The ~500kHz UART connection between SubCPU and the DAC/DSP control path is not yet fully decoded.
+
+### What Works Now
+
+- SubCPU firmware loads and executes (192KB payload transfer via HDMA)
+- All inter-CPU audio commands (0x2D DSP config, 0x2B sound name query, etc.) are dispatched correctly
+- DSP state dispatcher runs all 11 sub-routines, generating complete register write sequences
+- Effect configurations flow from MainCPU → SubCPU → DSP device stubs
+- Keybed input from MAME input ports reaches the tone generator device
+
 ## Research Needed
 
 - [ ] Document waveform ROM format and sample layout
