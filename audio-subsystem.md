@@ -397,6 +397,68 @@ The Main CPU organizes sounds into 16 categories with pointers at 0xE023B0:
 | 14 | GM SPECIAL |
 | 15 | DRUM KITS |
 
+## Feature Demo
+
+The Feature Demo plays pre-recorded MIDI sequences to demonstrate the keyboard's capabilities. Pressing the DEMO button triggers a complex initialization and playback sequence.
+
+### Demo Initialization Flow
+
+```
+DemoModeFunc (entry point)
+  ├─ First call → DemoMode_Initialize
+  │     ├─ Demo_PreSetup (general preparation)
+  │     ├─ Audio_WaitForReady (poll bit 2 of 0x0420)
+  │     ├─ Voice_SavePreset (save current voice state)
+  │     ├─ SeqInit_PostEventSequence (post events 0xE1, 0xE2, 0xE3)
+  │     └─ Seq_StartMainControlAlt (enter main control with event 0x01E1000D)
+  └─ Subsequent calls → DemoMode_Main_Operation
+        ├─ Voice_InitializeAll (allocates 0x1F0 bytes, inits 16 voices × 26 params)
+        ├─ Audio_ConfigureDSP (DSP and hardware setup)
+        ├─ Voice_LoadVoiceTable (load 16 voice presets)
+        ├─ Demo_PreSetup
+        ├─ Voice_CopyPreset (restore voice data)
+        ├─ Timer7_DisableInterrupt
+        ├─ Audio_CheckSubsystemReady
+        ├─ SeqInit_PostEventSequence
+        ├─ SeqInit_FinalEvent (post event 0x1B with 0xFFFFFFFF)
+        └─ Seq_StartMainControl (enter main control with event 0x01E1000C)
+```
+
+### Sequencer Event Processing
+
+The sequencer reads song events from an internal buffer and dispatches them via inter-CPU latch:
+
+| Routine | Address | Purpose |
+|---------|---------|---------|
+| `Seq_ProcessEventLoop` | 0xEF14CA | Main event processing loop |
+| `Seq_CheckSongEnd` | 0xEF27A5 | Checks if song position (0x01F377) == end position (0x01F373) |
+| `Seq_ProcessMidiEvent` | 0xEF13CD | Processes individual MIDI events (0x90=NoteOn, 0x80=NoteOff, 0xB0=CC) |
+
+### Demo Song Data
+
+The demo's style/rhythm preset data is at `Demo_StyleRhythmData` (0xF5CFCC), which contains:
+- Rhythm/style parameter bytes (96 bytes)
+- ASCII variation names: "a-variation1" through "c-variation4" (12 variations)
+- Section names: "a-intro 1", "a-fill in 1", "a-ending 1", etc. (24 sections)
+- Additional parameter data
+
+The data loading uses LDIR block copy loops at `Demo_LoadVariationData` (0xF5CF8B) and `Demo_LoadVariationC_Data` (0xF5CFAE).
+
+### Current Emulation Behavior
+
+When the DEMO button is pressed in MAME, the Feature Demo enters its playback loop but **only sends configuration commands** (Control Change, Pitch Bend, Channel Pressure, SysEx). No Note On (0x90) or Note Off (0x80) events are ever dispatched. Analysis of a test session showed:
+
+| Command Type | Count | Description |
+|-------------|-------|-------------|
+| 0xB0 (CC) | 2,555 | Control Change — Pan (1109), Expression (1099), Volume (73), others |
+| 0xF0 (SysEx) | 36 | System Exclusive messages |
+| 0xE0 (Pitch Bend) | 19 | Pitch Bend changes |
+| 0xD0 (Chan Pressure) | 15 | Channel Pressure (aftertouch) |
+| **0x90 (Note On)** | **0** | **No note events sent** |
+| **0x80 (Note Off)** | **0** | **No note events sent** |
+
+The demo initializes channels 0-22 with CC setup commands (volume, pan, expression), then enters a loop updating expression values for channels 10-14. The sequencer position pointer at 0x01F377 either never advances to reach note events, or the song data structure ends before note events are scheduled. This is likely caused by missing emulation of a timing mechanism or a subcpu response that would advance the sequencer position.
+
 ## Code References
 
 ### Main CPU (`maincpu/kn5000_v10_program.asm`)
@@ -407,6 +469,14 @@ The Main CPU organizes sounds into 16 categories with pointers at 0xE023B0:
 | `Audio_Lock_Release` | 0xEF1F0F | Release inter-CPU lock |
 | `Audio_DMA_Transfer` | 0xEF341B | Core DMA transfer |
 | `Audio_InitDMAChannels` | 0xEF329E | Initialize DMA channels |
+| `sendCOMM` | 0xEF32F4 | Send command/audio data to Sub CPU (chunks 32-byte blocks) |
+| `InterCPU_Send_Data_Block` | 0xEF3350 | Send 1-32 byte packet via inter-CPU latch |
+| `Audio_CheckSubsystemReady` | 0xFDDE6F | Check if audio subsystem is ready for commands |
+| `Audio_CheckInitStatus` | 0xFDF08A | Verify audio init state (checks 0xF19E) |
+| `Voice_InitializeAll` | 0xFE0E75 | Initialize all 16 voices (26 params each) |
+| `Audio_ConfigureDSP` | 0xFDBD52 | Configure DSP hardware and state |
+| `DemoMode_Initialize` | 0xF869E3 | Feature Demo first-time initialization |
+| `DemoMode_Main_Operation` | 0xF8696F | Feature Demo normal playback handler |
 
 ### Sub CPU (`subcpu/kn5000_subprogram_v142.asm`)
 
@@ -429,7 +499,7 @@ The Main CPU organizes sounds into 16 categories with pointers at 0xE023B0:
 
 ## Serial Port 1 Interface
 
-The Sub CPU's serial port 1 connects to an audio peripheral (likely the DAC IC313 or one of the DSPs) for control commands. The "SA" designation in the service manual schematics refers to "Sub Address" bus lines, not a chip name.
+The Sub CPU's serial port 1 is used as a **Computer Interface** (TO HOST connector). The "SA" designation in the service manual schematics refers to "Sub Address" bus lines, not a chip name.
 
 | Parameter | Value |
 |-----------|-------|
@@ -438,6 +508,10 @@ The Sub CPU's serial port 1 connects to an audio peripheral (likely the DAC IC31
 | Sync Byte | 0xFE (sent at init and periodically) |
 | TX Buffer | 1024 bytes at 0x0A00-0x0DFF |
 | RX Buffer | 512 bytes at 0x0E16-0x1015 |
+
+### MIDI Active Sensing
+
+MAME emulation confirms that the Sub CPU transmits **0xFE (MIDI Active Sensing)** on this port approximately every 276ms. This is a standard MIDI heartbeat message indicating the device is alive and ready for communication. No other data has been observed on this port during normal operation or Feature Demo playback.
 
 See [Tone Generator]({{ site.baseurl }}/tone-generator/#serial-port-1-sa-interface) for details.
 
@@ -721,6 +795,13 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 - DSP state dispatcher runs all 11 sub-routines, generating complete register write sequences
 - Effect configurations flow from MainCPU → SubCPU → DSP device stubs
 - Keybed input from MAME input ports reaches the tone generator device
+- SubCPU Serial Port 1 (Computer Interface) wired with UART byte decoder and logging
+- Feature Demo sends CC/pitch/sysex configuration commands correctly (2,625 commands observed)
+
+### Known Issues
+
+- **Feature Demo produces no audio** — The sequencer dispatches setup commands (CC, Pitch Bend, Channel Pressure) but never reaches Note On events. The sequencer position pointer appears to stall before note events are scheduled. See [Feature Demo](#feature-demo) for analysis.
+- **No audio output** — All three audio device classes are logging stubs; no sound synthesis or effects processing is implemented.
 
 ## Research Needed
 
@@ -731,7 +812,9 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 - [ ] Map MainCPU parameter indices (e.g., 33=REVERB TIME) to EFF block word positions per algorithm
 - [ ] Decode DSP register semantics per channel (what registers 0x10-0x17 control)
 - [ ] Document remaining inter-CPU command types (beyond 0x2D and 0xE1/E2/E3)
-- [x] ~~Identify exact device on Serial Port 1~~ — Likely DAC IC313 control interface
+- [ ] Investigate why Feature Demo sequencer never reaches Note On events (position pointer 0x01F377 stalls)
+- [ ] Identify the timing mechanism or subcpu response that advances the sequencer position
+- [x] ~~Identify exact device on Serial Port 1~~ — Computer Interface (TO HOST connector), sends 0xFE Active Sensing
 - [x] ~~Analyze DSP1/DSP2 command sets~~ — Partial: 4 commands identified, preset structure decoded
 - [x] ~~Extract effect type names from ROM~~ — Complete: 100 named effect types at MainCPU 0xE32A7A
 - [x] ~~Extract effect parameter names from ROM~~ — Complete: 84 parameter names at MainCPU 0xE324D0
