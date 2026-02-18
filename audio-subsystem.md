@@ -457,7 +457,58 @@ When the DEMO button is pressed in MAME, the Feature Demo enters its playback lo
 | **0x90 (Note On)** | **0** | **No note events sent** |
 | **0x80 (Note Off)** | **0** | **No note events sent** |
 
-The demo initializes channels 0-22 with CC setup commands (volume, pan, expression), then enters a loop updating expression values for channels 10-14. The sequencer position pointer at 0x01F377 either never advances to reach note events, or the song data structure ends before note events are scheduled. This is likely caused by missing emulation of a timing mechanism or a subcpu response that would advance the sequencer position.
+### Diagnostic Log Analysis
+
+Detailed MAME logging with sequencer state instrumentation reveals:
+
+**Rhythm ROM validation passes:**
+- `rhy_ofs=00000000` at RAM `(3277h)` — NOT 0xFFFFFFFF, so `RhythmROM_CheckValid` returns success
+- Rhythm ROM reads occur during demo mode (1800-3800 reads/second from 0x400000+ addresses)
+- First rhythm ROM read at t=5.5s from 0x400000, PC=0xF5465E (inside `RhythmROM_ValidateHeader`)
+
+**Sequencer state machine transitions:**
+
+| Time | State | Event |
+|------|-------|-------|
+| Boot | 0x00 | Initial idle state |
+| ~5s | 0x01 | Transition during initialization |
+| ~21s | 0xE0 | `DemoMode_Main_Operation` entered |
+| ~22.6s | 0xE4 | `DemoMode_Initialize` completed |
+
+All observed states (0x00, 0x01, 0xE0, 0xE4) are outside the 0x10-0x16 skip range, confirming the sequencer dispatcher is NOT blocked by state checks.
+
+**Ring buffer never written:**
+- `putc_mrx=0` in every heartbeat — the function that writes MIDI events to the main sequencer ring buffer (`SeqMain_WriteByte` at 0xEF276D) has ZERO execution hits
+- `SeqBuf wr=0000 rd=0000` — write and read positions are always equal (buffer empty)
+- `Seq_CheckSongEnd` always returns 0 (no events to process)
+
+**Startup flag always zero:**
+- `startflag=0000` at RAM `(0x0251D8)` — never set to a non-zero value
+- This flag controls whether `Seq_StartMainControlAlt` (called from `DemoMode_Initialize`) configures audio hardware at 0xF42EA4
+- On real hardware, something sets this flag during boot or demo initialization
+
+**Event loop rate drops 60x after demo init:**
+- Before demo: ~11,500 event loop iterations/sec
+- After demo init (state=0xE4): ~168-180 iterations/sec
+- This indicates the sequencer dispatcher IS running heavier processing (rhythm ROM reads, pattern loading), consuming CPU time, but never producing MIDI events into the ring buffer
+
+**Sequencer processing PC addresses during demo:**
+- PCs in range F5CFxx-F641xx confirm rhythm/sequencer processing code is executing
+- This range covers `Seq_RhythmProcessor` through `RhythmROM_CalcPatternAddr`
+
+### Root Cause Analysis
+
+The pipeline breaks between "rhythm data loaded from ROM" and "MIDI events generated into ring buffer":
+
+```
+Rhythm ROM (4MB) ──read──> Pattern Data in RAM ──???──> Ring Buffer (0x01F37B)
+     ✓ working              ✓ executing                  ✗ NEVER written
+```
+
+Possible causes under investigation:
+1. **Startup flag (0x0251D8)** is never set, potentially skipping a critical initialization step
+2. A missing Timer7 tick or other timing mechanism that drives MIDI event generation
+3. An inter-CPU response or hardware register that gates the final event write stage
 
 ## Code References
 
@@ -800,7 +851,7 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 
 ### Known Issues
 
-- **Feature Demo produces no audio** — The sequencer dispatches setup commands (CC, Pitch Bend, Channel Pressure) but never reaches Note On events. The sequencer position pointer appears to stall before note events are scheduled. See [Feature Demo](#feature-demo) for analysis.
+- **Feature Demo produces no note events** — The sequencer dispatcher runs and reads rhythm ROM data, but the song engine never writes MIDI events to the ring buffer. The pipeline breaks between pattern data loading and event generation. Rhythm ROM validation passes (rhy_ofs=0), state machine is correct (0xE0→0xE4), but `putc_mrx` (ring buffer write function) has zero executions. See [Feature Demo](#feature-demo) for detailed diagnostic analysis and [Sequencer]({{ site.baseurl }}/sequencer/) for the full architecture.
 - **No audio output** — All three audio device classes are logging stubs; no sound synthesis or effects processing is implemented.
 
 ## Research Needed
@@ -812,8 +863,11 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 - [ ] Map MainCPU parameter indices (e.g., 33=REVERB TIME) to EFF block word positions per algorithm
 - [ ] Decode DSP register semantics per channel (what registers 0x10-0x17 control)
 - [ ] Document remaining inter-CPU command types (beyond 0x2D and 0xE1/E2/E3)
-- [ ] Investigate why Feature Demo sequencer never reaches Note On events (position pointer 0x01F377 stalls)
-- [ ] Identify the timing mechanism or subcpu response that advances the sequencer position
+- [ ] Investigate why song engine never writes MIDI events to ring buffer (putc_mrx has zero hits)
+- [ ] Determine what sets the startup flag at 0x0251D8 on real hardware
+- [ ] Trace the path from rhythm ROM pattern data to ring buffer write calls
+- [x] ~~Investigate why Feature Demo sequencer never reaches Note On events~~ — Ring buffer at 0x01F37B is never written; sequencer dispatcher and rhythm ROM reading work correctly but event generation stage never fires
+- [x] ~~Identify the timing mechanism or subcpu response that advances the sequencer~~ — Partially resolved: Timer7, state machine, and dispatcher pipeline traced; the issue is in the song engine output stage, not the input/timing stage
 - [x] ~~Identify exact device on Serial Port 1~~ — Computer Interface (TO HOST connector), sends 0xFE Active Sensing
 - [x] ~~Analyze DSP1/DSP2 command sets~~ — Partial: 4 commands identified, preset structure decoded
 - [x] ~~Extract effect type names from ROM~~ — Complete: 100 named effect types at MainCPU 0xE32A7A
