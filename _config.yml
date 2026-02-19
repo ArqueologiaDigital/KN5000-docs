@@ -29,6 +29,7 @@ header_pages:
   - hdae5000.md
   - storage-subsystem.md
   # Homebrew
+  - hdae5000-homebrew.md
   - another-world-vm.md
   # Resources
   - image-gallery.md

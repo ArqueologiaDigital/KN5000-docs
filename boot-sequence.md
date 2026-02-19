@@ -932,39 +932,83 @@ Main CPU checks PE.0
 
 ### HDAE5000_Boot_Init (0x28F576)
 
+The firmware passes workspace pointer **`0x027ED2`** in XWA. This is the base of the firmware's object table -- a structure with 14-byte entries spanning to `0x02BC12` (~1,118 entries) in main DRAM.
+
+The XAPR validation routine at `LABEL_F1E9E0` handles detection and initialization:
+
+```asm
+; Validate XAPR signature at 0x280000
+PUSHW 0004h                          ; Compare 4 bytes
+PUSHW 00e1h
+PUSHW 0ffc6h                         ; Firmware's "XAPR" string
+LD    XWA, 00280000h                 ; Extension ROM base
+PUSH  XWA
+CALL  String_Compare
+ADD   XSP, 0000000ah
+CP    HL, 0
+JR    NZ, .no_extension
+
+LD    (03DD04h), 001h                ; Set XAPR detection flag
+
+; Call Boot_Init with workspace pointer
+LD    XHL, 00280008h                 ; Boot_Init entry point
+LDA   XWA, 027ED2h                  ; Workspace pointer
+CALL  T, XHL                        ; Boot_Init(XWA = 0x027ED2)
+RET
+```
+
 The boot initialization performs these steps:
 
 | Step | Action | Details |
 |------|--------|---------|
-| 1 | Store workspace | Save main CPU workspace pointer at 0x23A1A2 |
-| 2 | Clear work buffer | Zero 62KB at 0x22A000 |
-| 3 | Register handlers | Register 12 callback handlers with main CPU |
-| 4 | Load palette | Load 256-entry VGA palette from ROM |
-| 5 | Copy VRAM data | Copy 76,800 bytes to 0x1A0000 and 0x1A9600 |
-| 6 | Init handler pointers | Store function pointers at 0x230ECC/ED2/ED6 |
-| 7 | RAM test | Fill/verify 32KB at 0x230F1C-0x238F1C |
+| 1 | Store workspace | Save workspace pointer (0x027ED2) at 0x23A1A2 |
+| 2 | Clear work buffer | Zero 62KB at 0x22A000, copy 3KB init data to 0x23952A |
+| 3 | Register 12 handlers | Via `workspace[0x0E0A][0x00E4]` (handler registration function) |
+| 4 | Load palette | Load 256-entry VGA palette from ROM at 0x2E5DCE |
+| 5 | Allocate + copy VRAM | Copy 76,800 bytes to 0x1A0000 and 0x1A9600 |
+| 6 | Register callback | Via `workspace[0x0E0A][0x02C4]` with ID 0x00600002 |
+| 7 | Init handler pointers | 3 functions from handler table B (offsets 0x0108, 0x0100, 0x0104) |
 | 8 | Check HD presence | Detect hard disk, store result at 0x230EDA |
-| 9 | Register frame handler | Set up periodic update callback |
+| 9 | Register frame handler | Set up periodic update callback at 0x2803C2 |
+
+**Important:** Steps 1-5 must complete before step 6. The callback registration function at offset `0x02C4` depends on state established by the 12-handler registration at offset `0x00E4`.
+
+### Frame Handler Dispatch
+
+The frame handler dispatcher at `LABEL_F1E9D0` runs every main loop iteration:
+
+```asm
+CP    (03DD04h), 000h           ; Check XAPR detection flag
+RET   Z                         ; Skip if no extension
+LD    XHL, 00280010h            ; Frame handler entry point
+CALL  T, XHL                   ; Call Frame_Handler()
+RET
+```
+
+The frame handler is called **unconditionally** -- no registration is needed. The flag at `0x03DD04` is the only gate.
 
 ### Workspace Dispatch System
 
-The main CPU provides a callback registration system that HDAE5000 uses to integrate with the UI framework:
+The workspace pointer at `0x027ED2` provides access to the firmware's callback dispatch system:
 
 ```
-WORKSPACE_PTR (0x23A1A2)
-    │
-    └──> Handler Table A (offset +0x0E0A)
-              │
-              ├──> Registration func (offset +0x00E4)
-              ├──> Display callback (offset +0x0124)
-              ├──> UI callbacks (offsets +0x0244, +0x0248, etc.)
-              │
-    └──> Handler Table B (offset +0x0E88)
-              │
-              └──> Audio/system callbacks
+Workspace (0x027ED2)
+    |
+    +-- offset +0x0E0A --> Handler Table A pointer
+    |                        |
+    |                        +-- offset +0x00E4 --> Handler registration function
+    |                        +-- offset +0x02C4 --> Callback registration function
+    |                        +-- offset +0x0124 --> Display callback function
+    |                        +-- offset +0x0244, +0x0248, +0x024C --> UI callbacks
+    |
+    +-- offset +0x0E88 --> Handler Table B pointer
+                             |
+                             +-- offset +0x0100 --> Init function 2
+                             +-- offset +0x0104 --> Init function 3
+                             +-- offset +0x0108 --> Init function 1
 ```
 
-HDAE5000 registers 12 handlers using this system, each identified by a port address (0x0160000x) and handler ID.
+HDAE5000 registers 12 handlers using the function at offset `0x00E4`, each identified by a port address (0x0160000x) and handler ID. See [HDAE5000 Homebrew Development]({{ site.baseurl }}/hdae5000-homebrew/) for details on the workspace protocol and writing custom extension ROMs.
 
 ### Frame Handler (0x28F662)
 
