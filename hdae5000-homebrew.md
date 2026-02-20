@@ -167,14 +167,20 @@ The Handler_Registration routine at `0x280020` (now fully disassembled) register
 Parameter block layout (14 bytes):
   +0x00  4 bytes  Port address (identifies handler type)
   +0x04  4 bytes  Handler function pointer (from workspace dispatch table)
-  +0x08  2 bytes  Data size (in bytes) ← NOTE: 16-bit field!
-  +0x0A  4 bytes  Data pointer (RAM or ROM address)
+  +0x08  2 bytes  Record count (number of sub-objects) ← 16-bit field!
+  +0x0A  4 bytes  Data pointer → record table (RAM or ROM address)
 
 Call convention:
   WA  = handler ID (object table index, max 0x045F = 1119)
   XBC = pointer to parameter block (stack or RAM)
   Call workspace[0x0E0A][0x00E4]
 ```
+
+**Important:** The `+0x08` field is a **record count** (number of 24-byte sub-object records), NOT a byte size. This was confirmed by:
+- HDAE5000 handler 0x016A has `+0x08 = 0x000D` (13 records, matching its 13 sub-objects)
+- `RegisterObject` (0xFA431A) increments `+0x08` when adding sub-objects
+- `UnRegisterObject` (0xFA43B3) decrements `+0x08` when removing them
+- Built-in handlers use counts like 55, 32, 256 (matching their sub-object counts)
 
 #### RegisterObjectTable Implementation (0xFA42FB)
 
@@ -277,36 +283,42 @@ The final call uses dispatch table offset `0x0270` with additional parameters fo
 
 ### Data Record Table (Handler 0x016A)
 
-The data pointer registered for handler `0x016A` (`0x29C0AA`) points to a table of **24-byte records**, one per UI component (sub-object). The HDAE5000 has 13 sub-objects:
+The data pointer registered for handler `0x016A` (`0x29C0AA`) points to a table of **24-byte records**, one per UI component (sub-object). The HDAE5000 has 13 sub-objects (record count `+0x08` = 0x000D):
 
 ```
 Record layout (24 bytes):
   +0x00  4 bytes  Implementation function pointer (in ROM)
   +0x04  4 bytes  Next handler ID (linked list chain, 0xFFFFFFFF = end)
-  +0x08  2 bytes  Size/count field
-  +0x0A  2 bytes  Flags field
-  +0x0C  4 bytes  ROM data pointer (name string, config)
-  +0x10  4 bytes  ROM data pointer (secondary config)
+  +0x08  2 bytes  Config size (UI-specific parameter)
+  +0x0A  2 bytes  Config flags
+  +0x0C  4 bytes  ROM data pointer 1 (name/config strings)
+  +0x10  4 bytes  ROM data pointer 2 (secondary config)
   +0x14  4 bytes  RAM workspace pointer
 ```
 
-| Rec | Sub-Index | Name | Func | Next Link | Notes |
-|-----|-----------|------|------|-----------|-------|
-| 0 | 0x0000 | SelectList | 0x2807D9 | 0x01600011 | Main selection list UI |
-| 1 | 0x0001 | DbMemoCl | 0x28122A | 0x01600046 | Database/memo |
-| 2 | 0x0002 | TtlScreenR | 0x280489 | 0x01600034 | Title screen |
-| 3 | 0x0003 | AcHddNamingWindow | 0x281411 | 0x01600035 | HDD naming dialog |
-| 4 | 0x0004 | IvHddNaming | 0x282681 | 0x01600027 | HDD naming input |
-| **5** | **0x0005** | **HDTitleMenu** | **0x2827A8** | **0x0160001D** | **DISK MENU entry** |
-| 6 | 0x0006 | TtlScreenR2 | 0x280567 | 0x01600034 | Title screen variant |
-| 7 | 0x0007 | TtlScreenR3 | 0x280645 | 0x01600034 | Title screen variant |
-| 8 | 0x0008 | AcWindowPage1 | 0x28043C | 0x01600025 | Window page |
-| 9 | 0x0009 | IvScreenR2 | 0x280723 | 0x0160006A | Screen input handler |
-| 10 | 0x000A | AcLanguageText1 | 0x28B554 | 0x01600066 | Language text display |
-| 11 | 0x000B | LyricBox | 0x28CD08 | 0x01600011 | Lyrics display box |
-| 12 | 0x000C | FDFileSelect | 0x28E61B | 0x01600027 | File selection dialog |
+| Rec | Name | Func | Next | Size | Flags | Data1 | Data2 | RAM |
+|-----|------|------|------|------|-------|-------|-------|-----|
+| 0 | SelectList | 0x2807D9 | 0x01600011 | 0x3C | 0x20 | 0x29D972 | 0x29D966 | 0x23975A |
+| 1 | DbMemoCl | 0x28122A | 0x01600046 | 0x1A | 0x04 | 0x29D95C | 0x29D958 | 0x23978A |
+| 2 | TtlScreenR | 0x280489 | 0x01600034 | 0x2A | 0x00 | 0x29D94C | 0x29D94A | 0x239796 |
+| 3 | AcHddNamingWindow | 0x281411 | 0x01600035 | 0x24 | 0x00 | 0x29D938 | 0x29D936 | 0x23979A |
+| 4 | IvHddNaming | 0x282681 | 0x01600027 | 0x1A | 0x04 | 0x29D92A | 0x29D928 | 0x23979E |
+| **5** | **HDTitleMenu** | **0x2827A8** | **0x0160001D** | **0x36** | **0x00** | **0x29D91C** | **0x29D91A** | **0x2397A6** |
+| 6 | TtlScreenR2 | 0x280567 | 0x01600034 | 0x2A | 0x00 | 0x29D90E | 0x29D90C | 0x2397AA |
+| 7 | TtlScreenR3 | 0x280645 | 0x01600034 | 0x2A | 0x00 | 0x29D900 | 0x29D8FE | 0x2397AE |
+| 8 | AcWindowPage1 | 0x28043C | 0x01600025 | 0x24 | 0x00 | 0x29D8F0 | 0x29D8EE | 0x2397B2 |
+| 9 | IvScreenR2 | 0x280723 | 0x0160006A | 0x22 | 0x00 | 0x29D8E2 | 0x29D8E0 | 0x2397B6 |
+| 10 | AcLanguageText1 | 0x28B554 | 0x01600066 | 0x2A | 0x00 | 0x29D8D0 | 0x29D8CE | 0x2397BA |
+| 11 | LyricBox | 0x28CD08 | 0x01600011 | 0x2E | 0x12 | 0x29D8C4 | 0x29D8BC | 0x2397BE |
+| 12 | FDFileSelect | 0x28E61B | 0x01600027 | 0x20 | 0x0A | 0x29D8AE | 0x29D8AA | 0x2397DA |
 
-**Record 5 ("HDTitleMenu") is the DISK MENU entry handler.** Its sub-index (5) matches the high word in `slot+0x00 = 0x016A0005` (object index 0x016A, sub-index 0x0005). The "next" link chains each sub-object to a corresponding component in the Root module (object 0x0160), forming an **inheritance hierarchy** where HDAE5000 components extend base firmware components.
+**Record 5 ("HDTitleMenu") is the DISK MENU entry handler.** Its sub-index (5) matches the low word in `slot+0x00 = 0x016A0005` (object index 0x016A, sub-index 0x0005). The "next" link chains each sub-object to a corresponding component in the Root module (object 0x0160), forming an **inheritance hierarchy** where HDAE5000 components extend base firmware components.
+
+**Key observations from ROM data:**
+- All data pointer pairs (Data1/Data2) are adjacent ROM addresses 2 bytes apart (Data1 = Data2 + 2)
+- RAM workspace pointers are sequential in the 0x2397xx range (10 bytes apart)
+- Record 5 chains to Root module handler `0x0160001D`
+- Flags 0x04 appear on input-related records (1, 4); 0x12 on LyricBox; 0x0A on FileSelect
 
 ### DISK MENU Slot Registration (workspace[0x0E0A][0x02C4])
 
@@ -653,7 +665,7 @@ Based on the complete dispatch analysis, the Mines project needs:
 1. **Register handler `0x016A`** via `RegisterObjectTable` (workspace[0x0E0A][0x00E4]) with:
    - Port: `0x01600004`
    - Handler function: `ClassProc` (via workspace[0x0E0A][0x0168], resolves to 0xFA44E2)
-   - Data size: size of record table in bytes
+   - Record count: number of 24-byte records in the data table (e.g., 1 for a single sub-object)
    - Data pointer: address of data record table in ROM
 
 2. **Provide a data record table** with at least one 24-byte record:
