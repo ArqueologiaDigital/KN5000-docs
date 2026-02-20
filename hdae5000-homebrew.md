@@ -137,26 +137,78 @@ Notes:
   All registers should be preserved or restored
 ```
 
-## Handler Registration Prerequisites
+## Handler Registration
 
-The original HDAE5000 firmware performs extensive setup before calling the callback registration function at `workspace[0x0E0A][0x02C4]`:
+### Overview
+
+The original HDAE5000 firmware performs extensive setup during Boot_Init before any DISK MENU registration:
 
 1. **Clear work buffer** -- 62,762 bytes zeroed at `0x22A000`
-2. **Copy init data** -- 3,202 bytes from ROM to `0x23952A`
-3. **Register 12 handlers** -- via `workspace[0x0E0A][0x00E4]` (a *different* function than `0x02C4`)
+2. **Copy init data** -- 3,202 bytes from ROM `0x2F94B2` to RAM `0x23952A`
+3. **Register 11 handlers** -- via `workspace[0x0E0A][0x00E4]` (RegisterObjectTable)
 4. **Load VGA palette** -- 256 entries from ROM
 5. **Allocate DRAM and copy VRAM** -- 76,800 bytes to display areas
-6. *Then* **call `workspace[0x0E0A][0x02C4]`** -- the callback registration function
-
-**Current finding:** The Mines project successfully calls `workspace[0x0E0A][0x02C4]` with handler ID `0x00600002`, which registers a DISK MENU entry. The returned XHL points to a handler slot structure where:
-- `slot+0x2A` = pointer to display name string (shown in DISK MENU)
-- `slot+0x32` = icon ID (indexes into the table_data ROM icon table at `0x938000`)
-
-The icon ID `176` was patched into the table_data ROM to point at a custom mine icon embedded in the extension ROM. This approach is confirmed working -- the icon and "Mines Game" text appear in the DISK MENU.
-
-**DISK MENU activation** (what happens when the user selects the menu entry) is not yet implemented. The firmware uses handler ID `0x01600040` (ExtensionApp_Type1) to query whether an extension app should be activated. A sub-handler must be registered via `workspace[0x0E0A][0x00E4]` to respond to this query. See [DISK MENU Activation](#disk-menu-activation-mechanism) below.
+6. *Then* **call `workspace[0x0E0A][0x02C4]`** -- DISK MENU slot registration
+7. **Set slot fields** -- `slot+0x00` = handler flags, `slot+0x2A` = display name string
 
 For basic frame handler operation, handler registration is **not required**. The firmware calls the Frame_Handler entry point every frame regardless.
+
+### RegisterObjectTable Protocol (workspace[0x0E0A][0x00E4])
+
+The Handler_Registration routine at `0x280020` (now fully disassembled) registers handlers by building a 14-byte parameter block on the stack and calling the RegisterObjectTable function:
+
+```
+Parameter block layout (14 bytes on stack):
+  (XSP+0x00)  4 bytes  Port address (identifies handler type)
+  (XSP+0x04)  4 bytes  Handler function pointer (from workspace dispatch table)
+  (XSP+0x08)  2 bytes  Data size (in bytes)
+  (XSP+0x0A)  4 bytes  Data pointer (RAM or ROM address)
+
+Call convention:
+  WA  = handler ID (object table index)
+  XBC = pointer to parameter block on stack
+  Call workspace[0x0E0A][0x00E4]
+```
+
+RegisterObjectTable stores each 14-byte parameter block at `workspace_base + (handler_ID * 14)` in the firmware's object registry. The workspace base (`0x027ED2`) can hold up to ~1,118 object entries.
+
+### Complete Handler Table
+
+The HDAE5000 registers 11 handlers plus a final graphics initialization call:
+
+| # | ID | Port | Table Offset | Size | Data Address | Description |
+|---|-----|------|------|------|------|-------------|
+| 1 | 0x016A | 0x01600004 | 0x0168 | variable | 0x29C0AA | UI config strings |
+| 2 | 0x01CA | 0x0160000C | 0x013C | variable | 0x2397EA | RAM data area A |
+| 3 | 0x01EA | 0x0160000D | 0x0140 | variable | 0x239824 | RAM data area B |
+| 4 | 0x012A | 0x01600002 | 0x0248 | 69 (0x45) | 0x23952A | Init data primary |
+| 5 | 0x042A | 0x01600002 | 0x0248 | 69 (0x45) | 0x239642 | Init data secondary |
+| 6 | 0x010A | 0x01600001 | 0x0244 | 13 (0x0D) | 0x239872 | Serial data primary |
+| 7 | 0x040A | 0x01600001 | 0x0244 | 13 (0x0D) | 0x2398AA | Serial data secondary |
+| 8 | 0x014A | 0x01600003 | 0x024C | 14 (0x0E) | 0x239FD2 | Parallel data primary |
+| 9 | 0x044A | 0x01600003 | 0x024C | 14 (0x0E) | 0x23A00E | Parallel data secondary |
+| 10 | 0x007F | 0x01600010 | 0x0280 | 789 (0x315) | 0x2A5D2C | ROM graphics primary |
+| 11 | 0x037F | 0x0160000F | 0x0148 | 789 (0x315) | 0x2A6984 | ROM graphics secondary |
+
+The final call uses dispatch table offset `0x0270` with additional parameters for graphics initialization.
+
+**Port address pattern:** Handlers are grouped by port number. Pairs with the same port and table offset (e.g., 0x012A/0x042A on port 0x01600002) are primary/secondary instances of the same handler type.
+
+**Module naming pattern:** The main CPU firmware has similar registration routines named after developers: InitializeSuna (idx 4), InitializeScoop (6), InitializeKubo (8), InitializeHama (9), HDAE5000 (A), InitializeNaka (B). DISK MENU entries use object indices `0x0160`-`0x016B`.
+
+### DISK MENU Slot Registration (workspace[0x0E0A][0x02C4])
+
+After registering all 11 handlers, Boot_Init calls `workspace[0x0E0A][0x02C4]` with ID `0x00600002` to create a DISK MENU entry. The returned XHL points to a handler slot structure:
+
+| Offset | Size | Value (HDAE5000) | Value (Mines) | Description |
+|--------|------|-------------------|---------------|-------------|
+| +0x00 | 4 | `0x016A0005` | *(not set)* | Handler flags + object index |
+| +0x2A | 4 | `0x2F8DCE` → "HD-AE5000" | MENU_NAME → "Mines Game" | Display name string pointer |
+| +0x32 | 4 | *(from firmware)* | 176 | Icon ID (table_data ROM) |
+
+The `slot+0x00` field links the DISK MENU entry to a registered handler object. The low word (`0x016A`) is the object table index, and the high word (`0x0005`) contains flags. The Mines project does not currently set `slot+0x00`, which may explain why DISK MENU activation doesn't work.
+
+The `slot+0x2A` field has been **confirmed** as a display name string pointer by verifying that address `0x2F8DCE` in the HDAE5000 ROM contains the null-terminated string "HD-AE5000".
 
 ## Display Ownership Model
 
@@ -260,51 +312,43 @@ Testing with MAME confirmed:
 
 ## DISK MENU Activation Mechanism
 
-When the user selects a DISK MENU entry, the firmware does not directly call the extension ROM. Instead, it queries registered handlers to determine what action to take.
+When the user selects a DISK MENU entry, the firmware does not directly call the extension ROM. Instead, it uses the event dispatch system to activate the registered handler.
 
-### Registration Flow (Working)
+### Activation Trigger
+
+The main firmware routine at `LABEL_F8B1DF` handles extension board activation:
 
 ```asm
-; 1. Get handler table A
-ld   xiz, (WORKSPACE_PTR)
-add  xiz, 0x0E0A
-ld   xiz, (xiz)
+; LABEL_F8B1DF: Check if HDAE5000 extension is present
+CALL  LABEL_F1E9A3           ; Read XAPR detection flag from (0x03DD04)
+CP    L, 0
+JR    Z, .no_extension       ; Skip if no extension ROM
 
-; 2. Get registration function
-push xiz
-add  xiz, 0x02C4
-ld   xix, (xiz)
-pop  xiz
-
-; 3. Call registration with ID 0x00600002
-ld   xwa, 0x00600002
-call (xix)
-
-; 4. XHL = handler slot pointer
-; Set display name at slot+0x2A
-ld   xwa, MENU_NAME
-ld   (xhl + 0x2A), xwa
-
-; 5. Set icon ID at slot+0x32
-ld   xwa, 176           ; custom icon ID
-ld   (xhl + 0x32), xwa
+; Extension present -- post activation event
+LD    XWA, 00600002h         ; Target handler ID (same as DISK MENU registration)
+LD    XBC, 01E0009Ch         ; Event parameter
+LD    XDE, 0
+CALL  ApPostEvent            ; Dispatch event to registered handler
 ```
 
-### Activation Flow (Not Yet Implemented)
+The `ApPostEvent` function dispatches events to handlers registered with the workspace callback system. The handler registered with ID `0x00600002` receives the activation event.
 
-When the user selects the DISK MENU entry:
-1. Firmware queries handler `0x01600040` (ExtensionApp_Type1)
-2. A registered handler must respond to indicate the extension is an app
-3. Firmware then activates the extension (exact callback mechanism TBD)
+### What Mines Is Missing
 
-The original HDAE5000 uses handler `0x016A` registered via `workspace[0x0E0A][0x00E4]` with data at `0x29C0AA` (UI config strings). This handler appears to be the key to DISK MENU integration for apps vs. the default floppy disk test behavior.
+For the Mines project to activate from DISK MENU, it likely needs:
+
+1. **Set `slot+0x00`** -- The HDAE5000 sets `slot+0x00 = 0x016A0005`, linking the DISK MENU entry to its registered handler object. Mines currently skips this step.
+
+2. **Register at least handler `0x016A`** -- The HDAE5000 registers this handler (port `0x01600004`, table offset `0x0168`) with UI config data at `0x29C0AA`. This handler is the primary object for the DISK MENU entry.
+
+3. **Provide the correct data format** -- The handler function (resolved via workspace dispatch table offset `0x0168`) expects a specific data structure. The data at `0x29C0AA` contains UI configuration strings (documented as "infofont", "reversecolor", "fontcolor", "dial", etc. at `0x29BFE0`).
 
 ### Open Questions
 
-- What response does handler `0x016A` provide when queried?
-- How does the firmware transition from "DISK MENU item selected" to "extension app active"?
-- Does `slot+0x2A` store a text string pointer (as used by Mines) or a function pointer (as may be used by the original HDAE5000)?
-- What is the complete Alloc_Memory protocol? (request codes 0xA1=data ptr, 0xA2=width, 0xA3=height)
+- What is the exact data format expected by the handler function at table offset `0x0168`?
+- Can a minimal subset of the 11 handlers enable DISK MENU activation, or are all required?
+- What does the Alloc_Memory callback (request codes 0xA1=data ptr, 0xA2=width, 0xA3=height) return for the HDAE5000, and is it called during activation?
+- How does `ApPostEvent(0x00600002, 0x01E0009C)` reach the extension ROM code?
 
 ## Control Panel Input
 
