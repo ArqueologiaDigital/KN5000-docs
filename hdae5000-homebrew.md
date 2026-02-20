@@ -8,7 +8,7 @@ permalink: /hdae5000-homebrew/
 
 The HD-AE5000 extension slot can run custom code on the KN5000's main CPU. By replacing the HDAE5000 ROM with a custom binary, you can create games, demos, or utilities that run on the keyboard hardware. This page documents the extension ROM protocol, known toolchain bugs, and a working build pipeline.
 
-> **Status**: Boot initialization, frame handler callbacks, and DISK MENU registration are working. The extension ROM appears in the DISK MENU with a custom icon and name. Display ownership (taking over the LCD from the firmware) and game activation from the DISK MENU are under investigation.
+> **Status**: Boot initialization, frame handler callbacks, and DISK MENU registration are working. The extension ROM appears in the DISK MENU with a custom icon and name. The firmware's object dispatch system (`FA9660`, `FA44E2`, `FA3D85`, `FA4409`) and the HDAE5000's 13-component data record table have been fully analyzed. Display ownership (taking over the LCD from the firmware) and game activation from the DISK MENU require implementing the data record table and handler function.
 
 ## Prerequisites
 
@@ -90,10 +90,14 @@ Workspace (0x027ED2)
     |
     +-- offset +0x0E0A --> Handler Table A pointer
     |                        |
-    |                        +-- offset +0x00E4 --> Handler registration function
-    |                        +-- offset +0x02C4 --> Callback registration function
+    |                        +-- offset +0x00DC --> Default handler function (lifecycle)
+    |                        +-- offset +0x00E4 --> RegisterObjectTable function
+    |                        +-- offset +0x0100 --> Secondary dispatch function
     |                        +-- offset +0x0124 --> Display callback function
+    |                        +-- offset +0x0168 --> DISK MENU handler (FA44E2)
     |                        +-- offset +0x0244, +0x0248, +0x024C --> UI callbacks
+    |                        +-- offset +0x0270 --> Graphics init dispatch
+    |                        +-- offset +0x02C4 --> DISK MENU slot registration
     |
     +-- offset +0x0E88 --> Handler Table B pointer
                              |
@@ -102,7 +106,7 @@ Workspace (0x027ED2)
                              +-- offset +0x0108 --> Init function 1
 ```
 
-Both handler tables are in main DRAM (0x000000-0x0FFFFF range). The values at these offsets are function pointers into the firmware ROM.
+Both handler tables are in main DRAM (0x000000-0x0FFFFF range). The values at these offsets are function pointers into the firmware ROM. The offset `+0x0168` resolves to `FA44E2` (the shared DISK MENU handler used by all built-in modules).
 
 ### Boot_Init Calling Convention
 
@@ -195,6 +199,39 @@ The final call uses dispatch table offset `0x0270` with additional parameters fo
 **Port address pattern:** Handlers are grouped by port number. Pairs with the same port and table offset (e.g., 0x012A/0x042A on port 0x01600002) are primary/secondary instances of the same handler type.
 
 **Module naming pattern:** The main CPU firmware has similar registration routines named after developers: InitializeSuna (idx 4), InitializeScoop (6), InitializeKubo (8), InitializeHama (9), HDAE5000 (A), InitializeNaka (B). DISK MENU entries use object indices `0x0160`-`0x016B`.
+
+### Data Record Table (Handler 0x016A)
+
+The data pointer registered for handler `0x016A` (`0x29C0AA`) points to a table of **24-byte records**, one per UI component (sub-object). The HDAE5000 has 13 sub-objects:
+
+```
+Record layout (24 bytes):
+  +0x00  4 bytes  Implementation function pointer (in ROM)
+  +0x04  4 bytes  Next handler ID (linked list chain, 0xFFFFFFFF = end)
+  +0x08  2 bytes  Size/count field
+  +0x0A  2 bytes  Flags field
+  +0x0C  4 bytes  ROM data pointer (name string, config)
+  +0x10  4 bytes  ROM data pointer (secondary config)
+  +0x14  4 bytes  RAM workspace pointer
+```
+
+| Rec | Sub-Index | Name | Func | Next Link | Notes |
+|-----|-----------|------|------|-----------|-------|
+| 0 | 0x0000 | SelectList | 0x2807D9 | 0x01600011 | Main selection list UI |
+| 1 | 0x0001 | DbMemoCl | 0x28122A | 0x01600046 | Database/memo |
+| 2 | 0x0002 | TtlScreenR | 0x280489 | 0x01600034 | Title screen |
+| 3 | 0x0003 | AcHddNamingWindow | 0x281411 | 0x01600035 | HDD naming dialog |
+| 4 | 0x0004 | IvHddNaming | 0x282681 | 0x01600027 | HDD naming input |
+| **5** | **0x0005** | **HDTitleMenu** | **0x2827A8** | **0x0160001D** | **DISK MENU entry** |
+| 6 | 0x0006 | TtlScreenR2 | 0x280567 | 0x01600034 | Title screen variant |
+| 7 | 0x0007 | TtlScreenR3 | 0x280645 | 0x01600034 | Title screen variant |
+| 8 | 0x0008 | AcWindowPage1 | 0x28043C | 0x01600025 | Window page |
+| 9 | 0x0009 | IvScreenR2 | 0x280723 | 0x0160006A | Screen input handler |
+| 10 | 0x000A | AcLanguageText1 | 0x28B554 | 0x01600066 | Language text display |
+| 11 | 0x000B | LyricBox | 0x28CD08 | 0x01600011 | Lyrics display box |
+| 12 | 0x000C | FDFileSelect | 0x28E61B | 0x01600027 | File selection dialog |
+
+**Record 5 ("HDTitleMenu") is the DISK MENU entry handler.** Its sub-index (5) matches the high word in `slot+0x00 = 0x016A0005` (object index 0x016A, sub-index 0x0005). The "next" link chains each sub-object to a corresponding component in the Root module (object 0x0160), forming an **inheritance hierarchy** where HDAE5000 components extend base firmware components.
 
 ### DISK MENU Slot Registration (workspace[0x0E0A][0x02C4])
 
@@ -310,6 +347,108 @@ Testing with MAME confirmed:
 - Setting CRTC start to 0 and continuously resetting it was insufficient to maintain display ownership
 - The display disable flag at `0x0D53` bit 3 is the intended mechanism for an extension to take over the display
 
+## Object Dispatch System
+
+The firmware implements an **object-oriented dispatch system** that manages all DISK MENU interactions. Understanding this system is essential for proper DISK MENU integration.
+
+### Architecture Overview
+
+```
+Object Table (0x027ED2)                  Data Record Table
+ 14-byte entries, max 1118               24-byte records per sub-object
+┌──────────────────────────────┐       ┌────────────────────────────────┐
+│ +0x00: Port address (4)      │       │ +0x00: Impl function ptr (4)   │
+│ +0x04: Handler function (4)  │       │ +0x04: Next handler ID (4)     │
+│ +0x08: Data size (2)         │       │ +0x08: Size/count (2)          │
+│ +0x0A: Data pointer (4) ─────┼──────>│ +0x0A: Flags (2)               │
+└──────────────────────────────┘       │ +0x0C: ROM data ptr (4)        │
+                                       │ +0x10: ROM data ptr 2 (4)      │
+Global State (saved/restored            │ +0x14: RAM workspace ptr (4)   │
+ per dispatch call):                    └────────────────────────────────┘
+  0x02BC14: Current object identity
+  0x02BC24: Current handler ID
+  0x02BC28: Current request code
+  0x02BC2C: Current parameter
+```
+
+### Object Identifiers
+
+Object IDs combine an object table index with a sub-object index:
+
+```
+  0x016A0005
+  ├── 0x016A  = Object table index (handler ID registered via RegisterObjectTable)
+  └── 0x0005  = Sub-object index (record number in data table)
+```
+
+The `slot+0x00` field in the DISK MENU slot stores this combined identifier, linking the menu entry to a specific sub-object (record) in the handler's data table.
+
+### Main Dispatch Function (0xFA9660)
+
+`FA9660` is the firmware's general-purpose object method dispatch. Every request to an object goes through this function:
+
+```
+FA9660(XWA=object_id, XBC=request_code, XDE=param):
+  1. Save current global state (0x02BC14, 0x02BC24-2C)
+  2. Look up handler function from object entry[+4]
+  3. Call handler(object_id, 0x01E00000, 0) → "identity" query
+  4. Set 0x02BC14 = identity result
+  5. Look up data table record for the sub-object index
+  6. Read implementation function from record[+0x00]
+  7. Call record_function(object_id, request_code, param)
+  8. Restore global state
+  9. Return result
+```
+
+The identity query (step 3) calls through the registered handler function (e.g., `FA44E2` for DISK MENU objects). For request `0x01E00000`, `FA44E2` simply returns XWA unchanged, so the identity equals the object ID.
+
+### Request Code Dispatch (Three Layers)
+
+The handler function `FA44E2` (shared by all DISK MENU modules) dispatches requests through three layers:
+
+```
+FA44E2 (Layer 1): Simple getters (0x01E00000-0x01E00007)
+  ├── Case 0 (0x01E00000): Return XWA (identity)
+  ├── Case 1 (0x01E00001): Return *(XHL)
+  ├── Case 2 (0x01E00002): Return *(XIZ)
+  ├── Case 3 (0x01E00003): Return HL from (XIZ+0x08)
+  ├── Case 4 (0x01E00004): Linked object search
+  ├── Case 5 (0x01E00005): String data processing
+  ├── Case 6 (0x01E00006): (complex)
+  ├── Case 7 (0x01E00007): (complex)
+  ├── 0x01E0000D, 0x01E0000E: Special cases
+  ├── 0x01E0000F: Return immediately
+  ├── 0x01E00015: Return (XHL+0x0C)
+  └── Default (including 0x01E0009C): → FA3D85
+                                         │
+FA3D85 (Layer 2): Lifecycle events (0x01E00010-0x01E00023)
+  ├── 20 cases via jump table at 0xEAA8A4
+  │   (setters, init/teardown, string operations)
+  └── Out of range (including 0x01E0009C): → FA4409
+                                               │
+FA4409 (Layer 3): Chain dispatch for unhandled requests
+  ├── Read current dispatch context from 0x02BC14
+  ├── Look up "next" handler from record[+0x04]
+  ├── If next ≠ 0xFFFFFFFF: follow chain, call next handler
+  └── If next = 0xFFFFFFFF: return 0
+```
+
+### HDAE5000 Handler Behavior (Record 5: "HDTitleMenu")
+
+The HDAE5000's DISK MENU handler function at `0x2827A8` (Record 5) is minimal:
+
+```
+0x2827A8(XWA=handler_id, XBC=request, XDE=param):
+  if (request == 0x01C0000F):
+    call workspace[0x0E0A][0x00DC]  // Call default handler first
+    call workspace[0x0E0A][0x0100]  // Then post 0x01C0000D request
+    return 0
+  else:
+    jp workspace[0x0E0A][0x00DC]    // Delegate to default handler
+```
+
+**The default handler at `workspace[0x0E0A][0x00DC]` manages the full DISK MENU lifecycle for most requests, including 0x01E0009C (activation).** The HDAE5000 only intercepts request `0x01C0000F` to perform additional initialization after the default handler runs.
+
 ## DISK MENU Activation Mechanism
 
 When the user selects a DISK MENU entry, the firmware does not directly call the extension ROM. Instead, it uses the event dispatch system to activate the registered handler.
@@ -331,24 +470,50 @@ LD    XDE, 0
 CALL  ApPostEvent            ; Dispatch event to registered handler
 ```
 
-The `ApPostEvent` function dispatches events to handlers registered with the workspace callback system. The handler registered with ID `0x00600002` receives the activation event.
+The `ApPostEvent` function queues events in a ring buffer at `0x02BC34` (12-byte entries: target_object + handler_id + event_param, max 1024 entries). The event processor dequeues events and dispatches them via `FA9660`.
 
-### What Mines Is Missing
+### Complete Activation Flow
 
-For the Mines project to activate from DISK MENU, it likely needs:
+When `ApPostEvent(0x00600002, 0x01E0009C, 0)` is dispatched:
 
-1. **Set `slot+0x00`** -- The HDAE5000 sets `slot+0x00 = 0x016A0005`, linking the DISK MENU entry to its registered handler object. Mines currently skips this step.
+```
+1. Event processor calls FA9660(object_id, 0x01E0009C, 0)
+   where object_id comes from the DISK MENU slot+0x00 (e.g., 0x016A0005)
+2. FA9660 calls identity query: FA44E2(0x016A0005, 0x01E00000, 0) → 0x016A0005
+3. FA9660 sets 0x02BC14 = 0x016A0005
+4. FA9660 looks up Record 5 in data table → func = 0x2827A8
+5. FA9660 calls 0x2827A8(0x016A0005, 0x01E0009C, 0)
+6. Handler delegates to workspace[0x0E0A][0x00DC] (default handler)
+7. Default handler manages the DISK MENU activation lifecycle
+```
 
-2. **Register at least handler `0x016A`** -- The HDAE5000 registers this handler (port `0x01600004`, table offset `0x0168`) with UI config data at `0x29C0AA`. This handler is the primary object for the DISK MENU entry.
+### What Mines Needs for DISK MENU Activation
 
-3. **Provide the correct data format** -- The handler function (resolved via workspace dispatch table offset `0x0168`) expects a specific data structure. The data at `0x29C0AA` contains UI configuration strings (documented as "infofont", "reversecolor", "fontcolor", "dial", etc. at `0x29BFE0`).
+Based on the complete dispatch analysis, the Mines project needs:
+
+1. **Register handler `0x016A`** via `workspace[0x0E0A][0x00E4]` (RegisterObjectTable) with:
+   - Port: `0x01600004`
+   - Handler function: `workspace[0x0E0A][0x0168]` (the shared DISK MENU handler `FA44E2`)
+   - Data size: number of records
+   - Data pointer: address of a record table in ROM or RAM
+
+2. **Provide a data record table** with at least one 24-byte record (for the DISK MENU sub-object):
+   - `+0x00`: Implementation function pointer (our handler function)
+   - `+0x04`: Next handler ID (chain to Root module, e.g., `0x0160001D`, or `0xFFFFFFFF` for none)
+   - `+0x08-0x14`: Config fields (may need specific values for the default handler to work)
+
+3. **Set `slot+0x00`** to `0x016A0005` (or appropriate sub-index matching the record position in the data table)
+
+4. **Implement a handler function** that:
+   - Delegates most requests to `workspace[0x0E0A][0x00DC]` (the default handler)
+   - Optionally intercepts specific requests (e.g., `0x01C0000F`) for custom initialization
 
 ### Open Questions
 
-- What is the exact data format expected by the handler function at table offset `0x0168`?
-- Can a minimal subset of the 11 handlers enable DISK MENU activation, or are all required?
-- What does the Alloc_Memory callback (request codes 0xA1=data ptr, 0xA2=width, 0xA3=height) return for the HDAE5000, and is it called during activation?
-- How does `ApPostEvent(0x00600002, 0x01E0009C)` reach the extension ROM code?
+- What specific record fields (`+0x08` through `+0x14`) does the default handler at `workspace[0x0E0A][0x00DC]` expect?
+- Can the "next" chain link (`record[+0x04]`) be `0xFFFFFFFF` for a standalone handler, or must it chain to a Root module component?
+- What lifecycle events does the default handler send to the record function during activation, and what responses are expected?
+- Can the Mines project use a simpler approach (e.g., intercepting the activation in Frame_Handler via a flag) instead of fully participating in the object dispatch system?
 
 ## Control Panel Input
 
