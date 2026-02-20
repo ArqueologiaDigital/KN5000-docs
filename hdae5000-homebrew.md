@@ -8,7 +8,7 @@ permalink: /hdae5000-homebrew/
 
 The HD-AE5000 extension slot can run custom code on the KN5000's main CPU. By replacing the HDAE5000 ROM with a custom binary, you can create games, demos, or utilities that run on the keyboard hardware. This page documents the extension ROM protocol, known toolchain bugs, and a working build pipeline.
 
-> **Status**: Boot initialization, frame handler callbacks, and DISK MENU registration are working. The extension ROM appears in the DISK MENU with a custom icon and name. The firmware's object dispatch system (`FA9660`, `FA44E2`, `FA3D85`, `FA4409`) and the HDAE5000's 13-component data record table have been fully analyzed. Display ownership (taking over the LCD from the firmware) and game activation from the DISK MENU require implementing the data record table and handler function.
+> **Status**: Boot initialization, frame handler callbacks, and DISK MENU registration are working. The extension ROM appears in the DISK MENU with a custom icon and name. The firmware's object dispatch system (`SendEvent`, `ClassProc`, `ObjectProc`, `InheritedProc`, `RegisterObjectTable`) and the HDAE5000's 13-component data record table have been fully analyzed. Display ownership (taking over the LCD from the firmware) and game activation from the DISK MENU require implementing the data record table and handler function.
 
 ## Prerequisites
 
@@ -106,7 +106,7 @@ Workspace (0x027ED2)
                              +-- offset +0x0108 --> Init function 1
 ```
 
-Both handler tables are in main DRAM (0x000000-0x0FFFFF range). The values at these offsets are function pointers into the firmware ROM. The offset `+0x0168` resolves to `FA44E2` (the shared DISK MENU handler used by all built-in modules).
+Both handler tables are in main DRAM (0x000000-0x0FFFFF range). The values at these offsets are function pointers into the firmware ROM. The offset `+0x0168` resolves to `ClassProc` (0xFA44E2), the shared DISK MENU handler used by all built-in modules. The offset `+0x00E4` resolves to `RegisterObjectTable` (0xFA42FB).
 
 ### Boot_Init Calling Convention
 
@@ -159,22 +159,97 @@ For basic frame handler operation, handler registration is **not required**. The
 
 ### RegisterObjectTable Protocol (workspace[0x0E0A][0x00E4])
 
-The Handler_Registration routine at `0x280020` (now fully disassembled) registers handlers by building a 14-byte parameter block on the stack and calling the RegisterObjectTable function:
+The Handler_Registration routine at `0x280020` (now fully disassembled) registers handlers by building a 14-byte parameter block on the stack and calling the `RegisterObjectTable` function.
+
+#### Parameter Block Format
 
 ```
-Parameter block layout (14 bytes on stack):
-  (XSP+0x00)  4 bytes  Port address (identifies handler type)
-  (XSP+0x04)  4 bytes  Handler function pointer (from workspace dispatch table)
-  (XSP+0x08)  2 bytes  Data size (in bytes)
-  (XSP+0x0A)  4 bytes  Data pointer (RAM or ROM address)
+Parameter block layout (14 bytes):
+  +0x00  4 bytes  Port address (identifies handler type)
+  +0x04  4 bytes  Handler function pointer (from workspace dispatch table)
+  +0x08  2 bytes  Data size (in bytes) ← NOTE: 16-bit field!
+  +0x0A  4 bytes  Data pointer (RAM or ROM address)
 
 Call convention:
-  WA  = handler ID (object table index)
-  XBC = pointer to parameter block on stack
+  WA  = handler ID (object table index, max 0x045F = 1119)
+  XBC = pointer to parameter block (stack or RAM)
   Call workspace[0x0E0A][0x00E4]
 ```
 
-RegisterObjectTable stores each 14-byte parameter block at `workspace_base + (handler_ID * 14)` in the firmware's object registry. The workspace base (`0x027ED2`) can hold up to ~1,118 object entries.
+#### RegisterObjectTable Implementation (0xFA42FB)
+
+The actual implementation is a simple 14-byte block copy:
+
+```asm
+RegisterObjectTable:          ; 0xFA42FB
+    CP    WA, 045Fh           ; Validate handler ID <= 1119
+    RET   UGT                 ; Return if out of range
+    EXTZ  XWA                 ; Zero-extend WA to 32-bit
+    LD    XDE, XWA
+    SLL   3, XDE              ; XDE = id * 8
+    SUB   XDE, XWA            ; XDE = id * 7
+    ADD   XDE, XDE            ; XDE = id * 14
+    LD    XIX, 00027ED2h      ; Object table base address
+    ADD   XIX, XDE            ; XIX = base + id * 14
+    LD    XIY, XBC            ; XIY = parameter block source
+    LD    BC, 7               ; 7 words = 14 bytes
+    LDIRW                     ; Block copy from source to object table
+    RET
+```
+
+This means `RegisterObjectTable` simply copies 14 bytes from the caller's parameter block to `object_table[handler_id * 14]`. The object table base at `0x027ED2` can hold up to 1,120 entries (handler IDs 0x0000-0x045F).
+
+#### RegObjTable Macro (Firmware Convention)
+
+The main CPU firmware uses two macro variants for handler registration:
+
+```asm
+; Variant 1: Data size read from ROM address
+RegObjTable MACRO ParamA, ParamB, ParamC, ParamD, ParamE
+    LDA   XBC, XSP            ; XBC = param block ptr (ON STACK)
+    LD    XWA, ParamA          ; Port address (32-bit)
+    LD    (XBC), XWA
+    LDA   XWA, ParamB          ; Handler function (LEA, not LD)
+    LD    (XBC + 004h), XWA
+    LD    WA, (ParamC)          ; Data size: 16-bit read from ROM address
+    LD    (XBC + 008h), WA      ; 16-BIT store to +0x08
+    LDA   XWA, ParamD          ; Data pointer (LEA)
+    LD    (XBC + 00Ah), XWA
+    LD    WA, ParamE            ; Handler ID (16-bit)
+    CALL  RegisterObjectTable
+ENDM
+
+; Variant 2: Data size as immediate value
+RegObjTabl MACRO ParamA, ParamB, ParamC, ParamD, ParamE
+    LDA   XBC, XSP
+    LD    XWA, ParamA
+    LD    (XBC), XWA
+    LDA   XWA, ParamB
+    LD    (XBC + 004h), XWA
+    LDW   (XBC + 008h:8), ParamC   ; Immediate 16-bit store
+    LDA   XWA, ParamD
+    LD    (XBC + 00Ah), XWA
+    LD    WA, ParamE
+    CALL  RegisterObjectTable
+ENDM
+```
+
+**Key detail:** Both macros use `LDA XBC, XSP` to point XBC at the parameter block which is allocated on the stack. The HDAE5000 also allocates its parameter block on the stack (14 bytes via `LDA XSP, XSP - 0Eh`). The parameter block can be anywhere in RAM -- the `RegisterObjectTable` function just does a block copy from whatever address XBC points to.
+
+#### Firmware Registration Examples
+
+All built-in DISK MENU modules (port `0x01600004`) use `ClassProc` (0xFA44E2) as their handler function:
+
+```
+RegObjTable 01600004h, 0FA44E2h, 0E0CDACh, 0E0CD94h, 0166h  ; InitializeScoop
+RegObjTable 01600004h, 0FA44E2h, 0E0E95Ch, 0E0E944h, 016Bh  ; InitializeKSS
+RegObjTable 01600004h, 0FA44E2h, 0E17322h, 0E16C86h, 0164h  ; InitializeSuna
+RegObjTable 01600004h, 0FA44E2h, 0E1F0BCh, 0E1F080h, 0169h  ; InitializeHama
+RegObjTable 01600004h, 0FA44E2h, 0E20CAEh, 0E208ECh, 0167h  ; InitializeKubo
+RegObjTable 01600004h, 0FA44E2h, 0E27596h, 0E27180h, 0168h  ; InitializeNaka
+```
+
+Handler IDs `0x0160`-`0x016B` are all DISK MENU modules. The HDAE5000 claims `0x016A`.
 
 ### Complete Handler Table
 
@@ -351,11 +426,26 @@ Testing with MAME confirmed:
 
 The firmware implements an **object-oriented dispatch system** that manages all DISK MENU interactions. Understanding this system is essential for proper DISK MENU integration.
 
+### Firmware Symbol Names
+
+The main CPU firmware symbol table reveals the real names for these functions:
+
+| Address | Symbol Name | Previous Name | Purpose |
+|---------|-------------|---------------|---------|
+| 0xFA9660 | **SendEvent** | "FA9660" | Main event dispatch entry point |
+| 0xFA44E2 | **ClassProc** | "Layer 1 handler" | UI event handler (shared by all DISK MENU modules) |
+| 0xFA3D85 | **ObjectProc** | "Layer 2 dispatch" | Object lifecycle event handler |
+| 0xFA4409 | **InheritedProc** | "Layer 3 chain dispatch" | Handler chain traversal |
+| 0xFA42FB | **RegisterObjectTable** | "workspace[0x0E0A][0x00E4]" | Register handler in object table |
+| 0xFA431A | **RegisterObject** | (unnamed) | Register individual object entry |
+| 0xFA43B3 | **UnRegisterObject** | (unnamed) | Remove object entry |
+| 0xFAD61F | **PostEvent** | "ApPostEvent" | Queue event for asynchronous dispatch |
+
 ### Architecture Overview
 
 ```
 Object Table (0x027ED2)                  Data Record Table
- 14-byte entries, max 1118               24-byte records per sub-object
+ 14-byte entries, max 1120               24-byte records per sub-object
 ┌──────────────────────────────┐       ┌────────────────────────────────┐
 │ +0x00: Port address (4)      │       │ +0x00: Impl function ptr (4)   │
 │ +0x04: Handler function (4)  │       │ +0x04: Next handler ID (4)     │
@@ -365,10 +455,9 @@ Object Table (0x027ED2)                  Data Record Table
                                        │ +0x10: ROM data ptr 2 (4)      │
 Global State (saved/restored            │ +0x14: RAM workspace ptr (4)   │
  per dispatch call):                    └────────────────────────────────┘
-  0x02BC14: Current object identity
-  0x02BC24: Current handler ID
-  0x02BC28: Current request code
-  0x02BC2C: Current parameter
+  0x02BC14: Current object identity (SetCurrentTarget/GetCurrentTarget)
+  0x02BC18-20: Root object/event/param (SetRootObject/GetRootObject etc.)
+  0x02BC24-2C: Focus object/event/param (GetFocusObject/GetFocusEvent etc.)
 ```
 
 ### Object Identifiers
@@ -383,53 +472,98 @@ Object IDs combine an object table index with a sub-object index:
 
 The `slot+0x00` field in the DISK MENU slot stores this combined identifier, linking the menu entry to a specific sub-object (record) in the handler's data table.
 
-### Main Dispatch Function (0xFA9660)
+### SendEvent (0xFA9660) — Main Event Dispatch
 
-`FA9660` is the firmware's general-purpose object method dispatch. Every request to an object goes through this function:
+`SendEvent` is the firmware's synchronous event dispatch. Every request to an object goes through this function:
 
 ```
-FA9660(XWA=object_id, XBC=request_code, XDE=param):
-  1. Save current global state (0x02BC14, 0x02BC24-2C)
-  2. Look up handler function from object entry[+4]
-  3. Call handler(object_id, 0x01E00000, 0) → "identity" query
-  4. Set 0x02BC14 = identity result
-  5. Look up data table record for the sub-object index
-  6. Read implementation function from record[+0x00]
-  7. Call record_function(object_id, request_code, param)
-  8. Restore global state
-  9. Return result
+SendEvent(XWA=object_id, XBC=request_code, XDE=param):
+  1. Save current focus state (0x02BC24-2C) to stack
+  2. Extract handler_index = (object_id >> 16) & 0xFFF
+  3. Look up handler function from object_table[handler_index * 14 + 4]
+  4. Call handler(object_id, 0x01E00000, 0) → "identity" query
+  5. Set 0x02BC14 = identity result (via handler function)
+  6. Extract sub_index from identity result
+  7. Look up data record table from object_table[handler_index * 14 + 0x0A]
+  8. Read implementation function from record[sub_index * 24 + 0x00]
+  9. Call record_function(object_id, request_code, param)
+  10. Restore focus state from stack
+  11. Return result in XHL
 ```
 
-The identity query (step 3) calls through the registered handler function (e.g., `FA44E2` for DISK MENU objects). For request `0x01E00000`, `FA44E2` simply returns XWA unchanged, so the identity equals the object ID.
+The identity query (step 4) calls through the registered handler function (e.g., `ClassProc` for DISK MENU objects). For request `0x01E00000`, `ClassProc` simply returns XWA unchanged, so the identity equals the object ID.
+
+### PostEvent (0xFAD61F) — Asynchronous Event Queue
+
+`PostEvent` (previously called "ApPostEvent") queues events for later dispatch:
+
+```asm
+PostEvent:                    ; 0xFAD61F
+    ; Allocate 8 bytes on stack, save registers
+    ; Acquire lock (CALL 0xEF1EA7 with WA=4)
+    ; Read queue state:
+    ;   BC = queue size from (0x02EC34)
+    ;   DE = write index from (0x02EC36)
+    ; Check for queue full (WA = DE + 1, compare with BC)
+    ; If full: release lock, spin forever (deadlock!)
+    ;
+    ; Write 12-byte event entry to queue:
+    ;   Queue base: 0x02BC34
+    ;   Entry address: 0x02BC34 + (write_index * 12)
+    ;   +0x00: XIZ (target object ID)
+    ;   +0x04: XBC (event code)
+    ;   +0x08: XDE (parameter)
+    ;
+    ; Advance write index (wrap at 0x03FF)
+    ; Increment event counter at 0x02F840
+    ; Release locks
+    RET
+```
+
+The event queue is a ring buffer with 1,024 entries (indices 0x0000-0x03FF), each 12 bytes. Events are dequeued by the main loop and dispatched via `SendEvent`.
 
 ### Request Code Dispatch (Three Layers)
 
-The handler function `FA44E2` (shared by all DISK MENU modules) dispatches requests through three layers:
+`ClassProc` (shared by all DISK MENU modules) dispatches requests through three layers:
 
 ```
-FA44E2 (Layer 1): Simple getters (0x01E00000-0x01E00007)
-  ├── Case 0 (0x01E00000): Return XWA (identity)
-  ├── Case 1 (0x01E00001): Return *(XHL)
-  ├── Case 2 (0x01E00002): Return *(XIZ)
-  ├── Case 3 (0x01E00003): Return HL from (XIZ+0x08)
-  ├── Case 4 (0x01E00004): Linked object search
-  ├── Case 5 (0x01E00005): String data processing
-  ├── Case 6 (0x01E00006): (complex)
-  ├── Case 7 (0x01E00007): (complex)
-  ├── 0x01E0000D, 0x01E0000E: Special cases
+ClassProc (0xFA44E2): UI event handler
+  ├── 0x01E00000-0x01E00007: Jump table via 0xEAA8F8
+  │   ├── Case 0 (0x01E00000): Return XWA (identity)
+  │   ├── Case 1 (0x01E00001): Return *(XHL)
+  │   ├── Case 2 (0x01E00002): Return *(XIZ)
+  │   ├── Case 3 (0x01E00003): Return *(XHL+0x0C)
+  │   ├── Case 4-7: (complex linked object operations)
+  │   Via helper functions:
+  │     ClassProc_Event_LoadFromWA   (0xFA4598)
+  │     ClassProc_Event_LoadFromHL   (0xFA459D)
+  │     ClassProc_Event_LoadFromIZ   (0xFA45A2)
+  │     ClassProc_Event_LoadFromOffset (0xFA45A7)
+  ├── 0x01E0000D: Special case (keypress handling)
+  ├── 0x01E0000E: Special case (other input)
   ├── 0x01E0000F: Return immediately
-  ├── 0x01E00015: Return (XHL+0x0C)
-  └── Default (including 0x01E0009C): → FA3D85
+  ├── 0x01E00015: Return *(XHL+0x0C)
+  └── Default (including 0x01E0009C): → ObjectProc
                                          │
-FA3D85 (Layer 2): Lifecycle events (0x01E00010-0x01E00023)
-  ├── 20 cases via jump table at 0xEAA8A4
+ObjectProc (0xFA3D85): Lifecycle events
+  ├── Allocates 0x90 bytes stack frame
+  ├── Extracts handler index, looks up data records
+  ├── Calls handler identity query first
+  ├── 0x01E00010-0x01E00023: 20 cases via jump table at 0xEAA8A4
   │   (setters, init/teardown, string operations)
-  └── Out of range (including 0x01E0009C): → FA4409
+  └── Out of range (including 0x01E0009C): → InheritedProc
                                                │
-FA4409 (Layer 3): Chain dispatch for unhandled requests
-  ├── Read current dispatch context from 0x02BC14
-  ├── Look up "next" handler from record[+0x04]
-  ├── If next ≠ 0xFFFFFFFF: follow chain, call next handler
+InheritedProc (0xFA4409): Handler chain traversal
+  ├── Read current target identity from 0x02BC14
+  ├── Extract handler_index and sub_index
+  ├── Look up data record table for current handler
+  ├── Read "next" handler ID from record[sub_index * 24 + 0x04]
+  ├── If next ≠ 0xFFFFFFFF:
+  │     Set 0x02BC14 = next handler ID
+  │     Look up next handler's record table
+  │     Call next handler's implementation function
+  │     Restore 0x02BC14 to original value
+  │     Return result
   └── If next = 0xFFFFFFFF: return 0
 ```
 
@@ -449,6 +583,24 @@ The HDAE5000's DISK MENU handler function at `0x2827A8` (Record 5) is minimal:
 
 **The default handler at `workspace[0x0E0A][0x00DC]` manages the full DISK MENU lifecycle for most requests, including 0x01E0009C (activation).** The HDAE5000 only intercepts request `0x01C0000F` to perform additional initialization after the default handler runs.
 
+### Dispatch Flow for Activation Event (0x01E0009C)
+
+When the DISK MENU activation event reaches our handler:
+
+```
+PostEvent(0x00600002, 0x01E0009C, 0)
+  → Event queue stores entry
+  → Main loop dequeues event
+  → SendEvent(slot[+0x00], 0x01E0009C, 0)
+    → ClassProc: 0x01E0009C not in simple getter range → ObjectProc
+      → ObjectProc: 0x01E0009C not in 0x10-0x23 range → InheritedProc
+        → InheritedProc: follows record[+0x04] "next" chain
+          → If next = 0xFFFFFFFF: returns 0 (no further handler)
+          → If next = valid ID: calls that handler's function
+```
+
+**Key insight:** For the activation event `0x01E0009C`, neither `ClassProc` nor `ObjectProc` handle it directly. It falls through to `InheritedProc`, which follows the "next handler" chain in the data record. If the chain ends (`0xFFFFFFFF`), nothing happens. The actual activation must be handled by the record's implementation function (called by `SendEvent` at step 9), or by a chained handler via `InheritedProc`.
+
 ## DISK MENU Activation Mechanism
 
 When the user selects a DISK MENU entry, the firmware does not directly call the extension ROM. Instead, it uses the event dispatch system to activate the registered handler.
@@ -465,48 +617,68 @@ JR    Z, .no_extension       ; Skip if no extension ROM
 
 ; Extension present -- post activation event
 LD    XWA, 00600002h         ; Target handler ID (same as DISK MENU registration)
-LD    XBC, 01E0009Ch         ; Event parameter
-LD    XDE, 0
-CALL  ApPostEvent            ; Dispatch event to registered handler
+LD    XBC, 01E0009Ch         ; Event code: activate
+LD    XDE, 0                 ; Parameter: none
+CALL  PostEvent              ; Queue event for dispatch
 ```
 
-The `ApPostEvent` function queues events in a ring buffer at `0x02BC34` (12-byte entries: target_object + handler_id + event_param, max 1024 entries). The event processor dequeues events and dispatches them via `FA9660`.
+`PostEvent` (0xFAD61F) queues events in a ring buffer at `0x02BC34` (12-byte entries, max 1,024). The main event loop dequeues events and dispatches them synchronously via `SendEvent`.
 
 ### Complete Activation Flow
 
-When `ApPostEvent(0x00600002, 0x01E0009C, 0)` is dispatched:
+When `PostEvent(0x00600002, 0x01E0009C, 0)` is dispatched:
 
 ```
-1. Event processor calls FA9660(object_id, 0x01E0009C, 0)
-   where object_id comes from the DISK MENU slot+0x00 (e.g., 0x016A0005)
-2. FA9660 calls identity query: FA44E2(0x016A0005, 0x01E00000, 0) → 0x016A0005
-3. FA9660 sets 0x02BC14 = 0x016A0005
-4. FA9660 looks up Record 5 in data table → func = 0x2827A8
-5. FA9660 calls 0x2827A8(0x016A0005, 0x01E0009C, 0)
-6. Handler delegates to workspace[0x0E0A][0x00DC] (default handler)
-7. Default handler manages the DISK MENU activation lifecycle
+1. Main loop dequeues event from ring buffer at 0x02BC34
+2. SendEvent(object_id, 0x01E0009C, 0)
+   where object_id = slot[+0x00] (e.g., 0x016A0005)
+
+3. SendEvent extracts handler_index = 0x016A
+4. Looks up object_table[0x016A * 14 + 4] → handler function (ClassProc)
+5. Calls ClassProc(0x016A0005, 0x01E00000, 0) → identity = 0x016A0005
+6. Sets 0x02BC14 = 0x016A0005
+
+7. Looks up data_ptr from object_table[0x016A * 14 + 0x0A]
+8. Extracts sub_index = 5 from identity
+9. Reads record[5 * 24 + 0x00] → implementation function (0x2827A8)
+10. Calls 0x2827A8(0x016A0005, 0x01E0009C, 0)
+11. Handler delegates to workspace[0x0E0A][0x00DC] (default handler)
+12. Default handler manages the DISK MENU activation lifecycle
 ```
 
 ### What Mines Needs for DISK MENU Activation
 
 Based on the complete dispatch analysis, the Mines project needs:
 
-1. **Register handler `0x016A`** via `workspace[0x0E0A][0x00E4]` (RegisterObjectTable) with:
+1. **Register handler `0x016A`** via `RegisterObjectTable` (workspace[0x0E0A][0x00E4]) with:
    - Port: `0x01600004`
-   - Handler function: `workspace[0x0E0A][0x0168]` (the shared DISK MENU handler `FA44E2`)
-   - Data size: number of records
-   - Data pointer: address of a record table in ROM or RAM
+   - Handler function: `ClassProc` (via workspace[0x0E0A][0x0168], resolves to 0xFA44E2)
+   - Data size: size of record table in bytes
+   - Data pointer: address of data record table in ROM
 
-2. **Provide a data record table** with at least one 24-byte record (for the DISK MENU sub-object):
+2. **Provide a data record table** with at least one 24-byte record:
    - `+0x00`: Implementation function pointer (our handler function)
-   - `+0x04`: Next handler ID (chain to Root module, e.g., `0x0160001D`, or `0xFFFFFFFF` for none)
+   - `+0x04`: Next handler ID (`0xFFFFFFFF` for end-of-chain, or chain to Root module e.g. `0x0160001D`)
    - `+0x08-0x14`: Config fields (may need specific values for the default handler to work)
 
-3. **Set `slot+0x00`** to `0x016A0005` (or appropriate sub-index matching the record position in the data table)
+3. **Set `slot+0x00`** to `0x016A0005` (handler 0x016A, sub-index 5 matching the HDAE5000 convention) — or `0x016A0000` if using sub-index 0
 
 4. **Implement a handler function** that:
    - Delegates most requests to `workspace[0x0E0A][0x00DC]` (the default handler)
-   - Optionally intercepts specific requests (e.g., `0x01C0000F`) for custom initialization
+   - Intercepts `0x01E0009C` to set the `GAME_ACTIVE` flag
+   - Optionally intercepts `0x01C0000F` for custom initialization (as the original HDAE5000 does)
+
+### Object System Initialization
+
+The firmware initializes the object table at startup via `InitializeObjectTable` (0xFA40B2). This function:
+
+1. Clears all 1,120 entries in the object table (14 bytes each)
+2. Initializes internal dispatch tables (0x0328FC and 0x032ABC)
+3. Registers built-in system handlers (IDs 0x0260, 0x0180, 0x01A0, 0x0000-0x00FF, 0x0300-0x03FF)
+4. Calls 31 `Initialize*` functions (one per built-in module): `InitializeMurai`, `InitializeToshi`, `InitializeEast`, `InitializeSuna`, `InitializeCheap`, `InitializeScoop`, `InitializeYoko`, `InitializeKubo`, `InitializeHama`, `InitializeKSS`, `InitializeNaka`, and `InitializeUser12`-`InitializeUser31`
+5. Each `Initialize*` function calls `RegisterObjectTable` with that module's handlers
+
+The HDAE5000's `Handler_Registration` runs later (during `Boot_Init`), overwriting the table entry for handler `0x016A` that was previously initialized by one of the built-in modules.
 
 ### Open Questions
 
