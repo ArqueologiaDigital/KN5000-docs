@@ -8,7 +8,7 @@ permalink: /hdae5000-homebrew/
 
 The HD-AE5000 extension slot can run custom code on the KN5000's main CPU. By replacing the HDAE5000 ROM with a custom binary, you can create games, demos, or utilities that run on the keyboard hardware. This page documents the extension ROM protocol, known toolchain bugs, and a working build pipeline.
 
-> **Status**: Boot initialization and frame handler callbacks are working. Handler registration with the firmware's dispatch system is not yet functional (see [Handler Registration](#handler-registration-prerequisites) below).
+> **Status**: Boot initialization, frame handler callbacks, and DISK MENU registration are working. The extension ROM appears in the DISK MENU with a custom icon and name. Display ownership (taking over the LCD from the firmware) and game activation from the DISK MENU are under investigation.
 
 ## Prerequisites
 
@@ -148,9 +148,193 @@ The original HDAE5000 firmware performs extensive setup before calling the callb
 5. **Allocate DRAM and copy VRAM** -- 76,800 bytes to display areas
 6. *Then* **call `workspace[0x0E0A][0x02C4]`** -- the callback registration function
 
-**Current finding:** Calling `workspace[0x0E0A][0x02C4]` without performing steps 1-5 first causes a crash. The registration function likely depends on state established by the 12-handler registration at offset `0x00E4`. This is an area of ongoing investigation.
+**Current finding:** The Mines project successfully calls `workspace[0x0E0A][0x02C4]` with handler ID `0x00600002`, which registers a DISK MENU entry. The returned XHL points to a handler slot structure where:
+- `slot+0x2A` = pointer to display name string (shown in DISK MENU)
+- `slot+0x32` = icon ID (indexes into the table_data ROM icon table at `0x938000`)
 
-For basic operation, handler registration is **not required**. The firmware calls the Frame_Handler entry point every frame regardless. Handler registration is only needed for DISK MENU integration (displaying an icon and responding to user selection).
+The icon ID `176` was patched into the table_data ROM to point at a custom mine icon embedded in the extension ROM. This approach is confirmed working -- the icon and "Mines Game" text appear in the DISK MENU.
+
+**DISK MENU activation** (what happens when the user selects the menu entry) is not yet implemented. The firmware uses handler ID `0x01600040` (ExtensionApp_Type1) to query whether an extension app should be activated. A sub-handler must be registered via `workspace[0x0E0A][0x00E4]` to respond to this query. See [DISK MENU Activation](#disk-menu-activation-mechanism) below.
+
+For basic frame handler operation, handler registration is **not required**. The firmware calls the Frame_Handler entry point every frame regardless.
+
+## Display Ownership Model
+
+Understanding how the firmware manages the LCD display is critical for any homebrew project that wants to render graphics.
+
+### Firmware Display Architecture
+
+The KN5000 display is **NOT driven by a vertical blank interrupt (VBI)**. Instead, display updates happen in the firmware's main event loop at `LABEL_EF1245`:
+
+```
+Main Event Loop (LABEL_EF1245)
+    |
+    +-- Control Panel Poll
+    +-- Display Update         <-- firmware draws its UI here
+    +-- MIDI Processing
+    +-- FDC Handler
+    +-- Frame_Handler call     <-- extension ROM runs AFTER firmware drawing
+    +-- Audio Sync
+    |
+    (loop)
+```
+
+**Key implication:** The Frame_Handler is called **after** the firmware has already drawn its screen content. Any VRAM writes made by the extension ROM will be visible briefly, then overwritten by the firmware on the next loop iteration.
+
+### Display Disable Flag (SFR 0x0D53, bit 3)
+
+The firmware checks a flag before performing display updates:
+
+```asm
+BIT 3, (0D53h)           ; Check display disable flag
+JR NZ, skip_display      ; If set, skip all firmware screen drawing
+```
+
+**To take display ownership**, an extension ROM should:
+1. Set bit 3 of the byte at SFR address `0x0D53`
+2. This prevents the firmware from overwriting VRAM
+3. The extension ROM then has full control of the framebuffer
+
+**WARNING:** This is based on disassembly analysis and has not been fully tested. The address `0x0D53` is in the TMP94C241F's internal RAM / SFR space. Additional firmware state may need to be managed to prevent side effects.
+
+### VGA Controller Details
+
+The KN5000 uses an **MN89304** LCD controller, which is VGA-compatible with some differences:
+
+| Property | Standard VGA | MN89304 (KN5000) |
+|----------|-------------|-------------------|
+| DAC resolution | 6-bit (0-63) | **4-bit (0-15)** |
+| Palette format | 18-bit RGB | **12-bit RGB** |
+| Row pitch | configurable | `svga_device::offset() << 3` (8x multiplier) |
+| CRTC start | standard | standard |
+
+#### VGA Register Map
+
+| Register | CPU Address | Description |
+|----------|-------------|-------------|
+| DAC Mask | 0x1703C6 | Palette mask register |
+| DAC Write Index | 0x1703C8 | Select palette entry to write |
+| DAC Data | 0x1703C9 | Write R, G, B values sequentially |
+| CRTC Index | 0x1703D4 | Select CRTC register |
+| CRTC Data | 0x1703D5 | Read/write CRTC register value |
+
+#### Palette Format
+
+The MN89304 uses a **4-bit RAMDAC** (`pal4bit()` in MAME). Only the lower 4 bits of each color component are used:
+
+```c
+// Writing a palette entry
+*VGA_DAC_WRITE_INDEX = palette_index;
+*VGA_DAC_DATA = red >> 2;    // Convert 6-bit VGA to 4-bit
+*VGA_DAC_DATA = green >> 2;
+*VGA_DAC_DATA = blue >> 2;
+```
+
+The original HDAE5000 firmware shifts RGB values right by 4 bits (`>> 4`) from 8-bit source data. If your palette data is already in 6-bit VGA format (0-63), shift right by 2 (`>> 2`) to get 4-bit values.
+
+#### CRTC Start Address
+
+The CRTC start address (registers 0x0C high, 0x0D low) determines which VRAM address appears at the top-left of the screen. The firmware initializes this to `0x0000` during VGA setup, meaning VRAM address `0x1A0000` maps to pixel (0,0).
+
+The MN89304 applies an additional 8x multiplier to the row offset calculation (`mn89304::offset()` overrides `svga_device::offset()` and left-shifts by 3). This affects scrolling but not the basic framebuffer start address.
+
+### VRAM Layout
+
+| Property | Value |
+|----------|-------|
+| Base address | 0x1A0000 |
+| Size | 256KB (0x1A0000-0x1DFFFF) |
+| Active display | 76,800 bytes (320 x 240) |
+| Pixel format | 8-bit indexed color |
+| Row stride | 320 bytes |
+
+VRAM is linear and row-major. Pixel at screen position (x, y) is at VRAM address `0x1A0000 + y * 320 + x`.
+
+### Experimental Observations
+
+Testing with MAME confirmed:
+- VRAM writes at `0x1A0000` are effective (filling VRAM with 0xFF produced visible red at the bottom of the screen)
+- The firmware continuously redraws its UI, overwriting extension ROM VRAM writes within one main loop iteration
+- Setting CRTC start to 0 and continuously resetting it was insufficient to maintain display ownership
+- The display disable flag at `0x0D53` bit 3 is the intended mechanism for an extension to take over the display
+
+## DISK MENU Activation Mechanism
+
+When the user selects a DISK MENU entry, the firmware does not directly call the extension ROM. Instead, it queries registered handlers to determine what action to take.
+
+### Registration Flow (Working)
+
+```asm
+; 1. Get handler table A
+ld   xiz, (WORKSPACE_PTR)
+add  xiz, 0x0E0A
+ld   xiz, (xiz)
+
+; 2. Get registration function
+push xiz
+add  xiz, 0x02C4
+ld   xix, (xiz)
+pop  xiz
+
+; 3. Call registration with ID 0x00600002
+ld   xwa, 0x00600002
+call (xix)
+
+; 4. XHL = handler slot pointer
+; Set display name at slot+0x2A
+ld   xwa, MENU_NAME
+ld   (xhl + 0x2A), xwa
+
+; 5. Set icon ID at slot+0x32
+ld   xwa, 176           ; custom icon ID
+ld   (xhl + 0x32), xwa
+```
+
+### Activation Flow (Not Yet Implemented)
+
+When the user selects the DISK MENU entry:
+1. Firmware queries handler `0x01600040` (ExtensionApp_Type1)
+2. A registered handler must respond to indicate the extension is an app
+3. Firmware then activates the extension (exact callback mechanism TBD)
+
+The original HDAE5000 uses handler `0x016A` registered via `workspace[0x0E0A][0x00E4]` with data at `0x29C0AA` (UI config strings). This handler appears to be the key to DISK MENU integration for apps vs. the default floppy disk test behavior.
+
+### Open Questions
+
+- What response does handler `0x016A` provide when queried?
+- How does the firmware transition from "DISK MENU item selected" to "extension app active"?
+- Does `slot+0x2A` store a text string pointer (as used by Mines) or a function pointer (as may be used by the original HDAE5000)?
+- What is the complete Alloc_Memory protocol? (request codes 0xA1=data ptr, 0xA2=width, 0xA3=height)
+
+## Control Panel Input
+
+The KN5000 control panel communicates with the main CPU via SC1 synchronous serial at 250 kHz. The firmware manages this communication in its main event loop.
+
+### Input Routing Considerations
+
+For homebrew projects that need button input:
+
+1. **Direct SC1 access** -- Reading SC1BUF directly works but may conflict with the firmware's own panel polling. The firmware polls the control panel every main loop iteration, and concurrent access to SC1 could corrupt the serial protocol state.
+
+2. **Firmware-mediated input** -- The firmware's callback dispatch system likely provides a way for extensions to receive input events. The workspace callbacks at offsets `0x0244`, `0x0248`, and `0x024C` in Handler Table A are labeled as "UI callbacks" and may provide this mechanism.
+
+3. **Interrupt-based input** -- The SC1 RX interrupt (`INTRX1`) could be used, but would need careful coordination with the firmware's interrupt handlers.
+
+**Current approach in Mines:** Direct SC1 serial access works for basic testing in MAME, with edge detection to convert held buttons into single-press events. For production use on real hardware, firmware-mediated input would be more reliable.
+
+### Button Mapping
+
+See the [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) page for the full serial protocol. For game-like input, useful buttons include:
+
+| Button Group | Panel | Segment | Bit | Suggested Use |
+|-------------|-------|---------|-----|---------------|
+| Part Select: Right 2 | Right | 4 | 1 | UP |
+| Conductor: Left | Right | 4 | 4 | LEFT |
+| Conductor: Right 2 | Right | 4 | 5 | DOWN |
+| Conductor: Right 1 | Right | 4 | 6 | RIGHT |
+| Variation 4 | Left | 4 | 3 | ACTION (open cell) |
+| Page Up | Left | 2 | 7 | SECONDARY (flag) |
+| Exit | Left | 7 | 3 | QUIT |
 
 ## LLVM TLCS-900 Assembler Encoding Bugs
 
@@ -343,10 +527,16 @@ Frame_Handler:
 |--------------|------|--------|-----|
 | 0x200000-0x27FFFF | 256KB | Extension RAM | Variables, stack, heap |
 | 0x280000-0x2FFFFF | 512KB | Extension ROM | Code, read-only data |
-| 0x1A0000-0x1DFFFF | 256KB | Video RAM | 320x240 8bpp display |
-| 0x1703C8-0x1703C9 | 2B | VGA DAC | Palette index and RGB data |
+| 0x1A0000-0x1DFFFF | 256KB | Video RAM | 320x240 8bpp linear framebuffer |
+| 0x1703C6 | 1B | VGA DAC Mask | Palette mask register |
+| 0x1703C8 | 1B | VGA DAC Index | Palette write index |
+| 0x1703C9 | 1B | VGA DAC Data | RGB data (write 3 bytes sequentially) |
+| 0x1703D4 | 1B | VGA CRTC Index | CRTC register select |
+| 0x1703D5 | 1B | VGA CRTC Data | CRTC register data |
+| 0x0D53 | 1B | Display Flags | Bit 3: display disable (firmware SFR) |
+| 0x03DD04 | 1B | XAPR Flag | Extension ROM detection (1=present) |
 
-The KN5000's LCD is 320x240 pixels at 8 bits per pixel (256-color indexed palette). VRAM starts at `0x1A0000` with a linear framebuffer layout (row-major, 320 bytes per row).
+The KN5000's LCD is 320x240 pixels at 8 bits per pixel (256-color indexed palette). VRAM starts at `0x1A0000` with a linear framebuffer layout (row-major, 320 bytes per row). See [Display Ownership Model](#display-ownership-model) for details on taking control of the display.
 
 ## Testing with MAME
 
@@ -365,6 +555,8 @@ The `-oslog` flag captures debug output, including any invalid instruction repor
 ## Related Pages
 
 - [HDAE5000 Hard Disk Expansion]({{ site.baseurl }}/hdae5000/) -- Original firmware documentation
+- [Display Subsystem]({{ site.baseurl }}/display-subsystem/) -- VGA controller and display architecture
+- [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) -- Serial input protocol
 - [Memory Map]({{ site.baseurl }}/memory-map/) -- Full system address space
 - [Boot Sequence]({{ site.baseurl }}/boot-sequence/) -- System startup and XAPR validation
 - [Another World VM]({{ site.baseurl }}/another-world-vm/) -- Another homebrew project for the KN5000
