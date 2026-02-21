@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 154 (121 open, 33 closed)
+**Total Issues:** 154 (120 open, 34 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (65) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (64) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -952,14 +952,6 @@ Reference: maincpu VRAM_FillRect at 0xEF50DF, rom-reconstruction.md
 
 ---
 
-#### 🟡 Docs: Explain 'Disables firmware display (SET bit 3 of SFR 0x0D53)' {#issue-kn5000-bjw}
-
-**ID:** `kn5000-bjw` | **Priority:** Medium | **Created:** 2026-02-21
-
-**Notes:** The documentation mentions 'Disables firmware display (SET bit 3 of SFR 0x0D53)' but does not explain what this means, how it works, or why homebrew code needs it. Need to research the SFR register, trace firmware behavior, and add a clear explanation to the relevant docs.
-
----
-
 #### 🟡 Document ROM interleaving formats for all ROM chips {#issue-kn5000-67g}
 
 **ID:** `kn5000-67g` | **Priority:** Medium | **Created:** 2026-01-30
@@ -1836,6 +1828,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-bjw` | Docs: Explain 'Disables firmware display (SET bit 3 of SF... | 2026-02-21 |
 | `kn5000-2og` | Symbols: Rename AudioMix to a more accurate name | 2026-02-21 |
 | `kn5000-99f` | ROM Reconstruction: Achieve 100% byte-matching for all ROMs | 2026-02-21 |
 | `kn5000-w1w` | Custom Data ROM: Begin reconstruction (currently 0%) | 2026-02-21 |
@@ -1855,9 +1848,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-qtl` | Update: Document key combinations for update mode | 2026-01-26 |
 | `kn5000-3cm` | Update: Map file types to system components | 2026-01-26 |
 | `kn5000-psz` | Update: Document floppy disk file formats | 2026-01-26 |
-| `kn5000-6qi` | Video: Document LCD controller IC206 (MN89304) | 2026-01-26 |
 
-*...and 13 more closed issues*
+*...and 14 more closed issues*
 
 ---
 
@@ -1869,7 +1861,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 70 |
+| Medium | 69 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1883,11 +1875,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 65 |
+| Other | 64 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-21 03:26*
+*Last updated: 2026-02-21 03:28*
