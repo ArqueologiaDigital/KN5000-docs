@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 153 (123 open, 30 closed)
+**Total Issues:** 153 (121 open, 32 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (67) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (65) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -460,14 +460,6 @@ Phase 1 represents the critical path to functional emulation.
 
 ---
 
-#### 🔴 ROM Reconstruction: Achieve 100% byte-matching for all ROMs {#issue-kn5000-99f}
-
-**ID:** `kn5000-99f` | **Priority:** Critical | **Created:** 2026-01-25
-
-**Depends on:** [`kn5000-cfe`](#issue-kn5000-cfe), [`kn5000-kqy`](#issue-kn5000-kqy), [`kn5000-hlw`](#issue-kn5000-hlw)
-
----
-
 #### 🟠 Audio: Analyze DSP effects processing algorithms {#issue-kn5000-1oy}
 
 **ID:** `kn5000-1oy` | **Priority:** High | **Created:** 2026-01-30
@@ -901,12 +893,6 @@ Need to:
 4. Document relationship to Program Change messages
 
 Reference: SOUND_DATA_SECTION_PTRS at 0xE023B0 in maincpu.
-
----
-
-#### 🟡 Custom Data ROM: Begin reconstruction (currently 0%) {#issue-kn5000-w1w}
-
-**ID:** `kn5000-w1w` | **Priority:** Medium | **Created:** 2026-02-21
 
 ---
 
@@ -1852,6 +1838,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-99f` | ROM Reconstruction: Achieve 100% byte-matching for all ROMs | 2026-02-21 |
+| `kn5000-w1w` | Custom Data ROM: Begin reconstruction (currently 0%) | 2026-02-21 |
 | `kn5000-hy8` | Video: Document pixel format and color palette | 2026-02-21 |
 | `kn5000-3c5` | Display: Document framebuffer memory organization at 0x1A... | 2026-02-21 |
 | `kn5000-hlw` | table_data: Improve from 32.42% match | 2026-02-21 |
@@ -1870,10 +1858,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-psz` | Update: Document floppy disk file formats | 2026-01-26 |
 | `kn5000-6qi` | Video: Document LCD controller IC206 (MN89304) | 2026-01-26 |
 | `kn5000-m91` | Video: Document Video RAM IC207 (M5M44265CJ8S) | 2026-01-26 |
-| `kn5000-t75` | Video: Trace LCD initialization in firmware | 2026-01-26 |
-| `kn5000-618` | HDAE5000: Analyze PPI interface at 0x160000 | 2026-01-26 |
 
-*...and 10 more closed issues*
+*...and 12 more closed issues*
 
 ---
 
@@ -1883,9 +1869,9 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Priority | Count |
 |----------|-------|
-| Critical | 3 |
+| Critical | 2 |
 | High | 28 |
-| Medium | 71 |
+| Medium | 70 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1899,11 +1885,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 67 |
+| Other | 65 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-21 01:43*
+*Last updated: 2026-02-21 01:49*
