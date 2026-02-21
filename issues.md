@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 143 (119 open, 24 closed)
+**Total Issues:** 150 (124 open, 26 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (61) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (66) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
 
 ---
 
@@ -669,6 +669,14 @@ Analyze the KN5000 service manual (59 pages) to extract hardware architecture de
 
 ---
 
+#### 🟠 MAME: Spurious button events during boot (voice dialog, transpose B) {#issue-kn5000-0eo}
+
+**ID:** `kn5000-0eo` | **Priority:** High | **Created:** 2026-02-21
+
+**Notes:** Running 'make fsanches_test' outside the VM, after boot sequence completes, some actions happen without user input: a dialog for selecting an instrument voice appears, and the screen shows transposition set to B (half step below default C). This suggests spurious button press events (possibly a 'transpose -' event). The control panel HLE or serial protocol may be generating ghost events. Needs investigation in MAME driver or control panel emulation.
+
+---
+
 #### 🟠 MAME: Update HLE based on audio subsystem findings {#issue-kn5000-0o6}
 
 **ID:** `kn5000-0o6` | **Priority:** High | **Created:** 2026-01-30
@@ -689,6 +697,22 @@ Update mame_driver/ reference files:
 - Ensure CC handlers match discovered behavior
 
 Reference: audio-subsystem.md, midi-subsystem.md, inter-cpu-protocol.md
+
+---
+
+#### 🟠 Mines: Fix garbled graphics on KN5000 playfield screenshot {#issue-kn5000-1iy}
+
+**ID:** `kn5000-1iy` | **Priority:** High | **Created:** 2026-02-21
+
+**Notes:** The screenshot of the playfield drawn on the KN5000 screen clearly shows garbled graphics. The minesweeper game board is not rendering correctly. Need to investigate the rendering code (video.c, tiles.c) and fix the drawing so the board displays properly.
+
+---
+
+#### 🟠 Mines: Only Mines Game button should activate game from DISK MENU {#issue-kn5000-3z6}
+
+**ID:** `kn5000-3z6` | **Priority:** High | **Created:** 2026-02-21
+
+**Notes:** At the DISK MENU, pressing other buttons also activates the Mines game. Need to ensure that ONLY the Mines Game button (specific event/button index) activates the game, while other buttons retain their original firmware behavior. The Mines_Handler in startup.s likely needs to check which button was pressed before activating.
 
 ---
 
@@ -968,6 +992,14 @@ Approach:
 This will make the table_data bootloader easier to understand and maintain.
 
 Reference: maincpu VRAM_FillRect at 0xEF50DF, rom-reconstruction.md
+
+---
+
+#### 🟡 Docs: Explain 'Disables firmware display (SET bit 3 of SFR 0x0D53)' {#issue-kn5000-bjw}
+
+**ID:** `kn5000-bjw` | **Priority:** Medium | **Created:** 2026-02-21
+
+**Notes:** The documentation mentions 'Disables firmware display (SET bit 3 of SFR 0x0D53)' but does not explain what this means, how it works, or why homebrew code needs it. Need to research the SFR register, trace firmware behavior, and add a clear explanation to the relevant docs.
 
 ---
 
@@ -1312,6 +1344,14 @@ Many UI routines already have good names (Display_*, GridCheck_*, ClassProc_*).
 Focus on remaining LABEL_* symbols in UI code regions.
 
 Reference: ui-framework.md for existing documentation.
+
+---
+
+#### 🟡 Symbols: Rename AudioMix to a more accurate name {#issue-kn5000-2og}
+
+**ID:** `kn5000-2og` | **Priority:** Medium | **Created:** 2026-02-21
+
+**Notes:** AudioMix appears to be a misnomer. Need to investigate what the symbol actually does and choose a better semantic name. Apply sed-based renaming across all assembly files and documentation per policy.
 
 ---
 
@@ -1868,6 +1908,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-jpp` | Docs: Add LLVM backend repo link to hdae5000-homebrew Pre... | 2026-02-21 |
+| `kn5000-vto` | Docs: Fix broken markdown tables in hdae5000/ Handler Reg... | 2026-02-21 |
 | `kn5000-o0o` | Refactor shared bootloader code between maincpu and table... | 2026-01-31 |
 | `kn5000-9lg` | MAME: Create milestone tracking issue for emulator comple... | 2026-01-31 |
 | `kn5000-kqy` | maincpu: Fix 177 divergent bytes | 2026-01-31 |
@@ -1886,10 +1928,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-c3p` | SubCPU: Trace payload transfer initialization | 2026-01-26 |
 | `kn5000-dui` | SubCPU: Analyze inter-CPU latch protocol at 0x120000 | 2026-01-26 |
 | `kn5000-fmq` | SubCPU: Document MicroDMA registers on TMP94C241F | 2026-01-26 |
-| `kn5000-52e` | Boot: Document peripheral initialization order | 2026-01-26 |
-| `kn5000-cav` | Boot: Document memory initialization sequence | 2026-01-26 |
 
-*...and 4 more closed issues*
+*...and 6 more closed issues*
 
 ---
 
@@ -1900,8 +1940,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 3 |
-| High | 28 |
-| Medium | 67 |
+| High | 31 |
+| Medium | 69 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1915,7 +1955,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 61 |
+| Other | 66 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Table Data ROM | 1 |
@@ -1923,4 +1963,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-02-21 00:34*
+*Last updated: 2026-02-21 00:45*
