@@ -8,10 +8,13 @@ permalink: /hdae5000-homebrew/
 
 The HD-AE5000 extension slot can run custom code on the KN5000's main CPU. By replacing the HDAE5000 ROM with a custom binary, you can create games, demos, or utilities that run on the keyboard hardware. This page documents the extension ROM protocol, known toolchain bugs, and a working build pipeline.
 
-> **Status**: A Minesweeper game is rendering on the KN5000 LCD via the HDAE5000 extension slot. Boot initialization, handler registration, DISK MENU entry, game activation, palette loading, and VRAM rendering are all working in MAME. The firmware's object dispatch system and handler registration protocol are fully implemented. Remaining work: control panel input and DISK MENU button-press activation.
+> **Status**: A Minesweeper game is fully playable on the KN5000 LCD via the HDAE5000 extension slot. Boot initialization, handler registration, DISK MENU entry with custom icon, game activation via button press, palette loading, and VRAM rendering are all working in MAME. The firmware's object dispatch system, handler registration protocol, and event dispatch are fully implemented. Remaining work: control panel input during gameplay.
+
+![DISK MENU showing Mines Game entry]({{ site.baseurl }}/assets/images/mines-disk-menu.png)
+*The KN5000 DISK MENU in MAME showing the "Mines Game" entry with a custom mine icon at the bottom-right position. Selecting this entry activates the game.*
 
 ![Mines game rendering on KN5000 LCD in MAME]({{ site.baseurl }}/assets/images/mines-game-rendering.png)
-*Minesweeper game rendering on the KN5000 LCD screen in MAME emulation. The green border, red minefield, and yellow grid lines are drawn by the extension ROM's game code.*
+*Minesweeper game rendering on the KN5000 LCD screen after activation from the DISK MENU. The green border, red minefield, and yellow tile markers are drawn by the extension ROM's game code.*
 
 ## Prerequisites
 
@@ -691,8 +694,8 @@ Based on the complete dispatch analysis, the Mines project needs:
 3. **Set `slot+0x00`** to `0x016A0005` (handler 0x016A, sub-index 5 matching the HDAE5000 convention) — or `0x016A0000` if using sub-index 0
 
 4. **Implement a handler function** that:
-   - Delegates most requests to `workspace[0x0E0A][0x00DC]` (the default handler)
-   - Intercepts `0x01E0009C` to set the `GAME_ACTIVE` flag
+   - Intercepts `0x01C00008` (button-press activation) and `0x01E0009C` (programmatic activation) to set the `GAME_ACTIVE` flag — and **skips delegation** for these events
+   - Delegates all other requests to `workspace[0x0E0A][0x00DC]` (the default handler)
    - Optionally intercepts `0x01C0000F` for custom initialization (as the original HDAE5000 does)
 
 ### Object System Initialization
@@ -713,17 +716,28 @@ The Mines project demonstrates that full participation in the object dispatch sy
 
 1. Registers handler `0x016A` with a minimal 1-record data table
 2. Sets the record's implementation function to `Mines_Handler`
-3. `Mines_Handler` intercepts the activation event (`0x01E0009C`) to set a `GAME_ACTIVE` flag in extension RAM
+3. `Mines_Handler` intercepts the activation event to set a `GAME_ACTIVE` flag in extension RAM
 4. All other requests are delegated to `workspace[0x0E0A][0x00DC]` (default handler)
 5. Frame_Handler checks `GAME_ACTIVE` and branches into the C game code when set
 
-This approach bypasses the complex lifecycle dispatch and just uses the handler registration to detect when the user selects the DISK MENU entry.
+**Key discovery:** When the user selects a DISK MENU entry via a physical button press, the firmware dispatches event code **`0x01C00008`** (not `0x01E0009C`) to the handler's record function. The activation event `0x01E0009C` is only used for direct `PostEvent` injection (e.g., from `LABEL_F8B1DF`). The handler must intercept **both** codes to support both activation paths.
+
+When activation is intercepted, the handler should **skip delegation** to the default handler — otherwise the default handler shows its own UI (e.g., "FD SAVE/LOAD TEST") which would interfere with the game.
+
+The full sequence of events received by the handler during DISK MENU interaction:
+
+| Phase | Events (in order) | Description |
+|-------|------------------|-------------|
+| Menu opens | `0x01C00001`, `0x01E00014`, `0x01C0000F` | Menu display and initialization |
+| Entry selected | `0x01C00008`, `0x01C00039`, `0x01C00002`, `0x01E00014` | Button press, selection, redraw |
+
+See the [Event Codes Reference]({{ site.baseurl }}/event-codes/) for a complete table of known event codes.
 
 ### Open Questions
 
 - What specific record fields (`+0x08` through `+0x14`) does the default handler at `workspace[0x0E0A][0x00DC]` expect?
 - Can the "next" chain link (`record[+0x04]`) be `0xFFFFFFFF` for a standalone handler, or must it chain to a Root module component?
-- How does the firmware route physical button presses (DISK MENU selection) to the `PostEvent(0x00600002, 0x01E0009C, 0)` call? Understanding this is needed for button-press activation.
+- ~~How does the firmware route physical button presses (DISK MENU selection) to the `PostEvent(0x00600002, 0x01E0009C, 0)` call?~~ **RESOLVED:** The firmware does NOT use `PostEvent` for button-press activation. Instead, it dispatches event code `0x01C00008` directly via `SendEvent` to the handler's record function. The `0x01E0009C` event is only used for programmatic activation via `PostEvent`.
 
 ## Control Panel Input
 
@@ -1032,6 +1046,7 @@ The `-oslog` flag captures debug output, including any invalid instruction repor
 
 ## Related Pages
 
+- [Event Codes Reference]({{ site.baseurl }}/event-codes/) -- Complete table of known firmware event codes
 - [HDAE5000 Hard Disk Expansion]({{ site.baseurl }}/hdae5000/) -- Original firmware documentation
 - [Display Subsystem]({{ site.baseurl }}/display-subsystem/) -- VGA controller and display architecture
 - [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) -- Serial input protocol

@@ -30,6 +30,7 @@ header_pages:
   - storage-subsystem.md
   # Homebrew
   - hdae5000-homebrew.md
+  - event-codes.md
   - another-world-vm.md
   # Resources
   - image-gallery.md
