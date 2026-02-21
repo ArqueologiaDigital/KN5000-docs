@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 140 (116 open, 24 closed)
+**Total Issues:** 143 (119 open, 24 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (58) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (61) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
 
 ---
 
@@ -600,6 +600,22 @@ Analyze the KN5000 service manual (59 pages) to extract hardware architecture de
 
 ---
 
+#### 🟠 LLVM: Fix bug #10 — register x/y swap on inlining {#issue-kn5000-8zr}
+
+**ID:** `kn5000-8zr` | **Priority:** High | **Created:** 2026-02-21
+
+**Notes:** LLVM TLCS-900 backend bug #10: When functions are inlined, IX and IY registers get swapped in the generated code. Current workaround: use __attribute__((noinline)) on affected functions (e.g., tile_vram_ptr in Mines). This is one of 2 remaining active bugs in the TLCS-900 backend. Tracked in Mines memory (llvm-encoding-bugs.md).
+
+---
+
+#### 🟠 LLVM: Fix bug #11 — for-loop with uint16_t counter exits after 1 iteration {#issue-kn5000-o3u}
+
+**ID:** `kn5000-o3u` | **Priority:** High | **Created:** 2026-02-21
+
+**Notes:** LLVM TLCS-900 backend bug #11: for-loops using uint16_t counter variables exit after only 1 iteration. Current workaround: use do-while loops with uint32_t counters. Affects VRAM clear and other iteration-heavy code. This is one of 2 remaining active bugs in the TLCS-900 backend. Tracked in Mines memory (llvm-encoding-bugs.md).
+
+---
+
 #### 🟠 MAME: Audio subsystem emulation milestone {#issue-kn5000-y18}
 
 **ID:** `kn5000-y18` | **Priority:** High | **Created:** 2026-01-31
@@ -673,6 +689,14 @@ Update mame_driver/ reference files:
 - Ensure CC handlers match discovered behavior
 
 Reference: audio-subsystem.md, midi-subsystem.md, inter-cpu-protocol.md
+
+---
+
+#### 🟠 Mines: Re-enable control panel input for gameplay {#issue-kn5000-qea}
+
+**ID:** `kn5000-qea` | **Priority:** High | **Created:** 2026-02-21
+
+**Notes:** The Mines homebrew game renders correctly on the KN5000 LCD but input is disabled (early return at input.c:64). Next steps: (1) Re-enable control panel input, (2) Implement firmware-mediated input via workspace UI callbacks, (3) Handle game exit and return display to firmware. Related: HDAE5000 extension board interface, workspace pointer system documented in Mines CLAUDE.md.
 
 ---
 
@@ -1876,7 +1900,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 3 |
-| High | 25 |
+| High | 28 |
 | Medium | 67 |
 | Low | 20 |
 | P4 | 1 |
@@ -1891,7 +1915,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 58 |
+| Other | 61 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Table Data ROM | 1 |
@@ -1899,4 +1923,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-02-18 11:24*
+*Last updated: 2026-02-21 00:34*
