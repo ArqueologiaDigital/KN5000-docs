@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 150 (124 open, 26 closed)
+**Total Issues:** 153 (123 open, 30 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (66) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (67) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -510,27 +510,6 @@ Phase 1 represents the critical path to functional emulation.
 
 ---
 
-#### 🟠 Display: Document framebuffer memory organization at 0x1A0000 {#issue-kn5000-3c5}
-
-**ID:** `kn5000-3c5` | **Priority:** High | **Created:** 2026-01-30
-
-**Notes:** Video RAM at 0x1A0000 (512KB) organization needs documentation.
-
-**Current state:** Address known, layout unknown.
-
-**Required work:**
-- Determine pixel storage format (linear? planar?)
-- Map screen regions to memory offsets
-- Document double-buffering if present
-- Identify any hardware scrolling/panning support
-
-**Phase:** 1 - Foundation (MAME Blockers)
-**Blocks:** MAME display rendering
-**Dependencies:** VGA register documentation (kn5000-ezo)
-**Related:** kn5000-rq0 (screen layout)
-
----
-
 #### 🟠 Document all serial command bytes and their purposes {#issue-kn5000-p2c}
 
 **ID:** `kn5000-p2c` | **Priority:** High | **Created:** 2026-01-25
@@ -577,26 +556,6 @@ Analyze the KN5000 service manual (59 pages) to extract hardware architecture de
 **Notes:** Significant progress: Analyzed schematic pages II-9 to II-38. Documented main CPU (TMP94C241F), all memory ICs, control panel MCUs (M37471M2196S), button mappings, serial signals. Created hardware-architecture.md page.
 
 **Depends on:** [`kn5000-bcn`](#issue-kn5000-bcn), [`kn5000-jwk`](#issue-kn5000-jwk), [`kn5000-xhi`](#issue-kn5000-xhi)
-
----
-
-#### 🟠 Fix 177 divergent bytes in Main CPU ROM (24-bit address encoding issue) {#issue-kn5000-5a0}
-
-**ID:** `kn5000-5a0` | **Priority:** High | **Created:** 2026-01-26
-
-**Notes:** 177 divergent bytes in Main CPU ROM must be fixed for 100% match.
-
-**Current state:** 99.99% match, 177 bytes differ due to 24-bit address encoding issues.
-
-**Required work:**
-- Analyze divergent byte locations
-- Fix ASL macro encodings in tmp94c241.inc
-- Verify instruction semantics match original
-
-**Phase:** 1 - Foundation (MAME Blockers)
-**Blocks:** 100% ROM reconstruction
-**Dependencies:** None
-**Related:** kn5000-kqy (same issue), kn5000-3o6 (ASL macros)
 
 ---
 
@@ -816,6 +775,12 @@ Block diagram shows ROTA and ROTB signals from control panel. Find the encoder c
 
 ---
 
+#### 🟡 Another World: Complete floppy code injection for KN5000 port {#issue-kn5000-yhj}
+
+**ID:** `kn5000-yhj` | **Priority:** Medium | **Created:** 2026-02-21
+
+---
+
 #### 🟡 Audio: Document Technics SysEx message format {#issue-kn5000-81p}
 
 **ID:** `kn5000-81p` | **Priority:** Medium | **Created:** 2026-01-30
@@ -936,6 +901,12 @@ Need to:
 4. Document relationship to Program Change messages
 
 Reference: SOUND_DATA_SECTION_PTRS at 0xE023B0 in maincpu.
+
+---
+
+#### 🟡 Custom Data ROM: Begin reconstruction (currently 0%) {#issue-kn5000-w1w}
+
+**ID:** `kn5000-w1w` | **Priority:** Medium | **Created:** 2026-02-21
 
 ---
 
@@ -1143,6 +1114,12 @@ Tasks:
 The data appears to be 8-bit indexed color (lots of 0xF7 bytes = likely background color).
 
 Reference: Investigation of ROM word-level interleaving fix
+
+---
+
+#### 🟡 LLVM: Document recent backend improvements (LDIR/LDDR, peepholes, frame pointer) {#issue-kn5000-car}
+
+**ID:** `kn5000-car` | **Priority:** Medium | **Created:** 2026-02-21
 
 ---
 
@@ -1776,40 +1753,7 @@ Determine the sub CPU chip type (IC27 on main board). Document its memory map: w
 
 ---
 
-### Table Data ROM {#table-data-rom}
-
-#### 🟡 table_data: Improve from 32.42% match {#issue-kn5000-hlw}
-
-**ID:** `kn5000-hlw` | **Priority:** Medium | **Created:** 2026-01-25
-
-Table data ROM (kn5000_table_data.rebuilt.rom) is at 32.42% match with 1,417,294 incorrect bytes. This ROM is mostly binary data (images, assets). Lower priority than code ROMs - focus on verifying include() paths and binary data extraction.
-
----
-
 ### Video & Display {#video-display}
-
-#### 🟠 Video: Document pixel format and color palette {#issue-kn5000-hy8}
-
-**ID:** `kn5000-hy8` | **Priority:** High | **Created:** 2026-01-25
-
-Determine exact pixel format used by the display. Document: bits per pixel (likely 8bpp indexed), palette format and location, how palette is loaded, any direct color modes. Analyze extracted images to confirm format.
-
-**Notes:** Pixel format and color palette documentation is essential for display rendering.
-
-**Current state:** 8-bit indexed color known, palette location at 0xEB37DE documented.
-
-**Required work:**
-- Verify 6-bit per channel DAC (0x3C8/0x3C9 ports)
-- Document palette loading sequence
-- Map default system palette
-- Document any palette animation support
-
-**Phase:** 1 - Foundation (MAME Blockers)
-**Blocks:** Correct color rendering
-**Dependencies:** VGA register documentation (kn5000-ezo)
-**Related:** kn5000-gln (drawing primitives)
-
----
 
 #### 🟠 Video: Reverse engineer drawing primitives {#issue-kn5000-gln}
 
@@ -1908,6 +1852,10 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-hy8` | Video: Document pixel format and color palette | 2026-02-21 |
+| `kn5000-3c5` | Display: Document framebuffer memory organization at 0x1A... | 2026-02-21 |
+| `kn5000-hlw` | table_data: Improve from 32.42% match | 2026-02-21 |
+| `kn5000-5a0` | Fix 177 divergent bytes in Main CPU ROM (24-bit address e... | 2026-02-21 |
 | `kn5000-jpp` | Docs: Add LLVM backend repo link to hdae5000-homebrew Pre... | 2026-02-21 |
 | `kn5000-vto` | Docs: Fix broken markdown tables in hdae5000/ Handler Reg... | 2026-02-21 |
 | `kn5000-o0o` | Refactor shared bootloader code between maincpu and table... | 2026-01-31 |
@@ -1924,12 +1872,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-m91` | Video: Document Video RAM IC207 (M5M44265CJ8S) | 2026-01-26 |
 | `kn5000-t75` | Video: Trace LCD initialization in firmware | 2026-01-26 |
 | `kn5000-618` | HDAE5000: Analyze PPI interface at 0x160000 | 2026-01-26 |
-| `kn5000-595` | Boot: Document sub CPU startup handshake | 2026-01-26 |
-| `kn5000-c3p` | SubCPU: Trace payload transfer initialization | 2026-01-26 |
-| `kn5000-dui` | SubCPU: Analyze inter-CPU latch protocol at 0x120000 | 2026-01-26 |
-| `kn5000-fmq` | SubCPU: Document MicroDMA registers on TMP94C241F | 2026-01-26 |
 
-*...and 6 more closed issues*
+*...and 10 more closed issues*
 
 ---
 
@@ -1940,8 +1884,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 3 |
-| High | 31 |
-| Medium | 69 |
+| High | 28 |
+| Medium | 71 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1955,11 +1899,10 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 66 |
+| Other | 67 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
-| Table Data ROM | 1 |
-| Video & Display | 7 |
+| Video & Display | 6 |
 
 ---
 
