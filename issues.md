@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 150 (124 open, 26 closed)
+**Total Issues:** 150 (123 open, 27 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (66) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (65) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Table Data ROM](#table-data-rom) (1) · [Video & Display](#video-display) (7)
 
 ---
 
@@ -705,14 +705,6 @@ Reference: audio-subsystem.md, midi-subsystem.md, inter-cpu-protocol.md
 **ID:** `kn5000-1iy` | **Priority:** High | **Created:** 2026-02-21
 
 **Notes:** The screenshot of the playfield drawn on the KN5000 screen clearly shows garbled graphics. The minesweeper game board is not rendering correctly. Need to investigate the rendering code (video.c, tiles.c) and fix the drawing so the board displays properly.
-
----
-
-#### 🟠 Mines: Only Mines Game button should activate game from DISK MENU {#issue-kn5000-3z6}
-
-**ID:** `kn5000-3z6` | **Priority:** High | **Created:** 2026-02-21
-
-**Notes:** At the DISK MENU, pressing other buttons also activates the Mines game. Need to ensure that ONLY the Mines Game button (specific event/button index) activates the game, while other buttons retain their original firmware behavior. The Mines_Handler in startup.s likely needs to check which button was pressed before activating.
 
 ---
 
@@ -1908,6 +1900,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-3z6` | Mines: Only Mines Game button should activate game from D... | 2026-02-21 |
 | `kn5000-jpp` | Docs: Add LLVM backend repo link to hdae5000-homebrew Pre... | 2026-02-21 |
 | `kn5000-vto` | Docs: Fix broken markdown tables in hdae5000/ Handler Reg... | 2026-02-21 |
 | `kn5000-o0o` | Refactor shared bootloader code between maincpu and table... | 2026-01-31 |
@@ -1927,9 +1920,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-595` | Boot: Document sub CPU startup handshake | 2026-01-26 |
 | `kn5000-c3p` | SubCPU: Trace payload transfer initialization | 2026-01-26 |
 | `kn5000-dui` | SubCPU: Analyze inter-CPU latch protocol at 0x120000 | 2026-01-26 |
-| `kn5000-fmq` | SubCPU: Document MicroDMA registers on TMP94C241F | 2026-01-26 |
 
-*...and 6 more closed issues*
+*...and 7 more closed issues*
 
 ---
 
@@ -1940,7 +1932,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 3 |
-| High | 31 |
+| High | 30 |
 | Medium | 69 |
 | Low | 20 |
 | P4 | 1 |
@@ -1955,7 +1947,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 66 |
+| Other | 65 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Table Data ROM | 1 |
@@ -1963,4 +1955,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-02-21 00:45*
+*Last updated: 2026-02-21 00:48*
