@@ -365,19 +365,50 @@ Main Event Loop (LABEL_EF1245)
 
 ### Display Disable Flag (SFR 0x0D53, bit 3)
 
-The firmware checks a flag before performing display updates:
+Address `0x0D53` is a firmware flag byte in the TMP94C241F's internal RAM. Setting bit 3 tells the firmware to skip all LCD rendering, giving an extension ROM exclusive VRAM ownership.
+
+#### Firmware mechanism
+
+The firmware checks this flag at four locations in its main event loop before performing display operations:
 
 ```asm
-BIT 3, (0D53h)           ; Check display disable flag
-JR NZ, skip_display      ; If set, skip all firmware screen drawing
+; At 0xEF77DF — main display update gate:
+BIT 3, (0D53h)
+JRL Z, skip               ; If bit 3 CLEAR, skip display update entirely
+CALL Display_ResetDirtyFlags
+; ... dispatches to display handler based on state in (0D65h) ...
+CALL Display_UpdateDirtyRegions
 ```
 
-**To take display ownership**, an extension ROM should:
-1. Set bit 3 of the byte at SFR address `0x0D53`
-2. This prevents the firmware from overwriting VRAM
-3. The extension ROM then has full control of the framebuffer
+When bit 3 is **clear** (default), the firmware draws its UI (menus, panels, status bars) into VRAM every main loop iteration. When bit 3 is **set**, all four display update paths are skipped — `Display_ResetDirtyFlags`, `Display_UpdateDirtyRegions`, and related state management code at `0xEFAA40`, `0xF59C11`, and `0xF59D65` are all bypassed.
 
-**Note:** In MAME, this flag is not required for the extension ROM to maintain display ownership -- the emulated firmware does not appear to overwrite VRAM between Frame_Handler calls. On real hardware, this flag may be necessary. The address `0x0D53` is in the TMP94C241F's internal RAM / SFR space.
+The firmware also uses a related state byte at `0x0D65` for sub-state dispatch within the display update. Setting bit 3 of `0x0D53` bypasses all of this.
+
+#### How to set it
+
+In assembly (e.g., during Boot_Init or early Frame_Handler):
+```asm
+SET 3, (0x0D53)     ; Disable firmware display updates
+```
+
+In C (via volatile pointer):
+```c
+*(volatile uint8_t *)0x0D53 |= 0x08;   // Set bit 3
+```
+
+To restore firmware display ownership (e.g., when exiting a game):
+```asm
+RES 3, (0x0D53)     ; Re-enable firmware display updates
+```
+
+#### When is it needed?
+
+In practice, the Mines homebrew game does **not** set this flag. It relies on the Frame_Handler timing: the firmware draws its UI, then calls Frame_Handler, and the game overwrites VRAM with its own graphics. This works because the firmware does not have a VBI-driven (vertical blank interrupt) display refresh — its drawing is purely main-loop driven.
+
+However, setting the flag is recommended for homebrew that needs flicker-free display ownership, especially if:
+- The game renders in a background timer rather than Frame_Handler
+- The firmware's main loop runs faster than expected, causing visible flicker
+- Running on real hardware where timing may differ from MAME emulation
 
 ### VGA Controller Details
 

@@ -167,14 +167,18 @@ This means:
 
 ### Display Disable Flag
 
-The firmware checks a flag before performing display updates:
+The firmware checks a flag byte at address `0x0D53` before performing display updates. Setting bit 3 of this byte disables all firmware-driven LCD rendering:
 
 ```asm
+; At 0xEF77DF (main display update gate):
 BIT 3, (0D53h)           ; Check display disable flag
-JR NZ, skip_display      ; If bit 3 set, skip firmware screen drawing
+JRL Z, skip              ; If bit 3 CLEAR, skip display entirely
+CALL Display_ResetDirtyFlags
+; ... dispatches via state byte (0D65h) ...
+CALL Display_UpdateDirtyRegions
 ```
 
-Address `0x0D53` is in the TMP94C241F's internal RAM / SFR space. Setting bit 3 of this byte prevents the firmware from drawing to VRAM, allowing an extension ROM to take full control of the display.
+This check occurs at four firmware locations (`0xEF77DF`, `0xEFAA40`, `0xF59C11`, `0xF59D65`), gating all display update code paths. When bit 3 is set, the firmware skips dirty-region tracking, state-based display dispatch, and VRAM writes — allowing an extension ROM to take full control of the framebuffer. See [HDAE5000 Homebrew]({{ site.baseurl }}/hdae5000-homebrew/#display-disable-flag-sfr-0x0d53-bit-3) for usage details.
 
 ### Workspace Display Callbacks
 
