@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 154 (122 open, 32 closed)
+**Total Issues:** 154 (121 open, 33 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (66) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (65) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1316,14 +1316,6 @@ Reference: ui-framework.md for existing documentation.
 
 ---
 
-#### 🟡 Symbols: Rename AudioMix to a more accurate name {#issue-kn5000-2og}
-
-**ID:** `kn5000-2og` | **Priority:** Medium | **Created:** 2026-02-21
-
-**Notes:** AudioMix appears to be a misnomer. Need to investigate what the symbol actually does and choose a better semantic name. Apply sed-based renaming across all assembly files and documentation per policy.
-
----
-
 #### 🟡 Symbols: Rename remaining LABEL_* in Sub CPU audio code {#issue-kn5000-9jq}
 
 **ID:** `kn5000-9jq` | **Priority:** Medium | **Created:** 2026-01-30
@@ -1844,6 +1836,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-2og` | Symbols: Rename AudioMix to a more accurate name | 2026-02-21 |
 | `kn5000-99f` | ROM Reconstruction: Achieve 100% byte-matching for all ROMs | 2026-02-21 |
 | `kn5000-w1w` | Custom Data ROM: Begin reconstruction (currently 0%) | 2026-02-21 |
 | `kn5000-hy8` | Video: Document pixel format and color palette | 2026-02-21 |
@@ -1863,9 +1856,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-3cm` | Update: Map file types to system components | 2026-01-26 |
 | `kn5000-psz` | Update: Document floppy disk file formats | 2026-01-26 |
 | `kn5000-6qi` | Video: Document LCD controller IC206 (MN89304) | 2026-01-26 |
-| `kn5000-m91` | Video: Document Video RAM IC207 (M5M44265CJ8S) | 2026-01-26 |
 
-*...and 12 more closed issues*
+*...and 13 more closed issues*
 
 ---
 
@@ -1877,7 +1869,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 71 |
+| Medium | 70 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1891,11 +1883,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 66 |
+| Other | 65 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-21 03:23*
+*Last updated: 2026-02-21 03:26*
