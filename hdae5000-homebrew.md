@@ -8,7 +8,10 @@ permalink: /hdae5000-homebrew/
 
 The HD-AE5000 extension slot can run custom code on the KN5000's main CPU. By replacing the HDAE5000 ROM with a custom binary, you can create games, demos, or utilities that run on the keyboard hardware. This page documents the extension ROM protocol, known toolchain bugs, and a working build pipeline.
 
-> **Status**: Boot initialization, frame handler callbacks, and DISK MENU registration are working. The extension ROM appears in the DISK MENU with a custom icon and name. The firmware's object dispatch system (`SendEvent`, `ClassProc`, `ObjectProc`, `InheritedProc`, `RegisterObjectTable`) and the HDAE5000's 13-component data record table have been fully analyzed. Display ownership (taking over the LCD from the firmware) and game activation from the DISK MENU require implementing the data record table and handler function.
+> **Status**: A Minesweeper game is rendering on the KN5000 LCD via the HDAE5000 extension slot. Boot initialization, handler registration, DISK MENU entry, game activation, palette loading, and VRAM rendering are all working in MAME. The firmware's object dispatch system and handler registration protocol are fully implemented. Remaining work: control panel input and DISK MENU button-press activation.
+
+![Mines game rendering on KN5000 LCD in MAME]({{ site.baseurl }}/assets/images/mines-game-rendering.png)
+*Minesweeper game rendering on the KN5000 LCD screen in MAME emulation. The green border, red minefield, and yellow grid lines are drawn by the extension ROM's game code.*
 
 ## Prerequisites
 
@@ -326,11 +329,11 @@ After registering all 11 handlers, Boot_Init calls `workspace[0x0E0A][0x02C4]` w
 
 | Offset | Size | Value (HDAE5000) | Value (Mines) | Description |
 |--------|------|-------------------|---------------|-------------|
-| +0x00 | 4 | `0x016A0005` | *(not set)* | Handler flags + object index |
+| +0x00 | 4 | `0x016A0005` | `0x016A0000` | Object ID (handler index + sub-index) |
 | +0x2A | 4 | `0x2F8DCE` → "HD-AE5000" | MENU_NAME → "Mines Game" | Display name string pointer |
 | +0x32 | 4 | *(from firmware)* | 176 | Icon ID (table_data ROM) |
 
-The `slot+0x00` field links the DISK MENU entry to a registered handler object. The low word (`0x016A`) is the object table index, and the high word (`0x0005`) contains flags. The Mines project does not currently set `slot+0x00`, which may explain why DISK MENU activation doesn't work.
+The `slot+0x00` field links the DISK MENU entry to a registered handler object. The high word (`0x016A`) is the object table index (handler ID), and the low word is the sub-object index. The Mines project uses `0x016A0000` (handler 0x016A, sub-index 0) with a single data record.
 
 The `slot+0x2A` field has been **confirmed** as a display name string pointer by verifying that address `0x2F8DCE` in the HDAE5000 ROM contains the null-terminated string "HD-AE5000".
 
@@ -371,7 +374,7 @@ JR NZ, skip_display      ; If set, skip all firmware screen drawing
 2. This prevents the firmware from overwriting VRAM
 3. The extension ROM then has full control of the framebuffer
 
-**WARNING:** This is based on disassembly analysis and has not been fully tested. The address `0x0D53` is in the TMP94C241F's internal RAM / SFR space. Additional firmware state may need to be managed to prevent side effects.
+**Note:** In MAME, this flag is not required for the extension ROM to maintain display ownership -- the emulated firmware does not appear to overwrite VRAM between Frame_Handler calls. On real hardware, this flag may be necessary. The address `0x0D53` is in the TMP94C241F's internal RAM / SFR space.
 
 ### VGA Controller Details
 
@@ -429,10 +432,22 @@ VRAM is linear and row-major. Pixel at screen position (x, y) is at VRAM address
 ### Experimental Observations
 
 Testing with MAME confirmed:
-- VRAM writes at `0x1A0000` are effective (filling VRAM with 0xFF produced visible red at the bottom of the screen)
-- The firmware continuously redraws its UI, overwriting extension ROM VRAM writes within one main loop iteration
-- Setting CRTC start to 0 and continuously resetting it was insufficient to maintain display ownership
-- The display disable flag at `0x0D53` bit 3 is the intended mechanism for an extension to take over the display
+- **VRAM writes from extension ROM code work correctly** -- both assembly and C code can write to the 0x1A0000 framebuffer
+- **Game rendering is fully working** -- the Mines game draws a complete minesweeper board (palette, tiles, grid) to the KN5000 LCD
+- The display disable flag at `0x0D53` bit 3 is available but **not required in MAME** -- the emulated firmware does not appear to have a VBI-driven display refresh that overwrites VRAM between Frame_Handler calls
+- **Critical pitfall:** The LLVM backend's for-loop bug (#11) caused the VRAM clear to only execute one iteration, making it appear that VRAM writes didn't work when in fact only 4 bytes out of 76,800 were being cleared
+
+### Headless MAME Testing
+
+For automated testing without a display (CI environments, SSH sessions):
+
+```bash
+QT_QPA_PLATFORM=offscreen mame kn5000 -rompath rompath \
+    -extension hdae5000 -video none -sound none \
+    -skip_gameinfo -autoboot_script test.lua
+```
+
+MAME Lua scripts can read/write VRAM and CPU memory via `cpu.spaces["program"]:read_u8(addr)` / `write_u8(addr, val)`, take screenshots via `manager.machine.video:snapshot()`, and exit via `manager.machine:exit()`.
 
 ## Object Dispatch System
 
@@ -692,12 +707,23 @@ The firmware initializes the object table at startup via `InitializeObjectTable`
 
 The HDAE5000's `Handler_Registration` runs later (during `Boot_Init`), overwriting the table entry for handler `0x016A` that was previously initialized by one of the built-in modules.
 
+### Simplified Activation (Mines Approach)
+
+The Mines project demonstrates that full participation in the object dispatch system is not required. Instead of implementing all 13 sub-objects and chaining to the Root module, the Mines handler:
+
+1. Registers handler `0x016A` with a minimal 1-record data table
+2. Sets the record's implementation function to `Mines_Handler`
+3. `Mines_Handler` intercepts the activation event (`0x01E0009C`) to set a `GAME_ACTIVE` flag in extension RAM
+4. All other requests are delegated to `workspace[0x0E0A][0x00DC]` (default handler)
+5. Frame_Handler checks `GAME_ACTIVE` and branches into the C game code when set
+
+This approach bypasses the complex lifecycle dispatch and just uses the handler registration to detect when the user selects the DISK MENU entry.
+
 ### Open Questions
 
 - What specific record fields (`+0x08` through `+0x14`) does the default handler at `workspace[0x0E0A][0x00DC]` expect?
 - Can the "next" chain link (`record[+0x04]`) be `0xFFFFFFFF` for a standalone handler, or must it chain to a Root module component?
-- What lifecycle events does the default handler send to the record function during activation, and what responses are expected?
-- Can the Mines project use a simpler approach (e.g., intercepting the activation in Frame_Handler via a flag) instead of fully participating in the object dispatch system?
+- How does the firmware route physical button presses (DISK MENU selection) to the `PostEvent(0x00600002, 0x01E0009C, 0)` call? Understanding this is needed for button-press activation.
 
 ## Control Panel Input
 
@@ -729,9 +755,11 @@ See the [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) pag
 | Page Up | Left | 2 | 7 | SECONDARY (flag) |
 | Exit | Left | 7 | 3 | QUIT |
 
-## LLVM TLCS-900 Assembler Encoding Bugs
+## LLVM TLCS-900 Backend Bugs
 
-The LLVM TLCS-900 assembler backend has several encoding bugs that produce invalid machine code. These affect any project using LLVM to target the TLCS-900 architecture.
+The LLVM TLCS-900 backend has several encoding and code generation bugs. These affect any project using LLVM to target the TLCS-900 architecture. **Status: 8 fixed, 2 active, 1 confirmed not-a-bug.** A detailed report for compiler developers is maintained in the [Mines project repository](https://github.com/nicories/Mines/blob/main/LLVM_TLCS900_BUGS.md).
+
+### Assembler Encoding Bugs (Fixed)
 
 ### Bug 1: Direct Memory Load Prefix
 
@@ -794,6 +822,63 @@ ld   (xde), xwa                       ; store via register-indirect
 add  xiz, 0x0E0A                       ; modify register (destructive)
 ld   xiz, (xiz)                        ; then dereference
 ```
+
+### Bug 6: Source Memory Prefix Size Mismatch (Fixed)
+
+**Instruction:** 8/16-bit register-indirect loads (`ld a, (xhl)`, `ld wa, (xhl)`)
+
+**Bug:** LLVM always used the 32-bit prefix (0xA0-0xA7) regardless of operand size. The TLCS-900 requires 0x80-0x87 for byte, 0x90-0x97 for word, and 0xA0-0xA7 for long operations.
+
+**Fix:** Corrected in LLVM backend. ISel now auto-materializes addresses for byte/word global loads (LD32ri + register-indirect). Displacement range restricted from +/-32767 to +/-127 (d8).
+
+### Bug 7: INC/DEC Immediate Field Off-by-One (Fixed)
+
+**Instruction:** `inc 1, xreg` / `dec 1, xreg`
+
+**Bug:** LLVM encoded INC 1 with I3=0, which means increment by 8 (not 1) on the TLCS-900. The I3 convention is: 000=8, 001=1, 010=2, ..., 111=7. LLVM used `(Count - 1) & 7` instead of the correct `Count & 7`.
+
+### Bug 8: 8-bit Register Encoding (Fixed)
+
+**Instruction:** Any instruction using 8-bit registers (A, C, E, L)
+
+**Bug:** `getRegEncoding()` returned the GPR_lo8 class index (A=0, C=1, E=2, L=3) instead of the hardware encoding (A=1, C=3, E=5, L=7). This caused 8-bit operations to use wrong registers. GPR_lo8 operands contain 32-bit parent registers (XWA/XBC/XDE/XHL), and the encoder used the parent's HWEncoding instead of the 8-bit sub-register's.
+
+**C workaround (before fix):** Copy 32-bit values and mask, instead of using 8-bit register operations directly.
+
+### Code Generation Bugs (Active)
+
+### Bug 10: Register Allocation X/Y Swap in Inlined Functions
+
+**Severity:** Moderate -- causes transposed tile positions
+
+When `tile_vram_offset(tx, ty)` is inlined into `set_tile(dst_x, dst_y, tile)`, the register allocator swaps the registers for dst_x and dst_y. The row offset (should use dst_y * 2560) is computed from dst_x, and vice versa. The LLVM IR correctly uses `%dst_y` for the row, but the generated machine code uses the register holding `%dst_x`.
+
+**C workaround:** Mark the affected function as `__attribute__((noinline))`.
+
+### Bug 11: For-Loop with uint16_t Counter Exits After 1 Iteration
+
+**Severity:** High -- causes loops to execute only once
+
+A C `for` loop with a `uint16_t` counter and 32-bit pointer dereference executes only one iteration:
+
+```c
+volatile uint32_t *p = (volatile uint32_t *)0x1A0000;
+for (uint16_t i = 0; i < 19200; i++) {
+    *p++ = 0;  // Only first 4 bytes cleared!
+}
+```
+
+This was the critical bug preventing game rendering -- the VRAM clear loop only cleared 4 bytes instead of 76,800. The 32-bit store works correctly, but the loop counter comparison fails, causing immediate loop exit.
+
+**C workaround:** Use `do-while` loop with `uint32_t` counter:
+
+```c
+volatile uint32_t *p = (volatile uint32_t *)0x1A0000;
+uint32_t count = 19200;
+do { *p++ = 0; count--; } while (count != 0);
+```
+
+This works because `uint32_t` comparison uses 32-bit ALU instructions (correctly encoded) and `do-while` with `!= 0` avoids the broken less-than comparison path.
 
 ### TLCS-900 Opcode Reference for Workarounds
 
