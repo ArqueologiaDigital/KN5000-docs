@@ -116,12 +116,14 @@ The Table Data ROM uses two interleaved 16-bit chips:
 - Even bytes in IC3
 
 This creates different address offsets:
+
 | 16-bit Offset | 32-bit Offset | Notes |
 |---------------|---------------|-------|
 | 0x5555 | 0xAAAA | Unlock address 1 |
 | 0x2AAA | 0x5554 | Unlock address 2 |
 
 But for **command** addresses, the 32-bit values are:
+
 | 16-bit Offset | 32-bit Offset | Notes |
 |---------------|---------------|-------|
 | 0x5555 | 0x15554 | Bit 16 set due to A16 routing |

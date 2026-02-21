@@ -18,7 +18,7 @@ The HD-AE5000 extension slot can run custom code on the KN5000's main CPU. By re
 
 ## Prerequisites
 
-- **LLVM with TLCS-900 backend** -- a custom LLVM build with the TLCS-900 target
+- **[LLVM with TLCS-900 backend](https://github.com/felipesanches/llvm-project/tree/tlcs900_backend)** -- a custom LLVM build with the TLCS-900 target
 - **MAME** with KN5000 driver for testing
 - Knowledge of the [HDAE5000 firmware protocol]({{ site.baseurl }}/hdae5000/)
 
