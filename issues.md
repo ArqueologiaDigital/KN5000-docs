@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 155 (120 open, 35 closed)
+**Total Issues:** 156 (119 open, 37 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (64) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (63) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1095,9 +1095,9 @@ Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
-#### 🟡 LLVM parallel build: Phase 2 - Replace .incbin with converted assembly {#issue-kn5000-3ei}
+#### 🟡 LLVM parallel build: Phase 2 (.byte fallback) complete {#issue-kn5000-17u}
 
-**ID:** `kn5000-3ei` | **Priority:** Medium | **Created:** 2026-02-21
+**ID:** `kn5000-17u` | **Priority:** Medium | **Created:** 2026-02-21
 
 ---
 
@@ -1203,28 +1203,6 @@ All subsystems fully documented in the documentation website.
 - [ ] All subsystem pages have code references
 - [ ] Symbol names in docs match assembly source
 - [ ] All P2/P3 documentation issues closed
-
----
-
-#### 🟡 Review deferred DMA macro renames in tmp94c241.inc (DMAC↔DMAM) {#issue-kn5000-q51}
-
-**ID:** `kn5000-q51` | **Priority:** Medium | **Created:** 2026-02-21
-
-Three DMA macro renames from the sound subsystem worktree salvage were deferred because they require updating tmp94c241.inc to define new macro names before the assembly can use them.
-
-The sound worktree had corrected these macro names to match the actual TMP94C241F DMA register semantics (DMAC = counter registers at CR offsets 0x40/0x44/0x48/0x4C, DMAM = mode registers at CR offsets 0x42/0x46/0x4A/0x4E):
-
-1. LDC_DMAC2_XWA → LDC_DMAM2_A (writes CR offset 0x4A = mode register, not counter)
-2. LDC_DMAC0_A → LDC_DMAM0_A (writes CR offset 0x42 = mode register, not counter)
-3. LDC_WA_DMAM0 → LDC_WA_DMAC0 (reads CR offset 0x40 = counter register, not mode)
-
-Steps:
-- Add LDC_DMAM2_A, LDC_DMAM0_A, and LDC_WA_DMAC0 macros to tmp94c241.inc (with correct byte encodings from the sound worktree version)
-- Optionally remove or deprecate the incorrectly-named duplicates (LDC_DMAC2_XWA, LDC_DMAC0_A, LDC_WA_DMAM0)
-- Update subcpu/kn5000_subprogram_v142.asm to use the corrected names
-- Build and verify 100% byte-match with compare_roms.py
-
-Context: see scripts/rename_subcpu_dsp_labels.sed comments for the deferred rules.
 
 ---
 
@@ -1844,6 +1822,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-3ei` | LLVM parallel build: Phase 2 - Replace .incbin with conve... | 2026-02-21 |
+| `kn5000-q51` | Review deferred DMA macro renames in tmp94c241.inc (DMAC↔... | 2026-02-21 |
 | `kn5000-car` | LLVM: Document recent backend improvements (LDIR/LDDR, pe... | 2026-02-21 |
 | `kn5000-bjw` | Docs: Explain 'Disables firmware display (SET bit 3 of SF... | 2026-02-21 |
 | `kn5000-2og` | Symbols: Rename AudioMix to a more accurate name | 2026-02-21 |
@@ -1862,10 +1842,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-bcn` | Identify control panel MCU chip type from schematics | 2026-01-26 |
 | `kn5000-toq` | Sound: Identify and document Sub CPU (IC27) | 2026-01-26 |
 | `kn5000-7vw` | Update: Identify Flash ROM chip types | 2026-01-26 |
-| `kn5000-qtl` | Update: Document key combinations for update mode | 2026-01-26 |
-| `kn5000-3cm` | Update: Map file types to system components | 2026-01-26 |
 
-*...and 15 more closed issues*
+*...and 17 more closed issues*
 
 ---
 
@@ -1877,7 +1855,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 69 |
+| Medium | 68 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1891,11 +1869,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 64 |
+| Other | 63 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-21 08:24*
+*Last updated: 2026-02-21 08:28*
