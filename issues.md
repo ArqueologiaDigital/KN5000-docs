@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 153 (121 open, 32 closed)
+**Total Issues:** 154 (122 open, 32 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (65) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (66) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1103,6 +1103,12 @@ Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
+#### 🟡 LLVM parallel build: Phase 2 - Replace .incbin with converted assembly {#issue-kn5000-3ei}
+
+**ID:** `kn5000-3ei` | **Priority:** Medium | **Created:** 2026-02-21
+
+---
+
 #### 🟡 LLVM: Document recent backend improvements (LDIR/LDDR, peepholes, frame pointer) {#issue-kn5000-car}
 
 **ID:** `kn5000-car` | **Priority:** Medium | **Created:** 2026-02-21
@@ -1871,7 +1877,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 70 |
+| Medium | 71 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1885,11 +1891,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 65 |
+| Other | 66 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-21 01:49*
+*Last updated: 2026-02-21 03:08*
