@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 159 (119 open, 40 closed)
+**Total Issues:** 160 (118 open, 42 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (63) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (62) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1095,12 +1095,6 @@ Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
-#### 🟡 LLVM output: symbolic JP/CALL labels and comment cleanup {#issue-kn5000-vz7}
-
-**ID:** `kn5000-vz7` | **Priority:** Medium | **Created:** 2026-02-21
-
----
-
 #### 🟡 MAME: Input/Control subsystem emulation milestone {#issue-kn5000-1vz}
 
 **ID:** `kn5000-1vz` | **Priority:** Medium | **Created:** 2026-01-31
@@ -1822,6 +1816,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-001` | LLVM: Symbolic labels, comment cleanup, and label shift b... | 2026-02-22 |
+| `kn5000-vz7` | LLVM output: symbolic JP/CALL labels and comment cleanup | 2026-02-21 |
 | `kn5000-95a` | LLVM parallel build: Phase 3 - Progressive native instruc... | 2026-02-21 |
 | `kn5000-6p6` | LLVM Phase 3a complete: per-instruction .byte with 100% R... | 2026-02-21 |
 | `kn5000-17u` | LLVM parallel build: Phase 2 (.byte fallback) complete | 2026-02-21 |
@@ -1840,10 +1836,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-vto` | Docs: Fix broken markdown tables in hdae5000/ Handler Reg... | 2026-02-21 |
 | `kn5000-o0o` | Refactor shared bootloader code between maincpu and table... | 2026-01-31 |
 | `kn5000-9lg` | MAME: Create milestone tracking issue for emulator comple... | 2026-01-31 |
-| `kn5000-kqy` | maincpu: Fix 177 divergent bytes | 2026-01-31 |
-| `kn5000-jwk` | Document DATA/BCK serial interface pinout | 2026-01-26 |
 
-*...and 20 more closed issues*
+*...and 22 more closed issues*
 
 ---
 
@@ -1855,7 +1849,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 68 |
+| Medium | 67 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1869,11 +1863,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 63 |
+| Other | 62 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-22 04:35*
+*Last updated: 2026-02-22 06:51*
