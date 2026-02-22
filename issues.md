@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 169 (124 open, 45 closed)
+**Total Issues:** 169 (123 open, 46 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (68) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (67) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1399,62 +1399,6 @@ Lower priority than LD/LDA/CP which have 10-50x more instances. Implement after 
 
 ---
 
-#### 🟡 LLVM converter: Native shift/rotate instructions (~2,781 instructions) {#issue-kn5000-xcz}
-
-**ID:** `kn5000-xcz` | **Priority:** Medium | **Created:** 2026-02-22
-
-## Goal
-Convert SLL, SLA, SRL, SRA, RL, RLC, RR, RRC from .byte fallback to native LLVM.
-
-## Instruction counts
-- SLL: 1,221 | SLA: 1,138 | SRL: 366 | SRA: 25
-- RL: 1 | RLC: 14 | RR: 1 | RRC: 15
-
-## Encoding
-All are 3-byte: prefix_byte + shift_opcode + count_byte
-- prefix_byte: register prefix (C8+r for 8-bit, D8+r for 16-bit, E8+r for 32-bit)
-- shift_opcode: SLL=0xE8..0xEF depending on exact variant. Consult sub-opcode tables.
-- count_byte: shift amount (1-8)
-
-Example: .byte 0xc9, 0xee, 0x04 → sll 4, a (shift A left by 4)
-
-## Sub-opcode table (from _SUB_BYTES_C8 / _SUB_BYTES_D8 / _SUB_BYTES_E8)
-The sub-opcode encodes the shift type:
-- SLL: 0xE8-0xEF (within the C8/D8/E8 sub-table)
-- SRL: 0xE0-0xE7
-- SLA: 0xF8-0xFF
-- SRA: 0xF0-0xF7
-- RL: 0xE0 (single rotate variants)
-- RR, RLC, RRC: adjacent opcodes
-
-Check existing PrefixShift format in MCCodeEmitter for exact encoding.
-
-## LLVM backend status
-Already supported as PrefixShift and PrefixRotate formats.
-
-## Converter changes needed
-File: scripts/asl_to_llvm.py, in try_convert_native()
-
-### New Tier: Shift/Rotate (3-byte: prefix + opcode + count)
-- Check: nbytes == 3, rom_bytes is not None
-- Verify prefix byte is in register prefix range (0xC8-0xCF, 0xD8-0xDF, 0xE8-0xEF)
-- Look up sub-opcode to determine shift type
-- Extract count from rom_bytes[2]
-- Mnemonic check: mnem_upper in ('SLL', 'SLA', 'SRL', 'SRA', 'RL', 'RLC', 'RR', 'RRC')
-- ASL syntax: "SLL count, reg" → LLVM: "sll count, reg"
-
-### Register name extraction
-From prefix byte:
-- 0xC8+r → 8-bit reg: {0:'w', 1:'a', 2:'b', 3:'c', 4:'d', 5:'e', 6:'h', 7:'l'}
-- 0xD8+r → 16-bit reg: {0:'wa', 1:'bc', 2:'de', 3:'hl', 4:'ix', 5:'iy', 6:'iz', 7:'sp'}
-- 0xE8+r → 32-bit reg: {0:'xwa', 1:'xbc', 2:'xde', 3:'xhl', 4:'xix', 5:'xiy', 6:'xiz', 7:'xsp'}
-
-## Verification
-1. Regenerate, build, compare_roms → 100.00%
-2. Spot-check: grep -cP '^\s+sll ' and grep -cP '^\s+srl '
-
----
-
 #### 🟡 MAME: Input/Control subsystem emulation milestone {#issue-kn5000-1vz}
 
 **ID:** `kn5000-1vz` | **Priority:** Medium | **Created:** 2026-01-31
@@ -2176,6 +2120,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-xcz` | LLVM converter: Native shift/rotate instructions (~2,781 ... | 2026-02-22 |
 | `kn5000-nfa` | LLVM converter: Native PUSH/POP r16 and PUSH/POP SR (~2,1... | 2026-02-22 |
 | `kn5000-aq9` | LLVM converter: Native 8/16-bit register immediate loads ... | 2026-02-22 |
 | `kn5000-3lw` | LLVM Phase 3: Native JR/JRL/CALR support complete | 2026-02-22 |
@@ -2195,9 +2140,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-3c5` | Display: Document framebuffer memory organization at 0x1A... | 2026-02-21 |
 | `kn5000-hlw` | table_data: Improve from 32.42% match | 2026-02-21 |
 | `kn5000-5a0` | Fix 177 divergent bytes in Main CPU ROM (24-bit address e... | 2026-02-21 |
-| `kn5000-jpp` | Docs: Add LLVM backend repo link to hdae5000-homebrew Pre... | 2026-02-21 |
 
-*...and 25 more closed issues*
+*...and 26 more closed issues*
 
 ---
 
@@ -2209,7 +2153,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 73 |
+| Medium | 72 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -2223,11 +2167,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 68 |
+| Other | 67 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-22 09:00*
+*Last updated: 2026-02-22 09:07*
