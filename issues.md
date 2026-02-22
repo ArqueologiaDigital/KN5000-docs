@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 169 (123 open, 46 closed)
+**Total Issues:** 169 (122 open, 47 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (67) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (66) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1095,65 +1095,6 @@ Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
-#### 🟡 LLVM converter: Native CP/BIT/SET/RES short forms (~9,427 instructions) {#issue-kn5000-pb3w}
-
-**ID:** `kn5000-pb3w` | **Priority:** Medium | **Created:** 2026-02-22
-
-## Goal
-Convert short-form CP (compare with small immediate 0-7), BIT, SET, and RES from .byte fallback to native LLVM.
-
-## Instruction forms
-
-### CP reg, N (2-byte short form: prefix + 0xD8+N) — ~3,549 instances
-Short compare with immediate 0-7, encoded in the sub-opcode:
-- prefix = C8+r (8-bit), D8+r (16-bit), E8+r (32-bit)
-- sub-opcode = 0xD8 + N (where N = 0..7)
-- Example: .byte 0xc9, 0xd9 → cp a, 1
-- Example: .byte 0xdb, 0xd8 → cp hl, 0
-
-### BIT n, reg (3-byte: prefix + 0xC8 + bit_number) — 2,495 instances
-- prefix = C8+r / D8+r / E8+r (register prefix)
-- sub-opcode = 0xC8 (BIT opcode in sub-table)
-- third byte = bit number (0-31 for 32-bit, 0-15 for 16-bit, 0-7 for 8-bit)
-- Example: .byte 0xc9, 0xc8, 0x07 → bit 7, a
-- Note: Many BIT instructions use memory operands (e.g., BIT n, (addr)) — those are different encoding and should be left as fallback for now.
-
-### SET n, reg (3-byte: prefix + 0xB8 + bit_number) — 528 instances
-### RES n, reg (3-byte: prefix + 0xB0 + bit_number) — 647 instances
-- Same encoding as BIT but different sub-opcodes
-
-## LLVM backend status
-- CP short form: Would need a new format or adaptation of PrefixIncDec-style encoding
-- BIT/SET/RES register forms: Already supported as PrefixBit format
-- All formats supported by MCCodeEmitter
-
-## Converter changes needed
-File: scripts/asl_to_llvm.py, in try_convert_native()
-
-### CP short form (2-byte)
-- Already partially handled in Tier 3? Check if CP reg,reg is there. The SHORT form (CP reg, 0-7) is different — it's prefix + 0xD8+N.
-- Add to Tier 3 area or new sub-tier for 2-byte prefix instructions.
-- Check: nbytes == 2, prefix in reg prefix range, sub-opcode in 0xD8-0xDF
-- N = sub_opcode - 0xD8
-- Emit: cp <reg>, <N>
-
-### BIT/SET/RES register form (3-byte)
-- Check: nbytes == 3, prefix in reg prefix range
-- BIT: sub-opcode == 0xC8, RES: sub-opcode in 0xB0-0xB7 (B0+bit??), SET: sub-opcode in 0xB8-0xBF
-- Actually: BIT/SET/RES use prefix + opcode + bit_number (3 bytes)
-- BIT sub-opcode = 0xC8, SET = varies, RES = varies. Check sub-opcode tables.
-- Mnemonic: mnem_upper in ('BIT', 'SET', 'RES', 'CHG', 'TSET')
-
-## Caution
-- Memory-operand forms (BIT n, (addr)) use different prefixes (F0/F1/F2 etc). Don't match those.
-- Only match register prefixes: 0xC8-0xCF, 0xD8-0xDF, 0xE8-0xEF
-
-## Verification
-1. Regenerate, build, compare_roms → 100.00%
-2. Spot-check counts for cp, bit, set, res
-
----
-
 #### 🟡 LLVM converter: Native LD with memory operands (~40,000+ instructions) {#issue-kn5000-1zlp}
 
 **ID:** `kn5000-1zlp` | **Priority:** Medium | **Created:** 2026-02-22
@@ -2120,6 +2061,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-pb3w` | LLVM converter: Native CP/BIT/SET/RES short forms (~9,427... | 2026-02-22 |
 | `kn5000-xcz` | LLVM converter: Native shift/rotate instructions (~2,781 ... | 2026-02-22 |
 | `kn5000-nfa` | LLVM converter: Native PUSH/POP r16 and PUSH/POP SR (~2,1... | 2026-02-22 |
 | `kn5000-aq9` | LLVM converter: Native 8/16-bit register immediate loads ... | 2026-02-22 |
@@ -2139,9 +2081,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-hy8` | Video: Document pixel format and color palette | 2026-02-21 |
 | `kn5000-3c5` | Display: Document framebuffer memory organization at 0x1A... | 2026-02-21 |
 | `kn5000-hlw` | table_data: Improve from 32.42% match | 2026-02-21 |
-| `kn5000-5a0` | Fix 177 divergent bytes in Main CPU ROM (24-bit address e... | 2026-02-21 |
 
-*...and 26 more closed issues*
+*...and 27 more closed issues*
 
 ---
 
@@ -2153,7 +2094,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 72 |
+| Medium | 71 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -2167,11 +2108,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 67 |
+| Other | 66 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-22 09:07*
+*Last updated: 2026-02-22 09:47*
