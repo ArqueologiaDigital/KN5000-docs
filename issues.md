@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 160 (118 open, 42 closed)
+**Total Issues:** 162 (119 open, 43 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (62) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (63) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1095,6 +1095,58 @@ Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
+#### 🟡 LLVM converter: Native 8/16-bit register immediate loads (~11,834 instructions) {#issue-kn5000-aq9}
+
+**ID:** `kn5000-aq9` | **Priority:** Medium | **Created:** 2026-02-22
+
+## Goal
+Convert LD r8,#imm8 and LD r16,#imm16 from .byte fallback to native LLVM instructions.
+
+## Instruction forms
+
+### LD r8, #imm8 (2-byte: 0x20+r, imm8) — 5,533 instances
+- Opcode range: 0x20-0x27 (W=0, A=1, B=2, C=3, D=4, E=5, H=6, L=7)
+- Example: .byte 0x21, 0x00 → ld a, 0x0
+
+### LD r16, #imm16 (3-byte: 0x30+r, imm16_LE) — 6,301 instances  
+- Opcode range: 0x30-0x37 (WA=0, BC=1, DE=2, HL=3, IX=4, IY=5, IZ=6, SP=7)
+- Example: .byte 0x33, 0x00, 0x00 → ld hl, 0x0
+
+## LLVM backend status
+- LD r8,#imm8: Already supported as SingleByteImm8 format (opcode range in _SIMPLE_LENGTHS confirmed as 2 bytes)
+- LD r16,#imm16: Already supported as SingleByteRegImm format with 16-bit immediate
+- Both formats are already encodable by the MCCodeEmitter
+
+## Converter changes needed
+File: scripts/asl_to_llvm.py, in try_convert_native()
+
+### Tier 11a: LD r8, #imm8
+- Check: nbytes == 2, 0x20 <= rom_bytes[0] <= 0x27, mnem_upper in ('LD',)
+- Register index: rom_bytes[0] - 0x20
+- Register names: {0:'w', 1:'a', 2:'b', 3:'c', 4:'d', 5:'e', 6:'h', 7:'l'}
+- Immediate: rom_bytes[1]
+- Emit: ld <r8>, 0x<imm>
+
+### Tier 11b: LD r16, #imm16
+- Check: nbytes == 3, 0x30 <= rom_bytes[0] <= 0x37, mnem_upper in ('LD', 'LDW')
+- Register index: rom_bytes[0] - 0x30
+- Register names: {0:'wa', 1:'bc', 2:'de', 3:'hl', 4:'ix', 5:'iy', 6:'iz', 7:'sp'}
+- Immediate: rom_bytes[1] | (rom_bytes[2] << 8)
+- Emit: ld <r16>, 0x<imm>
+
+## Verification
+1. Regenerate: python scripts/asl_to_llvm.py maincpu/kn5000_v10_program.asm
+2. Build: make rebuilt_ROMs/kn5000_v10_program.llvm.rom
+3. Match: python scripts/compare_roms.py → 100.00%
+4. Spot-check: grep -cP '^\s+ld [a-z]+, 0x' in output
+
+## Caution
+- The 2-byte LD check overlaps with Tier 3 (reg-reg). Place AFTER Tier 3 or verify rom_bytes[0] range.
+- Don't confuse with Tier 2 (5-byte LD r32,#imm32) — different byte count.
+- PUSH r16 (0x28-0x2F) and POP r16 (0x48-0x4F) are adjacent opcodes — handle separately.
+
+---
+
 #### 🟡 MAME: Input/Control subsystem emulation milestone {#issue-kn5000-1vz}
 
 **ID:** `kn5000-1vz` | **Priority:** Medium | **Created:** 2026-01-31
@@ -1816,6 +1868,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-3lw` | LLVM Phase 3: Native JR/JRL/CALR support complete | 2026-02-22 |
 | `kn5000-001` | LLVM: Symbolic labels, comment cleanup, and label shift b... | 2026-02-22 |
 | `kn5000-vz7` | LLVM output: symbolic JP/CALL labels and comment cleanup | 2026-02-21 |
 | `kn5000-95a` | LLVM parallel build: Phase 3 - Progressive native instruc... | 2026-02-21 |
@@ -1835,9 +1888,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-jpp` | Docs: Add LLVM backend repo link to hdae5000-homebrew Pre... | 2026-02-21 |
 | `kn5000-vto` | Docs: Fix broken markdown tables in hdae5000/ Handler Reg... | 2026-02-21 |
 | `kn5000-o0o` | Refactor shared bootloader code between maincpu and table... | 2026-01-31 |
-| `kn5000-9lg` | MAME: Create milestone tracking issue for emulator comple... | 2026-01-31 |
 
-*...and 22 more closed issues*
+*...and 23 more closed issues*
 
 ---
 
@@ -1849,7 +1901,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 67 |
+| Medium | 68 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1863,11 +1915,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 62 |
+| Other | 63 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-22 07:52*
+*Last updated: 2026-02-22 08:27*
