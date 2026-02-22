@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 162 (119 open, 43 closed)
+**Total Issues:** 169 (126 open, 43 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (63) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (70) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1147,6 +1147,413 @@ File: scripts/asl_to_llvm.py, in try_convert_native()
 
 ---
 
+#### 🟡 LLVM converter: Native CP/BIT/SET/RES short forms (~9,427 instructions) {#issue-kn5000-pb3w}
+
+**ID:** `kn5000-pb3w` | **Priority:** Medium | **Created:** 2026-02-22
+
+## Goal
+Convert short-form CP (compare with small immediate 0-7), BIT, SET, and RES from .byte fallback to native LLVM.
+
+## Instruction forms
+
+### CP reg, N (2-byte short form: prefix + 0xD8+N) — ~3,549 instances
+Short compare with immediate 0-7, encoded in the sub-opcode:
+- prefix = C8+r (8-bit), D8+r (16-bit), E8+r (32-bit)
+- sub-opcode = 0xD8 + N (where N = 0..7)
+- Example: .byte 0xc9, 0xd9 → cp a, 1
+- Example: .byte 0xdb, 0xd8 → cp hl, 0
+
+### BIT n, reg (3-byte: prefix + 0xC8 + bit_number) — 2,495 instances
+- prefix = C8+r / D8+r / E8+r (register prefix)
+- sub-opcode = 0xC8 (BIT opcode in sub-table)
+- third byte = bit number (0-31 for 32-bit, 0-15 for 16-bit, 0-7 for 8-bit)
+- Example: .byte 0xc9, 0xc8, 0x07 → bit 7, a
+- Note: Many BIT instructions use memory operands (e.g., BIT n, (addr)) — those are different encoding and should be left as fallback for now.
+
+### SET n, reg (3-byte: prefix + 0xB8 + bit_number) — 528 instances
+### RES n, reg (3-byte: prefix + 0xB0 + bit_number) — 647 instances
+- Same encoding as BIT but different sub-opcodes
+
+## LLVM backend status
+- CP short form: Would need a new format or adaptation of PrefixIncDec-style encoding
+- BIT/SET/RES register forms: Already supported as PrefixBit format
+- All formats supported by MCCodeEmitter
+
+## Converter changes needed
+File: scripts/asl_to_llvm.py, in try_convert_native()
+
+### CP short form (2-byte)
+- Already partially handled in Tier 3? Check if CP reg,reg is there. The SHORT form (CP reg, 0-7) is different — it's prefix + 0xD8+N.
+- Add to Tier 3 area or new sub-tier for 2-byte prefix instructions.
+- Check: nbytes == 2, prefix in reg prefix range, sub-opcode in 0xD8-0xDF
+- N = sub_opcode - 0xD8
+- Emit: cp <reg>, <N>
+
+### BIT/SET/RES register form (3-byte)
+- Check: nbytes == 3, prefix in reg prefix range
+- BIT: sub-opcode == 0xC8, RES: sub-opcode in 0xB0-0xB7 (B0+bit??), SET: sub-opcode in 0xB8-0xBF
+- Actually: BIT/SET/RES use prefix + opcode + bit_number (3 bytes)
+- BIT sub-opcode = 0xC8, SET = varies, RES = varies. Check sub-opcode tables.
+- Mnemonic: mnem_upper in ('BIT', 'SET', 'RES', 'CHG', 'TSET')
+
+## Caution
+- Memory-operand forms (BIT n, (addr)) use different prefixes (F0/F1/F2 etc). Don't match those.
+- Only match register prefixes: 0xC8-0xCF, 0xD8-0xDF, 0xE8-0xEF
+
+## Verification
+1. Regenerate, build, compare_roms → 100.00%
+2. Spot-check counts for cp, bit, set, res
+
+---
+
+#### 🟡 LLVM converter: Native LD with memory operands (~40,000+ instructions) {#issue-kn5000-1zlp}
+
+**ID:** `kn5000-1zlp` | **Priority:** Medium | **Created:** 2026-02-22
+
+## Goal
+Convert the massive LD instruction backlog from .byte fallback to native LLVM. This is the single largest category (~53,807 fallbacks) and covers many sub-forms.
+
+## Sub-form breakdown
+
+### Direct memory loads: LD reg, (nn) — ~7,248 instances
+- Extended addressing: C1/D1/E1 prefix + 16-bit addr + LD sub-opcode
+- 24-bit addressing: C2/D2/E2 prefix + 24-bit addr + LD sub-opcode
+- Example: .byte 0xc1, 0x02, 0x04, 0x21 → ld a, (0x0402)
+
+### Direct memory stores: LD (nn), reg — ~6,411 instances
+- Extended addressing: F0/F1 prefix + addr + store sub-opcode + reg_or_imm
+- 24-bit addressing: F2 prefix + 24-bit addr + store sub-opcode
+- Example: .byte 0xf1, 0x09, 0x04, 0x60 → ld (0x0409), xwa
+
+### Direct memory store immediate: LD (nn), #imm — ~1,698 instances (opcode 0x08)
+- 3-byte: 0x08, addr_lo, imm8 (8-bit I/O register writes)
+- Example: .byte 0x08, 0x3c, 0x00 → ld (0x3C), 0x00
+
+### Register-indirect with displacement: LD reg, (Xreg+d8/d16) — ~167+349 instances
+- d8 form: prefix_base+8+r, d8, sub-opcode (3 bytes)
+- d16 form: F3, mode_byte, d16, sub-opcode (5+ bytes)
+- Example: .byte 0x9f, 0x04, 0x23 → ld hl, (xsp+4)
+
+### Prefix LD r,#imm (prefix + 0x03 + imm) — ~33 instances
+- 8-bit: C8+r, 0x03, imm8 (3 bytes)
+- 16-bit: D8+r, 0x03, imm16 (4 bytes)
+- Already supported as PrefixLDImm format in MCCodeEmitter
+
+### Other LD forms
+- LD r8,#imm8 (0x20-0x27) — 5,533 (separate issue kn5000-aq9)
+- LD r16,#imm16 (0x30-0x37) — 6,301 (separate issue kn5000-aq9)
+- LD r32,#imm32 (0x40-0x47) — already native (Tier 2)
+- LD r,r (2-byte) — already native (Tier 3)
+- LD r,(Xreg) / LD (Xreg),r (2-byte) — already native (Tier 7)
+
+## LLVM backend status
+- MemLoad format: reg_prefix + (opcode + dst_reg) — supported
+- MemStore format: dst_prefix + (opcode + src_reg_or_imm) — supported
+- MemLoadDst (LDA): dst_prefix + (opcode + dst_reg) — supported
+- Direct addressing via F2/E2: 24-bit address with fixup — supported
+- Register-indirect with d8/d16 displacement: emitMemPrefix handles all cases
+
+## Implementation strategy
+Recommend implementing in phases due to complexity:
+1. **Phase A:** Direct memory with extended addressing (C1-E2/F0-F2 prefixes) — highest count
+2. **Phase B:** Register-indirect with d8 displacement — moderate count
+3. **Phase C:** LD (nn),#imm8 (0x08 opcode) — 1,698 instances
+4. **Phase D:** Prefix LD r,#imm forms — small count
+
+### Key challenge: Address operand syntax
+LLVM syntax for memory operands: "ld a, (xhl)" vs "ld a, (xhl, 4)" for displacement.
+Must match exactly what the LLVM AsmParser expects. Check TLCS900AsmParser.cpp or .td files.
+
+For direct addressing with symbols/labels, can use either:
+- Numeric: ld a, (0x0402, 0) — base=0x0402, disp=0
+- Symbolic: ld a, (SYMBOL, 0) — if the address has a known label
+
+## Verification
+1. Regenerate, build, compare_roms → 100.00%
+2. Spot-check: count native ld instructions vs remaining .byte LD fallbacks
+
+---
+
+#### 🟡 LLVM converter: Native LDA (load effective address) (~11,565 instructions) {#issue-kn5000-2th1}
+
+**ID:** `kn5000-2th1` | **Priority:** Medium | **Created:** 2026-02-22
+
+## Goal
+Convert LDA (Load Effective Address) from .byte fallback to native LLVM.
+
+## Instruction forms
+
+### LDA Xreg, (nn) — 3-byte form (~6,071 instances)
+- Prefix: B0+r (B0 table) or F0 for extended
+- Sub-opcode: 0x30+r (LDA in B0 table)
+- Example: .byte 0xf0, 0xe4, 0x31 → lda xbc, (0xE4) [I/O register INTET01]
+
+### LDA Xreg, nn:24 — 5-byte form (~3,579 instances)
+- Prefix: F2 (24-bit direct addressing)
+- 24-bit address + sub-opcode 0x30+r
+- Example: .byte 0xf2, 0x00, 0xb0, 0x0a, 0x31 → lda xbc, (0x0AB000)
+
+### LDA Xreg, (nn:16) — 4-byte form (~1,603 instances)
+- Prefix: F0/F1 (extended 8/16-bit addressing)
+- Example: .byte 0xf0, 0x80, 0x30 → lda xwa, (0x80)
+
+### LDA Xreg, (Xreg+d) — 2-byte form (~311 instances)  
+- Register-indirect with LDA sub-opcode in B0 table
+- Example: .byte 0xb0, 0x30 → lda xwa, (xwa)
+
+## LLVM backend status
+- MemLoadDst format: Already supported — uses dst_mem_prefix + (opcode + dst_reg)
+- LDA is in the B0 opcode table (destination-memory prefix)
+- Direct addressing via F2 prefix: supported
+- MCCodeEmitter encodes this correctly
+
+## Converter changes needed
+File: scripts/asl_to_llvm.py, in try_convert_native()
+
+### Encoding detection
+LDA uses the B0 sub-opcode table. The sub-opcode for LDA is 0x30+r where r is the 32-bit destination register index:
+- r=0: XWA, r=1: XBC, r=2: XDE, r=3: XHL, r=4: XIX, r=5: XIY, r=6: XIZ, r=7: XSP
+
+### Address prefix types
+- B0+r: register-indirect (Xreg) — no displacement
+- B8+r, d8: register-indirect with 8-bit displacement
+- F0, addr8: 8-bit I/O register address
+- F1, addr16_LE: 16-bit address  
+- F2, addr24_LE: 24-bit address
+- F3, mode, d16: register-indirect with 16-bit displacement
+
+### Implementation approach
+1. Identify the prefix type from rom_bytes[0]
+2. Decode the address/displacement
+3. Find the LDA sub-opcode (0x30-0x37) to get destination register
+4. Emit native: lda <xreg>, (<address_expr>)
+
+### Key challenge
+Must match LLVM's expected syntax for LDA operands. The MemLoadDst format expects (base_reg, disp) or (symbol_expr, 0) syntax. Check .td files or test with llvm-mc.
+
+## Verification
+1. Regenerate, build, compare_roms → 100.00%
+2. Spot-check: grep -cP '^\s+lda ' in output
+
+---
+
+#### 🟡 LLVM converter: Native PUSH/POP r16 and PUSH/POP SR (~2,128 instructions) {#issue-kn5000-nfa}
+
+**ID:** `kn5000-nfa` | **Priority:** Medium | **Created:** 2026-02-22
+
+## Goal
+Convert PUSH r16, POP r16, PUSH SR, and POP SR from .byte fallback to native LLVM.
+
+## Instruction forms
+
+### PUSH r16 (1-byte: 0x28+r) — 1,294 instances
+- Opcode range: 0x28-0x2F (WA=0, BC=1, DE=2, HL=3, IX=4, IY=5, IZ=6, SP=7)
+- Example: .byte 0x28 → push wa
+- Note: PUSH r32 (0x38-0x3F) is already handled in Tier 6.
+
+### POP r16 (1-byte: 0x48+r) — 763 instances
+- Opcode range: 0x48-0x4F (WA=0, BC=1, DE=2, HL=3, IX=4, IY=5, IZ=6, SP=7)
+- Example: .byte 0x48 → pop wa
+- Note: POP r32 (0x58-0x5F) is already handled in Tier 6.
+
+### PUSH SR (1-byte: 0x02) — 40 instances
+### POP SR (1-byte: 0x03) — 31 instances
+
+## LLVM backend status
+- PUSH r16/POP r16: Encoded as SingleByteReg format (opcode 0x28/0x48)
+- PUSH SR/POP SR: Encoded as SingleByte format (opcode 0x02/0x03)
+- All already encodable by MCCodeEmitter
+
+## Converter changes needed
+File: scripts/asl_to_llvm.py, in try_convert_native()
+
+### Extend Tier 6 for r16
+Currently Tier 6 handles 1-byte PUSH/POP for 32-bit registers (0x38-0x3F, 0x58-0x5F).
+Extend to also handle 16-bit (0x28-0x2F, 0x48-0x4F):
+- Register names for r16: {0:'wa', 1:'bc', 2:'de', 3:'hl', 4:'ix', 5:'iy', 6:'iz', 7:'sp'}
+- ASL mnemonic: PUSH/PUSHW for push, POP/POPW for pop
+
+### Add PUSH SR / POP SR
+- These are in Tier 1 territory (zero-operand, 1-byte). Check if already in NATIVE_ZERO_OPS.
+- If not, add: 'PUSH': ('push sr', 1) when rom_bytes[0] == 0x02, etc.
+- Actually PUSH SR has operand "SR", so check operands_str. Simpler: add to Tier 6 with special case for 0x02/0x03.
+
+## Verification
+1. Regenerate, build, compare_roms → 100.00%
+2. Spot-check: grep -cP '^\s+push (wa|bc|de|hl)' and grep -cP '^\s+pop (wa|bc|de|hl)'
+
+---
+
+#### 🟡 LLVM converter: Native memory-operand ALU (AND/OR/ADD/SUB/CP with (addr)) (~4,000+ instructions) {#issue-kn5000-iwmk}
+
+**ID:** `kn5000-iwmk` | **Priority:** Medium | **Created:** 2026-02-22
+
+## Goal
+Convert ALU operations with memory operands from .byte fallback to native LLVM.
+
+## Instruction forms
+These use extended addressing prefixes (C0-C5, D0-D5, E0-E5, F0-F5) or register-indirect prefixes (80-BF) followed by ALU sub-opcodes.
+
+### Estimated counts (from fallback mnemonics, memory-operand subset):
+- AND (mem): ~500-800 of 1,322 total AND fallbacks
+- OR (mem): ~400-600 of 1,039 total OR fallbacks  
+- ADD (mem): ~300-500 of 1,124 total ADD fallbacks
+- SUB (mem): ~200-300 of 458 total SUB fallbacks
+- CP (mem): ~2,000+ of 8,195 total CP fallbacks (non-short-form)
+- Total estimate: ~4,000+ instructions
+
+### Encoding patterns
+1. Direct memory addressing: F0/F1/F2 prefix + 24-bit addr + sub-opcode [+ imm]
+   - F0 = 8-bit (from B0 table), F1 = extended 8-bit
+   - F2 = 24-bit direct memory
+   - Example: .byte 0xc1, 0x02, 0x04, 0x3f, 0x04 → cp (0x0402), 4
+   
+2. Register-indirect: 80+r/90+r/A0+r/B0+r prefix + sub-opcode [+ imm]
+   - Already partially handled for LD in Tier 7
+   - ALU sub-opcodes: ADD=0x80, ADC=0x81, SUB=0x82, SBC=0x83, AND=0x84, XOR=0x85, OR=0x86, CP=0x87 (in mem-src table)
+
+## LLVM backend status
+- MemALU format: Already supported (src_mem_prefix + opcode + reg_or_imm)
+- MemStore format: Handles stores
+- Direct addressing via F2 prefix: Already supported
+- All formats encodable by MCCodeEmitter
+
+## Converter changes needed
+File: scripts/asl_to_llvm.py, in try_convert_native()
+
+This is complex because of the many addressing mode variants. Recommend implementing in sub-phases:
+1. Register-indirect ALU: (Xreg) operands, 2-3 byte forms
+2. Direct memory ALU: (addr) operands, 4-6 byte forms
+
+### Key challenge
+The converter must match the EXACT LLVM syntax that the backend expects for memory operands. Check LLVM .td files for the expected operand syntax (e.g., does LLVM expect "and a, (xhl)" or "and (xhl), a"?).
+
+## Verification
+1. Regenerate, build, compare_roms → 100.00%
+2. Spot-check: grep -cP '^\s+(and|or|cp|add|sub) .+\(' in output
+
+---
+
+#### 🟡 LLVM converter: Native remaining misc instructions (~2,000+ instructions) {#issue-kn5000-9w1z}
+
+**ID:** `kn5000-9w1z` | **Priority:** Medium | **Created:** 2026-02-22
+
+## Goal
+Convert remaining miscellaneous instruction types from .byte fallback to native LLVM.
+
+## Instruction forms and counts
+
+### SCC cc, reg — 218 instances
+Set register to 1 if condition true, 0 if false.
+- 3-byte: prefix + 0x70+cc  (prefix encodes register)
+- Example: scc nz, a
+
+### DJNZ reg, target — 129 instances
+Decrement and jump if not zero (loop instruction).
+- 3-byte: prefix + 0x1C + d8
+- Already supported as PrefixDJNZ format in MCCodeEmitter
+- Needs PC-relative target label resolution (like JR)
+
+### EI level — 301 instances
+Enable interrupts at specified level.
+- 2-byte: 0x06, level (0-7)
+- Already supported as SingleByteImm8 format
+
+### RETD imm16 — 68 instances
+Return and deallocate stack frame.
+- 3-byte: 0x0F, d16_LE
+- Already supported as SingleByteImm8 format (special case for 0x0F)
+
+### RET / RETI — ~621 instances (some already native?)
+- RET: 1-byte (0x0E) — should be in Tier 1 NATIVE_ZERO_OPS
+- RETI: 1-byte (0x07) — should be in Tier 1
+- Check if these are actually already handled; if 549 remain as fallback, some forms may differ
+
+### EX F,F' — 31 instances
+Exchange flag registers. 1-byte: 0x16.
+
+### MUL/MULS/DIV/DIVS — ~1,989 instances total
+- MULS WA,reg: 2-byte prefix + 0x08 (multiply signed)
+- MUL WA,reg: 2-byte prefix + 0x00 (multiply unsigned)  
+- DIVS WA,reg: 2-byte prefix + 0x09
+- DIV WA,reg: 2-byte prefix + 0x01
+- These may need new converter tiers since they're specialized reg-reg ops
+
+### LDIR/LDIRW — ~583 instances
+Block transfer instructions (repeat).
+- LDIR: 2-byte (0x80, 0x10)
+- LDIRW: variant
+- Already supported as BlockTransfer format
+
+## LLVM backend status
+Most of these formats are already supported in the MCCodeEmitter:
+- PrefixDJNZ, SingleByteImm8, PrefixShift, BlockTransfer, SingleByte
+- Some may need new converter logic but no backend changes
+
+## Priority
+Lower priority than LD/LDA/CP which have 10-50x more instances. Implement after the big categories.
+
+## Verification
+1. Regenerate, build, compare_roms → 100.00%
+
+---
+
+#### 🟡 LLVM converter: Native shift/rotate instructions (~2,781 instructions) {#issue-kn5000-xcz}
+
+**ID:** `kn5000-xcz` | **Priority:** Medium | **Created:** 2026-02-22
+
+## Goal
+Convert SLL, SLA, SRL, SRA, RL, RLC, RR, RRC from .byte fallback to native LLVM.
+
+## Instruction counts
+- SLL: 1,221 | SLA: 1,138 | SRL: 366 | SRA: 25
+- RL: 1 | RLC: 14 | RR: 1 | RRC: 15
+
+## Encoding
+All are 3-byte: prefix_byte + shift_opcode + count_byte
+- prefix_byte: register prefix (C8+r for 8-bit, D8+r for 16-bit, E8+r for 32-bit)
+- shift_opcode: SLL=0xE8..0xEF depending on exact variant. Consult sub-opcode tables.
+- count_byte: shift amount (1-8)
+
+Example: .byte 0xc9, 0xee, 0x04 → sll 4, a (shift A left by 4)
+
+## Sub-opcode table (from _SUB_BYTES_C8 / _SUB_BYTES_D8 / _SUB_BYTES_E8)
+The sub-opcode encodes the shift type:
+- SLL: 0xE8-0xEF (within the C8/D8/E8 sub-table)
+- SRL: 0xE0-0xE7
+- SLA: 0xF8-0xFF
+- SRA: 0xF0-0xF7
+- RL: 0xE0 (single rotate variants)
+- RR, RLC, RRC: adjacent opcodes
+
+Check existing PrefixShift format in MCCodeEmitter for exact encoding.
+
+## LLVM backend status
+Already supported as PrefixShift and PrefixRotate formats.
+
+## Converter changes needed
+File: scripts/asl_to_llvm.py, in try_convert_native()
+
+### New Tier: Shift/Rotate (3-byte: prefix + opcode + count)
+- Check: nbytes == 3, rom_bytes is not None
+- Verify prefix byte is in register prefix range (0xC8-0xCF, 0xD8-0xDF, 0xE8-0xEF)
+- Look up sub-opcode to determine shift type
+- Extract count from rom_bytes[2]
+- Mnemonic check: mnem_upper in ('SLL', 'SLA', 'SRL', 'SRA', 'RL', 'RLC', 'RR', 'RRC')
+- ASL syntax: "SLL count, reg" → LLVM: "sll count, reg"
+
+### Register name extraction
+From prefix byte:
+- 0xC8+r → 8-bit reg: {0:'w', 1:'a', 2:'b', 3:'c', 4:'d', 5:'e', 6:'h', 7:'l'}
+- 0xD8+r → 16-bit reg: {0:'wa', 1:'bc', 2:'de', 3:'hl', 4:'ix', 5:'iy', 6:'iz', 7:'sp'}
+- 0xE8+r → 32-bit reg: {0:'xwa', 1:'xbc', 2:'xde', 3:'xhl', 4:'xix', 5:'xiy', 6:'xiz', 7:'xsp'}
+
+## Verification
+1. Regenerate, build, compare_roms → 100.00%
+2. Spot-check: grep -cP '^\s+sll ' and grep -cP '^\s+srl '
+
+---
+
 #### 🟡 MAME: Input/Control subsystem emulation milestone {#issue-kn5000-1vz}
 
 **ID:** `kn5000-1vz` | **Priority:** Medium | **Created:** 2026-01-31
@@ -1901,7 +2308,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 68 |
+| Medium | 75 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1915,11 +2322,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 63 |
+| Other | 70 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-22 08:27*
+*Last updated: 2026-02-22 08:50*
