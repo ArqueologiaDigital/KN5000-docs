@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 169 (125 open, 44 closed)
+**Total Issues:** 169 (124 open, 45 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (69) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (68) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1285,53 +1285,6 @@ Must match LLVM's expected syntax for LDA operands. The MemLoadDst format expect
 
 ---
 
-#### 🟡 LLVM converter: Native PUSH/POP r16 and PUSH/POP SR (~2,128 instructions) {#issue-kn5000-nfa}
-
-**ID:** `kn5000-nfa` | **Priority:** Medium | **Created:** 2026-02-22
-
-## Goal
-Convert PUSH r16, POP r16, PUSH SR, and POP SR from .byte fallback to native LLVM.
-
-## Instruction forms
-
-### PUSH r16 (1-byte: 0x28+r) — 1,294 instances
-- Opcode range: 0x28-0x2F (WA=0, BC=1, DE=2, HL=3, IX=4, IY=5, IZ=6, SP=7)
-- Example: .byte 0x28 → push wa
-- Note: PUSH r32 (0x38-0x3F) is already handled in Tier 6.
-
-### POP r16 (1-byte: 0x48+r) — 763 instances
-- Opcode range: 0x48-0x4F (WA=0, BC=1, DE=2, HL=3, IX=4, IY=5, IZ=6, SP=7)
-- Example: .byte 0x48 → pop wa
-- Note: POP r32 (0x58-0x5F) is already handled in Tier 6.
-
-### PUSH SR (1-byte: 0x02) — 40 instances
-### POP SR (1-byte: 0x03) — 31 instances
-
-## LLVM backend status
-- PUSH r16/POP r16: Encoded as SingleByteReg format (opcode 0x28/0x48)
-- PUSH SR/POP SR: Encoded as SingleByte format (opcode 0x02/0x03)
-- All already encodable by MCCodeEmitter
-
-## Converter changes needed
-File: scripts/asl_to_llvm.py, in try_convert_native()
-
-### Extend Tier 6 for r16
-Currently Tier 6 handles 1-byte PUSH/POP for 32-bit registers (0x38-0x3F, 0x58-0x5F).
-Extend to also handle 16-bit (0x28-0x2F, 0x48-0x4F):
-- Register names for r16: {0:'wa', 1:'bc', 2:'de', 3:'hl', 4:'ix', 5:'iy', 6:'iz', 7:'sp'}
-- ASL mnemonic: PUSH/PUSHW for push, POP/POPW for pop
-
-### Add PUSH SR / POP SR
-- These are in Tier 1 territory (zero-operand, 1-byte). Check if already in NATIVE_ZERO_OPS.
-- If not, add: 'PUSH': ('push sr', 1) when rom_bytes[0] == 0x02, etc.
-- Actually PUSH SR has operand "SR", so check operands_str. Simpler: add to Tier 6 with special case for 0x02/0x03.
-
-## Verification
-1. Regenerate, build, compare_roms → 100.00%
-2. Spot-check: grep -cP '^\s+push (wa|bc|de|hl)' and grep -cP '^\s+pop (wa|bc|de|hl)'
-
----
-
 #### 🟡 LLVM converter: Native memory-operand ALU (AND/OR/ADD/SUB/CP with (addr)) (~4,000+ instructions) {#issue-kn5000-iwmk}
 
 **ID:** `kn5000-iwmk` | **Priority:** Medium | **Created:** 2026-02-22
@@ -2223,6 +2176,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-nfa` | LLVM converter: Native PUSH/POP r16 and PUSH/POP SR (~2,1... | 2026-02-22 |
 | `kn5000-aq9` | LLVM converter: Native 8/16-bit register immediate loads ... | 2026-02-22 |
 | `kn5000-3lw` | LLVM Phase 3: Native JR/JRL/CALR support complete | 2026-02-22 |
 | `kn5000-001` | LLVM: Symbolic labels, comment cleanup, and label shift b... | 2026-02-22 |
@@ -2242,9 +2196,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-hlw` | table_data: Improve from 32.42% match | 2026-02-21 |
 | `kn5000-5a0` | Fix 177 divergent bytes in Main CPU ROM (24-bit address e... | 2026-02-21 |
 | `kn5000-jpp` | Docs: Add LLVM backend repo link to hdae5000-homebrew Pre... | 2026-02-21 |
-| `kn5000-vto` | Docs: Fix broken markdown tables in hdae5000/ Handler Reg... | 2026-02-21 |
 
-*...and 24 more closed issues*
+*...and 25 more closed issues*
 
 ---
 
@@ -2256,7 +2209,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 74 |
+| Medium | 73 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -2270,11 +2223,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 69 |
+| Other | 68 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-22 08:56*
+*Last updated: 2026-02-22 09:00*
