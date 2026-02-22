@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 186 (124 open, 62 closed)
+**Total Issues:** 186 (121 open, 65 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (68) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (65) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1103,127 +1103,6 @@ About 1,500 JR/JRL relative branch instructions remain as .byte fallback because
 
 ---
 
-#### 🟡 LLVM converter: Native LDA (load effective address) (~11,565 instructions) {#issue-kn5000-2th1}
-
-**ID:** `kn5000-2th1` | **Priority:** Medium | **Created:** 2026-02-22
-
-## Goal
-Convert LDA (Load Effective Address) from .byte fallback to native LLVM.
-
-## Instruction forms
-
-### LDA Xreg, (nn) — 3-byte form (~6,071 instances)
-- Prefix: B0+r (B0 table) or F0 for extended
-- Sub-opcode: 0x30+r (LDA in B0 table)
-- Example: .byte 0xf0, 0xe4, 0x31 → lda xbc, (0xE4) [I/O register INTET01]
-
-### LDA Xreg, nn:24 — 5-byte form (~3,579 instances)
-- Prefix: F2 (24-bit direct addressing)
-- 24-bit address + sub-opcode 0x30+r
-- Example: .byte 0xf2, 0x00, 0xb0, 0x0a, 0x31 → lda xbc, (0x0AB000)
-
-### LDA Xreg, (nn:16) — 4-byte form (~1,603 instances)
-- Prefix: F0/F1 (extended 8/16-bit addressing)
-- Example: .byte 0xf0, 0x80, 0x30 → lda xwa, (0x80)
-
-### LDA Xreg, (Xreg+d) — 2-byte form (~311 instances)  
-- Register-indirect with LDA sub-opcode in B0 table
-- Example: .byte 0xb0, 0x30 → lda xwa, (xwa)
-
-## LLVM backend status
-- MemLoadDst format: Already supported — uses dst_mem_prefix + (opcode + dst_reg)
-- LDA is in the B0 opcode table (destination-memory prefix)
-- Direct addressing via F2 prefix: supported
-- MCCodeEmitter encodes this correctly
-
-## Converter changes needed
-File: scripts/asl_to_llvm.py, in try_convert_native()
-
-### Encoding detection
-LDA uses the B0 sub-opcode table. The sub-opcode for LDA is 0x30+r where r is the 32-bit destination register index:
-- r=0: XWA, r=1: XBC, r=2: XDE, r=3: XHL, r=4: XIX, r=5: XIY, r=6: XIZ, r=7: XSP
-
-### Address prefix types
-- B0+r: register-indirect (Xreg) — no displacement
-- B8+r, d8: register-indirect with 8-bit displacement
-- F0, addr8: 8-bit I/O register address
-- F1, addr16_LE: 16-bit address  
-- F2, addr24_LE: 24-bit address
-- F3, mode, d16: register-indirect with 16-bit displacement
-
-### Implementation approach
-1. Identify the prefix type from rom_bytes[0]
-2. Decode the address/displacement
-3. Find the LDA sub-opcode (0x30-0x37) to get destination register
-4. Emit native: lda <xreg>, (<address_expr>)
-
-### Key challenge
-Must match LLVM's expected syntax for LDA operands. The MemLoadDst format expects (base_reg, disp) or (symbol_expr, 0) syntax. Check .td files or test with llvm-mc.
-
-## Verification
-1. Regenerate, build, compare_roms → 100.00%
-2. Spot-check: grep -cP '^\s+lda ' in output
-
----
-
-#### 🟡 LLVM converter: Native memory-operand ALU (AND/OR/ADD/SUB/CP with (addr)) (~4,000+ instructions) {#issue-kn5000-iwmk}
-
-**ID:** `kn5000-iwmk` | **Priority:** Medium | **Created:** 2026-02-22
-
-## Goal
-Convert ALU operations with memory operands from .byte fallback to native LLVM.
-
-## Instruction forms
-These use extended addressing prefixes (C0-C5, D0-D5, E0-E5, F0-F5) or register-indirect prefixes (80-BF) followed by ALU sub-opcodes.
-
-### Estimated counts (from fallback mnemonics, memory-operand subset):
-- AND (mem): ~500-800 of 1,322 total AND fallbacks
-- OR (mem): ~400-600 of 1,039 total OR fallbacks  
-- ADD (mem): ~300-500 of 1,124 total ADD fallbacks
-- SUB (mem): ~200-300 of 458 total SUB fallbacks
-- CP (mem): ~2,000+ of 8,195 total CP fallbacks (non-short-form)
-- Total estimate: ~4,000+ instructions
-
-### Encoding patterns
-1. Direct memory addressing: F0/F1/F2 prefix + 24-bit addr + sub-opcode [+ imm]
-   - F0 = 8-bit (from B0 table), F1 = extended 8-bit
-   - F2 = 24-bit direct memory
-   - Example: .byte 0xc1, 0x02, 0x04, 0x3f, 0x04 → cp (0x0402), 4
-   
-2. Register-indirect: 80+r/90+r/A0+r/B0+r prefix + sub-opcode [+ imm]
-   - Already partially handled for LD in Tier 7
-   - ALU sub-opcodes: ADD=0x80, ADC=0x81, SUB=0x82, SBC=0x83, AND=0x84, XOR=0x85, OR=0x86, CP=0x87 (in mem-src table)
-
-## LLVM backend status
-- MemALU format: Already supported (src_mem_prefix + opcode + reg_or_imm)
-- MemStore format: Handles stores
-- Direct addressing via F2 prefix: Already supported
-- All formats encodable by MCCodeEmitter
-
-## Converter changes needed
-File: scripts/asl_to_llvm.py, in try_convert_native()
-
-This is complex because of the many addressing mode variants. Recommend implementing in sub-phases:
-1. Register-indirect ALU: (Xreg) operands, 2-3 byte forms
-2. Direct memory ALU: (addr) operands, 4-6 byte forms
-
-### Key challenge
-The converter must match the EXACT LLVM syntax that the backend expects for memory operands. Check LLVM .td files for the expected operand syntax (e.g., does LLVM expect "and a, (xhl)" or "and (xhl), a"?).
-
-## Verification
-1. Regenerate, build, compare_roms → 100.00%
-2. Spot-check: grep -cP '^\s+(and|or|cp|add|sub) .+\(' in output
-
----
-
-#### 🟡 LLVM converter: Single-byte opcode tiers for LD r32, PUSH, POP, LDA (~2,500 .byte) {#issue-kn5000-8r82}
-
-**ID:** `kn5000-8r82` | **Priority:** Medium | **Created:** 2026-02-22
-
-Add converter tiers for single-byte opcodes in range 0x20-0x4F that are currently .byte fallback. These include: LD r32,#imm (0x40+r, ~660 groups), PUSH r32/POP r32 (0x28-0x2F, ~520 groups), PUSH #imm (0x28+size, ~520 groups), LDA XR,nn (0x20+r, ~420 groups), LD (n),#imm I/O writes (0x30+size, ~570 groups). The LLVM backend already defines these instructions — the gap is in the converter not recognizing the byte patterns.
-
----
-
 #### 🟡 MAME: Input/Control subsystem emulation milestone {#issue-kn5000-1vz}
 
 **ID:** `kn5000-1vz` | **Priority:** Medium | **Created:** 2026-01-31
@@ -1961,6 +1840,9 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-2th1` | LLVM converter: Native LDA (load effective address) (~11,... | 2026-02-22 |
+| `kn5000-iwmk` | LLVM converter: Native memory-operand ALU (AND/OR/ADD/SUB... | 2026-02-22 |
+| `kn5000-8r82` | LLVM converter: Single-byte opcode tiers for LD r32, PUSH... | 2026-02-22 |
 | `kn5000-lb20` | LLVM: Forced d8=0 displacement memory ops — ~234 instruct... | 2026-02-22 |
 | `kn5000-pdzd` | LLVM: Rare register prefix sub-opcodes (C8-EF) — 250 inst... | 2026-02-22 |
 | `kn5000-cpx9` | LLVM: Post-increment/pre-decrement addressing (C4/C5/D4/D... | 2026-02-22 |
@@ -1978,11 +1860,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-1zlp` | LLVM converter: Native LD with memory operands (~40,000+ ... | 2026-02-22 |
 | `kn5000-pb3w` | LLVM converter: Native CP/BIT/SET/RES short forms (~9,427... | 2026-02-22 |
 | `kn5000-xcz` | LLVM converter: Native shift/rotate instructions (~2,781 ... | 2026-02-22 |
-| `kn5000-nfa` | LLVM converter: Native PUSH/POP r16 and PUSH/POP SR (~2,1... | 2026-02-22 |
-| `kn5000-aq9` | LLVM converter: Native 8/16-bit register immediate loads ... | 2026-02-22 |
-| `kn5000-3lw` | LLVM Phase 3: Native JR/JRL/CALR support complete | 2026-02-22 |
 
-*...and 42 more closed issues*
+*...and 45 more closed issues*
 
 ---
 
@@ -1994,7 +1873,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 71 |
+| Medium | 68 |
 | Low | 22 |
 | P4 | 1 |
 
@@ -2008,11 +1887,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 68 |
+| Other | 65 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-22 20:55*
+*Last updated: 2026-02-22 21:01*
