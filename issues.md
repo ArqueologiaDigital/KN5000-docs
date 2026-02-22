@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 180 (125 open, 55 closed)
+**Total Issues:** 186 (124 open, 62 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (69) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (68) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1216,14 +1216,6 @@ The converter must match the EXACT LLVM syntax that the backend expects for memo
 
 ---
 
-#### 🟡 LLVM converter: Replace extpfx with semantic register-indirect instructions (~12,000) {#issue-kn5000-1c7d}
-
-**ID:** `kn5000-1c7d` | **Priority:** Medium | **Created:** 2026-02-22
-
-Convert extpfx pseudo-instructions that use C0-C7/D0-D7/E0-E7/F0-F5 prefix bytes into semantic native instructions with proper register names and mnemonics. Currently 13,038 extpfx lines emit correct bytes but have no semantic meaning — the assembler doesn't understand what instruction they represent. The converter needs to decode the prefix byte to identify the base register and addressing mode, then the sub-opcode to identify the operation (LD, CP, ADD, etc.), and emit a proper native LLVM instruction. Top operations inside extpfx: LD (2,587), JR (1,141), EXTZ (1,025), CALL (566), CP (496), CALR (372), PUSH/POP (~700), LDA (324), ADD (280).
-
----
-
 #### 🟡 LLVM converter: Single-byte opcode tiers for LD r32, PUSH, POP, LDA (~2,500 .byte) {#issue-kn5000-8r82}
 
 **ID:** `kn5000-8r82` | **Priority:** Medium | **Created:** 2026-02-22
@@ -1969,6 +1961,13 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-lb20` | LLVM: Forced d8=0 displacement memory ops — ~234 instruct... | 2026-02-22 |
+| `kn5000-pdzd` | LLVM: Rare register prefix sub-opcodes (C8-EF) — 250 inst... | 2026-02-22 |
+| `kn5000-cpx9` | LLVM: Post-increment/pre-decrement addressing (C4/C5/D4/D... | 2026-02-22 |
+| `kn5000-jhi3` | LLVM: Extended register prefix (C7/D7/E7) — ~4,678 instru... | 2026-02-22 |
+| `kn5000-1061` | LLVM: Complex register-indirect addressing (C3/D3/E3/F3) ... | 2026-02-22 |
+| `kn5000-bquc` | LLVM: Remaining memory prefix sub-opcodes (80-BF) — ~427 ... | 2026-02-22 |
+| `kn5000-1c7d` | LLVM converter: Replace extpfx with semantic register-ind... | 2026-02-22 |
 | `kn5000-1b1i` | LLVM converter: data formatting improvements — .ascii/.lo... | 2026-02-22 |
 | `kn5000-61vj` | LLVM converter: remaining sub-opcodes — RLD, RETI, INCF (... | 2026-02-22 |
 | `kn5000-js1z` | LLVM converter: unresolved JR/JRL branch labels (~1.5K .b... | 2026-02-22 |
@@ -1982,15 +1981,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-nfa` | LLVM converter: Native PUSH/POP r16 and PUSH/POP SR (~2,1... | 2026-02-22 |
 | `kn5000-aq9` | LLVM converter: Native 8/16-bit register immediate loads ... | 2026-02-22 |
 | `kn5000-3lw` | LLVM Phase 3: Native JR/JRL/CALR support complete | 2026-02-22 |
-| `kn5000-001` | LLVM: Symbolic labels, comment cleanup, and label shift b... | 2026-02-22 |
-| `kn5000-vz7` | LLVM output: symbolic JP/CALL labels and comment cleanup | 2026-02-21 |
-| `kn5000-95a` | LLVM parallel build: Phase 3 - Progressive native instruc... | 2026-02-21 |
-| `kn5000-6p6` | LLVM Phase 3a complete: per-instruction .byte with 100% R... | 2026-02-21 |
-| `kn5000-17u` | LLVM parallel build: Phase 2 (.byte fallback) complete | 2026-02-21 |
-| `kn5000-3ei` | LLVM parallel build: Phase 2 - Replace .incbin with conve... | 2026-02-21 |
-| `kn5000-q51` | Review deferred DMA macro renames in tmp94c241.inc (DMAC↔... | 2026-02-21 |
 
-*...and 35 more closed issues*
+*...and 42 more closed issues*
 
 ---
 
@@ -2002,7 +1994,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 72 |
+| Medium | 71 |
 | Low | 22 |
 | P4 | 1 |
 
@@ -2016,11 +2008,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 69 |
+| Other | 68 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-22 18:58*
+*Last updated: 2026-02-22 20:55*
