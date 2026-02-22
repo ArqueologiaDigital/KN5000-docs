@@ -37,8 +37,10 @@ PR 2 (EI/RETI shadow) ──┘
 ## PR 1: TLCS-900/H --- LDC Control Register Mapping for TMP94C241 DMA Registers {#pr1}
 
 <div style="background: #fff3cd; border: 3px solid #ffc107; border-radius: 8px; padding: 16px; margin: 16px 0; font-size: 1.1em;">
-<strong>&#9888;&#65039; REVIEW STATUS:</strong> All PRs on this page were drafted with AI assistance (Claude). <strong>Only this PR (PR 1) has been fully reviewed</strong> by the author (Felipe Sanches) and <a href="https://github.com/mamedev/mame/pull/14970">submitted upstream</a>. PRs 2&ndash;5 are still under human review and may be tweaked before submission.
+<strong>&#9888;&#65039; REVIEW STATUS:</strong> All PRs on this page were drafted with AI assistance (Claude). <strong>PRs 1&ndash;3 have been fully reviewed</strong> by the author (Felipe Sanches) and submitted upstream. PRs 4&ndash;5 are still under human review and may be tweaked before submission.
 </div>
+
+**Upstream PR:** [mamedev/mame#14970](https://github.com/mamedev/mame/pull/14970) (merged)
 
 **Branch:** [`kn5000_pr1_ldc_cr_mapping`](https://github.com/felipesanches/mame/tree/kn5000_pr1_ldc_cr_mapping)
 
@@ -100,6 +102,8 @@ The TMP94C241 control register map is documented in the Toshiba TMP94C241F Data 
 
 ## PR 2: TLCS-900/H --- EI/RETI Interrupt Acceptance Shadow {#pr2}
 
+**Upstream PR:** [mamedev/mame#14995](https://github.com/mamedev/mame/pull/14995) (merged)
+
 **Branch:** [`kn5000_pr2_irq_inhibit`](https://github.com/felipesanches/mame/tree/kn5000_pr2_irq_inhibit)
 
 ### Summary
@@ -149,6 +153,8 @@ Toshiba TLCS-900/H Programming Manual, Section 8.2: "After the EI instruction or
 
 ## PR 3: TMP94C241 --- DMA Subsystem (HDMA + DMAR) and Port Read Fix {#pr3}
 
+**Upstream PR:** [mamedev/mame#15003](https://github.com/mamedev/mame/pull/15003) (open)
+
 **Branch:** [`kn5000_pr3_dma_and_port`](https://github.com/felipesanches/mame/tree/kn5000_pr3_dma_and_port)
 
 **Depends on:** PR 1 + PR 2
@@ -170,7 +176,6 @@ Additionally, `port_r()` always returned the external pin level, but real TMP94C
 ### Changes
 
 - **`tmp94c241.h`**:
-  - Move the interrupt register enum (`INTE45`, `INTE67`, ..., `INTNMWDT`) from the `.cpp` file to the header. This makes the enum accessible to the serial sub-device (PR 4) for setting interrupt flags.
   - Add declarations for `tlcs900_process_hdma()`, `tlcs900_process_software_dma()`, and `dmar_w()`.
 
 - **`tmp94c241.cpp`**:
