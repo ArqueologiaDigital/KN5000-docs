@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 191 (120 open, 71 closed)
+**Total Issues:** 192 (119 open, 73 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (64) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (63) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1441,14 +1441,6 @@ This helps understand the full data flow.
 
 ---
 
-#### ⚪ LLVM converter: Add RLD, RRD, RETI, INCF/DECF sub-opcodes (~300 .byte) {#issue-kn5000-gwsz}
-
-**ID:** `kn5000-gwsz` | **Priority:** Low | **Created:** 2026-02-22
-
-Add instruction definitions and converter tiers for remaining rare single-byte opcodes: RLD/RRD rotate digit (0x10-0x15, ~130 groups), RETI return from interrupt (0x1F, ~90 groups), INCF/DECF increment/decrement flag register (0x07, ~80 groups). These are low-frequency instructions that need both LLVM backend instruction definitions and converter tier matching.
-
----
-
 #### ⚪ LLVM converter: Data formatting improvements (.ascii, .long, .short) {#issue-kn5000-f6d8}
 
 **ID:** `kn5000-f6d8` | **Priority:** Low | **Created:** 2026-02-22
@@ -1832,6 +1824,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-nvz7` | LLVM converter: reduce instruction .byte fallbacks to min... | 2026-02-22 |
+| `kn5000-gwsz` | LLVM converter: Add RLD, RRD, RETI, INCF/DECF sub-opcodes... | 2026-02-22 |
 | `kn5000-7egk` | LLVM: Add bank register prefix (C7/D7/E7) support (~16 in... | 2026-02-22 |
 | `kn5000-cw5c` | LLVM converter: Semantic direct-addressing instructions (... | 2026-02-22 |
 | `kn5000-ov84` | LLVM converter: Fix unresolved JR/JRL branch labels (~1,5... | 2026-02-22 |
@@ -1850,10 +1844,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-1c7d` | LLVM converter: Replace extpfx with semantic register-ind... | 2026-02-22 |
 | `kn5000-1b1i` | LLVM converter: data formatting improvements — .ascii/.lo... | 2026-02-22 |
 | `kn5000-61vj` | LLVM converter: remaining sub-opcodes — RLD, RETI, INCF (... | 2026-02-22 |
-| `kn5000-js1z` | LLVM converter: unresolved JR/JRL branch labels (~1.5K .b... | 2026-02-22 |
-| `kn5000-qgz3` | LLVM converter: single-byte opcode tiers for LD r32/#imm,... | 2026-02-22 |
 
-*...and 51 more closed issues*
+*...and 53 more closed issues*
 
 ---
 
@@ -1866,7 +1858,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Critical | 2 |
 | High | 28 |
 | Medium | 67 |
-| Low | 22 |
+| Low | 21 |
 | P4 | 1 |
 
 ### By Category
@@ -1879,11 +1871,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 64 |
+| Other | 63 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-22 22:17*
+*Last updated: 2026-02-23 00:06*
