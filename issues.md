@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 195 (120 open, 75 closed)
+**Total Issues:** 197 (122 open, 75 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (64) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (66) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1095,6 +1095,18 @@ Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
+#### 🟡 LLVM converter: 2 remaining TMP94C241-specific LD (XIX+d8), imm8 fallbacks {#issue-kn5000-amhh}
+
+**ID:** `kn5000-amhh` | **Priority:** Medium | **Created:** 2026-02-23
+
+---
+
+#### 🟡 LLVM converter: 4 LD XHL, imm32 instructions stuck as .byte due to ASL db encoding {#issue-kn5000-6r49}
+
+**ID:** `kn5000-6r49` | **Priority:** Medium | **Created:** 2026-02-23
+
+---
+
 #### 🟡 LLVM converter: drifted Fmm medley labels (4 fallbacks) {#issue-kn5000-azj7}
 
 **ID:** `kn5000-azj7` | **Priority:** Medium | **Created:** 2026-02-23
@@ -1872,7 +1884,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 68 |
+| Medium | 70 |
 | Low | 21 |
 | P4 | 1 |
 
@@ -1886,11 +1898,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 64 |
+| Other | 66 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-23 07:26*
+*Last updated: 2026-02-23 07:52*
