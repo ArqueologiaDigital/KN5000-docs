@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 216 (118 open, 98 closed)
+**Total Issues:** 216 (117 open, 99 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (62) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (61) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -869,12 +869,6 @@ Need to:
 4. Document relationship to Program Change messages
 
 Reference: SOUND_DATA_SECTION_PTRS at 0xE023B0 in maincpu.
-
----
-
-#### 🟡 Decode remaining 199 x_ extended addressing mode instructions to proper TLCS-900 mnemonics {#issue-kn5000-e8qs}
-
-**ID:** `kn5000-e8qs` | **Priority:** Medium | **Created:** 2026-02-23
 
 ---
 
@@ -1798,6 +1792,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-e8qs` | Decode remaining 199 x_ extended addressing mode instruct... | 2026-02-23 |
 | `kn5000-h1fe` | Replace extended addressing mode wrappers with native LLV... | 2026-02-23 |
 | `kn5000-5il7` | LLVM backend: Replace all raw encoding wrappers with sema... | 2026-02-23 |
 | `kn5000-07bj` | Milestone: Zero .byte fallbacks across all 6 ROMs (279,44... | 2026-02-23 |
@@ -1817,9 +1812,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-de13` | LLVM converter: JRL T falls back to .byte (1 fallback) | 2026-02-23 |
 | `kn5000-otg7` | LLVM converter: JR T $+2 delay NOP has no target label (3... | 2026-02-23 |
 | `kn5000-2ic6` | LLVM converter: PUSH imm16 mnemonic mismatch (51 fallbacks) | 2026-02-23 |
-| `kn5000-j5d2` | Convert all ROM sources to LLVM syntax (multi-ROM support) | 2026-02-23 |
 
-*...and 78 more closed issues*
+*...and 79 more closed issues*
 
 ---
 
@@ -1831,7 +1825,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 67 |
+| Medium | 66 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1845,11 +1839,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 62 |
+| Other | 61 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-23 19:17*
+*Last updated: 2026-02-23 20:15*
