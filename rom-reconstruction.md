@@ -35,12 +35,12 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 
 | ROM | Size | Match % | Bytes Off | Source File |
 |-----|------|---------|-----------|-------------|
-| Main CPU | 2MB | **100%** | 0 | `maincpu/kn5000_v10_program.asm` |
-| Sub CPU Payload | 192KB | **100%** | 0 | `subcpu/kn5000_subprogram_v142.asm` |
-| Sub CPU Boot | 128KB | **100%** | 0 | `subcpu_boot/kn5000_subcpu_boot.asm` |
-| Table Data | 2MB | **100%** | 0 | `table_data/kn5000_table_data.asm` |
-| Custom Data | 1MB | - | - | No source yet |
-| HDAE5000 (HD Expansion) | 512KB | **100%** | 0 | `hdae5000/hd-ae5000_v2_06i.asm` |
+| Main CPU | 2MB | **100%** | 0 | `maincpu/kn5000_v10_program.s` |
+| Sub CPU Payload | 192KB | **100%** | 0 | `subcpu/kn5000_subprogram_v142.s` |
+| Sub CPU Boot | 128KB | **100%** | 0 | `subcpu/boot/kn5000_subcpu_boot.s` |
+| Table Data | 2MB | **100%** | 0 | `table_data/kn5000_table_data.s` |
+| Custom Data | 1MB | **100%** | 0 | `custom_data/kn5000_custom_data.s` |
+| HDAE5000 (HD Expansion) | 512KB | **100%** | 0 | `hdae5000/hd-ae5000_v2_06i.s` |
 
 ### Disassembly Status Visualization
 
@@ -79,28 +79,26 @@ Reference disassembly files (`.unidasm`) are generated with MAME's `unidasm` too
 
 ## Assembler
 
-The project uses **ASL (Alfred Arnold's Macro Assembler)** version 1.42 Beta.
+The project uses a **custom LLVM backend** (`llvm-mc -triple=tlcs900`) for assembly. All 278,941 instructions are encoded natively — no workaround macros needed.
 
 **Build Process:**
-1. ASL assembles `.asm` files to `.p` intermediate format
-2. `p2bin` converts `.p` to binary `.rom` files
-3. `compare_roms.py` verifies byte-for-byte match against originals
+1. `llvm-mc` assembles `.s` files to ELF object files
+2. `ld.lld` links with a linker script to set the ROM base address
+3. `llvm-objcopy` extracts the raw binary from the ELF
+4. `compare_roms.py` verifies byte-for-byte match against originals
 
-**Note:** ASL embeds a version signature in `.p` files (e.g., "AS 1.42 Beta [Bld 298]"), but `p2bin` strips this metadata when generating the final `.rom` files, so no post-processing is needed.
-
-**Challenge**: ASL only supports TMP96C141, not TMP94C241F. Unsupported instructions are handled via macros in `tmp94c241.inc` that emit raw byte sequences.
+**History:** The project originally used ASL (Alfred Arnold's Macro Assembler), which only supported TMP96C141 — requiring 110+ workaround macros for TMP94C241F-specific instructions. The LLVM backend was developed to encode all TLCS-900/H2 instructions natively. ASL sources are archived in `archive/asl/` for reference.
 
 ## Milestone: 100% Byte-Matching ROMs
 
-As of January 2026, **all five firmware ROMs** rebuild with 100% byte accuracy:
+As of February 2026, **all six ROMs** rebuild with 100% byte accuracy using LLVM assembly (278,941 native instructions, 0 workaround macros):
 
-- **Main CPU** (2MB) - Complete disassembly with symbolic labels
-- **Sub CPU Payload** (192KB) - Full protocol implementation
-- **Sub CPU Boot** (128KB) - Boot ROM with VGA initialization
-- **Table Data** (2MB) - Feature demo, wallpapers, icons, bootloader
-- **HDAE5000** (512KB) - Hard disk expansion firmware
-
-The only remaining target is the **Custom Data** ROM (1MB), which contains user storage and doesn't require disassembly for emulation.
+- **Main CPU** (2MB) - Complete disassembly with symbolic labels (239,683 instructions)
+- **Sub CPU Payload** (192KB) - Full protocol implementation (35,721 instructions)
+- **Sub CPU Boot** (128KB) - Boot ROM with VGA initialization (1,357 instructions)
+- **Table Data** (2MB) - Feature demo, wallpapers, icons, bootloader (1,677 instructions)
+- **HDAE5000** (512KB) - Hard disk expansion firmware (502 instructions)
+- **Custom Data** (1MB) - User storage (data-only, byte-exact reconstruction)
 
 ## Source File Organization
 
@@ -110,79 +108,79 @@ The Main CPU disassembly is organized into modular source files for maintainabil
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `maincpu/kn5000_v10_program.asm` | ~337,000 | Main source file (includes others) |
-| `maincpu/gui_constants.asm` | 57 | Display state variables, offscreen buffers |
-| `maincpu/fdc_constants.asm` | 75 | FDC I/O addresses, commands, status bits |
-| `maincpu/fdc_routines.asm` | 1,403 | FDC read/write/seek routines |
-| `maincpu/midi_encoder_constants.asm` | 85 | MIDI CC and encoder RAM/ROM addresses |
-| `maincpu/midi_encoder_routines.asm` | 268 | Encoder dispatch and MIDI CC processing |
-| `maincpu/cpanel_constants.asm` | 164 | Control panel state, buffers, button/LED mappings |
-| `maincpu/cpanel_routines.asm` | 1,506 | Control panel serial protocol handlers |
-| `maincpu/sysex_routines.asm` | 239 | MIDI System Exclusive message handlers |
-| `maincpu/demo_routines.asm` | 290 | Feature Demo mode handlers |
-| `maincpu/computer_interface_config.asm` | 310 | Computer Interface connection configuration |
-| `maincpu/computer_interface_pcg.asm` | 703 | Computer Interface PCG (Program Change) output |
-| `maincpu/midi_serial_routines.asm` | 995 | MIDI serial communication (SC0) |
-| `maincpu/sound_editor_routines.asm` | 629 | Sound Editor mode and title functions |
-| `maincpu/file_io/title_handlers.asm` | 349 | File I/O title entry handlers |
-| `maincpu/file_io/disk_operations.asm` | 1,297 | File copy, rename, format, disk info |
-| `maincpu/file_io/filename_password.asm` | 807 | Filename and password UI |
-| `maincpu/file_io/composer_filters.asm` | 968 | Composer load and filter operations |
-| `maincpu/file_io/smf_operations.asm` | 1,312 | Standard MIDI File operations |
-| `maincpu/file_io/wallpaper.asm` | 519 | Wallpaper loading |
-| `maincpu/file_io/single_load.asm` | 2,298 | Single file load operations |
-| `maincpu/file_io/medley.asm` | 4,690 | Medley playback (disk, internal, SMF, PD, doc) |
-| `maincpu/file_io/misc_ui.asm` | 969 | Jump insert, priority, setup, filename box |
-| `maincpu/sequencer_reference.asm` | 163 | Sequencer function index (reference only) |
+| `maincpu/kn5000_v10_program.s` | ~337,000 | Main source file (includes others) |
+| `maincpu/gui_constants.s` | 57 | Display state variables, offscreen buffers |
+| `maincpu/fdc_constants.s` | 75 | FDC I/O addresses, commands, status bits |
+| `maincpu/fdc_routines.s` | 1,403 | FDC read/write/seek routines |
+| `maincpu/midi_encoder_constants.s` | 85 | MIDI CC and encoder RAM/ROM addresses |
+| `maincpu/midi_encoder_routines.s` | 268 | Encoder dispatch and MIDI CC processing |
+| `maincpu/cpanel_constants.s` | 164 | Control panel state, buffers, button/LED mappings |
+| `maincpu/cpanel_routines.s` | 1,506 | Control panel serial protocol handlers |
+| `maincpu/sysex_routines.s` | 239 | MIDI System Exclusive message handlers |
+| `maincpu/demo_routines.s` | 290 | Feature Demo mode handlers |
+| `maincpu/computer_interface_config.s` | 310 | Computer Interface connection configuration |
+| `maincpu/computer_interface_pcg.s` | 703 | Computer Interface PCG (Program Change) output |
+| `maincpu/midi_serial_routines.s` | 995 | MIDI serial communication (SC0) |
+| `maincpu/sound_editor_routines.s` | 629 | Sound Editor mode and title functions |
+| `maincpu/file_io/title_handlers.s` | 349 | File I/O title entry handlers |
+| `maincpu/file_io/disk_operations.s` | 1,297 | File copy, rename, format, disk info |
+| `maincpu/file_io/filename_password.s` | 807 | Filename and password UI |
+| `maincpu/file_io/composer_filters.s` | 968 | Composer load and filter operations |
+| `maincpu/file_io/smf_operations.s` | 1,312 | Standard MIDI File operations |
+| `maincpu/file_io/wallpaper.s` | 519 | Wallpaper loading |
+| `maincpu/file_io/single_load.s` | 2,298 | Single file load operations |
+| `maincpu/file_io/medley.s` | 4,690 | Medley playback (disk, internal, SMF, PD, doc) |
+| `maincpu/file_io/misc_ui.s` | 969 | Jump insert, priority, setup, filename box |
+| `maincpu/sequencer_reference.s` | 163 | Sequencer function index (reference only) |
 
 **Total extracted code: ~20,000 lines across 24 files**
 
 **Subsystem Descriptions:**
 
 **FDC (Floppy Disk Controller):**
-- `fdc_constants.asm`: Memory-mapped I/O addresses (0x110000 base), command codes (uPD765-compatible), status register bit definitions
-- `fdc_routines.asm`: Complete FDC handler including `FDC_COMMAND_DISPATCHER`, `FDC_HANDLER_01` through `FDC_HANDLER_11`, `Reset_Floppy_Disk_Controller`, `Check_for_Floppy_Disk_Change`
+- `fdc_constants.s`: Memory-mapped I/O addresses (0x110000 base), command codes (uPD765-compatible), status register bit definitions
+- `fdc_routines.s`: Complete FDC handler including `FDC_COMMAND_DISPATCHER`, `FDC_HANDLER_01` through `FDC_HANDLER_11`, `Reset_Floppy_Disk_Controller`, `Check_for_Floppy_Disk_Change`
 
 **MIDI/Encoder:**
-- `midi_encoder_constants.asm`: MIDI CC value storage, raw encoder inputs, lookup table addresses
-- `midi_encoder_routines.asm`: `CPanel_EncoderDispatch`, `Encoder_ProcessModwheel`, `Encoder_ProcessVolume`, `Encoder_ProcessBreath`, `Encoder_ProcessFoot`, `Encoder_ProcessExpression`
+- `midi_encoder_constants.s`: MIDI CC value storage, raw encoder inputs, lookup table addresses
+- `midi_encoder_routines.s`: `CPanel_EncoderDispatch`, `Encoder_ProcessModwheel`, `Encoder_ProcessVolume`, `Encoder_ProcessBreath`, `Encoder_ProcessFoot`, `Encoder_ProcessExpression`
 
 **Control Panel:**
-- `cpanel_constants.asm`: State machine variables, RX/TX buffers, button state arrays with bit mappings, LED row/pattern mappings
-- `cpanel_routines.asm`: Serial protocol handlers (`CPanel_SM_*`), packet processors (`CPanel_RX_*`), LED control, buffer management
+- `cpanel_constants.s`: State machine variables, RX/TX buffers, button state arrays with bit mappings, LED row/pattern mappings
+- `cpanel_routines.s`: Serial protocol handlers (`CPanel_SM_*`), packet processors (`CPanel_RX_*`), LED control, buffer management
 
 **SysEx (System Exclusive):**
-- `sysex_routines.asm`: `ExcSendFunc`, `ExcPmemFunc` (Panel Memory), `ExcSmemFunc` (Sound Memory), `ExcCompFunc` (Composer), `ExcSeqFunc` (Sequence), `ExcMspFunc` (MSP)
+- `sysex_routines.s`: `ExcSendFunc`, `ExcPmemFunc` (Panel Memory), `ExcSmemFunc` (Sound Memory), `ExcCompFunc` (Composer), `ExcSeqFunc` (Sequence), `ExcMspFunc` (MSP)
 
 **Feature Demo:**
-- `demo_routines.asm`: `DemoModeFunc`, `DemoStyleTtlFunc`, `DemoSoundTtlFunc`, `DemoRhyTtlFunc`
+- `demo_routines.s`: `DemoModeFunc`, `DemoStyleTtlFunc`, `DemoSoundTtlFunc`, `DemoRhyTtlFunc`
 
 **Computer Interface:**
-- `computer_interface_config.asm`: `TtComputerConnection`, `MdCmptCnctFunc`, `MdPcgModeFunc`, `MdDrumTypeFunc`, `MdSetupLoadFunc`
-- `computer_interface_pcg.asm`: `TtMdPcgOut`, `AcPcgOutGridBoxProc`, `PcgOutGridCheck`, `PcgOutSendFunc`, `MainPcgOutSend`
+- `computer_interface_config.s`: `TtComputerConnection`, `MdCmptCnctFunc`, `MdPcgModeFunc`, `MdDrumTypeFunc`, `MdSetupLoadFunc`
+- `computer_interface_pcg.s`: `TtMdPcgOut`, `AcPcgOutGridBoxProc`, `PcgOutGridCheck`, `PcgOutSendFunc`, `MainPcgOutSend`
 
 **MIDI Serial (SC0):**
-- `midi_serial_routines.asm`: `INTTX0_HANDLER`, `INTRX0_HANDLER`, `READ_COM_SELECT_SWITCH`, SC0 initialization
+- `midi_serial_routines.s`: `INTTX0_HANDLER`, `INTRX0_HANDLER`, `READ_COM_SELECT_SWITCH`, SC0 initialization
 
 **Sound Editor:**
-- `sound_editor_routines.asm`: 32 Sound Editor functions including `SeMenuModeFunc`, `SeMenuTitleFunc`, `SeEasyTitleFunc`, `SeTonTon1/2TitleFunc`, `SePitPit1TitleFunc`, `SeAmpAmp1/2TitleFunc`, `SeFilLpq1TitleFunc`, `SeDigEffTitleFunc`, `SeCtr2/3TitleFunc`, `SeCopyTitleFunc`, `SeWrtMemTitleFunc`, `SeWrtSndTitleFunc`
+- `sound_editor_routines.s`: 32 Sound Editor functions including `SeMenuModeFunc`, `SeMenuTitleFunc`, `SeEasyTitleFunc`, `SeTonTon1/2TitleFunc`, `SePitPit1TitleFunc`, `SeAmpAmp1/2TitleFunc`, `SeFilLpq1TitleFunc`, `SeDigEffTitleFunc`, `SeCtr2/3TitleFunc`, `SeCopyTitleFunc`, `SeWrtMemTitleFunc`, `SeWrtSndTitleFunc`
 
 **File I/O & Disk Operations** (in `maincpu/file_io/` subdirectory):
-- `title_handlers.asm`: Entry handlers (`LoadTtlJgFunc`, `SaveTtlJgFunc`, `SetupFlashFunc`, `FmmUtilityTitleFunc`)
-- `disk_operations.asm`: File operations (`FileCopyFunc`, `FileRenameFunc`, `FmmFormatFunc`, `DiskNameFunc`, `DiskInfoFunc`)
-- `filename_password.asm`: UI routines (`FmmPasswordFunc`, `FmmFileNameFunc`)
-- `composer_filters.asm`: Composer and filters (`FmmComposerLoadFunc`, `FmmLoadFilterFunc`, `FmmSaveFilterFunc`)
-- `smf_operations.asm`: Standard MIDI File (`FmmSmfLoadTitleFunc`, `SmfLoadAsFunc`, `FmmSmfFileNameFunc`)
-- `wallpaper.asm`: Wallpaper loading (`FmmWallpaperLoadFunc`)
-- `single_load.asm`: Single file load (`SingleLoadModeFunc`, `SingleLoadSrcFunc`, `SingleLoadDstFunc`)
-- `medley.asm`: All medley modes (`FmmIntMedleyFunc`, `FmmDiskMedley*Func`, `FmmSmfMedleyFunc`, `FmmDocMedleyFunc`)
-- `misc_ui.asm`: Utilities (`JumpInsertFunc`, `SetupOkFunc`, `PsFileNameBoxProc`)
+- `title_handlers.s`: Entry handlers (`LoadTtlJgFunc`, `SaveTtlJgFunc`, `SetupFlashFunc`, `FmmUtilityTitleFunc`)
+- `disk_operations.s`: File operations (`FileCopyFunc`, `FileRenameFunc`, `FmmFormatFunc`, `DiskNameFunc`, `DiskInfoFunc`)
+- `filename_password.s`: UI routines (`FmmPasswordFunc`, `FmmFileNameFunc`)
+- `composer_filters.s`: Composer and filters (`FmmComposerLoadFunc`, `FmmLoadFilterFunc`, `FmmSaveFilterFunc`)
+- `smf_operations.s`: Standard MIDI File (`FmmSmfLoadTitleFunc`, `SmfLoadAsFunc`, `FmmSmfFileNameFunc`)
+- `wallpaper.s`: Wallpaper loading (`FmmWallpaperLoadFunc`)
+- `single_load.s`: Single file load (`SingleLoadModeFunc`, `SingleLoadSrcFunc`, `SingleLoadDstFunc`)
+- `medley.s`: All medley modes (`FmmIntMedleyFunc`, `FmmDiskMedley*Func`, `FmmSmfMedleyFunc`, `FmmDocMedleyFunc`)
+- `misc_ui.s`: Utilities (`JumpInsertFunc`, `SetupOkFunc`, `PsFileNameBoxProc`)
 
 **Sequencer (Reference Only):**
-- `sequencer_reference.asm`: Documents 61 sequencer functions scattered across the ROM (not extracted due to interleaving with other code)
+- `sequencer_reference.s`: Documents 61 sequencer functions scattered across the ROM (not extracted due to interleaving with other code)
 
 **GUI Constants:**
-- `gui_constants.asm`: Display dirty flags (0x0205E4), offscreen buffer addresses (0x043C00, 0x056800, 0x05FE00, 0x069400), screen dimensions (320x240 @ 8bpp)
+- `gui_constants.s`: Display dirty flags (0x0205E4), offscreen buffer addresses (0x043C00, 0x056800, 0x05FE00, 0x069400), screen dimensions (320x240 @ 8bpp)
 
 **Palettes:**
 
@@ -314,13 +312,13 @@ The disassembly now uses actual shared source files that are included by both RO
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `shared/vga_constants.asm` | 58 | VGA register addresses and constants |
-| `shared/vga_init_sequence.asm` | 135 | VGA initialization data tables |
-| `shared/vga_init_epilogue.asm` | 28 | VGA init completion code |
-| `shared/vga_io.asm` | 51 | VGA register I/O routines (byte-identical) |
-| `shared/boot_call_init_handlers.asm` | 87 | Init handler dispatch (conditional assembly) |
-| `shared/boot_code_routines.asm` | 630 | Boot initialization routines |
-| `shared/lzss_routines.asm` | 85 | LZSS compression decoder |
+| `shared/vga_constants.s` | 58 | VGA register addresses and constants |
+| `shared/vga_init.s` | 135 | VGA initialization data tables |
+| `shared/vga_init.s` | 28 | VGA init completion code |
+| `shared/vga_io.s` | 51 | VGA register I/O routines (byte-identical) |
+| `shared/boot_call_init_handlers.s` | 87 | Init handler dispatch (conditional assembly) |
+| `shared/boot_routines.s` | 630 | Boot initialization routines |
+| `shared/boot_routines.s` | 85 | LZSS compression decoder |
 
 **Total shared source: 1,074 lines across 7 files**
 
@@ -339,7 +337,7 @@ The disassembly now uses actual shared source files that are included by both RO
 Some shared routines have minor encoding differences between ROMs (e.g., byte vs word comparison, different helper addresses). These are handled with conditional assembly:
 
 ```asm
-; Example from boot_call_init_handlers.asm
+; Example from boot_call_init_handlers.s
 IF INIT_FLAG_COMPARE_WORD
   ; table_data: CP (0xFFFEEE), 0xFFFF (7 bytes)
   db 0D2h, 0EEh, 0FEh, 0FFh, 03Fh, 0FFh, 0FFh
