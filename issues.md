@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 197 (122 open, 75 closed)
+**Total Issues:** 197 (120 open, 77 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (66) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (64) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1095,18 +1095,6 @@ Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
-#### 🟡 LLVM converter: 2 remaining TMP94C241-specific LD (XIX+d8), imm8 fallbacks {#issue-kn5000-amhh}
-
-**ID:** `kn5000-amhh` | **Priority:** Medium | **Created:** 2026-02-23
-
----
-
-#### 🟡 LLVM converter: 4 LD XHL, imm32 instructions stuck as .byte due to ASL db encoding {#issue-kn5000-6r49}
-
-**ID:** `kn5000-6r49` | **Priority:** Medium | **Created:** 2026-02-23
-
----
-
 #### 🟡 LLVM converter: drifted Fmm medley labels (4 fallbacks) {#issue-kn5000-azj7}
 
 **ID:** `kn5000-azj7` | **Priority:** Medium | **Created:** 2026-02-23
@@ -1851,6 +1839,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-amhh` | LLVM converter: 2 remaining TMP94C241-specific LD (XIX+d8... | 2026-02-23 |
+| `kn5000-6r49` | LLVM converter: 4 LD XHL, imm32 instructions stuck as .by... | 2026-02-23 |
 | `kn5000-jwzk` | LLVM converter: LDW (n),#imm16 I/O register writes (2 fal... | 2026-02-23 |
 | `kn5000-r9n3` | LLVM converter: JR T to VGA_SEQUENCER macro CALR (1 fallb... | 2026-02-23 |
 | `kn5000-nvz7` | LLVM converter: reduce instruction .byte fallbacks to min... | 2026-02-22 |
@@ -1869,10 +1859,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-cpx9` | LLVM: Post-increment/pre-decrement addressing (C4/C5/D4/D... | 2026-02-22 |
 | `kn5000-jhi3` | LLVM: Extended register prefix (C7/D7/E7) — ~4,678 instru... | 2026-02-22 |
 | `kn5000-1061` | LLVM: Complex register-indirect addressing (C3/D3/E3/F3) ... | 2026-02-22 |
-| `kn5000-bquc` | LLVM: Remaining memory prefix sub-opcodes (80-BF) — ~427 ... | 2026-02-22 |
-| `kn5000-1c7d` | LLVM converter: Replace extpfx with semantic register-ind... | 2026-02-22 |
 
-*...and 55 more closed issues*
+*...and 57 more closed issues*
 
 ---
 
@@ -1884,7 +1872,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 70 |
+| Medium | 68 |
 | Low | 21 |
 | P4 | 1 |
 
@@ -1898,11 +1886,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 66 |
+| Other | 64 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-23 07:52*
+*Last updated: 2026-02-23 08:03*
