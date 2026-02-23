@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 199 (121 open, 78 closed)
+**Total Issues:** 200 (122 open, 78 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (65) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (66) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -899,6 +899,12 @@ Reference: SOUND_DATA_SECTION_PTRS at 0xE023B0 in maincpu.
 #### 🟡 Block overflow: 2328 instructions emitted as comments due to block buffer exhaustion {#issue-kn5000-hhj1}
 
 **ID:** `kn5000-hhj1` | **Priority:** Medium | **Created:** 2026-02-23
+
+---
+
+#### 🟡 Convert all ROM sources to LLVM syntax (multi-ROM support) {#issue-kn5000-j5d2}
+
+**ID:** `kn5000-j5d2` | **Priority:** Medium | **Created:** 2026-02-23
 
 ---
 
@@ -1878,7 +1884,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 69 |
+| Medium | 70 |
 | Low | 21 |
 | P4 | 1 |
 
@@ -1892,11 +1898,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 65 |
+| Other | 66 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-23 09:49*
+*Last updated: 2026-02-23 10:52*
