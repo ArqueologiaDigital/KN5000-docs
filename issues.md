@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 208 (129 open, 79 closed)
+**Total Issues:** 208 (121 open, 87 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (73) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (65) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -1101,70 +1101,6 @@ Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
-#### 🟡 LLVM backend+converter: SWI instruction not emitted (1 fallback) {#issue-kn5000-mr3i}
-
-**ID:** `kn5000-mr3i` | **Priority:** Medium | **Created:** 2026-02-23
-
-SWI 7 (opcode 0xFF = 0xF8|7). Single-byte instruction with vector embedded in opcode. The LLVM backend SWI definition is wrong (2 bytes instead of 1). Converter has no tier to emit SWI. Fix both. 1 instance in subcpu_payload.
-
----
-
-#### 🟡 LLVM backend: add LDW memory-to-memory instruction (1 fallback) {#issue-kn5000-mfvh}
-
-**ID:** `kn5000-mfvh` | **Priority:** Medium | **Created:** 2026-02-23
-
-LDW_16_16 (mem),(mem) — opcode 0xD1 prefix with sub-opcode 0x19. Memory-to-memory word transfer. The LLVM backend has no instruction definition for this encoding. Need to add LDMM16. 1 instance in subcpu_payload.
-
----
-
-#### 🟡 LLVM converter: CALR fails for some label targets (18 fallbacks) {#issue-kn5000-wb81}
-
-**ID:** `kn5000-wb81` | **Priority:** Medium | **Created:** 2026-02-23
-
-CALR (0x1E + d16) works for most targets but falls back in FDC routines section of table_data. The label lookup in Tier 10 fails for these addresses. Need to investigate why ADDR_TO_LABEL misses these targets. All 18 in table_data.
-
----
-
-#### 🟡 LLVM converter: INCW/SRLW with (XSP+d) addressing not handled (7 fallbacks) {#issue-kn5000-q70f}
-
-**ID:** `kn5000-q70f` | **Priority:** Medium | **Created:** 2026-02-23
-
-INCW n,(XSP+offset) opcode 0x9F prefix: 6 fallbacks. SRLW (XSP+d): 1 fallback. Plus INCW n,(addr) direct: 1 fallback. Converter tiers don't handle these addressing modes. All in table_data.
-
----
-
-#### 🟡 LLVM converter: JR T $+2 delay NOP has no target label (30 fallbacks) {#issue-kn5000-otg7}
-
-**ID:** `kn5000-otg7` | **Priority:** Medium | **Created:** 2026-02-23
-
-jr T, $+2 (opcode 0x68 0x00) is used as a delay NOP (jump to next instruction). Tier 8 fails because no label exists at addr+2. Fix: detect displacement=0 and emit a synthetic local label. Affects subcpu_boot (28) and table_data (2).
-
----
-
-#### 🟡 LLVM converter: JR cc with local labels falls back (7 fallbacks) {#issue-kn5000-a0mw}
-
-**ID:** `kn5000-a0mw` | **Priority:** Medium | **Created:** 2026-02-23
-
-JR Z/NZ/C with local label targets (.wait_loop, .wdi_wait_remove, etc.) fall back because ADDR_TO_LABEL doesn't find the target. The qualified local labels may not be registered. All 7 in table_data.
-
----
-
-#### 🟡 LLVM converter: JRL T falls back to .byte (1 fallback) {#issue-kn5000-de13}
-
-**ID:** `kn5000-de13` | **Priority:** Medium | **Created:** 2026-02-23
-
-JRL T, Boot_Init+014Bh (opcode 0x78 + d16) falls back because mnem_upper is 'JRL_T' not 'JRL'. Or label arithmetic (Boot_Init+014Bh) isn't resolved. 1 instance in table_data.
-
----
-
-#### 🟡 LLVM converter: PUSH imm16 mnemonic mismatch (51 fallbacks) {#issue-kn5000-2ic6}
-
-**ID:** `kn5000-2ic6` | **Priority:** Medium | **Created:** 2026-02-23
-
-Tier 23 checks mnem_upper == 'PUSHW' but ASL source uses 'PUSH'. Fix: also accept 'PUSH' in the condition. Affects table_data (51 instances). Opcode 0x0B + imm16_LE = 3 bytes.
-
----
-
 #### 🟡 LLVM converter: drifted Fmm medley labels (4 fallbacks) {#issue-kn5000-azj7}
 
 **ID:** `kn5000-azj7` | **Priority:** Medium | **Created:** 2026-02-23
@@ -1909,6 +1845,14 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-mfvh` | LLVM backend: add LDW memory-to-memory instruction (1 fal... | 2026-02-23 |
+| `kn5000-q70f` | LLVM converter: INCW/SRLW with (XSP+d) addressing not han... | 2026-02-23 |
+| `kn5000-a0mw` | LLVM converter: JR cc with local labels falls back (7 fal... | 2026-02-23 |
+| `kn5000-wb81` | LLVM converter: CALR fails for some label targets (18 fal... | 2026-02-23 |
+| `kn5000-mr3i` | LLVM backend+converter: SWI instruction not emitted (1 fa... | 2026-02-23 |
+| `kn5000-de13` | LLVM converter: JRL T falls back to .byte (1 fallback) | 2026-02-23 |
+| `kn5000-otg7` | LLVM converter: JR T $+2 delay NOP has no target label (3... | 2026-02-23 |
+| `kn5000-2ic6` | LLVM converter: PUSH imm16 mnemonic mismatch (51 fallbacks) | 2026-02-23 |
 | `kn5000-j5d2` | Convert all ROM sources to LLVM syntax (multi-ROM support) | 2026-02-23 |
 | `kn5000-6oxr` | Block overflow: 2,328 instructions emitted as comments in... | 2026-02-23 |
 | `kn5000-amhh` | LLVM converter: 2 remaining TMP94C241-specific LD (XIX+d8... | 2026-02-23 |
@@ -1921,16 +1865,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-cw5c` | LLVM converter: Semantic direct-addressing instructions (... | 2026-02-22 |
 | `kn5000-ov84` | LLVM converter: Fix unresolved JR/JRL branch labels (~1,5... | 2026-02-22 |
 | `kn5000-6nst` | LLVM converter: Fix label-drift relative branches (JR/JRL... | 2026-02-22 |
-| `kn5000-a6uy` | LLVM converter: Split macro expansion .byte lines into in... | 2026-02-22 |
-| `kn5000-28dn` | LLVM converter: Split chunked multi-instruction .byte blo... | 2026-02-22 |
-| `kn5000-2th1` | LLVM converter: Native LDA (load effective address) (~11,... | 2026-02-22 |
-| `kn5000-iwmk` | LLVM converter: Native memory-operand ALU (AND/OR/ADD/SUB... | 2026-02-22 |
-| `kn5000-8r82` | LLVM converter: Single-byte opcode tiers for LD r32, PUSH... | 2026-02-22 |
-| `kn5000-lb20` | LLVM: Forced d8=0 displacement memory ops — ~234 instruct... | 2026-02-22 |
-| `kn5000-pdzd` | LLVM: Rare register prefix sub-opcodes (C8-EF) — 250 inst... | 2026-02-22 |
-| `kn5000-cpx9` | LLVM: Post-increment/pre-decrement addressing (C4/C5/D4/D... | 2026-02-22 |
 
-*...and 59 more closed issues*
+*...and 67 more closed issues*
 
 ---
 
@@ -1942,7 +1878,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 77 |
+| Medium | 69 |
 | Low | 21 |
 | P4 | 1 |
 
@@ -1956,11 +1892,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 73 |
+| Other | 65 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-23 11:19*
+*Last updated: 2026-02-23 12:42*
