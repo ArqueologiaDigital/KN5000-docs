@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 216 (117 open, 99 closed)
+**Total Issues:** 221 (115 open, 106 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (61) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (59) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -648,22 +648,6 @@ Update mame_driver/ reference files:
 - Ensure CC handlers match discovered behavior
 
 Reference: audio-subsystem.md, midi-subsystem.md, inter-cpu-protocol.md
-
----
-
-#### 🟠 Mines: Fix garbled graphics on KN5000 playfield screenshot {#issue-kn5000-1iy}
-
-**ID:** `kn5000-1iy` | **Priority:** High | **Created:** 2026-02-21
-
-**Notes:** The screenshot of the playfield drawn on the KN5000 screen clearly shows garbled graphics. The minesweeper game board is not rendering correctly. Need to investigate the rendering code (video.c, tiles.c) and fix the drawing so the board displays properly.
-
----
-
-#### 🟠 Mines: Only Mines Game button should activate game from DISK MENU {#issue-kn5000-3z6}
-
-**ID:** `kn5000-3z6` | **Priority:** High | **Created:** 2026-02-21
-
-**Notes:** At the DISK MENU, pressing other buttons also activates the Mines game. Need to ensure that ONLY the Mines Game button (specific event/button index) activates the game, while other buttons retain their original firmware behavior. The Mines_Handler in startup.s likely needs to check which button was pressed before activating.
 
 ---
 
@@ -1792,6 +1776,13 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-1iy` | Mines: Fix garbled graphics on KN5000 playfield screenshot | 2026-02-23 |
+| `kn5000-3z6` | Mines: Only Mines Game button should activate game from D... | 2026-02-23 |
+| `kn5000-nw1y` | LLVM codegen: 8/16-bit native operation patterns | 2026-02-23 |
+| `kn5000-7q2k` | LLVM codegen: direct addressing patterns for global/stati... | 2026-02-23 |
+| `kn5000-j2uc` | LLVM codegen: short LD encoding forms for small constants | 2026-02-23 |
+| `kn5000-0os2` | LLVM codegen: INC/DEC selection for add/sub 1-8 | 2026-02-23 |
+| `kn5000-gkqf` | Complete TLCS-900 MCDisassembler coverage | 2026-02-23 |
 | `kn5000-e8qs` | Decode remaining 199 x_ extended addressing mode instruct... | 2026-02-23 |
 | `kn5000-h1fe` | Replace extended addressing mode wrappers with native LLV... | 2026-02-23 |
 | `kn5000-5il7` | LLVM backend: Replace all raw encoding wrappers with sema... | 2026-02-23 |
@@ -1805,15 +1796,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-hhj1` | Block overflow: 2328 instructions emitted as comments due... | 2026-02-23 |
 | `kn5000-azj7` | LLVM converter: drifted Fmm medley labels (4 fallbacks) | 2026-02-23 |
 | `kn5000-mfvh` | LLVM backend: add LDW memory-to-memory instruction (1 fal... | 2026-02-23 |
-| `kn5000-q70f` | LLVM converter: INCW/SRLW with (XSP+d) addressing not han... | 2026-02-23 |
-| `kn5000-a0mw` | LLVM converter: JR cc with local labels falls back (7 fal... | 2026-02-23 |
-| `kn5000-wb81` | LLVM converter: CALR fails for some label targets (18 fal... | 2026-02-23 |
-| `kn5000-mr3i` | LLVM backend+converter: SWI instruction not emitted (1 fa... | 2026-02-23 |
-| `kn5000-de13` | LLVM converter: JRL T falls back to .byte (1 fallback) | 2026-02-23 |
-| `kn5000-otg7` | LLVM converter: JR T $+2 delay NOP has no target label (3... | 2026-02-23 |
-| `kn5000-2ic6` | LLVM converter: PUSH imm16 mnemonic mismatch (51 fallbacks) | 2026-02-23 |
 
-*...and 79 more closed issues*
+*...and 86 more closed issues*
 
 ---
 
@@ -1824,7 +1808,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 28 |
+| High | 26 |
 | Medium | 66 |
 | Low | 20 |
 | P4 | 1 |
@@ -1839,11 +1823,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 61 |
+| Other | 59 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-23 20:15*
+*Last updated: 2026-02-23 22:38*
