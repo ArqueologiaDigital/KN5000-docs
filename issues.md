@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 208 (121 open, 87 closed)
+**Total Issues:** 209 (120 open, 89 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (65) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (64) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -896,12 +896,6 @@ Reference: SOUND_DATA_SECTION_PTRS at 0xE023B0 in maincpu.
 
 ---
 
-#### 🟡 Block overflow: 2328 instructions emitted as comments due to block buffer exhaustion {#issue-kn5000-hhj1}
-
-**ID:** `kn5000-hhj1` | **Priority:** Medium | **Created:** 2026-02-23
-
----
-
 #### 🟡 Design MAME HLE device for control panel {#issue-kn5000-qhm}
 
 **ID:** `kn5000-qhm` | **Priority:** Medium | **Created:** 2026-01-25
@@ -1101,18 +1095,9 @@ Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
-#### 🟡 LLVM converter: drifted Fmm medley labels (4 fallbacks) {#issue-kn5000-azj7}
+#### 🟡 LLVM migration: Phase 4 scaffolding removal (deferred) {#issue-kn5000-du3c}
 
-**ID:** `kn5000-azj7` | **Priority:** Medium | **Created:** 2026-02-23
-
-Four .byte fallbacks for JRL/CALR to Fmm medley function labels:
-- JRL T, FmmSmfMedleyFunc (lines 309196, 314038 as CALR)
-- JRL T, FmmPdMedleyFunc (line 309212)
-- CALR FmmDiskMedleySelectFunc (line 309220)
-
-These labels exist in the LLVM output but at wrong addresses (drifted). The converter's address tracker accumulates errors before reaching these labels, so the computed branch offset doesn't match the ROM bytes.
-
-Fix approach: trace the address tracking from the segment start to identify where the byte count goes wrong. Likely a mislabeled LABEL_XXXXXX (like the FE730F→FE7310 fix) or incorrect instruction size in get_instruction_size_from_rom().
+**ID:** `kn5000-du3c` | **Priority:** Medium | **Created:** 2026-02-23
 
 ---
 
@@ -1845,6 +1830,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-hhj1` | Block overflow: 2328 instructions emitted as comments due... | 2026-02-23 |
+| `kn5000-azj7` | LLVM converter: drifted Fmm medley labels (4 fallbacks) | 2026-02-23 |
 | `kn5000-mfvh` | LLVM backend: add LDW memory-to-memory instruction (1 fal... | 2026-02-23 |
 | `kn5000-q70f` | LLVM converter: INCW/SRLW with (XSP+d) addressing not han... | 2026-02-23 |
 | `kn5000-a0mw` | LLVM converter: JR cc with local labels falls back (7 fal... | 2026-02-23 |
@@ -1863,10 +1850,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-gwsz` | LLVM converter: Add RLD, RRD, RETI, INCF/DECF sub-opcodes... | 2026-02-22 |
 | `kn5000-7egk` | LLVM: Add bank register prefix (C7/D7/E7) support (~16 in... | 2026-02-22 |
 | `kn5000-cw5c` | LLVM converter: Semantic direct-addressing instructions (... | 2026-02-22 |
-| `kn5000-ov84` | LLVM converter: Fix unresolved JR/JRL branch labels (~1,5... | 2026-02-22 |
-| `kn5000-6nst` | LLVM converter: Fix label-drift relative branches (JR/JRL... | 2026-02-22 |
 
-*...and 67 more closed issues*
+*...and 69 more closed issues*
 
 ---
 
@@ -1878,7 +1863,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 69 |
+| Medium | 68 |
 | Low | 21 |
 | P4 | 1 |
 
@@ -1892,11 +1877,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 65 |
+| Other | 64 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-23 12:42*
+*Last updated: 2026-02-23 14:14*
