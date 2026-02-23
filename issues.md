@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 210 (120 open, 90 closed)
+**Total Issues:** 214 (117 open, 97 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (64) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (61) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -735,30 +735,6 @@ Trace execution flow through all CPanel_SM_* state machine handlers (states 0-10
 
 ---
 
-#### 🟡 ASL Macros: Document new TMP94C241 instruction encodings {#issue-kn5000-3o6}
-
-**ID:** `kn5000-3o6` | **Priority:** Medium | **Created:** 2026-01-25
-
-Several new macros were added to tmp94c241.inc during subcpu_boot disassembly:
-
-Jump/Call macros:
-- JRL_T target: Jump relative long (78 LL HH) - 3 bytes vs jp's 4 bytes
-- CALR target: Call relative (1e LL HH) - 3 bytes vs call's 4 bytes  
-- CALL_ABS24 target: Call absolute 24-bit (1d LL MM HH)
-
-Block transfer macros:
-- LDIR_94: Block copy with TMP94C241 encoding (83 11 vs ASL's 85 11)
-
-Register load macros (for correct immediate encoding):
-- LD_A value: Load A with immediate (21 nn)
-- LD_D value: Load D with immediate (24 nn)
-
-These address encoding differences between TMP94C241 and TMP96C141 (which ASL targets).
-
-TODO: Document general encoding patterns for creating future macros.
-
----
-
 #### 🟡 Analyze ROTA/ROTB rotary encoder circuit {#issue-kn5000-xhi}
 
 **ID:** `kn5000-xhi` | **Priority:** Medium | **Created:** 2026-01-25
@@ -1092,14 +1068,6 @@ Tasks:
 The data appears to be 8-bit indexed color (lots of 0xF7 bytes = likely background color).
 
 Reference: Investigation of ROM word-level interleaving fix
-
----
-
-#### 🟡 LLVM migration Phase 3: Restore modular file organization {#issue-kn5000-sj5r}
-
-**ID:** `kn5000-sj5r` | **Priority:** Medium | **Created:** 2026-02-23
-
-Replace monolithic LLVM .s files with modular includes matching ASL file structure. Emit separate .s files per include (31 for maincpu), use .include directives, shared includes as shared .s files, update Makefile -I flags. Part of the ASL-to-LLVM migration plan (Phase 3, after scaffolding removal).
 
 ---
 
@@ -1446,14 +1414,6 @@ This helps understand the full data flow.
 - Documented build process for homebrew
 - At least one working example program
 - Community can build and test code
-
----
-
-#### ⚪ LLVM converter: Data formatting improvements (.ascii, .long, .short) {#issue-kn5000-f6d8}
-
-**ID:** `kn5000-f6d8` | **Priority:** Low | **Created:** 2026-02-22
-
-Improve readability of the ~90,000 data .byte lines by emitting higher-level directives where appropriate: .ascii for ASCII string data, .long for aligned 32-bit values, .short for aligned 16-bit values, .zero for zero-fill regions. This is a cosmetic/readability improvement — it doesn't change the binary output. Requires detecting data regions (consecutive .byte without instruction context) and pattern-matching for strings, aligned values, and zero runs.
 
 ---
 
@@ -1832,6 +1792,13 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-5il7` | LLVM backend: Replace all raw encoding wrappers with sema... | 2026-02-23 |
+| `kn5000-07bj` | Milestone: Zero .byte fallbacks across all 6 ROMs (279,44... | 2026-02-23 |
+| `kn5000-f6d8` | LLVM converter: Data formatting improvements (.ascii, .lo... | 2026-02-23 |
+| `kn5000-72q0` | LLVM migration Phase 6: Final documentation cleanup | 2026-02-23 |
+| `kn5000-3o6` | ASL Macros: Document new TMP94C241 instruction encodings | 2026-02-23 |
+| `kn5000-0du3` | LLVM migration Phase 5: Promote LLVM sources to authorita... | 2026-02-23 |
+| `kn5000-sj5r` | LLVM migration Phase 3: Restore modular file organization | 2026-02-23 |
 | `kn5000-du3c` | LLVM migration: Phase 4 scaffolding removal (deferred) | 2026-02-23 |
 | `kn5000-hhj1` | Block overflow: 2328 instructions emitted as comments due... | 2026-02-23 |
 | `kn5000-azj7` | LLVM converter: drifted Fmm medley labels (4 fallbacks) | 2026-02-23 |
@@ -1845,15 +1812,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-2ic6` | LLVM converter: PUSH imm16 mnemonic mismatch (51 fallbacks) | 2026-02-23 |
 | `kn5000-j5d2` | Convert all ROM sources to LLVM syntax (multi-ROM support) | 2026-02-23 |
 | `kn5000-6oxr` | Block overflow: 2,328 instructions emitted as comments in... | 2026-02-23 |
-| `kn5000-amhh` | LLVM converter: 2 remaining TMP94C241-specific LD (XIX+d8... | 2026-02-23 |
-| `kn5000-6r49` | LLVM converter: 4 LD XHL, imm32 instructions stuck as .by... | 2026-02-23 |
-| `kn5000-jwzk` | LLVM converter: LDW (n),#imm16 I/O register writes (2 fal... | 2026-02-23 |
-| `kn5000-r9n3` | LLVM converter: JR T to VGA_SEQUENCER macro CALR (1 fallb... | 2026-02-23 |
-| `kn5000-nvz7` | LLVM converter: reduce instruction .byte fallbacks to min... | 2026-02-22 |
-| `kn5000-gwsz` | LLVM converter: Add RLD, RRD, RETI, INCF/DECF sub-opcodes... | 2026-02-22 |
-| `kn5000-7egk` | LLVM: Add bank register prefix (C7/D7/E7) support (~16 in... | 2026-02-22 |
 
-*...and 70 more closed issues*
+*...and 77 more closed issues*
 
 ---
 
@@ -1865,8 +1825,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 28 |
-| Medium | 68 |
-| Low | 21 |
+| Medium | 66 |
+| Low | 20 |
 | P4 | 1 |
 
 ### By Category
@@ -1879,11 +1839,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 64 |
+| Other | 61 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-23 14:59*
+*Last updated: 2026-02-23 17:00*
