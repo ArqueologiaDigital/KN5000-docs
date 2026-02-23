@@ -79,7 +79,7 @@ Reference disassembly files (`.unidasm`) are generated with MAME's `unidasm` too
 
 ## Assembler
 
-The project uses a **custom LLVM backend** (`llvm-mc -triple=tlcs900`) for assembly. All 278,941 instructions are encoded natively — no workaround macros needed.
+The project uses a **custom LLVM backend** (`llvm-mc -triple=tlcs900`) for assembly. All 279,441 instructions are encoded natively — no workaround macros needed.
 
 **Build Process:**
 1. `llvm-mc` assembles `.s` files to ELF object files
@@ -91,12 +91,12 @@ The project uses a **custom LLVM backend** (`llvm-mc -triple=tlcs900`) for assem
 
 ## Milestone: 100% Byte-Matching ROMs
 
-As of February 2026, **all six ROMs** rebuild with 100% byte accuracy using LLVM assembly (278,941 native instructions, 0 workaround macros):
+As of February 2026, **all six ROMs** rebuild with 100% byte accuracy using LLVM assembly (279,441 native instructions, 0 workaround macros):
 
 - **Main CPU** (2MB) - Complete disassembly with symbolic labels (239,683 instructions)
 - **Sub CPU Payload** (192KB) - Full protocol implementation (35,721 instructions)
 - **Sub CPU Boot** (128KB) - Boot ROM with VGA initialization (1,357 instructions)
-- **Table Data** (2MB) - Feature demo, wallpapers, icons, bootloader (1,677 instructions)
+- **Table Data** (2MB) - Feature demo, wallpapers, icons, bootloader (1,678 instructions)
 - **HDAE5000** (512KB) - Hard disk expansion firmware (502 instructions)
 - **Custom Data** (1MB) - User storage (data-only, byte-exact reconstruction)
 
