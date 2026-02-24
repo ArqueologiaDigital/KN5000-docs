@@ -8,7 +8,7 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 223 (115 open, 108 closed)
+**Total Issues:** 224 (115 open, 109 closed)
 
 **Quick Links:** 
 [Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (59) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
@@ -1047,12 +1047,6 @@ Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
-#### 🟡 LLVM: INC/DEC flag definition mismatch for 16/32-bit registers {#issue-kn5000-udw7}
-
-**ID:** `kn5000-udw7` | **Priority:** Medium | **Created:** 2026-02-24
-
----
-
 #### 🟡 MAME: Input/Control subsystem emulation milestone {#issue-kn5000-1vz}
 
 **ID:** `kn5000-1vz` | **Priority:** Medium | **Created:** 2026-01-31
@@ -1404,6 +1398,14 @@ This helps understand the full data flow.
 **ID:** `kn5000-9a0` | **Priority:** Low | **Created:** 2026-01-25
 
 Keep the kn5000-docs Jekyll website in sync with reverse engineering progress. Update status, add findings, maintain open questions list. Website repo: claude_jail/kn5000-docs/
+
+---
+
+#### ⚪ Mines: Game exit and cleanup (QUIT button, remove auto-activate, clean debug markers) {#issue-kn5000-dnsp}
+
+**ID:** `kn5000-dnsp` | **Priority:** Low | **Created:** 2026-02-24
+
+Game is fully functional (display, input, game logic). Remaining cleanup: (1) QUIT button should cleanly return display ownership to firmware, (2) Remove auto-activate in Boot_Init for interactive builds, (3) Remove diagnostic debug markers from startup.s and main.c. Low priority since game works correctly as-is.
 
 ---
 
@@ -1774,6 +1776,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-udw7` | LLVM: INC/DEC flag definition mismatch for 16/32-bit regi... | 2026-02-24 |
 | `kn5000-qea` | Mines: Re-enable control panel input for gameplay | 2026-02-24 |
 | `kn5000-gaha` | Mines: Display ownership — firmware overwrites game VRAM | 2026-02-24 |
 | `kn5000-1iy` | Mines: Fix garbled graphics on KN5000 playfield screenshot | 2026-02-23 |
@@ -1793,9 +1796,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-0du3` | LLVM migration Phase 5: Promote LLVM sources to authorita... | 2026-02-23 |
 | `kn5000-sj5r` | LLVM migration Phase 3: Restore modular file organization | 2026-02-23 |
 | `kn5000-du3c` | LLVM migration: Phase 4 scaffolding removal (deferred) | 2026-02-23 |
-| `kn5000-hhj1` | Block overflow: 2328 instructions emitted as comments due... | 2026-02-23 |
 
-*...and 88 more closed issues*
+*...and 89 more closed issues*
 
 ---
 
@@ -1807,8 +1809,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 25 |
-| Medium | 67 |
-| Low | 20 |
+| Medium | 66 |
+| Low | 21 |
 | P4 | 1 |
 
 ### By Category
@@ -1828,4 +1830,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-02-24 06:44*
+*Last updated: 2026-02-24 06:49*
