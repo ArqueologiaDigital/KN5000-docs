@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 223 (116 open, 107 closed)
+**Total Issues:** 223 (115 open, 108 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (60) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (59) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -648,14 +648,6 @@ Update mame_driver/ reference files:
 - Ensure CC handlers match discovered behavior
 
 Reference: audio-subsystem.md, midi-subsystem.md, inter-cpu-protocol.md
-
----
-
-#### 🟠 Mines: Re-enable control panel input for gameplay {#issue-kn5000-qea}
-
-**ID:** `kn5000-qea` | **Priority:** High | **Created:** 2026-02-21
-
-**Notes:** The Mines homebrew game renders correctly on the KN5000 LCD but input is disabled (early return at input.c:64). Next steps: (1) Re-enable control panel input, (2) Implement firmware-mediated input via workspace UI callbacks, (3) Handle game exit and return display to firmware. Related: HDAE5000 extension board interface, workspace pointer system documented in Mines CLAUDE.md.
 
 ---
 
@@ -1782,6 +1774,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-qea` | Mines: Re-enable control panel input for gameplay | 2026-02-24 |
 | `kn5000-gaha` | Mines: Display ownership — firmware overwrites game VRAM | 2026-02-24 |
 | `kn5000-1iy` | Mines: Fix garbled graphics on KN5000 playfield screenshot | 2026-02-23 |
 | `kn5000-3z6` | Mines: Only Mines Game button should activate game from D... | 2026-02-23 |
@@ -1801,9 +1794,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-sj5r` | LLVM migration Phase 3: Restore modular file organization | 2026-02-23 |
 | `kn5000-du3c` | LLVM migration: Phase 4 scaffolding removal (deferred) | 2026-02-23 |
 | `kn5000-hhj1` | Block overflow: 2328 instructions emitted as comments due... | 2026-02-23 |
-| `kn5000-azj7` | LLVM converter: drifted Fmm medley labels (4 fallbacks) | 2026-02-23 |
 
-*...and 87 more closed issues*
+*...and 88 more closed issues*
 
 ---
 
@@ -1814,7 +1806,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 26 |
+| High | 25 |
 | Medium | 67 |
 | Low | 20 |
 | P4 | 1 |
@@ -1829,11 +1821,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 60 |
+| Other | 59 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-24 06:40*
+*Last updated: 2026-02-24 06:44*
