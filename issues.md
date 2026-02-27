@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (118 open, 118 closed)
+**Total Issues:** 237 (117 open, 119 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (4) · [Image Extraction](#image-extraction) (6) · [Other](#other) (63) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (4) · [Image Extraction](#image-extraction) (6) · [Other](#other) (62) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -880,29 +880,6 @@ Based on protocol documentation, design the C++ interface for a MAME HLE device 
 **ID:** `kn5000-kc5` | **Priority:** Medium | **Created:** 2026-01-26
 
 **Notes:** At address 0xF97D8D there's a jump table that references routines at F97696, F976E4, F97835, F97C21, F97C7C, F96BBF, F96BD0, F97984, F97C4B, F97C54, F97C5B, and F96D95. These routines are currently empty ORG labels. Need to disassemble the code at these addresses. Found via jump table pattern: JP T, XIX + WA with LDA XIX, LABEL_F97D8D.
-
----
-
-#### 🟡 Disassemble table_data bootloader raw db bytes to proper assembly {#issue-kn5000-m1j}
-
-**ID:** `kn5000-m1j` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** The table_data bootloader contains many routines as raw db bytes with comments. These should be converted to proper assembly for readability and maintainability.
-
-Priority regions (matching maincpu routines):
-- Init_Display_Progress (0x9FCD9A) - currently db bytes, maincpu has VRAM_FillRect
-- Boot utility routines (0x9FBC3C)
-- Boot init routines (0x9FB4F2)
-
-Approach:
-1. Use maincpu disassembly as reference (has proper labels)
-2. Convert db bytes to proper TLCS-900 instructions
-3. Use macros from tmp94c241.inc for unsupported opcodes
-4. Add meaningful labels matching maincpu where applicable
-
-This will make the table_data bootloader easier to understand and maintain.
-
-Reference: maincpu VRAM_FillRect at 0xEF50DF, rom-reconstruction.md
 
 ---
 
@@ -1802,6 +1779,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-kuu` | HDAE5000: Disassemble ROM at 0x280000 | 2026-02-27 |
 | `kn5000-jior` | LLVM: Add previous register bank (QWA/QBC/QDE/QHL/QIX/QIY... | 2026-02-27 |
 | `kn5000-o6jd` | LLVM: Support symbolic condition codes in callcc_24 and j... | 2026-02-27 |
 | `kn5000-fjwn` | LLVM: Replace memory-immediate instruction mnemonics (cpm... | 2026-02-27 |
@@ -1821,9 +1799,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-j2uc` | LLVM codegen: short LD encoding forms for small constants | 2026-02-23 |
 | `kn5000-0os2` | LLVM codegen: INC/DEC selection for add/sub 1-8 | 2026-02-23 |
 | `kn5000-gkqf` | Complete TLCS-900 MCDisassembler coverage | 2026-02-23 |
-| `kn5000-e8qs` | Decode remaining 199 x_ extended addressing mode instruct... | 2026-02-23 |
 
-*...and 98 more closed issues*
+*...and 99 more closed issues*
 
 ---
 
@@ -1835,7 +1812,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 25 |
-| Medium | 70 |
+| Medium | 69 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1849,11 +1826,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 4 |
 | Image Extraction | 6 |
-| Other | 63 |
+| Other | 62 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-27 21:40*
+*Last updated: 2026-02-27 21:54*
