@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (116 open, 121 closed)
+**Total Issues:** 237 (115 open, 122 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (4) · [Image Extraction](#image-extraction) (6) · [Other](#other) (61) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (4) · [Image Extraction](#image-extraction) (6) · [Other](#other) (60) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -491,14 +491,6 @@ Phase 1 represents the critical path to functional emulation.
 **Blocks:** Display rendering in MAME emulator
 **Dependencies:** None
 **Related:** kn5000-hy8 (color palette), kn5000-gln (drawing primitives)
-
----
-
-#### 🟠 Document all serial command bytes and their purposes {#issue-kn5000-p2c}
-
-**ID:** `kn5000-p2c` | **Priority:** High | **Created:** 2026-01-25
-
-Analyze maincpu code to catalog all 2-byte command sequences sent to control panel MCUs. Commands seen so far: 1f/1d/1e/dd (init), 20/25/2b (data), e0/e2/e3/eb (extended). Map each command to its purpose and expected response.
 
 ---
 
@@ -1769,6 +1761,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-p2c` | Document all serial command bytes and their purposes | 2026-02-27 |
 | `kn5000-q1wm` | HDAE5000 FS: Document on-disk format (FSB/FGB/FEB structu... | 2026-02-27 |
 | `kn5000-m1j` | Disassemble table_data bootloader raw db bytes to proper ... | 2026-02-27 |
 | `kn5000-kuu` | HDAE5000: Disassemble ROM at 0x280000 | 2026-02-27 |
@@ -1788,9 +1781,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-3z6` | Mines: Only Mines Game button should activate game from D... | 2026-02-23 |
 | `kn5000-nw1y` | LLVM codegen: 8/16-bit native operation patterns | 2026-02-23 |
 | `kn5000-7q2k` | LLVM codegen: direct addressing patterns for global/stati... | 2026-02-23 |
-| `kn5000-j2uc` | LLVM codegen: short LD encoding forms for small constants | 2026-02-23 |
 
-*...and 101 more closed issues*
+*...and 102 more closed issues*
 
 ---
 
@@ -1801,7 +1793,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 24 |
+| High | 23 |
 | Medium | 69 |
 | Low | 20 |
 | P4 | 1 |
@@ -1816,11 +1808,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 4 |
 | Image Extraction | 6 |
-| Other | 61 |
+| Other | 60 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-27 22:26*
+*Last updated: 2026-02-27 23:05*
