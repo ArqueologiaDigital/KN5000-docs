@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (103 open, 133 closed)
+**Total Issues:** 237 (100 open, 137 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (3) · [Image Extraction](#image-extraction) (5) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (3) · [Image Extraction](#image-extraction) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -242,30 +242,6 @@ Reverse engineer the Windows HD-TechManager5000 software to understand the PC si
 ---
 
 ### Image Extraction {#image-extraction}
-
-#### 🟠 Images: Find embedded image locations in table data ROM {#issue-kn5000-16s}
-
-**ID:** `kn5000-16s` | **Priority:** High | **Created:** 2026-01-25
-
-Scan the 2MB table data ROM for embedded images. This ROM likely contains most graphical assets. Look for BMP headers, icon data, splash screens, UI elements. Cross-reference with table_data/images/ directory which may already have some extractions.
-
----
-
-#### 🟡 Images: Extract all images as binary files {#issue-kn5000-pcq}
-
-**ID:** `kn5000-pcq` | **Priority:** Medium | **Created:** 2026-01-25
-
-Create extraction script to dump all identified images as individual binary files. Output to maincpu/images/ and table_data/images/ directories. Name files descriptively based on apparent purpose (icon_play.bin, splash_logo.bin, etc.). Generate manifest listing all extracted images.
-
----
-
-#### 🟡 Images: Reverse engineer image format {#issue-kn5000-36g}
-
-**ID:** `kn5000-36g` | **Priority:** Medium | **Created:** 2026-01-25
-
-Document the image format(s) used. Determine: pixel format (1bpp, 4bpp, 8bpp, RGB), dimensions encoding, palette format if indexed, compression if any, header structure. The LCD controller IC206 (MN89304) specs may indicate supported formats.
-
----
 
 #### 🟡 Images: Update assembly sources to include binary images {#issue-kn5000-4rr}
 
@@ -1640,6 +1616,10 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-pcq` | Images: Extract all images as binary files | 2026-02-27 |
+| `kn5000-36g` | Images: Reverse engineer image format | 2026-02-27 |
+| `kn5000-16s` | Images: Find embedded image locations in table data ROM | 2026-02-27 |
+| `kn5000-87u` | Images: Find embedded image locations in main CPU ROM | 2026-02-27 |
 | `kn5000-c47b` | HDAE5000 FS: Map RAM data structures used by filesystem | 2026-02-27 |
 | `kn5000-li65` | HDAE5000 FS: Annotate file operations (Save/Load/Delete/R... | 2026-02-27 |
 | `kn5000-c5gn` | HDAE5000 FS: Annotate sector allocation and VarInt encoding | 2026-02-27 |
@@ -1656,12 +1636,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-m1j` | Disassemble table_data bootloader raw db bytes to proper ... | 2026-02-27 |
 | `kn5000-kuu` | HDAE5000: Disassemble ROM at 0x280000 | 2026-02-27 |
 | `kn5000-jior` | LLVM: Add previous register bank (QWA/QBC/QDE/QHL/QIX/QIY... | 2026-02-27 |
-| `kn5000-o6jd` | LLVM: Support symbolic condition codes in callcc_24 and j... | 2026-02-27 |
-| `kn5000-fjwn` | LLVM: Replace memory-immediate instruction mnemonics (cpm... | 2026-02-27 |
-| `kn5000-gels` | LLVM: Replace 24-bit address instruction mnemonics with r... | 2026-02-27 |
-| `kn5000-c7ug` | LLVM: Replace ld_sril3/srib3/sriw3 with semantic register... | 2026-02-27 |
 
-*...and 113 more closed issues*
+*...and 117 more closed issues*
 
 ---
 
@@ -1672,8 +1648,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 20 |
-| Medium | 60 |
+| High | 19 |
+| Medium | 58 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1685,7 +1661,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Feature Demo | 11 |
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 3 |
-| Image Extraction | 5 |
+| Image Extraction | 2 |
 | Other | 51 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
@@ -1693,4 +1669,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-02-27 23:45*
+*Last updated: 2026-02-27 23:48*
