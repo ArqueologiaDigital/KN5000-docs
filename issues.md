@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (106 open, 130 closed)
+**Total Issues:** 237 (105 open, 131 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (3) · [Image Extraction](#image-extraction) (6) · [Other](#other) (53) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (3) · [Image Extraction](#image-extraction) (6) · [Other](#other) (52) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -907,14 +907,6 @@ Reference: kn5000_table_data.rom combination analysis
 
 ---
 
-#### 🟡 HDAE5000 FS: Annotate file operations (Save/Load/Delete/Rename/Format) {#issue-kn5000-li65}
-
-**ID:** `kn5000-li65` | **Priority:** Medium | **Created:** 2026-02-26
-
-The five main file operation routines are already disassembled: File_Save (381b at 0x28DA7B), File_Load (564b at 0x28DBF8), File_Delete (579b at 0x28DE2C), File_Rename (280b at 0x28E06F), File_Format (772b at 0x28E187). Add detailed annotations explaining: parameter structures, how each operation modifies the FSB/FGB/FEB, how sector allocation changes on save/delete, how directory entries are updated, and the file type dispatch logic (types 0x7E/0x58/5).
-
----
-
 #### 🟡 HDAE5000 FS: Map RAM data structures used by filesystem {#issue-kn5000-c47b}
 
 **ID:** `kn5000-c47b` | **Priority:** Medium | **Created:** 2026-02-26
@@ -1664,6 +1656,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-c5gn` | HDAE5000 FS: Annotate sector allocation and VarInt encoding | 2026-02-27 |
 | `kn5000-q7xb` | HDAE5000 FS: Annotate FS_Read_FSB with field-level comments | 2026-02-27 |
 | `kn5000-44c` | HDAE5000: Document filesystem structure | 2026-02-27 |
 | `kn5000-9ye` | Control Panel Protocol: Reverse engineer serial communica... | 2026-02-27 |
@@ -1683,9 +1676,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-c7ug` | LLVM: Replace ld_sril3/srib3/sriw3 with semantic register... | 2026-02-27 |
 | `kn5000-6abu` | HDAE5000 FS: Disassemble FS_Write_FSB (5,072 bytes at 0x2... | 2026-02-27 |
 | `kn5000-gkhu` | HDAE5000 FS: Disassemble FS_Init (3,711 bytes at 0x2870D6) | 2026-02-27 |
-| `kn5000-dnsp` | Mines: Game exit and cleanup (QUIT button, remove auto-ac... | 2026-02-24 |
 
-*...and 110 more closed issues*
+*...and 111 more closed issues*
 
 ---
 
@@ -1697,7 +1689,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 21 |
-| Medium | 62 |
+| Medium | 61 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1710,11 +1702,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 3 |
 | Image Extraction | 6 |
-| Other | 53 |
+| Other | 52 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-27 23:36*
+*Last updated: 2026-02-27 23:43*
