@@ -192,6 +192,178 @@ The firmware's workspace dispatch system provides display-related callbacks acce
 
 These callbacks are used by the original HDAE5000 firmware for integrating its UI with the main firmware's display system. Their exact protocols are under investigation.
 
+## Drawing Primitives
+
+The firmware implements a complete graphics library for rendering to offscreen buffers. All drawing targets `OFFSCREEN_BUFFER_1` (0x43C00) by default, which is then blitted to VRAM (0x1A0000) during the display update cycle.
+
+### Rendering Pipeline
+
+```
+Drawing functions write to OFFSCREEN_BUFFER_1 (0x43C00)
+     │
+     ├── SetChangeRect() expands dirty bounding box
+     │
+     └── Display update cycle blits changed regions to VRAM (0x1A0000)
+```
+
+### Address Calculation
+
+All drawing functions convert (x, y) pixel coordinates to buffer offsets using:
+
+```
+offset = y * 320 + x
+```
+
+The multiplication `y * 320` is computed via shifts: `(y << 2 + y) << 6 = y * 5 * 64`. This is implemented in the shared helper `Set_XWA_to_320_times_XDE` at `0xEF5023`.
+
+### Drawing Modes
+
+Several primitives support multiple drawing modes specified by a mode code:
+
+| Mode | Code | Operation | Description |
+|------|------|-----------|-------------|
+| Write | 0x201 | `pixel = color` | Direct pixel write |
+| Clear | 0x202 | `pixel = 0x00` | Clear pixel to zero |
+| OR | 0x203 | `pixel |= color` | Bitwise OR with color |
+| AND | 0x204 | `pixel &= color` | Bitwise AND with mask |
+| XOR | 0x205 | `pixel ^= color` | Bitwise XOR (used for cursors, selection) |
+
+### Special Colors
+
+| Color | Meaning |
+|-------|---------|
+| 0xF7 | Transparent (pixel skipped, no write) |
+| 0xF5 | Read-back: reads pixel from secondary buffer (pattern fill) |
+
+### Memory Operations
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `Copy_DE_words_from_XBC_to_XWA` | 0xEF18D7 | Block copy using LDIRW. Blits offscreen → VRAM |
+| `Fill_memory_at_XWA_with_DE_words_of_BC_value` | 0xEF18E0 | Fill memory with 16-bit pattern (buffer clear) |
+
+### Pixel Operations
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `ReadPixel` | 0xFAA7B4 | Read 8-bit color from offscreen buffer at (x, y) |
+| `ModifyPixel` | 0xFAA7E4 | Write single pixel to offscreen buffer |
+| `ModifyPixelEx` | 0xFAA84A | Extended pixel op: write/clear/OR/AND/XOR modes |
+
+### Rectangle Operations
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `VRAM_FillRect` | 0xEF50DF | Fill 6×12 pixel rect directly in VRAM with solid color |
+| `DrawWall` | 0xFABB74 | Fill entire screen from source buffer (wallpaper/splash) |
+
+### Line Drawing
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `DrawLine` | 0xFAA98A | Bresenham line from point A to point B |
+| `DrawLineEx` | 0xFAAA3E | Extended line with drawing mode (write/XOR/etc.) |
+
+Both use Bresenham's algorithm with optimized fast paths for horizontal lines (`dy = 0`), vertical lines (`dx = 0`), and general diagonal lines. The color 0xF5 triggers pattern-fill mode where each pixel's color is read from a secondary buffer instead of using a fixed color.
+
+### Bitmap/Sprite Drawing
+
+The firmware uses a **bitmap descriptor table** in ROM at `0x913000`. Each entry is 8 bytes:
+
+```
++0x00: word  width (pixels)
++0x02: word  height (rows)
++0x04: long  pixel_data_ptr (24-bit address of pixel data in ROM)
+```
+
+Bitmap pixel data is stored as packed 16-bit words (2 pixels per word). Color `0xF7` in bitmap data is treated as transparent (pixel skipped).
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `DrawBitmap` | 0xFABC3A | Draw bitmap with transparency (0xF7 = transparent) |
+| `DrawBitmapFast` | 0xFABE0E | Draw bitmap without transparency check (opaque only) |
+| `MovePixels` | 0xFABA60 | Copy rectangular pixel block within offscreen buffer |
+| `Draw_FlashMemUpdate_message_bitmap` | 0xEF5040 | Draw 224×22 monochrome (1bpp) bitmap for firmware update UI |
+
+### Text Rendering
+
+Text is rendered using a **font glyph table** in ROM at `0x945C00`. Each font entry is 16 bytes:
+
+```
++0x00: word  char_width (pixels per character)
++0x02: word  char_height (pixels)
++0x04: word  descent (below baseline)
++0x06: word  ascent (above baseline)
++0x08: long  glyph_bitmap_ptr (1bpp bitmap data, 8 pixels per byte, MSB first)
++0x0C: long  kerning_table_ptr (0 = fixed-width font)
+```
+
+Character codes are offset by 0x20 (space) before table lookup. Glyphs are rendered as 1bpp bitmaps decomposed into 8-pixel-wide vertical strips, drawn left-to-right, top-to-bottom. All text rendering clips against a specified rectangle.
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `DrawString` | 0xFACACE | Core text renderer: draws null-terminated string |
+| `DrawStringCentered` | 0xFACF17 | Center text horizontally and vertically in rect |
+| `DrawStringLeftJustify` | 0xFACFBA | Left-align text (x = rect.left + 4), center vertically |
+| `DrawStringRightJustify` | 0xFAD004 | Right-align text (x = rect.right - 4 - width) |
+| `DrawStringAlignment` | 0xFAD052 | Dispatch by mode: 0=center, 1=left, 2=right |
+| `DrawStringReverse` | 0xFAD091 | Draw with swapped fg/bg colors (selection highlight) |
+
+### Font Helper Functions
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `GetCharHeight` | 0xFB25ED | Return character height from font table (+0x02) |
+| `GetCharDescent` | 0xFB25F9 | Return character descent from font table (+0x04) |
+| `CalcTotalWidth` | 0xFB270D | Calculate total pixel width of rendered string |
+| `ConvertStrings` | 0xFB264F | Convert control codes to displayable format (0x7E prefix = escape) |
+| `WordwrapStrings` | 0xFB26D2 | Word-wrap text for multi-line layout |
+
+### Dirty Region Tracking
+
+The display update system tracks 11 independent screen regions. Each region has a dirty bit in the bitmap at `DISPLAY_DIRTY_FLAGS` (0x205E4):
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `Display_ResetDirtyFlags` | 0xEF5B27 | Clear all dirty flags and enable flag |
+| `Display_UpdateDirtyRegions` | 0xEF5B36 | Check all 11 regions, call redraw for dirty ones |
+| `Display_UpdateRegion0` | 0xEF5B8B | Status bar |
+| `Display_UpdateRegion1` | 0xEF5BE9 | Title bar |
+| `Display_UpdateRegion2` | 0xEF5C20 | Selection highlight |
+| `Display_UpdateRegion3` | 0xEF5C07 | Main content area |
+| `Display_UpdateRegion4` | 0xEF5C39 | Side panel |
+| `Display_UpdateRegion5` | 0xEF5C52 | Menu area |
+| `Display_UpdateRegion6` | 0xEF5C6B | Button labels |
+| `Display_UpdateRegion7` | 0xEF5C84 | Parameter display |
+| `Display_UpdateRegion8` | 0xEF5C9D | Value display |
+| `Display_UpdateRegion9` | 0xEF5CB6 | Indicator area |
+| `Display_UpdateRegion10` | 0xEF5CCF | Footer area |
+
+### Change Tracking
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `SetChangeRect` | 0xFAA760 | Expand dirty bounding box to include drawn region |
+
+The bounding box is maintained at:
+
+| Address | Purpose |
+|---------|---------|
+| 0x030456 | Min X (left edge) |
+| 0x030458 | Min Y (top edge) |
+| 0x03045A | Max X (right edge) |
+| 0x03045C | Max Y (bottom edge) |
+| 0x03045E | Update flag (non-zero = needs refresh) |
+
+### Offscreen Buffers
+
+| Buffer | Address | Size | Purpose |
+|--------|---------|------|---------|
+| OFFSCREEN_BUFFER_1 | 0x043C00 | 76,800 bytes | Primary render target (all drawing goes here) |
+| OFFSCREEN_BUFFER_2 | 0x056800 | 76,800 bytes | Secondary buffer (scrolling/animation) |
+| OFFSCREEN_BUFFER_3 | 0x05FE00 | 76,800 bytes | Tertiary buffer (compositing) |
+| OFFSCREEN_BUFFER_4 | 0x069400 | 76,800 bytes | Quaternary buffer (sprites/overlays) |
+
 ## Embedded Images
 
 Images extracted from firmware ROMs:
@@ -230,9 +402,9 @@ The KN5000 uses a single display mode:
 - [x] Understand display update mechanism (main loop, not VBI)
 - [x] Document MN89304 differences from standard VGA (4-bit RAMDAC, offset override)
 - [x] Identify display disable mechanism (0x0D53 bit 3)
-- [ ] Identify font rendering routines
-- [ ] Document text drawing functions
-- [ ] Map UI widget drawing primitives
+- [x] Identify font rendering routines (DrawString family, font table at 0x945C00)
+- [x] Document text drawing functions (DrawString, Centered, Left/Right, Reverse, Alignment)
+- [x] Map UI widget drawing primitives (pixel, line, rect, bitmap, text, blit)
 - [ ] Understand page transition effects
 - [ ] Document workspace display callbacks (0x0124, 0x0278, 0x0534) protocols
 
