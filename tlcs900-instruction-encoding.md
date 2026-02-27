@@ -271,7 +271,7 @@ As of February 2026, the following summarizes what the custom LLVM TLCS-900 back
 
 ### Known Encoding Issues
 
-1. **Displacement treated as signed:** The LLVM backend treats the 8-bit displacement in `(R+d8)` addressing as signed (range −128 to +127). The TLCS-900/H hardware uses unsigned displacement (0–255). This means displacements 128–255 cannot be encoded via the assembler.
+1. **Displacement is signed:** The 8-bit displacement in `(R+d8)` addressing modes is **signed** (range −128 to +127). This is confirmed by MAME's TLCS-900 emulator (`(int8_t)m_op` cast in `900tbl.hxx`). The LLVM backend correctly handles both positive and negative displacements. Example: `ld wa, (xsp-56)` produces byte `0xC8` for the displacement (−56 in two's complement).
 
 2. **d8=0 optimization:** When displacement is 0, LLVM optimizes `(R+0)` to the shorter `(R)` form, producing different byte sequences than the firmware which uses explicit `(R+0)`.
 
