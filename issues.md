@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (105 open, 131 closed)
+**Total Issues:** 237 (103 open, 133 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (3) · [Image Extraction](#image-extraction) (6) · [Other](#other) (52) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (3) · [Image Extraction](#image-extraction) (5) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -242,14 +242,6 @@ Reverse engineer the Windows HD-TechManager5000 software to understand the PC si
 ---
 
 ### Image Extraction {#image-extraction}
-
-#### 🟠 Images: Find embedded image locations in main CPU ROM {#issue-kn5000-87u}
-
-**ID:** `kn5000-87u` | **Priority:** High | **Created:** 2026-01-25
-
-Scan the main CPU ROM for embedded images. Look for: BMP headers (0x42 0x4D), consistent pixel data patterns, references in code to image addresses, LCD display routines that load image data. Document offset, size, and apparent format for each image found.
-
----
 
 #### 🟠 Images: Find embedded image locations in table data ROM {#issue-kn5000-16s}
 
@@ -904,14 +896,6 @@ Reference: kn5000_table_data.rom combination analysis
 - All placeholder pages have substantive content
 - Code references link to assembly symbols
 - Each page has at least one diagram or table
-
----
-
-#### 🟡 HDAE5000 FS: Map RAM data structures used by filesystem {#issue-kn5000-c47b}
-
-**ID:** `kn5000-c47b` | **Priority:** Medium | **Created:** 2026-02-26
-
-Create a comprehensive map of all RAM addresses used by the HDAE5000 filesystem code. Known so far: 0x22AA9C (filesystem buffer base, 20 entries), 0x22B430 (sector data table, 20KB), 0x230884 (directory entry table, 40 x 9-byte entries), 0x230E72 (entry count), 0x229D99-0x229DAE (CHS params + state flags from ATA IDENTIFY), 0x23A1A2 (dispatch pointer), 0x2304E0-0x2304EE (file save state). Document each field's purpose, size, and which routines read/write it.
 
 ---
 
@@ -1656,6 +1640,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-c47b` | HDAE5000 FS: Map RAM data structures used by filesystem | 2026-02-27 |
+| `kn5000-li65` | HDAE5000 FS: Annotate file operations (Save/Load/Delete/R... | 2026-02-27 |
 | `kn5000-c5gn` | HDAE5000 FS: Annotate sector allocation and VarInt encoding | 2026-02-27 |
 | `kn5000-q7xb` | HDAE5000 FS: Annotate FS_Read_FSB with field-level comments | 2026-02-27 |
 | `kn5000-44c` | HDAE5000: Document filesystem structure | 2026-02-27 |
@@ -1674,10 +1660,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-fjwn` | LLVM: Replace memory-immediate instruction mnemonics (cpm... | 2026-02-27 |
 | `kn5000-gels` | LLVM: Replace 24-bit address instruction mnemonics with r... | 2026-02-27 |
 | `kn5000-c7ug` | LLVM: Replace ld_sril3/srib3/sriw3 with semantic register... | 2026-02-27 |
-| `kn5000-6abu` | HDAE5000 FS: Disassemble FS_Write_FSB (5,072 bytes at 0x2... | 2026-02-27 |
-| `kn5000-gkhu` | HDAE5000 FS: Disassemble FS_Init (3,711 bytes at 0x2870D6) | 2026-02-27 |
 
-*...and 111 more closed issues*
+*...and 113 more closed issues*
 
 ---
 
@@ -1688,8 +1672,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 21 |
-| Medium | 61 |
+| High | 20 |
+| Medium | 60 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1701,12 +1685,12 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Feature Demo | 11 |
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 3 |
-| Image Extraction | 6 |
-| Other | 52 |
+| Image Extraction | 5 |
+| Other | 51 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-27 23:43*
+*Last updated: 2026-02-27 23:45*
