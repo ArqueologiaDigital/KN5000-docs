@@ -8,56 +8,14 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (100 open, 137 closed)
+**Total Issues:** 237 (89 open, 148 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (3) · [Image Extraction](#image-extraction) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11) · [Video & Display](#video-display) (6)
 
 ---
 
 ## Open Issues
-
-### Boot Sequence {#boot-sequence}
-
-#### 🟡 Boot: Document HDAE5000 detection and init {#issue-kn5000-izk}
-
-**ID:** `kn5000-izk` | **Priority:** Medium | **Created:** 2026-01-25
-
-Trace how main CPU detects presence of HD-AE5000 expansion at boot. Document: PPI probe at 0x160000, ROM detection at 0x280000, initialization sequence if present, graceful handling if absent.
-
----
-
-#### 🟡 Boot: Document LCD splash screen sequence {#issue-kn5000-vql}
-
-**ID:** `kn5000-vql` | **Priority:** Medium | **Created:** 2026-01-25
-
-Trace LCD initialization and splash screen display. Document: LCD controller (MN89304) register setup, video RAM initialization, Technics/KN5000 logo display timing, any boot progress indicators shown on screen.
-
----
-
-#### 🟡 Boot: Document audio subsystem initialization {#issue-kn5000-9bd}
-
-**ID:** `kn5000-9bd` | **Priority:** Medium | **Created:** 2026-01-25
-
-Trace initialization of tone generator and audio path. Document: sub CPU commands for audio init, DAC setup (IC310), DSP initialization (IC311), any audio self-test or calibration, when audio becomes ready for playback.
-
----
-
-#### 🟡 Boot: Document control panel initialization {#issue-kn5000-bq4}
-
-**ID:** `kn5000-bq4` | **Priority:** Medium | **Created:** 2026-01-25
-
-Trace initialization of control panel serial communication. Document: when serial channel to CPL/CPR MCUs is configured, initial command sequence sent to panels, LED initialization pattern, how main CPU confirms panel MCUs are responding.
-
----
-
-#### ⚪ Boot: Create complete boot sequence timeline {#issue-kn5000-mhj}
-
-**ID:** `kn5000-mhj` | **Priority:** Low | **Created:** 2026-01-25
-
-Compile all boot documentation into a comprehensive timeline. Create diagram showing: time from power-on, which subsystem initializes when, dependencies between init stages, total boot time to user-ready state. Add to documentation website.
-
----
 
 ### Feature Demo {#feature-demo}
 
@@ -225,37 +183,11 @@ Determine the pinout of the cable connecting HD-AE5000 to KN5000. Identify conne
 
 ---
 
-#### 🟡 HDAE5000: Reverse engineer parallel port protocol {#issue-kn5000-t8n}
-
-**ID:** `kn5000-t8n` | **Priority:** Medium | **Created:** 2026-01-25
-
-Document the parallel port communication protocol used by HD-TechManager5000 PC software. Capture and analyze traffic if possible. Identify handshaking signals, command/response format, file transfer protocol, and error handling.
-
----
-
 #### ⚪ HDAE5000: Analyze HD-TechManager5000 software {#issue-kn5000-qnf}
 
 **ID:** `kn5000-qnf` | **Priority:** Low | **Created:** 2026-01-25
 
 Reverse engineer the Windows HD-TechManager5000 software to understand the PC side of the parallel port protocol. Extract command definitions, file format handling, and UI functionality. Installation disks available at archive.org.
-
----
-
-### Image Extraction {#image-extraction}
-
-#### 🟡 Images: Update assembly sources to include binary images {#issue-kn5000-4rr}
-
-**ID:** `kn5000-4rr` | **Priority:** Medium | **Created:** 2026-01-25
-
-Modify assembly sources to include extracted image binaries using ASL incbin directive. Ensure correct alignment and placement. Verify rebuilt ROM matches original byte-for-byte at image locations. Update extract_include_binaries.py if needed.
-
----
-
-#### ⚪ Images: Convert images to viewable formats {#issue-kn5000-pkx}
-
-**ID:** `kn5000-pkx` | **Priority:** Low | **Created:** 2026-01-25
-
-Create conversion tools to export extracted images as PNG/BMP for documentation. Handle any custom palette or pixel format. Add converted images to documentation website for reference. Useful for identifying what each image represents.
 
 ---
 
@@ -1491,32 +1423,6 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 ---
 
-### Sub CPU {#sub-cpu}
-
-#### 🟡 SubCPU: Document boot sequence handshake {#issue-kn5000-51z}
-
-**ID:** `kn5000-51z` | **Priority:** Medium | **Created:** 2026-01-25
-
-Trace the complete boot sequence: 1) Main CPU reset/init, 2) Sub CPU held in reset?, 3) Payload transfer trigger, 4) DMA transfer execution, 5) Sub CPU release from reset?, 6) Sub CPU boot ROM hands off to payload, 7) Sub CPU signals ready to main CPU. Document timing requirements.
-
----
-
-#### 🟡 SubCPU: Document payload memory layout {#issue-kn5000-1ru}
-
-**ID:** `kn5000-1ru` | **Priority:** Medium | **Created:** 2026-01-25
-
-Analyze the 192KB sub CPU payload structure. Document: entry point address, interrupt vectors, code segments, data segments, any embedded tables or wavetables, and relationship to the 128KB boot ROM. Cross-reference with subcpu/kn5000_subprogram_v142.asm.
-
----
-
-#### 🟡 SubCPU: Identify sub CPU type and memory map {#issue-kn5000-ayt}
-
-**ID:** `kn5000-ayt` | **Priority:** Medium | **Created:** 2026-01-25
-
-Determine the sub CPU chip type (IC27 on main board). Document its memory map: where the 128KB boot ROM resides, where the 192KB payload is loaded, RAM areas, and any memory-mapped I/O for tone generator control. Check service manual schematics.
-
----
-
 ### Video & Display {#video-display}
 
 #### 🟠 Video: Reverse engineer drawing primitives {#issue-kn5000-gln}
@@ -1616,6 +1522,17 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-t8n` | HDAE5000: Reverse engineer parallel port protocol | 2026-02-27 |
+| `kn5000-9bd` | Boot: Document audio subsystem initialization | 2026-02-27 |
+| `kn5000-mhj` | Boot: Create complete boot sequence timeline | 2026-02-27 |
+| `kn5000-izk` | Boot: Document HDAE5000 detection and init | 2026-02-27 |
+| `kn5000-vql` | Boot: Document LCD splash screen sequence | 2026-02-27 |
+| `kn5000-bq4` | Boot: Document control panel initialization | 2026-02-27 |
+| `kn5000-pkx` | Images: Convert images to viewable formats | 2026-02-27 |
+| `kn5000-4rr` | Images: Update assembly sources to include binary images | 2026-02-27 |
+| `kn5000-1ru` | SubCPU: Document payload memory layout | 2026-02-27 |
+| `kn5000-ayt` | SubCPU: Identify sub CPU type and memory map | 2026-02-27 |
+| `kn5000-51z` | SubCPU: Document boot sequence handshake | 2026-02-27 |
 | `kn5000-pcq` | Images: Extract all images as binary files | 2026-02-27 |
 | `kn5000-36g` | Images: Reverse engineer image format | 2026-02-27 |
 | `kn5000-16s` | Images: Find embedded image locations in table data ROM | 2026-02-27 |
@@ -1625,19 +1542,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-c5gn` | HDAE5000 FS: Annotate sector allocation and VarInt encoding | 2026-02-27 |
 | `kn5000-q7xb` | HDAE5000 FS: Annotate FS_Read_FSB with field-level comments | 2026-02-27 |
 | `kn5000-44c` | HDAE5000: Document filesystem structure | 2026-02-27 |
-| `kn5000-9ye` | Control Panel Protocol: Reverse engineer serial communica... | 2026-02-27 |
-| `kn5000-qhm` | Design MAME HLE device for control panel | 2026-02-27 |
-| `kn5000-unb` | Understand rotary encoder data format | 2026-02-27 |
-| `kn5000-ljl` | Map LED indices to physical panel LEDs | 2026-02-27 |
-| `kn5000-j3c` | Map button indices to physical panel buttons | 2026-02-27 |
-| `kn5000-32b` | Trace CPanel_SM_* state machine handlers | 2026-02-27 |
-| `kn5000-p2c` | Document all serial command bytes and their purposes | 2026-02-27 |
-| `kn5000-q1wm` | HDAE5000 FS: Document on-disk format (FSB/FGB/FEB structu... | 2026-02-27 |
-| `kn5000-m1j` | Disassemble table_data bootloader raw db bytes to proper ... | 2026-02-27 |
-| `kn5000-kuu` | HDAE5000: Disassemble ROM at 0x280000 | 2026-02-27 |
-| `kn5000-jior` | LLVM: Add previous register bank (QWA/QBC/QDE/QHL/QIX/QIY... | 2026-02-27 |
 
-*...and 117 more closed issues*
+*...and 128 more closed issues*
 
 ---
 
@@ -1649,24 +1555,21 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 19 |
-| Medium | 58 |
-| Low | 20 |
+| Medium | 49 |
+| Low | 18 |
 | P4 | 1 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Boot Sequence | 5 |
 | Feature Demo | 11 |
 | Firmware Update | 8 |
-| HD-AE5000 Expansion | 3 |
-| Image Extraction | 2 |
+| HD-AE5000 Expansion | 2 |
 | Other | 51 |
 | Sound & Audio | 11 |
-| Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-27 23:48*
+*Last updated: 2026-02-27 23:59*
