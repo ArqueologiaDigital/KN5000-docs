@@ -999,14 +999,23 @@ The serial channel switches between rates during operation:
 - 250 kHz during normal operation
 - Exact timing/trigger for rate switches not fully traced
 
+### LED Packet Handlers (Fully Disassembled)
+
+| Address | Label | Size | Description |
+|---------|-------|------|-------------|
+| 0xFC4B95 | CPanel_LED_HandlePacket2 | 48 bytes | Types 0-2: transfers 2 bytes (row select + pattern) from event queue to LED TX buffer |
+| 0xFC4BC5 | CPanel_LED_HandlePacketN | 66 bytes | Type 3: transfers variable-length data; byte 1 lower nibble encodes count, total = (nibble + 2) bytes |
+
+Both handlers are dispatched from CPanel_UpdateLEDs via a 4-entry jump table at 0xFC4B8D.
+After transferring data, both jump back to CPanel_UpdateLEDs to check for more pending events.
+
 ### Remaining Undisassembled Routines
 
 | Address | Size | Context |
 |---------|------|---------|
-| 0xFC4B95 | Unknown | Called from LED path |
-| 0xFC4BC5 | Unknown | Called from LED path |
+| 0xFC4C34 | 23 bytes | Called from LED handlers; processes event byte and increments event read pointer |
 
-Note: Encoder handlers (0xFC6C80-0xFC6E41) have been fully disassembled.
+Note: LABEL_FC4C34 is in the main program file (not cpanel_routines.s). Encoder handlers (0xFC6C80-0xFC6E41) have been fully disassembled.
 
 ## 9. Configuration Switches
 
