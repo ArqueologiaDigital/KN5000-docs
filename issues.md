@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (124 open, 113 closed)
+**Total Issues:** 237 (118 open, 118 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (68) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (4) · [Image Extraction](#image-extraction) (6) · [Other](#other) (63) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -228,14 +228,6 @@ Write end-user documentation for performing system updates. Include: required ma
 ---
 
 ### HD-AE5000 Expansion {#hd-ae5000-expansion}
-
-#### 🟠 HDAE5000: Disassemble ROM at 0x280000 {#issue-kn5000-kuu}
-
-**ID:** `kn5000-kuu` | **Priority:** High | **Created:** 2026-01-25
-
-Disassemble and analyze the 512KB HDAE5000 ROM mapped at 0x280000. Identify entry points, command handlers, filesystem routines, and communication protocols. Determine CPU type if different from main board.
-
----
 
 #### 🟡 HDAE5000: Document filesystem structure {#issue-kn5000-44c}
 
@@ -561,14 +553,6 @@ Create comprehensive documentation of the HDAE5000 custom filesystem on-disk for
 
 ---
 
-#### 🟠 LLVM: Add previous register bank (QWA/QBC/QDE/QHL/QIX/QIY/QIZ/QSP) support {#issue-kn5000-jior}
-
-**ID:** `kn5000-jior` | **Priority:** High | **Created:** 2026-02-26
-
-The TLCS-900/H2 CPU has multiple register banks. The 'previous' bank registers (QWA, QBC, QDE, QHL, QIX, QIY, QIZ, QSP) are accessed via prefix bytes D4-D7 (16-bit) and similar ranges for 8/32-bit. The LLVM backend does not support these at all. Currently 3 instances in HDAE5000 assembly use .byte fallbacks: 'ld QIZ, HL' (d7 fa 9b), 'cp QIZ, 0xFFFF' (d7 fa cf ff ff), 'ld HL, QIZ' (d7 fa 8b). The backend needs register definitions and instruction patterns for these.
-
----
-
 #### 🟠 LLVM: Fix bug #10 — register x/y swap on inlining {#issue-kn5000-8zr}
 
 **ID:** `kn5000-8zr` | **Priority:** High | **Created:** 2026-02-21
@@ -582,38 +566,6 @@ The TLCS-900/H2 CPU has multiple register banks. The 'previous' bank registers (
 **ID:** `kn5000-o3u` | **Priority:** High | **Created:** 2026-02-21
 
 **Notes:** LLVM TLCS-900 backend bug #11: for-loops using uint16_t counter variables exit after only 1 iteration. Current workaround: use do-while loops with uint32_t counters. Affects VRAM clear and other iteration-heavy code. This is one of 2 remaining active bugs in the TLCS-900 backend. Tracked in Mines memory (llvm-encoding-bugs.md).
-
----
-
-#### 🟠 LLVM: Replace 24-bit address instruction mnemonics with readable forms {#issue-kn5000-gels}
-
-**ID:** `kn5000-gels` | **Priority:** High | **Created:** 2026-02-26
-
-Instructions like ldada_24, ldda32_24, ldda8_24, stda32_24, stda8_24, stdi8_24, cpdi8_24, adddm32_24, subda32_24 use encoded naming that obscures their meaning. They should use natural assembly syntax like 'ld xwa, (0x23A1A2)' or 'ld (0x160006), a' instead of 'ldda32_24 xwa, 2335138' or 'stda8_24 1441798, a'. Affected: ldada_24 (228 uses), ldda32_24 (215), stda8_24 (20), stdi8_24 (19), stda32_24 (17), cpdi8_24 (11), ldda8_24 (10), subda32_24 (1), adddm32_24 (1). Total ~522 instances.
-
----
-
-#### 🟠 LLVM: Replace ld_sril3/srib3/sriw3 with semantic register+displacement mnemonics {#issue-kn5000-c7ug}
-
-**ID:** `kn5000-c7ug` | **Priority:** High | **Created:** 2026-02-26
-
-The ld_sril3, ld_srib3, ld_sriw3 family of instructions use opaque raw-byte notation like 'ld_sril3 xwa, 0xE1, 0x88, 0x0E' which hides the actual operation 'ld xwa, (xwa + 0x0E88)'. These are register-indirect loads with 16-bit displacement (d16 addressing mode). The LLVM backend must support proper mnemonics like 'ld xwa, (xwa + 0x0E88)' for all register bases and operand sizes. 354 instances in HDAE5000 assembly alone. This is the highest-impact improvement for readability.
-
----
-
-#### 🟠 LLVM: Replace memory-immediate instruction mnemonics (cpmi8, ldmi8, ldmw, cpmi16) with standard syntax {#issue-kn5000-fjwn}
-
-**ID:** `kn5000-fjwn` | **Priority:** High | **Created:** 2026-02-26
-
-Instructions like cpmi8, cpmi16, ldmi8, ldmw use invented mnemonics for standard memory-immediate operations. They should use standard TLCS-900 syntax: 'cp (xsp+29), 0x08' instead of 'cpmi8 (xsp+29), 0x08', 'ld (xsp+4), 0x0001' instead of 'ldmw (xsp+4), 0x0001'. Note: these overlap with existing 'cp' and 'ld' mnemonics for register operands, so the assembler needs to disambiguate by operand type. Affected: ldmi8 (48), ldmw (40), cpmi8 (25), cpmi16 (10). Total ~123 instances.
-
----
-
-#### 🟠 LLVM: Support symbolic condition codes in callcc_24 and jpcc_24 {#issue-kn5000-o6jd}
-
-**ID:** `kn5000-o6jd` | **Priority:** High | **Created:** 2026-02-26
-
-The callcc_24 and jpcc_24 instructions require numeric condition codes (e.g., 'callcc_24 14, addr' for CALL NZ). They should accept symbolic names like 'call nz, addr' or 'jp z, addr' matching standard TLCS-900 assembly syntax. The assembler already parses condition codes for jr/jrl but not for the F2-prefixed 24-bit address variants. 8 jpcc_24 + 1 callcc_24 = 9 instances currently.
 
 ---
 
@@ -1850,6 +1802,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-jior` | LLVM: Add previous register bank (QWA/QBC/QDE/QHL/QIX/QIY... | 2026-02-27 |
+| `kn5000-o6jd` | LLVM: Support symbolic condition codes in callcc_24 and j... | 2026-02-27 |
+| `kn5000-fjwn` | LLVM: Replace memory-immediate instruction mnemonics (cpm... | 2026-02-27 |
+| `kn5000-gels` | LLVM: Replace 24-bit address instruction mnemonics with r... | 2026-02-27 |
+| `kn5000-c7ug` | LLVM: Replace ld_sril3/srib3/sriw3 with semantic register... | 2026-02-27 |
 | `kn5000-6abu` | HDAE5000 FS: Disassemble FS_Write_FSB (5,072 bytes at 0x2... | 2026-02-27 |
 | `kn5000-gkhu` | HDAE5000 FS: Disassemble FS_Init (3,711 bytes at 0x2870D6) | 2026-02-27 |
 | `kn5000-dnsp` | Mines: Game exit and cleanup (QUIT button, remove auto-ac... | 2026-02-24 |
@@ -1865,13 +1822,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-0os2` | LLVM codegen: INC/DEC selection for add/sub 1-8 | 2026-02-23 |
 | `kn5000-gkqf` | Complete TLCS-900 MCDisassembler coverage | 2026-02-23 |
 | `kn5000-e8qs` | Decode remaining 199 x_ extended addressing mode instruct... | 2026-02-23 |
-| `kn5000-h1fe` | Replace extended addressing mode wrappers with native LLV... | 2026-02-23 |
-| `kn5000-5il7` | LLVM backend: Replace all raw encoding wrappers with sema... | 2026-02-23 |
-| `kn5000-07bj` | Milestone: Zero .byte fallbacks across all 6 ROMs (279,44... | 2026-02-23 |
-| `kn5000-f6d8` | LLVM converter: Data formatting improvements (.ascii, .lo... | 2026-02-23 |
-| `kn5000-72q0` | LLVM migration Phase 6: Final documentation cleanup | 2026-02-23 |
 
-*...and 93 more closed issues*
+*...and 98 more closed issues*
 
 ---
 
@@ -1882,7 +1834,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 31 |
+| High | 25 |
 | Medium | 70 |
 | Low | 20 |
 | P4 | 1 |
@@ -1895,13 +1847,13 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Control Panel | 1 |
 | Feature Demo | 11 |
 | Firmware Update | 8 |
-| HD-AE5000 Expansion | 5 |
+| HD-AE5000 Expansion | 4 |
 | Image Extraction | 6 |
-| Other | 68 |
+| Other | 63 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-27 18:52*
+*Last updated: 2026-02-27 21:40*
