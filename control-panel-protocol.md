@@ -125,8 +125,38 @@ The high 3 bits of the command byte (bits 7-5) select the target panel:
 | Command | Bytes | Purpose |
 |---------|-------|---------|
 | `25 01` | Left panel data | Set/request data mode |
-| `2B 00` | Init state array (left) | Initialize button state |
-| `EB 00` | Init state array (right) | Initialize button state |
+| `2B 00` | Init state array (left) | Initialize button state (22-byte multi-segment response) |
+| `EB 00` | Init state array (right) | Initialize button state (22-byte multi-segment response) |
+
+#### Steady-State Polling (via LED TX Buffer)
+
+The `CPanel_InterruptPoll_MainLoop` queues one poll command every 42 main-loop iterations through the LED TX buffer (not via `CPanel_SendCommand`):
+
+| Command | Bytes | Purpose | Expected Response |
+|---------|-------|---------|-------------------|
+| `E0 13` | Poll right panel | Query right panel segment 3 | Button state packet |
+
+#### LED Control Commands (via LED TX Buffer)
+
+LED commands are 2-byte pairs (row select + pattern) queued in `CPANEL_LED_TX_BUFFER` and transmitted by the TX state machine. The MCU processes these silently — **no response is generated**.
+
+| Row | Panel | LEDs Controlled |
+|-----|-------|-----------------|
+| `0x00` | CPR | SUSTAIN, DIGITAL EFFECT, DSP EFFECT, DIGITAL REVERB, ACOUSTIC ILLUSION, SEQ:PLAY/REC/MENU |
+| `0x01` | CPR | PIANO, GUITAR, STRINGS&VOCAL, BRASS, FLUTE, SAX&REED, MALLET, WORLD PERC |
+| `0x02` | CPR | ORGAN, ORCHESTRAL PAD, SYNTH, BASS, DIGITAL DRAWBAR, ACCORDION REG, GM SPECIAL, DRUM KITS |
+| `0x03` | CPR | PM 1-8 |
+| `0x04` | CPR | PART: LEFT/RIGHT2/RIGHT1, ENTERTAINER, CONDUCTOR, TECHNI CHORD |
+| `0x08` | CPR | MENU: SOUND/CONTROL/MIDI/DISK |
+| `0x0A` | CPR | MEMORY A, MEMORY B |
+| `0x0B` | CPR | SYNCHRO&BREAK, R1/R2 OCTAVE -/+, BANK VIEW |
+| `0x0C` | CPR | START/STOP BEAT 1-4 |
+| `0xC0` | CPL | COMPOSER, SOUND ARR, MUSIC STYLIST, FADE IN/OUT, DISPLAY HOLD |
+| `0xC1` | CPL | Rhythm styles (U.S. TRAD through CUSTOM) |
+| `0xC2` | CPL | Rhythm styles 2 (STANDARD ROCK through JAZZ COMBO), MSP:MENU |
+| `0xC3` | CPL | VARIATION 1-4, MUSIC STYLE ARRANGER, AUTO PLAY CHORD |
+| `0xC4` | CPL | FILL IN 1-2, INTRO&ENDING 1-2, SPLIT POINT (L/C/R), TEMPO/PROGRAM |
+| `0xC8` | CPL | OTHER PARTS/TR |
 
 ### Response Packet Format
 
@@ -836,8 +866,8 @@ The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "valu
 
 | Address | Name | Description |
 |---------|------|-------------|
-| 0xFC4374 | `CPanel_WaitTXReady` | TX ready check with timeout |
-| 0xFC43D9 | `CPanel_SendCommand` | Send 2-byte command |
+| 0xFC4375 | `CPanel_WaitTXReady` | TX ready check with timeout |
+| 0xFC43C7 | `CPanel_SendCommand` | Send 2-byte command (A=cmd, W=param) |
 | 0xFC490E | `CPanel_RX_ProcessWithFlag` | Process RX with flag set |
 | 0xFC4915 | `CPanel_RX_Process` | Process RX with flag clear |
 | 0xFC491A | `CPanel_RX_DispatchLoop` | Initialize RX processing pointers |
@@ -882,20 +912,27 @@ The `*_PENDING` variants (e.g., `MIDI_CC_MODWHEEL_PENDING`) use bit 7 as a "valu
 
 | Address | Name | Iterations/Ticks |
 |---------|------|------------------|
+| 0xFC40DE | `DELAY_2_LOOPS` | 2 |
+| 0xFC40E9 | `DELAY_6_LOOPS` | 6 |
 | 0xFC40F4 | `DELAY_10_LOOPS` | 10 |
 | 0xFC4100 | `DELAY_300_LOOPS` | 300 |
 | 0xFC410C | `DELAY_1500_LOOPS` | 1500 |
 | 0xFC4118 | `DELAY_3000_LOOPS` | 3000 |
-| 0xFC4213 | `DELAY_6_TICKS` | 6 system ticks |
-| 0xFC4225 | `DELAY_51_TICKS` | 51 system ticks |
+| 0xFC4124 | `DELAY_2_TICKS` | 2 system ticks |
+| 0xFC4139 | `DELAY_6_TICKS` | 6 system ticks |
+| 0xFC414E | `DELAY_51_TICKS` | 51 system ticks |
 
 ### Button Detection
 
 | Address | Name | Description |
 |---------|------|-------------|
-| 0xFC4160 | `Detect_Control_Panel_button_combos` | Check for special button combinations |
-| 0xFC4265 | `CPanel_PollButtonState_Loop` | Main button polling loop |
-| 0xFC4289 | `CPanel_CheckEncoderState` | Check encoder value changes |
+| 0xFC3EE5 | `CPanel_ScanButtons` | Main button scan entry point |
+| 0xFC41FC | `CPanel_ReadAllButtons` | Read button states from both panels |
+| 0xFC4165 | `CPanel_CheckSpecialCombos` | Check for special button combinations |
+| 0xFC426A | `CPanel_PollStartup` | Poll buttons during startup |
+| 0xFC4293 | `CPanel_ButtonPollLoop` | Button polling loop |
+| 0xFC42B7 | `CPanel_EncoderCheck` | Check encoder state |
+| 0xFC480F | `CPanel_InterruptPoll_MainLoop` | Interrupt-driven poll + LED update cycle |
 
 ## 8. MAME Serial Bugs (Found and Fixed)
 
