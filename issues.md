@@ -8,7 +8,7 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (116 open, 120 closed)
+**Total Issues:** 237 (116 open, 121 closed)
 
 **Quick Links:** 
 [Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (4) · [Image Extraction](#image-extraction) (6) · [Other](#other) (61) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
@@ -1769,6 +1769,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-q1wm` | HDAE5000 FS: Document on-disk format (FSB/FGB/FEB structu... | 2026-02-27 |
 | `kn5000-m1j` | Disassemble table_data bootloader raw db bytes to proper ... | 2026-02-27 |
 | `kn5000-kuu` | HDAE5000: Disassemble ROM at 0x280000 | 2026-02-27 |
 | `kn5000-jior` | LLVM: Add previous register bank (QWA/QBC/QDE/QHL/QIX/QIY... | 2026-02-27 |
@@ -1788,9 +1789,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-nw1y` | LLVM codegen: 8/16-bit native operation patterns | 2026-02-23 |
 | `kn5000-7q2k` | LLVM codegen: direct addressing patterns for global/stati... | 2026-02-23 |
 | `kn5000-j2uc` | LLVM codegen: short LD encoding forms for small constants | 2026-02-23 |
-| `kn5000-0os2` | LLVM codegen: INC/DEC selection for add/sub 1-8 | 2026-02-23 |
 
-*...and 100 more closed issues*
+*...and 101 more closed issues*
 
 ---
 
@@ -1823,4 +1823,4 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 ---
 
-*Last updated: 2026-02-27 22:08*
+*Last updated: 2026-02-27 22:26*
