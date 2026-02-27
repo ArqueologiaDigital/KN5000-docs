@@ -713,30 +713,85 @@ void kn5000_cpanel_device::update_leds(int index, uint8_t pattern)
 | **0xC4** | FILL IN 1 | FILL IN 2 | INTRO & ENDING 1 | INTRO & ENDING 2 | SPLIT POINT (LEFT) | SPLIT POINT (CENTER) | SPLIT POINT (RIGHT) | TEMPO/PROGRAM |
 | **0xC8** | OTHER PARTS/TR | - | - | - | - | - | - | - |
 
-### Rotary Encoder Format
+### Analog Controller / Encoder Format
 
-Encoders send signed delta values via Type 2 packets:
+Analog controllers (modwheel, volume, breath, foot, expression) send **absolute 8-bit ADC values** via Type 2 packets — NOT signed deltas. The MCU samples analog inputs and sends the raw position value; the main CPU compares with the previous stored value to detect changes.
 
+**Type 2 Packet Format (2 bytes):**
+
+| Byte | Bits | Field |
+|------|------|-------|
+| 0 | 7-6 | Encoder ID high bits (bits 4-3 of 5-bit ID) |
+| 0 | 5-3 | `010` = Type 2 marker |
+| 0 | 2-0 | Encoder ID low bits (bits 2-0 of 5-bit ID) |
+| 1 | 7-0 | Raw 8-bit ADC value (absolute position) |
+
+**Encoder ID Extraction (from `CPanel_EncoderDispatch`):**
+```
+encoder_id = (byte0 & 0x07) | ((byte0 & 0xC0) >> 3)  // 5-bit ID, range 0-31
+```
+
+**Active Encoder IDs and Handlers:**
+
+| ID | Handler | Controller | Processing | MIDI CC | Output Variable |
+|----|---------|-----------|------------|---------|----------------|
+| 2 | `Encoder_ProcessModwheel` | Modulation wheel | Invert, /2, 128-entry LUT | CC#1 | `MIDI_CC_MODWHEEL_VALUE` (0x8EE4) |
+| 5 | `Encoder_ProcessVolume` | Volume slider | /2, 128-entry LUT, clamp+scale | CC#7 | `MIDI_CC_VOLUME_VALUE` (0x8EF4) |
+| 25 | `Encoder_ProcessBreath` | Breath controller | Invert, LUT, mode-dependent scaling | CC#2 | `MIDI_CC_BREATH_VALUE` (0x8EE8) |
+| 26 | `Encoder_ProcessFoot` | Foot controller | /2, 128-entry LUT | CC#4 | `MIDI_CC_FOOT_VALUE` (0x8EEA) |
+| 27 | `Encoder_ProcessExpression` | Expression pedal | Invert, /2, 128-entry LUT | CC#0 | `MIDI_CC_EXPRESSION_VALUE` (0x8EE6) |
+| 31 | `Encoder_PassthroughIdentity` | Raw passthrough | No processing | N/A | Direct return |
+| 0-1,3-4,6-24,28-30 | `Encoder_ReturnDefaultConstant` | Unused | Returns 1 | N/A | N/A |
+
+**Value Processing Pipeline (typical):**
+1. Raw 8-bit value from MCU ADC (0-255)
+2. Optional invert (`cpl a` = 255-value) for modwheel, breath, expression
+3. Divide by 2 (`srl a, 1`) → 0-127 index
+4. 128-entry ROM lookup table → MIDI CC value (0-127)
+5. Compare with previously stored value; if unchanged, return 0xFFFF (no event)
+6. Store new value, set "pending change" flag (bit 7 of `*_PENDING` variable)
+
+**Lookup Tables (ROM at 0xEDAxxxh):**
+
+| Table | Address | Size | Controller |
+|-------|---------|------|------------|
+| `ENCODER_LUT_MODWHEEL` | 0xEDA13C | 128 bytes | Modulation wheel |
+| `ENCODER_LUT_VOLUME` | 0xEDA1BC | 128 bytes | Volume slider |
+| `ENCODER_LUT_BREATH_VALUE` | 0xEDA2D2 | varies | Breath controller |
+| `ENCODER_LUT_FOOT` | 0xEDA402 | 128 bytes | Foot controller |
+| `ENCODER_LUT_EXPRESSION` | 0xEDA482 | 128 bytes | Expression pedal |
+
+**HLE Implementation:**
 ```cpp
-void kn5000_cpanel_device::process_encoder(int encoder_id, int8_t delta)
+void kn5000_cpanel_device::process_analog_input(int encoder_id, uint8_t adc_value)
 {
-    // Known Encoder IDs (from firmware analysis):
-    // 2: Data wheel / jog wheel -> ENCODER_0_OUTPUT
-    // 5: Volume slider / expression -> ENCODER_1_OUTPUT, MIDI_CC_VOLUME_VALUE
-    // Other IDs (0-1, 3-4, 6-31) return 0xFFFF (no handler)
-
-    m_encoder_delta[encoder_id] += delta;
-
-    // Report encoder change
-    // Byte 0 format: [ ID_hi[1:0] | 0 | 1 | 0 | ID_lo[2:0] ]
-    //                  bits 7-6     5   4   3   bits 2-0
-    // Type 2 = bits 5-3 = 010 = 0x10
+    // Encoder packet: Type 2, absolute ADC value
     uint8_t response[2];
-    response[0] = 0x10 | (encoder_id & 0x07) | ((encoder_id & 0x18) << 3);  // Type 2 + encoder ID
-    response[1] = delta;
+    response[0] = 0x10 | (encoder_id & 0x07) | ((encoder_id & 0x18) << 3);
+    response[1] = adc_value;  // Absolute position, NOT delta
     send_response(response, 2);
 }
 ```
+
+### Data Wheel (Jog Dial)
+
+The data wheel (large rotary dial next to LCD) uses the left panel MCU's ROTA/ROTB quadrature encoder inputs. Unlike the analog controllers above, it generates **direction events** through the main event system (event code 0x1C0001F), not Type 2 encoder packets.
+
+**Dial Event System (RAM at 0x3EF50-0x3EF6A):**
+
+| Address | Field | Description |
+|---------|-------|-------------|
+| 0x3EF50 | Dial Enable | Enable flag (word) |
+| 0x3EF52 | SetDialUp callback | XWA component (clockwise) |
+| 0x3EF56 | SetDialDown callback | XWA component (counter-clockwise) |
+| 0x3EF6A | Dial Focus | Currently focused UI object (32-bit) |
+
+**Direction Detection:**
+- When the main CPU receives event 0x1C0001F with a signed value:
+  - Positive value → clockwise → `SetDialUp` callback invoked
+  - Negative value → counter-clockwise → `SetDialDown` callback invoked
+
+The exact packet-level mechanism for how the MCU's quadrature decoder communicates data wheel direction to the main CPU is not yet fully traced. The MCU likely reports direction as part of its button/status response packets.
 
 ### MIDI Controller Output
 
@@ -982,15 +1037,17 @@ The `CPanel_RX_MultiBytePacket` handler has complex decoding logic:
 
 ### Encoder Physical Mapping (RESOLVED)
 
-Six encoder IDs have dedicated processing handlers:
-- **ID 2**: Modulation wheel → `MIDI_CC_MODWHEEL_VALUE`
-- **ID 5**: Volume slider → `MIDI_CC_VOLUME_VALUE`
-- **ID 25**: Breath controller → `MIDI_CC_BREATH_VALUE`
-- **ID 26**: Foot controller → `MIDI_CC_FOOT_VALUE`
-- **ID 27**: Expression pedal → `MIDI_CC_EXPRESSION_VALUE`
+Six encoder IDs have dedicated processing handlers (all send **absolute 8-bit ADC values**, not deltas):
+- **ID 2**: Modulation wheel → `MIDI_CC_MODWHEEL_VALUE` (inverted, /2, 128-entry LUT)
+- **ID 5**: Volume slider → `MIDI_CC_VOLUME_VALUE` (/2, LUT, clamp+scale)
+- **ID 25**: Breath controller → `MIDI_CC_BREATH_VALUE` (inverted, mode-dependent scaling)
+- **ID 26**: Foot controller → `MIDI_CC_FOOT_VALUE` (/2, LUT)
+- **ID 27**: Expression pedal → `MIDI_CC_EXPRESSION_VALUE` (inverted, /2, LUT)
 - **ID 31**: Direct passthrough (raw value)
 
 Physical assignments confirmed from firmware analysis. Remaining IDs (0-1, 3-4, 6-24, 28-30) return 1 (unused).
+
+**Data wheel (jog dial)** uses ROTA/ROTB quadrature encoder on CPL MCU, generates direction events (event 0x1C0001F) through a separate callback mechanism (SetDialUp/SetDialDown), not Type 2 packets.
 
 ### Baud Rate Transitions
 
