@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 224 (115 open, 109 closed)
+**Total Issues:** 237 (124 open, 113 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (59) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (5) · [Image Extraction](#image-extraction) (6) · [Other](#other) (68) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -551,6 +551,24 @@ Analyze the KN5000 service manual (59 pages) to extract hardware architecture de
 
 ---
 
+#### 🟠 HDAE5000 FS: Document on-disk format (FSB/FGB/FEB structures) {#issue-kn5000-q1wm}
+
+**ID:** `kn5000-q1wm` | **Priority:** High | **Created:** 2026-02-26
+
+Create comprehensive documentation of the HDAE5000 custom filesystem on-disk format. Based on disassembled routines, document: (1) FSB structure — master metadata block layout, 24 entries x 21 bytes, (2) FGB structure — file group block format, (3) FEB structure — file entry block format, (4) Partition table layout — up to 16 partitions, (5) Sector allocation scheme — 7-bit VarInt encoding, (6) Directory entry format — 9-byte entries sorted by name, max 40 per partition, (7) File type codes and mappings. Depends on FS_Init and FS_Write_FSB disassembly for complete picture.
+
+**Depends on:** [`kn5000-gkhu`](#issue-kn5000-gkhu), [`kn5000-6abu`](#issue-kn5000-6abu)
+
+---
+
+#### 🟠 LLVM: Add previous register bank (QWA/QBC/QDE/QHL/QIX/QIY/QIZ/QSP) support {#issue-kn5000-jior}
+
+**ID:** `kn5000-jior` | **Priority:** High | **Created:** 2026-02-26
+
+The TLCS-900/H2 CPU has multiple register banks. The 'previous' bank registers (QWA, QBC, QDE, QHL, QIX, QIY, QIZ, QSP) are accessed via prefix bytes D4-D7 (16-bit) and similar ranges for 8/32-bit. The LLVM backend does not support these at all. Currently 3 instances in HDAE5000 assembly use .byte fallbacks: 'ld QIZ, HL' (d7 fa 9b), 'cp QIZ, 0xFFFF' (d7 fa cf ff ff), 'ld HL, QIZ' (d7 fa 8b). The backend needs register definitions and instruction patterns for these.
+
+---
+
 #### 🟠 LLVM: Fix bug #10 — register x/y swap on inlining {#issue-kn5000-8zr}
 
 **ID:** `kn5000-8zr` | **Priority:** High | **Created:** 2026-02-21
@@ -564,6 +582,38 @@ Analyze the KN5000 service manual (59 pages) to extract hardware architecture de
 **ID:** `kn5000-o3u` | **Priority:** High | **Created:** 2026-02-21
 
 **Notes:** LLVM TLCS-900 backend bug #11: for-loops using uint16_t counter variables exit after only 1 iteration. Current workaround: use do-while loops with uint32_t counters. Affects VRAM clear and other iteration-heavy code. This is one of 2 remaining active bugs in the TLCS-900 backend. Tracked in Mines memory (llvm-encoding-bugs.md).
+
+---
+
+#### 🟠 LLVM: Replace 24-bit address instruction mnemonics with readable forms {#issue-kn5000-gels}
+
+**ID:** `kn5000-gels` | **Priority:** High | **Created:** 2026-02-26
+
+Instructions like ldada_24, ldda32_24, ldda8_24, stda32_24, stda8_24, stdi8_24, cpdi8_24, adddm32_24, subda32_24 use encoded naming that obscures their meaning. They should use natural assembly syntax like 'ld xwa, (0x23A1A2)' or 'ld (0x160006), a' instead of 'ldda32_24 xwa, 2335138' or 'stda8_24 1441798, a'. Affected: ldada_24 (228 uses), ldda32_24 (215), stda8_24 (20), stdi8_24 (19), stda32_24 (17), cpdi8_24 (11), ldda8_24 (10), subda32_24 (1), adddm32_24 (1). Total ~522 instances.
+
+---
+
+#### 🟠 LLVM: Replace ld_sril3/srib3/sriw3 with semantic register+displacement mnemonics {#issue-kn5000-c7ug}
+
+**ID:** `kn5000-c7ug` | **Priority:** High | **Created:** 2026-02-26
+
+The ld_sril3, ld_srib3, ld_sriw3 family of instructions use opaque raw-byte notation like 'ld_sril3 xwa, 0xE1, 0x88, 0x0E' which hides the actual operation 'ld xwa, (xwa + 0x0E88)'. These are register-indirect loads with 16-bit displacement (d16 addressing mode). The LLVM backend must support proper mnemonics like 'ld xwa, (xwa + 0x0E88)' for all register bases and operand sizes. 354 instances in HDAE5000 assembly alone. This is the highest-impact improvement for readability.
+
+---
+
+#### 🟠 LLVM: Replace memory-immediate instruction mnemonics (cpmi8, ldmi8, ldmw, cpmi16) with standard syntax {#issue-kn5000-fjwn}
+
+**ID:** `kn5000-fjwn` | **Priority:** High | **Created:** 2026-02-26
+
+Instructions like cpmi8, cpmi16, ldmi8, ldmw use invented mnemonics for standard memory-immediate operations. They should use standard TLCS-900 syntax: 'cp (xsp+29), 0x08' instead of 'cpmi8 (xsp+29), 0x08', 'ld (xsp+4), 0x0001' instead of 'ldmw (xsp+4), 0x0001'. Note: these overlap with existing 'cp' and 'ld' mnemonics for register operands, so the assembler needs to disambiguate by operand type. Affected: ldmi8 (48), ldmw (40), cpmi8 (25), cpmi16 (10). Total ~123 instances.
+
+---
+
+#### 🟠 LLVM: Support symbolic condition codes in callcc_24 and jpcc_24 {#issue-kn5000-o6jd}
+
+**ID:** `kn5000-o6jd` | **Priority:** High | **Created:** 2026-02-26
+
+The callcc_24 and jpcc_24 instructions require numeric condition codes (e.g., 'callcc_24 14, addr' for CALL NZ). They should accept symbolic names like 'call nz, addr' or 'jp z, addr' matching standard TLCS-900 assembly syntax. The assembler already parses condition codes for jr/jrl but not for the F2-prefixed 24-bit address variants. 8 jpcc_24 + 1 callcc_24 = 9 instances currently.
 
 ---
 
@@ -1001,6 +1051,38 @@ Reference: kn5000_table_data.rom combination analysis
 
 ---
 
+#### 🟡 HDAE5000 FS: Annotate FS_Read_FSB with field-level comments {#issue-kn5000-q7xb}
+
+**ID:** `kn5000-q7xb` | **Priority:** Medium | **Created:** 2026-02-26
+
+The FS_Read_FSB routine (832 bytes at 0x287F55) is already disassembled but needs deeper annotation. Add field-level comments identifying: what each of the 24 x 21-byte directory entries contains, which fields are filenames/sizes/CHS addresses/type codes, what the template data at ROM 0x2E2E60 represents, and how the event handlers (0x07, 0x3A, 0x7C, 0x84, 0x86) relate to UI interaction.
+
+---
+
+#### 🟡 HDAE5000 FS: Annotate file operations (Save/Load/Delete/Rename/Format) {#issue-kn5000-li65}
+
+**ID:** `kn5000-li65` | **Priority:** Medium | **Created:** 2026-02-26
+
+The five main file operation routines are already disassembled: File_Save (381b at 0x28DA7B), File_Load (564b at 0x28DBF8), File_Delete (579b at 0x28DE2C), File_Rename (280b at 0x28E06F), File_Format (772b at 0x28E187). Add detailed annotations explaining: parameter structures, how each operation modifies the FSB/FGB/FEB, how sector allocation changes on save/delete, how directory entries are updated, and the file type dispatch logic (types 0x7E/0x58/5).
+
+---
+
+#### 🟡 HDAE5000 FS: Annotate sector allocation and VarInt encoding {#issue-kn5000-c5gn}
+
+**ID:** `kn5000-c5gn` | **Priority:** Medium | **Created:** 2026-02-26
+
+Document the sector allocation scheme used by the HDAE5000 filesystem. The Calc_Disk_Space routine (0x28E48B) and VarInt_Encode/Decode routines (0x28F36B/0x28F3BD) are already disassembled. Add detailed comments explaining: (1) How the sector table at 0x22B430 (20KB) is organized, (2) The 7-bit VarInt encoding format (bit 7 = continuation), (3) How free space is calculated, (4) The max sector limit of 20,457, (5) How File_Format uses this for partition formatting.
+
+---
+
+#### 🟡 HDAE5000 FS: Map RAM data structures used by filesystem {#issue-kn5000-c47b}
+
+**ID:** `kn5000-c47b` | **Priority:** Medium | **Created:** 2026-02-26
+
+Create a comprehensive map of all RAM addresses used by the HDAE5000 filesystem code. Known so far: 0x22AA9C (filesystem buffer base, 20 entries), 0x22B430 (sector data table, 20KB), 0x230884 (directory entry table, 40 x 9-byte entries), 0x230E72 (entry count), 0x229D99-0x229DAE (CHS params + state flags from ATA IDENTIFY), 0x23A1A2 (dispatch pointer), 0x2304E0-0x2304EE (file save state). Document each field's purpose, size, and which routines read/write it.
+
+---
+
 #### 🟡 Input: Document analog controller processing (wheels, pedals) {#issue-kn5000-3c7}
 
 **ID:** `kn5000-3c7` | **Priority:** Medium | **Created:** 2026-01-30
@@ -1401,14 +1483,6 @@ Keep the kn5000-docs Jekyll website in sync with reverse engineering progress. U
 
 ---
 
-#### ⚪ Mines: Game exit and cleanup (QUIT button, remove auto-activate, clean debug markers) {#issue-kn5000-dnsp}
-
-**ID:** `kn5000-dnsp` | **Priority:** Low | **Created:** 2026-02-24
-
-Game is fully functional (display, input, game logic). Remaining cleanup: (1) QUIT button should cleanly return display ownership to firmware, (2) Remove auto-activate in Boot_Init for interactive builds, (3) Remove diagnostic debug markers from startup.s and main.c. Low priority since game works correctly as-is.
-
----
-
 #### ⚪ Phase 4 Completion: Production-ready quality {#issue-kn5000-nca}
 
 **ID:** `kn5000-nca` | **Priority:** Low | **Created:** 2026-01-31
@@ -1776,6 +1850,10 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-6abu` | HDAE5000 FS: Disassemble FS_Write_FSB (5,072 bytes at 0x2... | 2026-02-27 |
+| `kn5000-gkhu` | HDAE5000 FS: Disassemble FS_Init (3,711 bytes at 0x2870D6) | 2026-02-27 |
+| `kn5000-dnsp` | Mines: Game exit and cleanup (QUIT button, remove auto-ac... | 2026-02-24 |
+| `kn5000-lgy2` | Mines: Take full video ownership to fix flickering | 2026-02-24 |
 | `kn5000-udw7` | LLVM: INC/DEC flag definition mismatch for 16/32-bit regi... | 2026-02-24 |
 | `kn5000-qea` | Mines: Re-enable control panel input for gameplay | 2026-02-24 |
 | `kn5000-gaha` | Mines: Display ownership — firmware overwrites game VRAM | 2026-02-24 |
@@ -1792,12 +1870,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-07bj` | Milestone: Zero .byte fallbacks across all 6 ROMs (279,44... | 2026-02-23 |
 | `kn5000-f6d8` | LLVM converter: Data formatting improvements (.ascii, .lo... | 2026-02-23 |
 | `kn5000-72q0` | LLVM migration Phase 6: Final documentation cleanup | 2026-02-23 |
-| `kn5000-3o6` | ASL Macros: Document new TMP94C241 instruction encodings | 2026-02-23 |
-| `kn5000-0du3` | LLVM migration Phase 5: Promote LLVM sources to authorita... | 2026-02-23 |
-| `kn5000-sj5r` | LLVM migration Phase 3: Restore modular file organization | 2026-02-23 |
-| `kn5000-du3c` | LLVM migration: Phase 4 scaffolding removal (deferred) | 2026-02-23 |
 
-*...and 89 more closed issues*
+*...and 93 more closed issues*
 
 ---
 
@@ -1808,9 +1882,9 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 25 |
-| Medium | 66 |
-| Low | 21 |
+| High | 31 |
+| Medium | 70 |
+| Low | 20 |
 | P4 | 1 |
 
 ### By Category
@@ -1823,11 +1897,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 5 |
 | Image Extraction | 6 |
-| Other | 59 |
+| Other | 68 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-24 06:49*
+*Last updated: 2026-02-27 18:52*
