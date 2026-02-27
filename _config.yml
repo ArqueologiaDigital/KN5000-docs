@@ -28,6 +28,7 @@ header_pages:
   - serial-firmware-compatibility.md
   - hdae5000.md
   - storage-subsystem.md
+  - hdae5000-filesystem.md
   # Homebrew
   - hdae5000-homebrew.md
   - event-codes.md
