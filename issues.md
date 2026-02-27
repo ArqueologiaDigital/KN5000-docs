@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (117 open, 119 closed)
+**Total Issues:** 237 (116 open, 120 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (4) · [Image Extraction](#image-extraction) (6) · [Other](#other) (62) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (4) · [Image Extraction](#image-extraction) (6) · [Other](#other) (61) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -540,16 +540,6 @@ Analyze the KN5000 service manual (59 pages) to extract hardware architecture de
 **Notes:** Significant progress: Analyzed schematic pages II-9 to II-38. Documented main CPU (TMP94C241F), all memory ICs, control panel MCUs (M37471M2196S), button mappings, serial signals. Created hardware-architecture.md page.
 
 **Depends on:** [`kn5000-bcn`](#issue-kn5000-bcn), [`kn5000-jwk`](#issue-kn5000-jwk), [`kn5000-xhi`](#issue-kn5000-xhi)
-
----
-
-#### 🟠 HDAE5000 FS: Document on-disk format (FSB/FGB/FEB structures) {#issue-kn5000-q1wm}
-
-**ID:** `kn5000-q1wm` | **Priority:** High | **Created:** 2026-02-26
-
-Create comprehensive documentation of the HDAE5000 custom filesystem on-disk format. Based on disassembled routines, document: (1) FSB structure — master metadata block layout, 24 entries x 21 bytes, (2) FGB structure — file group block format, (3) FEB structure — file entry block format, (4) Partition table layout — up to 16 partitions, (5) Sector allocation scheme — 7-bit VarInt encoding, (6) Directory entry format — 9-byte entries sorted by name, max 40 per partition, (7) File type codes and mappings. Depends on FS_Init and FS_Write_FSB disassembly for complete picture.
-
-**Depends on:** [`kn5000-gkhu`](#issue-kn5000-gkhu), [`kn5000-6abu`](#issue-kn5000-6abu)
 
 ---
 
@@ -1779,6 +1769,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-m1j` | Disassemble table_data bootloader raw db bytes to proper ... | 2026-02-27 |
 | `kn5000-kuu` | HDAE5000: Disassemble ROM at 0x280000 | 2026-02-27 |
 | `kn5000-jior` | LLVM: Add previous register bank (QWA/QBC/QDE/QHL/QIX/QIY... | 2026-02-27 |
 | `kn5000-o6jd` | LLVM: Support symbolic condition codes in callcc_24 and j... | 2026-02-27 |
@@ -1798,9 +1789,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-7q2k` | LLVM codegen: direct addressing patterns for global/stati... | 2026-02-23 |
 | `kn5000-j2uc` | LLVM codegen: short LD encoding forms for small constants | 2026-02-23 |
 | `kn5000-0os2` | LLVM codegen: INC/DEC selection for add/sub 1-8 | 2026-02-23 |
-| `kn5000-gkqf` | Complete TLCS-900 MCDisassembler coverage | 2026-02-23 |
 
-*...and 99 more closed issues*
+*...and 100 more closed issues*
 
 ---
 
@@ -1811,7 +1801,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 25 |
+| High | 24 |
 | Medium | 69 |
 | Low | 20 |
 | P4 | 1 |
@@ -1826,11 +1816,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 4 |
 | Image Extraction | 6 |
-| Other | 62 |
+| Other | 61 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-27 21:54*
+*Last updated: 2026-02-27 22:08*
