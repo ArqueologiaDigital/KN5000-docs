@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (113 open, 123 closed)
+**Total Issues:** 237 (109 open, 128 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (5) · [Control Panel](#control-panel) (1) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (4) · [Image Extraction](#image-extraction) (6) · [Other](#other) (58) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
+[Boot Sequence](#boot-sequence) (5) · [Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (4) · [Image Extraction](#image-extraction) (6) · [Other](#other) (55) · [Sound & Audio](#sound-audio) (11) · [Sub CPU](#sub-cpu) (3) · [Video & Display](#video-display) (6)
 
 ---
 
@@ -56,18 +56,6 @@ Trace initialization of control panel serial communication. Document: when seria
 **ID:** `kn5000-mhj` | **Priority:** Low | **Created:** 2026-01-25
 
 Compile all boot documentation into a comprehensive timeline. Create diagram showing: time from power-on, which subsystem initializes when, dependencies between init stages, total boot time to user-ready state. Add to documentation website.
-
----
-
-### Control Panel {#control-panel}
-
-#### 🟠 Control Panel Protocol: Reverse engineer serial communication for HLE {#issue-kn5000-9ye}
-
-**ID:** `kn5000-9ye` | **Priority:** High | **Created:** 2026-01-25
-
-Reverse engineer the serial protocol between maincpu and control panel MCUs (LEDs, buttons, rotary encoders). The MCUs lack ROM dumps, so MAME emulation requires HLE based on protocol understanding. Analyze maincpu-side code to document all commands, responses, and state machines.
-
-**Depends on:** [`kn5000-p2c`](#issue-kn5000-p2c), [`kn5000-j3c`](#issue-kn5000-j3c), [`kn5000-ljl`](#issue-kn5000-ljl), [`kn5000-unb`](#issue-kn5000-unb), [`kn5000-32b`](#issue-kn5000-32b), [`kn5000-qhm`](#issue-kn5000-qhm)
 
 ---
 
@@ -822,31 +810,6 @@ Reference: SOUND_DATA_SECTION_PTRS at 0xE023B0 in maincpu.
 
 ---
 
-#### 🟡 Design MAME HLE device for control panel {#issue-kn5000-qhm}
-
-**ID:** `kn5000-qhm` | **Priority:** Medium | **Created:** 2026-01-25
-
-Based on protocol documentation, design the C++ interface for a MAME HLE device that emulates control panel MCU behavior. Define state machine, command handlers, and input/output bindings.
-
-**Notes:** MAME HLE device for control panel based on protocol reverse engineering.
-
-**Current state:** Protocol fully documented, HLE partially implemented in MAME PR.
-
-**Required work:**
-- Complete button input handling
-- Implement LED output state
-- Add encoder input support
-- Test with actual firmware execution
-
-**Phase:** 2 - Core Functionality
-**Blocks:** User input in emulator
-**Dependencies:** Control panel protocol (complete)
-**Related:** kn5000-9ye (protocol RE), kn5000-j3c (button mapping)
-
-**Depends on:** [`kn5000-p2c`](#issue-kn5000-p2c), [`kn5000-j3c`](#issue-kn5000-j3c), [`kn5000-ljl`](#issue-kn5000-ljl), [`kn5000-unb`](#issue-kn5000-unb)
-
----
-
 #### 🟡 Disassemble TODO routines at F97696-F97D8D range (jump table targets) {#issue-kn5000-kc5}
 
 **ID:** `kn5000-kc5` | **Priority:** Medium | **Created:** 2026-01-26
@@ -1083,16 +1046,6 @@ Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
-#### 🟡 Map LED indices to physical panel LEDs {#issue-kn5000-ljl}
-
-**ID:** `kn5000-ljl` | **Priority:** Medium | **Created:** 2026-01-25
-
-Analyze CPANEL_LED_READ_PTR, CPANEL_LED_WRITE_PTR, and CPANEL_LED_TX_BUFFER to understand LED addressing scheme. Create a mapping from index to physical LED name/location on the KN5000 front panel.
-
-**Notes:** Analyze CPANEL_LED_READ_PTR, CPANEL_LED_WRITE_PTR, and CPANEL_LED_TX_BUFFER to understand LED addressing scheme. Create a mapping from index to physical LED name/location on the KN5000 front panel.
-
----
-
 #### 🟡 Phase 3 Completion: Full documentation coverage {#issue-kn5000-9m6}
 
 **ID:** `kn5000-9m6` | **Priority:** Medium | **Created:** 2026-01-31
@@ -1242,14 +1195,6 @@ Approach:
 4. Add to sed script and apply
 
 Reference: audio_subsystem_rename.sed for pattern.
-
----
-
-#### 🟡 Understand rotary encoder data format {#issue-kn5000-unb}
-
-**ID:** `kn5000-unb` | **Priority:** Medium | **Created:** 2026-01-25
-
-Analyze how rotary encoder values are transmitted. Determine: absolute vs relative encoding, resolution/steps per rotation, which commands query encoder state.
 
 ---
 
@@ -1743,6 +1688,11 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-9ye` | Control Panel Protocol: Reverse engineer serial communica... | 2026-02-27 |
+| `kn5000-qhm` | Design MAME HLE device for control panel | 2026-02-27 |
+| `kn5000-unb` | Understand rotary encoder data format | 2026-02-27 |
+| `kn5000-ljl` | Map LED indices to physical panel LEDs | 2026-02-27 |
+| `kn5000-j3c` | Map button indices to physical panel buttons | 2026-02-27 |
 | `kn5000-32b` | Trace CPanel_SM_* state machine handlers | 2026-02-27 |
 | `kn5000-p2c` | Document all serial command bytes and their purposes | 2026-02-27 |
 | `kn5000-q1wm` | HDAE5000 FS: Document on-disk format (FSB/FGB/FEB structu... | 2026-02-27 |
@@ -1758,13 +1708,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-dnsp` | Mines: Game exit and cleanup (QUIT button, remove auto-ac... | 2026-02-24 |
 | `kn5000-lgy2` | Mines: Take full video ownership to fix flickering | 2026-02-24 |
 | `kn5000-udw7` | LLVM: INC/DEC flag definition mismatch for 16/32-bit regi... | 2026-02-24 |
-| `kn5000-qea` | Mines: Re-enable control panel input for gameplay | 2026-02-24 |
-| `kn5000-gaha` | Mines: Display ownership — firmware overwrites game VRAM | 2026-02-24 |
-| `kn5000-1iy` | Mines: Fix garbled graphics on KN5000 playfield screenshot | 2026-02-23 |
-| `kn5000-3z6` | Mines: Only Mines Game button should activate game from D... | 2026-02-23 |
-| `kn5000-nw1y` | LLVM codegen: 8/16-bit native operation patterns | 2026-02-23 |
 
-*...and 103 more closed issues*
+*...and 108 more closed issues*
 
 ---
 
@@ -1775,8 +1720,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 22 |
-| Medium | 68 |
+| High | 21 |
+| Medium | 65 |
 | Low | 20 |
 | P4 | 1 |
 
@@ -1785,16 +1730,15 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Category | Count |
 |----------|-------|
 | Boot Sequence | 5 |
-| Control Panel | 1 |
 | Feature Demo | 11 |
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 4 |
 | Image Extraction | 6 |
-| Other | 58 |
+| Other | 55 |
 | Sound & Audio | 11 |
 | Sub CPU | 3 |
 | Video & Display | 6 |
 
 ---
 
-*Last updated: 2026-02-27 23:19*
+*Last updated: 2026-02-27 23:28*
