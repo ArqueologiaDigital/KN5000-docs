@@ -113,16 +113,47 @@ These events integrate with the KN5000's broader UI event system (see [UI Framew
 
 ### Bitmap Images (Table Data ROM)
 
-The Feature Demo includes 6 bitmap images stored in BMP format:
+The Feature Demo includes 6 bitmap images stored in Windows BMP format:
 
-| Asset | ROM Address | Size | Content |
-|-------|-------------|------|---------|
-| `FTBMP01.BMP` | 0x880418 | ~78 KB | Technics logo with world globe |
-| `FTBMP02.BMP` | 0x89344E | ~40 KB | Subwoofers |
-| `FTBMP03.BMP` | 0x89DB04 | ~40 KB | Floppy discs |
-| `FTBMP04.BMP` | 0x8A753A | ~40 KB | Inserting discs |
-| `FTBMP05.BMP` | 0x8B0F70 | ~40 KB | Surround sound arrows |
-| `FTBMP06.BMP` | 0x8BAFE6 | ~40 KB | KN5000 name with rainbow comet |
+| Asset | ROM Address | Size (bytes) | Content |
+|-------|-------------|-------------|---------|
+| `FTBMP01.BMP` | 0x880418 | 77,878 | Technics logo with world globe |
+| `FTBMP02.BMP` | 0x89344E | 42,678 | Subwoofers |
+| `FTBMP03.BMP` | 0x89DB04 | 39,478 | Floppy discs |
+| `FTBMP04.BMP` | 0x8A753A | 39,478 | Inserting discs |
+| `FTBMP05.BMP` | 0x8B0F70 | 41,078 | Surround sound arrows |
+| `FTBMP06.BMP` | 0x8BAFE6 | 77,878 | KN5000 name with rainbow comet |
+
+**Total bitmap storage:** 318,468 bytes (~311 KB)
+
+### File Entry Index (0x8CE01C)
+
+The bitmap file entries use a fixed record format:
+
+```
+struct FeatureDemo_FileEntry {
+    char   filename[12];    // +0x00: null-terminated filename (e.g., "FTBMP01.BMP")
+    uint32 reserved;        // +0x0C: always 0
+    uint32 data_ptr;        // +0x10: pointer to BMP data in ROM
+    uint32 file_size;       // +0x14: size in bytes
+};                          // Total: 24 bytes per entry
+```
+
+Six entries are stored contiguously at 0x8CE01C, referenced by the metadata header at 0x87FFF0 via `FeatureDemo_FileEntry1`.
+
+### Metadata Header (0x87FFF0)
+
+The presentation file metadata at 0x87FFF0 links the SSF script and asset index:
+
+```
+struct FeatureDemo_FileMetadata {
+    char   filename[12];    // +0x00: "hkst_55.ssf"
+    uint32 reserved;        // +0x0C: 0
+    uint32 padding_ptr;     // +0x10: pointer to 2-byte padding (HKstSSF_Padding)
+    uint32 xml_ptr;         // +0x14: pointer to XML data (Feature_Demo_XML at 0x88000E)
+    uint32 entries_ptr;     // +0x18: pointer to file entries (FeatureDemo_FileEntry1 at 0x8CE01C)
+};
+```
 
 ### UI Objects (Program ROM)
 
@@ -136,6 +167,28 @@ The Feature Demo includes 6 bitmap images stored in BMP format:
 Each object defines the visual content shown for its corresponding `<SHOW OBJ="...">` action in the SSF script.
 
 ---
+
+## Demo Mode Handlers (Program ROM)
+
+The Feature Demo uses a multi-mode event-driven architecture with separate handlers for different demo stages:
+
+| Handler | Address | Event | Purpose |
+|---------|---------|-------|---------|
+| `DemoModeFunc` | `demo_routines.s` | 0x1C00013 | Main demo mode dispatcher (init vs. run) |
+| `DemoMenuTtlFunc` | `demo_routines.s` | — | Demo menu title (stub) |
+| `DemoStyleTtlFunc` | `demo_routines.s` | 0x1C00007/0x1C00013 | Style selection with encoder/direction input |
+| `DemoSoundTtlFunc` | `demo_routines.s` | 0x1C00007/0x1C00013 | Sound selection with encoder/direction input |
+| `DemoRhyTtlFunc` | `demo_routines.s` | 0x1C00007/0x1C00013 | Rhythm selection with encoder/direction input |
+| `DemoMode_Initialize` | 0xF869E3 | — | First-time demo setup (voice save, audio init) |
+| `DemoMode_Main_Operation` | 0xF8696F | — | Main demo playback loop |
+| `AcDemoSongBoxProc` | ~line 194533 | — | Song selection display widget |
+| `DemoSongSelFunc` | ~line 194728 | — | Song selection handler |
+| `AcDemoMedleyDispBoxProc` | ~line 195115 | — | Medley display widget |
+
+Each selection handler (Style/Sound/Rhythm) has a dispatch table and supports three input types:
+- **Direction** (up/down): Posts event 0xE2 (style) or 0xE3 (sound/rhythm)
+- **Encoder** (rotary): Posts event 0xE2 (rhythm) or 0xE1 (sound) via 0xF99490
+- **Enter**: Calls shared handler at 0xF86A47
 
 ## No Floppy Loading Path
 
