@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (69 open, 168 closed)
+**Total Issues:** 237 (65 open, 172 closed)
 
 **Quick Links:** 
-[Feature Demo](#feature-demo) (5) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (3)
+[Feature Demo](#feature-demo) (4) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (50) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
@@ -32,14 +32,6 @@ Extract all embedded MIDI data as playable .mid files. Parse MIDI structure to f
 **ID:** `kn5000-qjx` | **Priority:** Medium | **Created:** 2026-01-25
 
 Find all embedded MIDI files in the ROM. Search for MIDI headers (4D 54 68 64 = 'MThd'). Document: offset, size, apparent purpose (demo song, UI sound, jingle). May be in main CPU ROM or table data ROM.
-
----
-
-#### 🟡 FeatureDemo: Refactor assembly to use slide macros {#issue-kn5000-21e}
-
-**ID:** `kn5000-21e` | **Priority:** Medium | **Created:** 2026-01-25
-
-Replace raw data definitions in assembly source with new macros. Convert existing db/dw sequences to SLIDE_BEGIN, WIDGET_*, SLIDE_END. Verify rebuilt ROM still matches original byte-for-byte. Measure source code line reduction.
 
 ---
 
@@ -514,14 +506,6 @@ User interaction and file I/O fully working in MAME.
 **Blocks:** Full Table Data ROM disassembly, asset loading in emulator
 **Dependencies:** None
 **Related:** kn5000-hlw (improve match %), kn5000-16s (find images)
-
----
-
-#### 🟡 Analyze ROTA/ROTB rotary encoder circuit {#issue-kn5000-xhi}
-
-**ID:** `kn5000-xhi` | **Priority:** Medium | **Created:** 2026-01-25
-
-Block diagram shows ROTA and ROTB signals from control panel. Find the encoder circuit in schematics, determine: number of encoders, connection to MCU pins, any conditioning circuitry (pull-ups, filters). This helps understand encoder data format in protocol.
 
 ---
 
@@ -1287,14 +1271,6 @@ Add to CLAUDE.md so future work maintains consistency.
 
 ### Sound & Audio {#sound-audio}
 
-#### 🟡 Sound: Document rhythm/accompaniment engine {#issue-kn5000-98j}
-
-**ID:** `kn5000-98j` | **Priority:** Medium | **Created:** 2026-01-25
-
-Analyze how auto-accompaniment works. Document: rhythm pattern format, chord detection algorithm, bass/chord/rhythm part generation, style structure (intro/main/fill/ending), variation switching.
-
----
-
 #### ⚪ Sound: Extract and catalog all instrument patches {#issue-kn5000-cox}
 
 **ID:** `kn5000-cox` | **Priority:** Low | **Created:** 2026-01-25
@@ -1303,18 +1279,14 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 ---
 
-#### ⚪ Sound: Extract and convert waveform samples {#issue-kn5000-mrx}
-
-**ID:** `kn5000-mrx` | **Priority:** Low | **Created:** 2026-01-25
-
-Extract raw waveform data from ROM as playable audio. Convert to WAV format. Catalog samples by instrument type. Document sample rates, loop points, root notes. Useful for MAME sound emulation verification.
-
----
-
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-xhi` | Analyze ROTA/ROTB rotary encoder circuit | 2026-02-28 |
+| `kn5000-mrx` | Sound: Extract and convert waveform samples | 2026-02-28 |
+| `kn5000-21e` | FeatureDemo: Refactor assembly to use slide macros | 2026-02-28 |
+| `kn5000-98j` | Sound: Document rhythm/accompaniment engine | 2026-02-28 |
 | `kn5000-br1` | FeatureDemo: Create ASL macros for widget definitions | 2026-02-28 |
 | `kn5000-4q0` | FeatureDemo: Create ASL macros for slide definitions | 2026-02-28 |
 | `kn5000-dqi` | FeatureDemo: Document widget parameter formats | 2026-02-28 |
@@ -1331,12 +1303,8 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 | `kn5000-061` | Sound: Trace main CPU to Sub CPU command protocol | 2026-02-28 |
 | `kn5000-dj3` | Video: Extract and document all fonts | 2026-02-28 |
 | `kn5000-nmg` | Video: Document animation and transition effects | 2026-02-28 |
-| `kn5000-5dc` | Video: Document UI widget rendering | 2026-02-28 |
-| `kn5000-rq0` | Video: Document screen layout and regions | 2026-02-28 |
-| `kn5000-kev` | Video: Document font system and text rendering | 2026-02-28 |
-| `kn5000-gln` | Video: Reverse engineer drawing primitives | 2026-02-27 |
 
-*...and 148 more closed issues*
+*...and 152 more closed issues*
 
 ---
 
@@ -1348,20 +1316,20 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 |----------|-------|
 | Critical | 2 |
 | High | 12 |
-| Medium | 38 |
-| Low | 16 |
+| Medium | 35 |
+| Low | 15 |
 | P4 | 1 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Feature Demo | 5 |
+| Feature Demo | 4 |
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 2 |
-| Other | 51 |
-| Sound & Audio | 3 |
+| Other | 50 |
+| Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-02-28 01:14*
+*Last updated: 2026-02-28 01:16*
