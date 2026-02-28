@@ -236,6 +236,63 @@ Despite the sophisticated XML presentation infrastructure, **the current firmwar
 
 ---
 
+## Bitmap Loading Chain
+
+When `AcPresentationControlProc` processes a `<SHOW OBJ="ftdemo01">` action, the firmware:
+
+1. **Looks up the object name** (`ftdemo01`) in the UI object table (`LABEL_E1344E`, ~141 entries). The corresponding entry is a `FTDEMO_SCREEN*` structure.
+
+2. **Extracts the filename** from the structure — the last field is a `.long` pointer to a null-terminated string like `"FTBMP01"` (stored as `FTDEMO_BMP01_TECHNICS_GLOBE`).
+
+3. **Looks up the filename** in the file entry index at `0x8CE01C` (Table Data ROM). The index stores 6 entries of 24 bytes each:
+
+   ```c
+   struct FeatureDemo_FileEntry {
+       char   filename[12];  // "FTBMP01.BMP"
+       uint32 reserved;      // 0
+       uint32 data_ptr;      // ROM address (e.g. 0x880418)
+       uint32 file_size;     // in bytes
+   };
+   ```
+
+4. **Reads the BMP data** directly from the Table Data ROM using the pointer.
+
+5. **Renders to VRAM** (0x1A0000–0x1DFFFF, 256KB) via `VwUserBitmapByNameProc` / `DrawBitmapFile`. The 8-bit BMP palette is loaded to the hardware palette register; pixel data is DMA-copied to the display.
+
+The entire pipeline is **ROM-resident** — no disk I/O occurs for the Feature Demo. The `"FTBMP01"` filename in the `FTDEMO_SCREEN` structure is a logical key, not a filesystem path.
+
+---
+
+## MAME Emulation Status and Known Issues
+
+**Current status (February 2026):** The Feature Demo does not display images in MAME. The keyboard appears to navigate to the demo mode successfully, but no FTBMP images appear on screen. Investigation is ongoing.
+
+### Identified blocking points
+
+| Issue | Likelihood | Notes |
+|-------|-----------|-------|
+| Audio initialization delay | Low | `Audio_WaitForReady` (polls `0x420` bit 2 for up to 61,440 iterations) has a timeout — exits gracefully if SubCPU doesn't respond |
+| VRAM display mode | Medium | The LCD display may require a specific mode switch to show bitmap content vs. normal UI; if the mode switch requires SubCPU coordination, it may silently fail |
+| Event delivery | High | `AcPresentationControlProc` is entirely event-driven; if `EV_READPRESENTATION` or `EV_READACTION` events are never generated, the presentation controller stalls at the first action and never advances |
+| XML parser state | Medium | The SSF XML parser reads from hardcoded ROM and processes the script; if the internal state machine gets stuck (missing event, wrong parameter), no objects are shown |
+| `DemoMode_Main_Operation` loop | Low | Ends with `jp 0xF846BF` (continues the demo loop) — expected behaviour for an always-running demo; not a hang |
+
+### MAME floppy disk type bug (unrelated to FTBMP, but present)
+
+The MAME driver registers only a `"35dd"` (720 KB double-density) floppy connector in `kn5000_floppies`. The real hardware uses **1.44 MB HD (high-density)** drives — confirmed by:
+- FDC format configuration supporting 1440K (18 sectors/track, 80 tracks)
+- `update_disc.img` analysis: FAT12, OEM-ID `"Technics"`, 2880 sectors, 18 sectors/track, 2 heads
+
+This means MAME currently cannot mount any real KN5000 floppy disk images (firmware update discs, style/song discs, etc.). This is a separate issue from the Feature Demo.
+
+### Next investigation steps
+
+1. Run MAME with a Lua trace script while manually navigating to the Feature Demo, to identify the exact PC where execution stalls.
+2. Monitor `EV_READPRESENTATION` / `EV_READACTION` event constants to confirm whether the presentation controller is receiving its driving events.
+3. Check whether the display mode switch needed for full-screen bitmap rendering is properly signalled between main CPU and SubCPU.
+
+---
+
 ## Interpretation
 
 The XML presentation system — with its `EXEC` tag, `SONG` playback, `IMG` display, rich tag vocabulary, and event-driven architecture — was almost certainly designed to be more flexible than its single current usage (a hardcoded Feature Demo in ROM).
