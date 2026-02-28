@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (83 open, 153 closed)
+**Total Issues:** 237 (82 open, 154 closed)
 
 **Quick Links:** 
-[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11)
+[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (10)
 
 ---
 
@@ -1399,14 +1399,6 @@ Understand how sounds are generated. Document: oscillator count (polyphony), syn
 
 ---
 
-#### 🟡 Sound: Trace main CPU to Sub CPU command protocol {#issue-kn5000-061}
-
-**ID:** `kn5000-061` | **Priority:** Medium | **Created:** 2026-01-25
-
-Document how main CPU sends commands to sub CPU for sound generation. Trace latch communication at 0x120000. Document: note-on/off commands, program change, pitch bend, volume, pan, effects parameters. Create command reference.
-
----
-
 #### ⚪ Sound: Extract and catalog all instrument patches {#issue-kn5000-cox}
 
 **ID:** `kn5000-cox` | **Priority:** Low | **Created:** 2026-01-25
@@ -1427,6 +1419,7 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-dj3` | Video: Extract and document all fonts | 2026-02-28 |
 | `kn5000-nmg` | Video: Document animation and transition effects | 2026-02-28 |
 | `kn5000-5dc` | Video: Document UI widget rendering | 2026-02-28 |
 | `kn5000-rq0` | Video: Document screen layout and regions | 2026-02-28 |
@@ -1446,9 +1439,8 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 | `kn5000-pcq` | Images: Extract all images as binary files | 2026-02-27 |
 | `kn5000-36g` | Images: Reverse engineer image format | 2026-02-27 |
 | `kn5000-16s` | Images: Find embedded image locations in table data ROM | 2026-02-27 |
-| `kn5000-87u` | Images: Find embedded image locations in main CPU ROM | 2026-02-27 |
 
-*...and 133 more closed issues*
+*...and 134 more closed issues*
 
 ---
 
@@ -1460,7 +1452,7 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 |----------|-------|
 | Critical | 2 |
 | High | 18 |
-| Medium | 46 |
+| Medium | 45 |
 | Low | 16 |
 | P4 | 1 |
 
@@ -1472,8 +1464,8 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 2 |
 | Other | 51 |
-| Sound & Audio | 11 |
+| Sound & Audio | 10 |
 
 ---
 
-*Last updated: 2026-02-28 00:45*
+*Last updated: 2026-02-28 00:49*
