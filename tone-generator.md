@@ -316,8 +316,8 @@ See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) for the note encoding
 ## Research Needed
 
 - [ ] Determine exact register semantics (which parameters control pitch, envelope, filter, etc.)
-- [ ] Decode voice parameter template at ROM 0xF8D5
-- [ ] Identify the exact device connected to Serial Port 1
+- [ ] Decode voice parameter template at ROM 0xF8D5 (34 words of initial values)
 - [ ] Analyze waveform ROM format and sample addressing
 - [ ] Document DSP1/DSP2 command sets and processing algorithms
 - [ ] Trace the PCM audio serial bus (BCK/SDOR/SDOF) connections
+- [x] ~~Identify the exact device connected to Serial Port 1~~ — Computer Interface (TO HOST connector), sends 0xFE Active Sensing

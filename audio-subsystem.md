@@ -341,6 +341,144 @@ The DSP write routines used by the dispatcher:
 | `DSP_ParameterWriteEngine` | 0x03C9E6 | Core DSP parameter write engine |
 | `DSP_BytecodeInterpreter_Init` | 0x03C266 | Bytecode interpreter entry point |
 
+## Synthesis Architecture
+
+The KN5000 implements a **hardware wavetable synthesis** architecture: the Sub CPU firmware handles MIDI event processing, voice allocation, and parameter management, while the actual sound generation is performed entirely by the tone generator hardware (IC303, TC183C230002).
+
+### Polyphony and Voice Management
+
+| Parameter | Value |
+|-----------|-------|
+| MIDI Channels | 26 (channels 0-25) |
+| Hardware Voices | 64 simultaneous |
+| Voice Parameter Size | 287 bytes per MIDI channel (0x11F) |
+| Hardware Voice Size | 71 bytes per voice (0x47) |
+| Voice Template | 68 bytes at ROM 0xF8D5 (34 × 16-bit words) |
+| Channel Parameter Base | 0x04136E (Sub CPU RAM) |
+| Hardware Voice Pool | 0x04308E (Sub CPU RAM, 64 × 71 = 4544 bytes) |
+| Voice Slot Table | 0x4A4C (16 active voice tracking slots) |
+
+**Channel address formula:** `0x04136E + (channel_number × 0x11F)`
+
+The firmware implements **dynamic voice allocation**: any of the 26 MIDI channels can be assigned to any of the 64 hardware voices on demand. When a Note On arrives, `Voice_Allocate` (0x02C9DF) acquires a free voice from a pool-based allocator at 0x2A4E with voice stealing for polyphony overflow.
+
+### Voice Parameter Structure (287 bytes per MIDI channel)
+
+Each MIDI channel maintains a 287-byte parameter block:
+
+| Offset | Size | Parameter | Set By |
+|--------|------|-----------|--------|
+| +0x00 | 4 | Pitch base | Note On |
+| +0x04 | 2 | Portamento flag | CC 0x95 |
+| +0x06 | 2 | Volume (scaled) | CC 0x07 |
+| +0x08 | 2 | Pan | CC 0x0A |
+| +0x0A | 2 | Expression (scaled) | CC 0x0B |
+| +0x11 | 1 | Frequency multiplier | CC 0x91 |
+| +0x12 | 1 | Fine pitch tuning | CC 0x97 |
+| +0x1F | 1 | Vibrato depth | CC 0x9B |
+| +0x20 | 1 | Tremolo/AM depth | CC 0x9D |
+| +0x67 | var | Extended parameter refs | Program Change |
+
+### Note-On Processing Pipeline
+
+When a MIDI Note On arrives at `Voice_NoteOn` (0x02CF97):
+
+```
+MIDI Note On (channel, note, velocity)
+  │
+  ├─ velocity = 0? ──yes──> Voice_NoteOff (release voice)
+  │
+  ├─ Voice_Allocate (0x02C9DF)
+  │     └─ Pool-based allocation from 64 hardware voices
+  │     └─ Voice stealing if pool exhausted
+  │
+  ├─ Voice_SetVelocity
+  │     └─ Scale velocity via lookup table at 0x011D16
+  │     └─ Write to amplitude parameter
+  │
+  ├─ Voice_SetPitch / ToneGen_Calc_Pitch (0x03D11F)
+  │     └─ note + 0x24 (transpose by +36 semitones)
+  │     └─ Semitone-specific adjustments (A#, G#, F#, E#)
+  │     └─ Mode-dependent pitch offset (tone gen mode at 0x4A48)
+  │     └─ Clamp to 0-255 range
+  │
+  └─ ToneGen_WriteVoiceParams
+        └─ Write 21 register pairs to 0x100000/0x100002
+        └─ Set key-on flag (bit 15 at register offset 0x0080)
+```
+
+### Pitch Calculation
+
+`ToneGen_Calc_Pitch` (0x03D11F) converts MIDI note numbers to tone generator pitch values:
+
+1. Add base offset: `note + 0x24` (transpose up 3 octaves)
+2. Apply semitone-specific corrections for A#, G#, F#, E# (chromatic tuning compensation)
+3. Apply mode-dependent offset from lookup tables at 0x01F420-0x01F422
+4. Clamp final pitch to 0-255 range
+5. Look up velocity curve from table at 0x01F53E
+
+### Volume and Expression
+
+Volume (CC 0x07) and Expression (CC 0x0B) both use a shared **scaling lookup table** at ROM 0x011D16. The final output level is the product of volume and expression, applied to the tone generator's volume registers (groups 0x08-0x09).
+
+Pan (CC 0x0A) is a direct value (0-127) written to channel offset +0x08 and translated to left/right balance via `LABEL_032E1E`.
+
+### Envelope Processing
+
+The KN5000 uses **hardware envelopes** in the tone generator IC303 — the Sub CPU firmware does not implement software ADSR:
+
+- **Key-on** (Note On): Sets bit 15 at tone gen register 0x0080, which triggers the hardware's internal attack phase
+- **Key-off** (Note Off): Clears the enable flag, triggering hardware release
+- **Sustain pedal** (CC 0x40): `Voice_CC_Sustain` (0x028962) defers note-off processing while held — notes sustain until pedal released
+- **Sostenuto** (CC 0x5B): Similar hold behavior for notes already sounding
+- **Soft pedal** (CC 0x5D): Reduces velocity/volume scaling
+
+Attack, decay, sustain level, and release times are determined by the tone generator hardware and the per-voice register template, not by CPU-side envelope generators.
+
+### LFO and Modulation
+
+The Mod Wheel (CC 0x01) controls LFO modulation via `Voice_ModWheel_Apply` (0x024565). The modulation type is selected by bits [7:6] of voice parameter offset +16:
+
+| Bits [7:6] | Mode | Effect |
+|------------|------|--------|
+| 0x00 | Off | No modulation |
+| 0x40 | Vibrato | Pitch modulation (frequency wobble) |
+| 0x80 | Tremolo | Amplitude modulation (volume pulse) |
+| 0xC0 | Auto-pan | Stereo position modulation |
+
+Additional modulation parameters via proprietary CCs:
+
+| CC | Offset | Parameter |
+|----|--------|-----------|
+| 0x9B | +0x1F | Vibrato depth |
+| 0x9C | — | Vibrato enable/disable (bit 8 toggle) |
+| 0x9D | +0x20 | Tremolo/AM depth |
+
+The actual LFO oscillator runs inside the tone generator hardware; the firmware only sets depth and mode parameters.
+
+### Filter Control
+
+No explicit filter envelope or cutoff sweep exists in the CPU firmware. The tone generator hardware likely contains internal filters controlled by:
+
+- **CC 0x9B** (offset +0x1F): May modulate filter cutoff depth in addition to vibrato
+- **Tone gen registers 0x0800-0x08C0** (Volume/Level group): Likely include filter-related parameters
+- **Tone gen registers 0x09C0-0x0A40** (Aux group): Extended parameters potentially including resonance
+
+Filter behavior is fixed per voice preset — no real-time filter sweeps are implemented in firmware.
+
+### Proprietary Control Changes (0x91-0x9D)
+
+| CC | Handler | Channel Offset | Function |
+|----|---------|---------------|----------|
+| 0x91 | LABEL_028A44 | +0x11 | Frequency multiplier (via lookup table) |
+| 0x95 | LABEL_028A55 | +0x04 | Portamento enable/disable (boolean flag) |
+| 0x97 | LABEL_028A7F | +0x12 | Fine pitch tuning (semitone-level adjustment) |
+| 0x9B | LABEL_028A90 | +0x1F | Vibrato depth (via lookup table) |
+| 0x9C | LABEL_028AA1 | — | Vibrato enable/disable (bit 8 toggle) |
+| 0x9D | LABEL_028ACB | +0x20 | Tremolo/AM depth (via lookup table) |
+
+All proprietary CCs use `channel × 0x11F + base_offset` to access per-channel data. CCs 0x91, 0x97, 0x9B, and 0x9D read values from a shared lookup table at 0x011D16. CCs 0x95 and 0x9C are boolean toggles using OR/AND bit masks.
+
 ## Tone Generator
 
 The tone generator (IC303, TC183C230002) is a custom Matsushita 64-voice wavetable synthesis LSI. It has two interfaces:
@@ -857,8 +995,6 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 ## Research Needed
 
 - [ ] Document waveform ROM format and sample layout
-- [ ] Map remaining proprietary CC handlers (0x97-0x9D)
-- [ ] Decode tone generator register semantics (pitch, envelope, filter, etc.)
 - [ ] Decode per-algorithm parameter mapping tables at `0x1F22C`/`0x1F09C` (12-byte stride entries)
 - [ ] Map MainCPU parameter indices (e.g., 33=REVERB TIME) to EFF block word positions per algorithm
 - [ ] Decode DSP register semantics per channel (what registers 0x10-0x17 control)
@@ -866,6 +1002,7 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 - [ ] Investigate why song engine never writes MIDI events to ring buffer (putc_mrx has zero hits)
 - [ ] Determine what sets the startup flag at 0x0251D8 on real hardware
 - [ ] Trace the path from rhythm ROM pattern data to ring buffer write calls
+- [ ] Decode voice parameter template at ROM 0xF8D5 (34 words — which map to pitch, waveform select, envelope mode, etc.)
 - [x] ~~Investigate why Feature Demo sequencer never reaches Note On events~~ — Ring buffer at 0x01F37B is never written; sequencer dispatcher and rhythm ROM reading work correctly but event generation stage never fires
 - [x] ~~Identify the timing mechanism or subcpu response that advances the sequencer~~ — Partially resolved: Timer7, state machine, and dispatcher pipeline traced; the issue is in the song engine output stage, not the input/timing stage
 - [x] ~~Identify exact device on Serial Port 1~~ — Computer Interface (TO HOST connector), sends 0xFE Active Sensing
@@ -876,6 +1013,9 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 - [x] ~~Trace inter-CPU command 0x2D protocol~~ — Complete: 4-layer protocol fully documented
 - [x] ~~Map effect type indices to DSP register configurations~~ — Partial: translation chain traced through `DSP_WriteParameter` → `DSP_ParameterWriteEngine`, but per-algorithm ROM tables not yet decoded
 - [x] ~~Determine if DSP microcode is loaded from ROM~~ — **No.** DSPs are pre-programmed; SubCPU only writes configuration via bytecode interpreter
+- [x] ~~Map remaining proprietary CC handlers (0x97-0x9D)~~ — Complete: CC91=freq mult, CC95=portamento, CC97=fine pitch, CC9B=vibrato depth, CC9C=vibrato enable, CC9D=tremolo depth
+- [x] ~~Decode tone generator register semantics~~ — Partial: voice control state machine, key-on/off flags, volume/level groups, latched parameter updates documented; pitch/envelope/filter register mapping still needs work
+- [x] ~~Document synthesis architecture~~ — Complete: 64-voice wavetable, 26 MIDI channels, dynamic voice allocation, hardware ADSR, LFO modes, proprietary CCs
 - [ ] Reverse-engineer DSP register semantics by analyzing bytecode programs at 0x14777/0x147B3
 - [ ] Determine if DSP internal ROM can be extracted (decapping, JTAG, etc.)
 - [ ] Document bytecode interpreter opcode set completely (opcodes 0x0-0xF)
