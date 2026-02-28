@@ -319,15 +319,77 @@ Based on KN5000 specifications:
 
 ### Style System
 
-The auto-accompaniment styles include:
+#### Structure
 
-| Component | Description |
-|-----------|-------------|
-| Intro | Opening pattern |
-| Main A-D | Main variations |
-| Fill A-D | Transition fills |
-| Ending | Closing pattern |
-| Break | Pause pattern |
+Each auto-accompaniment style contains **3 main variations** (A, B, C), each with **6 sections**:
+
+| Section Type | Count | Purpose |
+|-------------|-------|---------|
+| Intro | 2 per variation | Opening pattern (e.g., "a-intro 1", "a-intro 2") |
+| Main (Variation) | 4 per variation | Main accompaniment loops (e.g., "a-variation1" through "a-variation4") |
+| Fill-In | 2 per variation | Transition fills (e.g., "a-fill in 1", "a-fill in 2") |
+| Ending | 2 per variation | Closing pattern (e.g., "a-ending 1", "a-ending 2") |
+
+Variation names are stored as ASCII strings in ROM (e.g., at `Demo_StyleRhythmData` 0xF5CFCC).
+
+#### Accompaniment Channels
+
+Each pattern includes **5 accompaniment parts** loaded from the Rhythm ROM:
+
+| Channel | Pattern Buffer Offset | Purpose |
+|---------|----------------------|---------|
+| Drums | +0x22 | Percussion: kick, snare, hi-hat, cymbals |
+| Bass | +0x2A | Bass line pattern |
+| Accomp1 | +0x32 | Harmony part 1 (chords) |
+| Accomp2 | +0x3A | Harmony part 2 |
+| Accomp3 | (additional) | Harmony part 3 |
+
+Each channel's metadata block is stored at a fixed offset within the pattern buffer (0x94800 or 0x95C00).
+
+#### Pattern Loading Pipeline
+
+`RhythmROM_PatternDispatcher` (0xF634F3) loads patterns using this address calculation:
+
+```
+ROM address = 0x400000 + base_offset + (selector << 8) + (type_index << 14)
+```
+
+Where:
+- `selector` is read from RAM at 0x348D-0x348F (pattern selectors A/B/type)
+- `type_index` selects the channel type (drums, bass, accomp, etc.)
+- Each pattern block is 1024 bytes (0x400)
+
+The loaded pattern data goes into RAM buffers at 0x94800 and 0x95C00 for double-buffering during playback.
+
+#### Chord Detection
+
+The firmware supports multiple chord detection modes, with **5 chord maps** identified in the style data. These likely correspond to:
+
+| Mode | Description |
+|------|-------------|
+| Fingered | Full chord recognition from held notes |
+| Single Finger | Root note + major/minor/7th from minimal input |
+| Full Keyboard | Split keyboard with left-hand chord area |
+| AI Fingered | Intelligent chord detection with voice leading |
+| Pianist | Chord detection across full keyboard range |
+
+Each chord map stores note-to-chord mappings that translate detected chord roots and types into bass and accompaniment note patterns for the 5 channels.
+
+#### Key RAM Addresses
+
+| Address | Purpose |
+|---------|---------|
+| 0x8D36 | Sequencer state machine (master state) |
+| 0x3277 | Rhythm ROM validation (0 = valid, 0xFFFFFFFF = invalid) |
+| 0x348D-0x348F | Pattern selectors (A/B/type) |
+| 0x3476 | Variation index (0-0x1E) |
+| 0x35A0-0x35A1 | Error flags and drum kit selection |
+| 0x94800 | Pattern buffer A (1024 bytes per pattern) |
+| 0x95C00 | Pattern buffer B (double-buffer) |
+
+#### Drum Kit Loading
+
+`RhythmROM_LoadDrumKit` (0xF64550) loads drum kit definitions from the Rhythm ROM. Each kit maps MIDI note numbers to specific drum/percussion sounds. Up to 10 drum kit configurations can be loaded.
 
 ### File Formats
 
@@ -373,9 +435,11 @@ See [Audio Subsystem - Feature Demo]({{ site.baseurl }}/audio-subsystem/#feature
 - [ ] Document sequence data structure format
 - [ ] Analyze playback timing engine (Timer7 involvement)
 - [ ] Map recording routines
-- [ ] Understand style format in Rhythm ROM
-- [ ] Document chord recognition
+- [ ] Decode full pattern data format within 1024-byte pattern blocks
+- [ ] Map chord detection algorithm (chord maps 1-5)
 - [ ] Identify quantization algorithms
+- [x] ~~Understand style format in Rhythm ROM~~ — 3 variations × 6 sections, 5 channels per pattern, 1024-byte blocks
+- [x] ~~Document chord recognition~~ — Partial: 5 chord maps identified, chord detection modes documented
 - [x] Document medley playback system
 - [x] Document main loop and dispatcher architecture
 - [x] Document ring buffer pipeline and instances
