@@ -802,7 +802,7 @@ See the [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) pag
 
 ## LLVM TLCS-900 Backend Bugs
 
-The LLVM TLCS-900 backend had several encoding and code generation bugs during development. **Status: All 11 bugs fixed or resolved (Feb 28, 2026). All C-level workarounds removed.** A detailed report for compiler developers is maintained in the [Mines project repository](https://github.com/nicories/Mines/blob/main/LLVM_TLCS900_BUGS.md).
+The LLVM TLCS-900 backend had several encoding and code generation bugs during development. **Status: All 11 bugs fixed or resolved (Feb 28, 2026). All C-level workarounds removed.** A detailed report for compiler developers is maintained in the [Mines project repository](https://github.com/ArqueologiaDigital/Mines/blob/kn5000_port/LLVM_TLCS900_BUGS.md).
 
 ### Assembler Encoding Bugs (Fixed)
 

@@ -321,6 +321,64 @@ After the sub CPU payload is loaded:
 | MIDI | External MIDI I/O |
 | HDAE5000 | Hard disk expansion (if present) at 0x160000 |
 
+#### Welcome Screen and Boot Animation
+
+After subsystem initialization and Sub CPU payload loading, the firmware displays a welcome screen. The exact screen shown depends on two factors: a **power-on button combination scan** and the **Sub CPU payload transfer result**.
+
+**Power-on button scan** (`CPanel_ScanButtons` / `CPanel_CheckSpecialCombos`): At early boot (before the welcome screen), the firmware scans the control panel buttons. If specific combinations are held during power-on, special boot modes are activated:
+
+| Button Combination | Code | Effect |
+|---|---|---|
+| No special combo | 0 | Normal boot — splash animation |
+| SHOWTIME & TRAD DANCE + PARTY TIME + MARCH & WALTZ | 1 | Soft version screen |
+| GM SPECIAL + ACCORDION REGISTER + DIGITAL DRAWBAR | 2 | Firmware version display + "ALL INITIAL SETTING!" |
+| AUTO PLAY CHORD + SPLIT POINT + VAR4 + VAR3 | 3 | Internal build numbers |
+| PM1 + PM2 + PM3 + PM4 (all 4 Panel Memory buttons) | 4 | Firmware flash update mode |
+
+The scanned combo code is stored in internal RAM at address 0x402 (byte at offset 1026).
+
+**Welcome screen decision tree** (in `AcWelcomScreenProc` at 0xF7F4B0):
+
+```
+CREATE event (0x1C00001):
+    │
+    ├─ Get region code from Port H (0x408)
+    │  Region 2 → animation data at 0xE9DF4E
+    │  Other    → animation data at 0xE9E806
+    │
+    ├─ Read boot button combo from RAM 0x402
+    │  │
+    │  ├─ Combo == 2 → "ALL INITIAL SETTING!" screen
+    │  │               (posts event 0x1C10009 → "AllInitial" widget)
+    │  │
+    │  └─ Combo != 2 → Check Sub CPU payload status
+    │     │
+    │     ├─ Payload error → "CPU data transmission" error dialog
+    │     │                  (posts event 0x1C10004)
+    │     │
+    │     └─ Payload OK → Normal splash animation
+    │                     (posts event 0x1E000B3)
+```
+
+**Normal splash animation**: On a successful boot with no special buttons held, the firmware displays a splash screen with the Technics/KN5000 logo and animated palette effects (palette cycling, spotlight-like illumination). The animation uses region-specific data tables — Region 2 uses different graphics than other regions. The animation is rendered via `ScreenGroup_Dispatch` (0xFDDB46) which manages UI widget groups.
+
+**"ALL INITIAL SETTING!" screen**: This appears when the firmware version button combo (GM SPECIAL + ACCORDION REGISTER + DIGITAL DRAWBAR) is held at power-on, **not** because of NVRAM loss or factory reset detection. This is a diagnostic/service mode, not an error condition.
+
+> **MAME Note**: In the emulator, the control panel MCU is HLE'd. If the HLE implementation does not correctly report "no buttons pressed" during the initial scan, the firmware may misinterpret the result and display the wrong welcome screen. This is an area for investigation.
+
+#### Battery-Backed SRAM Validation
+
+During boot, the firmware validates the battery-backed SRAM at 0x1E0000-0x1FFFFF:
+
+1. Reads 0x24B8 little-endian 16-bit words from 0x1E0010
+2. Computes a one's complement checksum
+3. Compares against the stored checksum at offset 0x72A8
+4. Validates the 16-byte header against known signatures: "KN5000 SOUND RAM", "KN3000 SOUND RAM", "KN1500 SOUND RAM"
+
+If validation fails, the firmware displays an **"ERROR in back-up SRAM"** message and prompts the user to power-cycle. The factory defaults are embedded in Program ROM at offset 0x0A0150 (0x72A6 bytes, starting with "KN5000 SOUND RAM" header).
+
+The MAME driver correctly implements this via `nvram2` with a custom initialization handler that copies factory defaults and computes the correct checksum on first run.
+
 #### Main Loop
 
 The main CPU enters its event loop, handling:
