@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (84 open, 152 closed)
+**Total Issues:** 237 (83 open, 153 closed)
 
 **Quick Links:** 
-[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11) · [Video & Display](#video-display) (1)
+[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11)
 
 ---
 
@@ -1423,20 +1423,11 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 ---
 
-### Video & Display {#video-display}
-
-#### ⚪ Video: Extract and document all fonts {#issue-kn5000-dj3}
-
-**ID:** `kn5000-dj3` | **Priority:** Low | **Created:** 2026-01-25
-
-Extract font data from ROMs as usable assets. Convert to standard format (BDF, TTF, or PNG atlas). Document character coverage, sizes, styles. Add font samples to image gallery on website.
-
----
-
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-nmg` | Video: Document animation and transition effects | 2026-02-28 |
 | `kn5000-5dc` | Video: Document UI widget rendering | 2026-02-28 |
 | `kn5000-rq0` | Video: Document screen layout and regions | 2026-02-28 |
 | `kn5000-kev` | Video: Document font system and text rendering | 2026-02-28 |
@@ -1456,9 +1447,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-36g` | Images: Reverse engineer image format | 2026-02-27 |
 | `kn5000-16s` | Images: Find embedded image locations in table data ROM | 2026-02-27 |
 | `kn5000-87u` | Images: Find embedded image locations in main CPU ROM | 2026-02-27 |
-| `kn5000-c47b` | HDAE5000 FS: Map RAM data structures used by filesystem | 2026-02-27 |
 
-*...and 132 more closed issues*
+*...and 133 more closed issues*
 
 ---
 
@@ -1471,7 +1461,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Critical | 2 |
 | High | 18 |
 | Medium | 46 |
-| Low | 17 |
+| Low | 16 |
 | P4 | 1 |
 
 ### By Category
@@ -1483,8 +1473,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | HD-AE5000 Expansion | 2 |
 | Other | 51 |
 | Sound & Audio | 11 |
-| Video & Display | 1 |
 
 ---
 
-*Last updated: 2026-02-28 00:30*
+*Last updated: 2026-02-28 00:45*
