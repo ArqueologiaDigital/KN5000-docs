@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (53 open, 183 closed)
+**Total Issues:** 238 (54 open, 184 closed)
 
 **Quick Links:** 
-[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (45) · [Sound & Audio](#sound-audio) (1)
+[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (46) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
@@ -716,6 +716,14 @@ Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
+#### 🟡 Mines: Remove LLVM bug workarounds from video.c {#issue-kn5000-qiw4}
+
+**ID:** `kn5000-qiw4` | **Priority:** Medium | **Created:** 2026-02-28
+
+All LLVM TLCS-900 bugs (#8, #9, #10, #11) are now fixed or resolved. Remove C-level workarounds: (1) 32-bit tile copy → byte-level (Bug #8), (2) noinline tile_vram_ptr → inline tile_vram_offset (Bug #10), (3) palette auto-increment → per-iteration index write (Bug #8/#9). Rebuild Mines and test on MAME.
+
+---
+
 #### 🟡 Phase 3 Completion: Full documentation coverage {#issue-kn5000-9m6}
 
 **ID:** `kn5000-9m6` | **Priority:** Medium | **Created:** 2026-01-31
@@ -1157,6 +1165,7 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-8zr` | LLVM: Fix bug #10 — register x/y swap on inlining | 2026-02-28 |
 | `kn5000-o3u` | LLVM: Fix bug #11 — for-loop with uint16_t counter exits ... | 2026-02-28 |
 | `kn5000-rlb` | Audio: Document tone generator voice allocation | 2026-02-28 |
 | `kn5000-5ck` | Audio: Document proprietary CC handlers (0x97, 0x9B-0x9D) | 2026-02-28 |
@@ -1176,9 +1185,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | `kn5000-4q0` | FeatureDemo: Create ASL macros for slide definitions | 2026-02-28 |
 | `kn5000-dqi` | FeatureDemo: Document widget parameter formats | 2026-02-28 |
 | `kn5000-x13` | FeatureDemo: Identify and catalog UI widget types | 2026-02-28 |
-| `kn5000-bds` | FeatureDemo: Reverse engineer slide record format | 2026-02-28 |
 
-*...and 163 more closed issues*
+*...and 164 more closed issues*
 
 ---
 
@@ -1190,7 +1198,7 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Critical | 2 |
 | High | 9 |
-| Medium | 28 |
+| Medium | 29 |
 | Low | 13 |
 | P4 | 1 |
 
@@ -1200,9 +1208,9 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Firmware Update | 5 |
 | HD-AE5000 Expansion | 2 |
-| Other | 45 |
+| Other | 46 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-02-28 05:03*
+*Last updated: 2026-02-28 05:32*
