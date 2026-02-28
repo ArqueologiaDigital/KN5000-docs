@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (87 open, 149 closed)
+**Total Issues:** 237 (86 open, 150 closed)
 
 **Quick Links:** 
-[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11) · [Video & Display](#video-display) (4)
+[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11) · [Video & Display](#video-display) (3)
 
 ---
 
@@ -1448,14 +1448,6 @@ Analyze how UI elements are drawn: buttons, sliders, menus, piano keyboard displ
 
 ---
 
-#### 🟡 Video: Document screen layout and regions {#issue-kn5000-rq0}
-
-**ID:** `kn5000-rq0` | **Priority:** Medium | **Created:** 2026-01-25
-
-Map the LCD screen layout: header area, main content area, status bar, any fixed regions. Document how different screens/modes use the display real estate. Create annotated screenshots showing region boundaries.
-
----
-
 #### ⚪ Video: Document animation and transition effects {#issue-kn5000-nmg}
 
 **ID:** `kn5000-nmg` | **Priority:** Low | **Created:** 2026-01-25
@@ -1476,6 +1468,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-kev` | Video: Document font system and text rendering | 2026-02-28 |
 | `kn5000-gln` | Video: Reverse engineer drawing primitives | 2026-02-27 |
 | `kn5000-t8n` | HDAE5000: Reverse engineer parallel port protocol | 2026-02-27 |
 | `kn5000-9bd` | Boot: Document audio subsystem initialization | 2026-02-27 |
@@ -1495,9 +1488,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-c47b` | HDAE5000 FS: Map RAM data structures used by filesystem | 2026-02-27 |
 | `kn5000-li65` | HDAE5000 FS: Annotate file operations (Save/Load/Delete/R... | 2026-02-27 |
 | `kn5000-c5gn` | HDAE5000 FS: Annotate sector allocation and VarInt encoding | 2026-02-27 |
-| `kn5000-q7xb` | HDAE5000 FS: Annotate FS_Read_FSB with field-level comments | 2026-02-27 |
 
-*...and 129 more closed issues*
+*...and 130 more closed issues*
 
 ---
 
@@ -1509,7 +1501,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 18 |
-| Medium | 48 |
+| Medium | 47 |
 | Low | 18 |
 | P4 | 1 |
 
@@ -1522,8 +1514,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | HD-AE5000 Expansion | 2 |
 | Other | 51 |
 | Sound & Audio | 11 |
-| Video & Display | 4 |
+| Video & Display | 3 |
 
 ---
 
-*Last updated: 2026-02-28 00:04*
+*Last updated: 2026-02-28 00:11*
