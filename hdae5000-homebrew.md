@@ -802,7 +802,7 @@ See the [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) pag
 
 ## LLVM TLCS-900 Backend Bugs
 
-The LLVM TLCS-900 backend has several encoding and code generation bugs. These affect any project using LLVM to target the TLCS-900 architecture. **Status: 8 fixed, 2 active, 1 confirmed not-a-bug.** A detailed report for compiler developers is maintained in the [Mines project repository](https://github.com/nicories/Mines/blob/main/LLVM_TLCS900_BUGS.md).
+The LLVM TLCS-900 backend had several encoding and code generation bugs during development. **Status: All 11 bugs fixed or resolved (Feb 28, 2026). All C-level workarounds removed.** A detailed report for compiler developers is maintained in the [Mines project repository](https://github.com/nicories/Mines/blob/main/LLVM_TLCS900_BUGS.md).
 
 ### Assembler Encoding Bugs (Fixed)
 
@@ -890,40 +890,19 @@ ld   xiz, (xiz)                        ; then dereference
 
 **C workaround (before fix):** Copy 32-bit values and mask, instead of using 8-bit register operations directly.
 
-### Code Generation Bugs (Active)
+### Code Generation Bugs (Resolved)
 
-### Bug 10: Register Allocation X/Y Swap in Inlined Functions
+### Bug 10: Register Allocation X/Y Swap in Inlined Functions — NOT REPRODUCIBLE
 
-**Severity:** Moderate -- causes transposed tile positions
+**Resolution (Feb 28, 2026):** The original analysis assumed XBC held the first parameter and XDE the second. Investigation of `TLCS900CallingConv.td` confirmed the calling convention has always been XDE-first (`CCAssignToReg<[XDE, XBC, XIX, XIY]>`). With the correct parameter mapping, the generated code was correct all along. The `__attribute__((noinline))` workaround has been removed.
 
-When `tile_vram_offset(tx, ty)` is inlined into `set_tile(dst_x, dst_y, tile)`, the register allocator swaps the registers for dst_x and dst_y. The row offset (should use dst_y * 2560) is computed from dst_x, and vice versa. The LLVM IR correctly uses `%dst_y` for the row, but the generated machine code uses the register holding `%dst_x`.
+### Bug 11: For-Loop with uint16_t Counter Exits After 1 Iteration — FIXED
 
-**C workaround:** Mark the affected function as `__attribute__((noinline))`.
+**Fix (Feb 28, 2026):** Commit `eba2fe6622ee`. Root cause: `EXTS32` and `EXTZ32` were declared with `Defs=[SR]` in `TLCS900InstrInfo.td`, telling the compiler they set flags. On TLCS-900/H hardware, EXTS/EXTZ do NOT set any flags (confirmed via MAME's `op_EXTZLR` and `op_EXTSLR` implementations).
 
-### Bug 11: For-Loop with uint16_t Counter Exits After 1 Iteration
+For `uint16_t` loops, clang generates a count-down pattern: `DEC` + `EXTZ` + `CP 0` + `JR NZ`. The `RedundantCmpElim` pass saw `EXTZ` (which it thought set Z) followed by `CP 0` + `JPcc NZ`, and removed the `CP` as "redundant." This left the `JR NZ` reading stale flags, causing immediate loop exit.
 
-**Severity:** High -- causes loops to execute only once
-
-A C `for` loop with a `uint16_t` counter and 32-bit pointer dereference executes only one iteration:
-
-```c
-volatile uint32_t *p = (volatile uint32_t *)0x1A0000;
-for (uint16_t i = 0; i < 19200; i++) {
-    *p++ = 0;  // Only first 4 bytes cleared!
-}
-```
-
-This was the critical bug preventing game rendering -- the VRAM clear loop only cleared 4 bytes instead of 76,800. The 32-bit store works correctly, but the loop counter comparison fails, causing immediate loop exit.
-
-**C workaround:** Use `do-while` loop with `uint32_t` counter:
-
-```c
-volatile uint32_t *p = (volatile uint32_t *)0x1A0000;
-uint32_t count = 19200;
-do { *p++ = 0; count--; } while (count != 0);
-```
-
-This works because `uint32_t` comparison uses 32-bit ALU instructions (correctly encoded) and `do-while` with `!= 0` avoids the broken less-than comparison path.
+**Fix:** Moved `EXTS32`/`EXTZ32` out of the `Defs=[SR]` block and removed them from `isFlagSettingDef()` in `RedundantCmpElim`. Standard `for` loops with `uint16_t` counters now work correctly. The `do-while` with `uint32_t` workaround has been removed.
 
 ### TLCS-900 Opcode Reference for Workarounds
 
