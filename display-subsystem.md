@@ -319,6 +319,18 @@ Character codes are offset by 0x20 (space) before table lookup. Glyphs are rende
 | `ConvertStrings` | 0xFB264F | Convert control codes to displayable format (0x7E prefix = escape) |
 | `WordwrapStrings` | 0xFB26D2 | Word-wrap text for multi-line layout |
 
+### Character Encoding
+
+Characters use ASCII encoding with an offset of `0x20` (space). Before lookup in the font or kerning table, each character code has `0x20` subtracted. Control characters below `0x20` are mapped to space.
+
+**Escape sequences:** The `0x7E` prefix byte introduces a two-digit hex-encoded character code:
+```
+0x7E 0x33 0x41  →  character 0x3A (colon)
+0x7E 0x46 0x37  →  character 0xF7 (special symbol)
+```
+
+Hex digits support `0-9`, `a-f`, and `A-F`.
+
 ### Dirty Region Tracking
 
 The display update system tracks 11 independent screen regions. Each region has a dirty bit in the bitmap at `DISPLAY_DIRTY_FLAGS` (0x205E4):
