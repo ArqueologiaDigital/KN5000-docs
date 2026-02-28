@@ -451,6 +451,62 @@ The bounding box is maintained at:
 | OFFSCREEN_BUFFER_3 | 0x05FE00 | 76,800 bytes | Tertiary buffer (compositing) |
 | OFFSCREEN_BUFFER_4 | 0x069400 | 76,800 bytes | Quaternary buffer (sprites/overlays) |
 
+## UI Widget Rendering
+
+### Rectangle & Shape Primitives
+
+In addition to the pixel-level drawing primitives, the firmware provides higher-level shape drawing functions:
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `DrawBox` | 0xFAB295 | Fill a rectangle with solid color (clip to 0-319, 0-239) |
+| `DrawFrame` | 0xFAB400 | Draw rectangle outline (4 border lines, no fill) |
+| `DrawFrameEx` | 0xFAB8CC | Styled frame with XOR support and screen clipping |
+| `DrawDesignFrame` | 0xF9C8B7 | Decorative frame with special border patterns |
+| `DrawDesignBox` | 0xFAD559 | Styled box with type-specific rendering |
+
+### Icon Rendering
+
+The firmware maintains a separate **icon descriptor table** at `0x938000` (in Table Data ROM), using the same 8-byte format as the bitmap table:
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `DrawIcons` | 0xFABF61 | Draw icon from table at 0x938000 |
+| `DrawBitmapSP` | 0xFAC0CB | Draw bitmap with special color mapping |
+| `DrawBitmapSPFast` | 0xFAC1FF | Fast special bitmap rendering |
+| `DrawBitmapSP2` | 0xFAC38D | Alternative special bitmap variant |
+| `DrawBitmapFile` | 0xFAC3FB | Draw bitmap from file/external data |
+
+### Progress Bar Widgets
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `DrawProgressRectH` | 0xF99E75 | Horizontal progress bar (3 modes: center, left, right fill) |
+| `DrawProgressRectV` | 0xF99F7D | Vertical progress bar (3 modes: center, top, bottom fill) |
+
+### Widget Event Handlers
+
+The firmware implements widget-specific event handlers following a `*Proc` naming convention:
+
+| Widget Type | Handler | Description |
+|-------------|---------|-------------|
+| GroupBox | `GroupBoxProc` | Container/panel widget |
+| Label | `LabelProc` | Static text display |
+| EditSwitch | `EditSwProc` | Toggle/checkbox control |
+| TextBox | `TextBoxProc` | Text input field |
+
+Many domain-specific widget types exist for the keyboard's various modes (arrangement, composition, bank selection, etc.).
+
+### LCD Control
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `LcdOn` | 0xFAA5D0 | Enable LCD output (set flag at 0x030464) |
+| `LcdOff` | 0xFAA5DB | Disable LCD output |
+| `ChangePalette` | 0xFAF34E | Switch color palette |
+| `ChangeWall` | 0xFAF21C | Load background wallpaper |
+| `ChangeWallPalette` | 0xFAF26C | Change palette for wallpaper |
+
 ## Embedded Images
 
 Images extracted from firmware ROMs:
