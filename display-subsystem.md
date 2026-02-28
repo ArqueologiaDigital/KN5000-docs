@@ -295,8 +295,10 @@ Text is rendered using a **font glyph table** in ROM at `0x945C00`. Each font en
 +0x04: word  descent (below baseline)
 +0x06: word  ascent (above baseline)
 +0x08: long  glyph_bitmap_ptr (1bpp bitmap data, 8 pixels per byte, MSB first)
-+0x0C: long  kerning_table_ptr (0 = fixed-width font)
++0x0C: long  kerning_table_ptr (0 = fixed-width font; see below)
 ```
+
+For **variable-width fonts** (kerning_table_ptr ≠ 0), the kerning table has 4-byte entries per character: `{word char_width, word glyph_data_offset}`. Each glyph uses `ceil(char_width/8) × height` bytes at `glyph_bitmap_ptr + glyph_data_offset`.
 
 Character codes are offset by 0x20 (space) before table lookup. Glyphs are rendered as 1bpp bitmaps decomposed into 8-pixel-wide vertical strips, drawn left-to-right, top-to-bottom. All text rendering clips against a specified rectangle.
 
@@ -330,6 +332,34 @@ Characters use ASCII encoding with an offset of `0x20` (space). Before lookup in
 ```
 
 Hex digits support `0-9`, `a-f`, and `A-F`.
+
+### Font Catalog
+
+The firmware contains **10 fonts** (IDs 0-9) in the Table Data ROM. Each font has 224 characters (ASCII 0x20-0xFF). All glyph data resides at `0x945C00`-`0x94FF00`.
+
+| ID | Size | Type | Kerning | Description |
+|----|------|------|---------|-------------|
+| 0 | 8×16 | Fixed | No | Standard UI font |
+| 1 | 8×16 | Fixed | No | Standard UI font (bold variant) |
+| 2 | 16×16 | Fixed | No | Wide/bold font (double-width) |
+| 3 | 6×8 | Fixed | No | Small font (compact displays) |
+| 4 | 11×16 | Fixed | No | Medium-wide font |
+| 5 | var×16 | Variable | Yes | Proportional font (widths 3-10px) |
+| 6 | 8×10 | Fixed | No | Compact font (reduced height) |
+| 7 | 8×16 | Fixed | No | Standard UI font (alternate style) |
+| 8 | 8×16 | Fixed | No | Standard UI font (alternate bold) |
+| 9 | 11×16 | Fixed | No | Medium-wide font (alternate) |
+
+**Variable-width font (ID 5):** Uses a kerning table at `0x94C620` with 4-byte entries per character: `{word char_width, word glyph_offset}`. Each glyph uses `ceil(width/8) × height` bytes. Character widths range from 3 to 10 pixels.
+
+**Font samples** (extracted from ROM):
+
+{% for i in (0..9) %}
+**Font {{ i }}:**
+![Font {{ i }}]({{ site.baseurl }}/assets/images/gallery/font_0{{ i }}.png)
+{% endfor %}
+
+BDF (Bitmap Distribution Format) exports are available in the [roms-disasm repository](https://github.com/ArqueologiaDigital/kn5000-roms-disasm/tree/main/extracted_fonts) for use in emulators and tools.
 
 ## Screen Layout and Regions
 
