@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (80 open, 156 closed)
+**Total Issues:** 237 (75 open, 162 closed)
 
 **Quick Links:** 
-[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (8)
+[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (3)
 
 ---
 
@@ -1335,46 +1335,6 @@ Add to CLAUDE.md so future work maintains consistency.
 
 ### Sound & Audio {#sound-audio}
 
-#### 🟠 Sound: Document DAC IC310 {#issue-kn5000-xel}
-
-**ID:** `kn5000-xel` | **Priority:** High | **Created:** 2026-01-25
-
-Identify and document the DAC chip (IC310). Find datasheet. Document: resolution (bits), sample rate, number of channels, interface protocol (I2S, parallel), output specifications.
-
----
-
-#### 🟠 Sound: Document Waveform ROM (IC306-307) {#issue-kn5000-d38}
-
-**ID:** `kn5000-d38` | **Priority:** High | **Created:** 2026-01-25
-
-Analyze the waveform ROM chips. Document: total size, data format, sample encoding (PCM bits, compression), how samples are indexed, instrument mapping. These contain the raw sound samples for synthesis.
-
----
-
-#### 🟡 Sound: Document MIDI implementation {#issue-kn5000-ake}
-
-**ID:** `kn5000-ake` | **Priority:** Medium | **Created:** 2026-01-25
-
-Fully document MIDI capabilities. Trace: MIDI IN/OUT/THRU handling, channel assignments, supported controllers (CC), SysEx commands, GM/GS/XG compatibility, MIDI clock sync, sequencer integration.
-
----
-
-#### 🟡 Sound: Document audio output path {#issue-kn5000-jy9}
-
-**ID:** `kn5000-jy9` | **Priority:** Medium | **Created:** 2026-01-25
-
-Trace complete audio signal path from DAC to output jacks. Document: analog circuitry, amplifier stages, headphone amp, line out levels, speaker amp (if internal), any analog effects or mixing.
-
----
-
-#### 🟡 Sound: Document effects processing chain {#issue-kn5000-si0}
-
-**ID:** `kn5000-si0` | **Priority:** Medium | **Created:** 2026-01-25
-
-Trace the audio effects signal path. Document: reverb types and parameters, chorus/flanger, EQ, effects routing (insert vs send), which chip handles each effect (DSP vs sub CPU), effects presets.
-
----
-
 #### 🟡 Sound: Document rhythm/accompaniment engine {#issue-kn5000-98j}
 
 **ID:** `kn5000-98j` | **Priority:** Medium | **Created:** 2026-01-25
@@ -1403,6 +1363,12 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-ake` | Sound: Document MIDI implementation | 2026-02-28 |
+| `kn5000-jy9` | Sound: Document audio output path | 2026-02-28 |
+| `kn5000-si0` | Sound: Document effects processing chain | 2026-02-28 |
+| `kn5000-d38` | Sound: Document Waveform ROM (IC306-307) | 2026-02-28 |
+| `kn5000-xel` | Sound: Document DAC IC310 | 2026-02-28 |
+| `kn5000-xv2` | Sound: Document DSP IC311 | 2026-02-28 |
 | `kn5000-tvq` | Sound: Document synthesis architecture | 2026-02-28 |
 | `kn5000-061` | Sound: Trace main CPU to Sub CPU command protocol | 2026-02-28 |
 | `kn5000-dj3` | Video: Extract and document all fonts | 2026-02-28 |
@@ -1417,14 +1383,8 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 | `kn5000-izk` | Boot: Document HDAE5000 detection and init | 2026-02-27 |
 | `kn5000-vql` | Boot: Document LCD splash screen sequence | 2026-02-27 |
 | `kn5000-bq4` | Boot: Document control panel initialization | 2026-02-27 |
-| `kn5000-pkx` | Images: Convert images to viewable formats | 2026-02-27 |
-| `kn5000-4rr` | Images: Update assembly sources to include binary images | 2026-02-27 |
-| `kn5000-1ru` | SubCPU: Document payload memory layout | 2026-02-27 |
-| `kn5000-ayt` | SubCPU: Identify sub CPU type and memory map | 2026-02-27 |
-| `kn5000-51z` | SubCPU: Document boot sequence handshake | 2026-02-27 |
-| `kn5000-pcq` | Images: Extract all images as binary files | 2026-02-27 |
 
-*...and 136 more closed issues*
+*...and 142 more closed issues*
 
 ---
 
@@ -1435,8 +1395,8 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 17 |
-| Medium | 44 |
+| High | 15 |
+| Medium | 41 |
 | Low | 16 |
 | P4 | 1 |
 
@@ -1448,8 +1408,8 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 2 |
 | Other | 51 |
-| Sound & Audio | 8 |
+| Sound & Audio | 3 |
 
 ---
 
-*Last updated: 2026-02-28 01:03*
+*Last updated: 2026-02-28 01:04*
