@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (89 open, 148 closed)
+**Total Issues:** 237 (87 open, 149 closed)
 
 **Quick Links:** 
-[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11) · [Video & Display](#video-display) (6)
+[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11) · [Video & Display](#video-display) (4)
 
 ---
 
@@ -1425,29 +1425,6 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 ### Video & Display {#video-display}
 
-#### 🟠 Video: Reverse engineer drawing primitives {#issue-kn5000-gln}
-
-**ID:** `kn5000-gln` | **Priority:** High | **Created:** 2026-01-25
-
-Find and document graphics drawing routines in firmware: pixel plotting, line drawing, rectangle fill, bitmap blitting (BLT), text rendering. Document function addresses, parameters, and any hardware acceleration used.
-
-**Notes:** Drawing primitives are needed for UI rendering.
-
-**Current state:** VRAM_FillRect identified at 0xEF50DF, other routines unknown.
-
-**Required work:**
-- Trace graphics API entry points
-- Document line, rect, fill, blit operations
-- Map sprite/bitmap rendering
-- Document clipping and coordinate systems
-
-**Phase:** 1 - Foundation (MAME Blockers)
-**Blocks:** UI rendering in emulator
-**Dependencies:** Framebuffer documentation (kn5000-3c5)
-**Related:** kn5000-5dc (widget rendering), kn5000-kev (fonts)
-
----
-
 #### 🟡 Video: Document UI widget rendering {#issue-kn5000-5dc}
 
 **ID:** `kn5000-5dc` | **Priority:** Medium | **Created:** 2026-01-25
@@ -1468,29 +1445,6 @@ Analyze how UI elements are drawn: buttons, sliders, menus, piano keyboard displ
 **Blocks:** Menu system in emulator
 **Dependencies:** Drawing primitives (kn5000-gln), fonts (kn5000-kev)
 **Related:** kn5000-x13 (widget catalog), kn5000-4bt (UI symbols)
-
----
-
-#### 🟡 Video: Document font system and text rendering {#issue-kn5000-kev}
-
-**ID:** `kn5000-kev` | **Priority:** Medium | **Created:** 2026-01-25
-
-Analyze how text is rendered on the LCD. Document: font data location in ROM, font format (bitmap or vector), character encoding, font sizes available, text drawing routines, any internationalization support.
-
-**Notes:** Font system documentation is needed for text rendering.
-
-**Current state:** Font location unknown, rendering routines not traced.
-
-**Required work:**
-- Locate font data in ROM (likely in Table Data or Main CPU)
-- Document font format (bitmap? vector?)
-- Trace text rendering routines
-- Document character encoding (ASCII? Shift-JIS?)
-
-**Phase:** 2 - Core Functionality
-**Blocks:** Text display in emulator
-**Dependencies:** Drawing primitives (kn5000-gln)
-**Related:** kn5000-dj3 (extract fonts)
 
 ---
 
@@ -1522,6 +1476,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-gln` | Video: Reverse engineer drawing primitives | 2026-02-27 |
 | `kn5000-t8n` | HDAE5000: Reverse engineer parallel port protocol | 2026-02-27 |
 | `kn5000-9bd` | Boot: Document audio subsystem initialization | 2026-02-27 |
 | `kn5000-mhj` | Boot: Create complete boot sequence timeline | 2026-02-27 |
@@ -1541,9 +1496,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-li65` | HDAE5000 FS: Annotate file operations (Save/Load/Delete/R... | 2026-02-27 |
 | `kn5000-c5gn` | HDAE5000 FS: Annotate sector allocation and VarInt encoding | 2026-02-27 |
 | `kn5000-q7xb` | HDAE5000 FS: Annotate FS_Read_FSB with field-level comments | 2026-02-27 |
-| `kn5000-44c` | HDAE5000: Document filesystem structure | 2026-02-27 |
 
-*...and 128 more closed issues*
+*...and 129 more closed issues*
 
 ---
 
@@ -1554,8 +1508,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 19 |
-| Medium | 49 |
+| High | 18 |
+| Medium | 48 |
 | Low | 18 |
 | P4 | 1 |
 
@@ -1568,8 +1522,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | HD-AE5000 Expansion | 2 |
 | Other | 51 |
 | Sound & Audio | 11 |
-| Video & Display | 6 |
+| Video & Display | 4 |
 
 ---
 
-*Last updated: 2026-02-27 23:59*
+*Last updated: 2026-02-28 00:04*
