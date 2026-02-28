@@ -538,6 +538,104 @@ The KN5000 uses a single display mode:
 - [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) - Physical components
 - [System Overview]({{ site.baseurl }}/system-overview/) - Overall architecture
 
+## Animation and Transition Effects
+
+The KN5000 implements several animation and transition effect mechanisms, all software-based (no hardware scroll registers are used).
+
+### Rendering Pipeline
+
+All drawing operations target `OFFSCREEN_BUFFER_1` (0x43C00), never VRAM directly. The `UpdateScreen` function (0xFAA61D) copies changed regions to VRAM:
+
+```
+Drawing Operation (DrawString, DrawBox, etc.)
+        ↓
+Write to OFFSCREEN_BUFFER_1 (0x43C00)
+        ↓
+Call SetChangeRect() → expand dirty bounding box at 0x030456
+        ↓
+Main loop calls UpdateScreen (0xFAA61D)
+        ↓
+Check dirty bounding box:
+  Full screen? → full-screen blit (0xFB30A9)
+  Partial?     → row-by-row blit (0xFB30D3)
+        ↓
+Copy from 0x43C00 → VRAM at 0x1A0000
+        ↓
+Reset dirty box and flags
+```
+
+During large updates, `VGA_ScreenBlank` (0xFB319A) blanks the display by setting VGA Sequencer register 01h bit 5, preventing visible tearing. `VGA_ScreenUnblank` (0xFB318A) re-enables display after the update.
+
+### Palette-Based Fade Effects
+
+The firmware implements fade effects through VGA DAC palette manipulation:
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| ChangePalette | 0xFAF2F3 | Switch to a new 256-color palette from table at 0xEAAE66 |
+| PaletteBankRotation | 0xFAF346 | Rotate pixel values through palette banks for fade effect |
+
+**Palette table** at `0xEAAE66`: entries are 10 bytes each, containing pointers to RGB palette data. The firmware supports 16 palette banks of 16 colors each (0x00-0x0F through 0xE0-0xEF).
+
+**Palette bank rotation** (0xFAF346) creates fade effects by modifying pixel color indices:
+- Pixels with value >= 0xE0: subtract 0x90 (wrap to lower bank)
+- Pixels with value < 0xE0: add 0x10 (shift to next bank)
+
+This rotates all pixels one palette bank forward. Combined with palettes arranged as intensity gradients, this produces smooth brightness fade transitions.
+
+**Key palette state addresses:**
+
+| Address | Purpose |
+|---------|---------|
+| 0x03EF94 | Current palette data pointer |
+| 0x03EF9E | Current palette index |
+| 0x03EFA0 | Previous palette index (for partial updates) |
+| 0x030460 | Palette update pending flag |
+
+### Grid-Based Screen Transitions
+
+Complex screen transitions use a grid-based dissolve effect:
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| AcFadeSetGridBoxProc | 0xF7514A | Grid fade effect processor (event-driven) |
+| FadeSetGridCheck | 0xF75377 | Grid parameter validation and dispatch |
+| TtFadeInOut | 0xF75118 | Fade-in/out state machine (Entertainer mode) |
+
+The grid effect divides the screen into cells and fades them individually with staggered timing, creating a "dissolve" appearance. Configuration uses ROM lookup tables:
+- `0xE7F948` — fade-in timing table
+- `0xE7F956` — fade-out timing table
+- `0xE7F964` — jump table for 7 sub-handlers (events 0x17-0x1D)
+
+### Pre-Computed Fade Data
+
+Four binary data blobs in ROM store pre-computed fade transition patterns:
+
+| Label | Address | Size | Purpose |
+|-------|---------|------|---------|
+| Bitmap_FadeInPicture | 0xEB8072 | 2800 | Picture fade-in transition data |
+| Bitmap_FadeInText | 0xEB8B62 | 1440 | Text fade-in transition data |
+| Bitmap_FadeOutPicture | 0xEB9102 | 2850 | Picture fade-out transition data |
+| Bitmap_FadeOutText | 0xEB9C24 | 2160 | Text fade-out transition data |
+
+### Timer-Driven Animation
+
+Animation timing is handled by the `IvOneShotTimerProc` (0xF8A122) event handler, which provides single-shot timer callbacks for UI animation frame ticks.
+
+### Screen Transition State Machine
+
+The `SeqState_TransitionMode` (0xF99579) handler manages full-screen mode transitions (e.g., switching between sequencer screens, entering demo mode). It coordinates state variables at:
+- `0x02749A` — transition progress counter
+- `0x02749E` — transition timer
+- `0x0274A2` — transition type/flags
+- `0x0274A8-0x0274AE` — additional transition parameters
+
+### Scrolling
+
+All scrolling is software-based — no VGA hardware scroll registers are used. Scrolling is implemented via `MovePixels` (0xFABA60), which copies rectangular pixel blocks within the offscreen buffer. The `AcRotStrBoxProc` (0xF8D6D8) handler provides smooth scrollbar animation with timer-based auto-repeat.
+
+UI element names "SlideMove" and "SlideBase" appear in the firmware's string table (0xEAB8D8), suggesting slide animation support for UI transitions.
+
 ## Research Needed
 
 - [x] Document VGA register map at 0x170000
@@ -548,8 +646,9 @@ The KN5000 uses a single display mode:
 - [x] Identify font rendering routines (DrawString family, font table at 0x945C00)
 - [x] Document text drawing functions (DrawString, Centered, Left/Right, Reverse, Alignment)
 - [x] Map UI widget drawing primitives (pixel, line, rect, bitmap, text, blit)
-- [ ] Understand page transition effects
+- [x] Document page transition effects (palette fade, grid dissolve, state machine)
 - [ ] Document workspace display callbacks (0x0124, 0x0278, 0x0534) protocols
+- [ ] Reverse engineer pre-computed fade data format (BitmapFadeIn/Out blobs)
 
 ## How to Contribute
 
