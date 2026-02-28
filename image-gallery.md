@@ -29,37 +29,43 @@ The Table Data ROM also contains 8 system update message bitmaps at address `0x9
 
 **Note:** The Table Data ROM uses 16-bit word-level interleaving (stored across two physical ROM chips: odd.ic1 and even.ic3). When properly combined, the bitmap data is byte-identical to the Main CPU versions. The disassembly source shares the same bitmap files between both ROMs.
 
-### FTBMP01 - Demo Screen 1
+### FTBMP01 - Technics Logo + World Globe (`FTDEMO_SCREEN01_TECHNICS_GLOBE`)
 
 ![FTBMP01]({{ "/assets/images/gallery/FTBMP01.png" | relative_url }})
 
-*320x240, 8-bit color*
+*320x240, 8-bit color* — The Technics brand logo overlaid on a world globe graphic. Used as the opening image of the Feature Demo presentation.
 
-### FTBMP02 - Demo Screen 2
+### FTBMP02 - Subwoofers (`FTDEMO_SCREEN02_SUBWOOFERS`)
 
 ![FTBMP02]({{ "/assets/images/gallery/FTBMP02.png" | relative_url }})
 
-*320x130, 8-bit color*
+*320x130, 8-bit color* — A showcase image of the KN5000's integrated subwoofer speakers.
 
-### FTBMP03 - Demo Screen 3
+### FTBMP03 - Floppy Disks (`FTDEMO_SCREEN03_FLOPPY_DISKS`)
 
 ![FTBMP03]({{ "/assets/images/gallery/FTBMP03.png" | relative_url }})
 
-*320x120, 8-bit color*
+*320x120, 8-bit color* — A collection of floppy disks, highlighting the keyboard's built-in floppy drive.
 
-### FTBMP05 - Demo Screen 5
+### FTBMP04 - Disk Insertion (`FTDEMO_SCREEN04_DISK_INSERT`)
+
+![FTBMP04]({{ "/assets/images/gallery/FTBMP04.png" | relative_url }})
+
+*320x120, 8-bit color* — A floppy disk being inserted into the KN5000's drive slot.
+
+### FTBMP05 - 360° Surround Arrows (`FTDEMO_SCREEN05_SURROUND_ARROWS`)
 
 ![FTBMP05]({{ "/assets/images/gallery/FTBMP05.png" | relative_url }})
 
-*320x125, 8-bit color*
+*320x125, 8-bit color* — Arrows arranged in a 360° pattern, representing the keyboard's surround sound capabilities.
 
-### FTBMP06 - Demo Screen 6
+### FTBMP06 - KN5000 + Rainbow Comet (`FTDEMO_SCREEN06_KN5000_RAINBOW`)
 
 ![FTBMP06]({{ "/assets/images/gallery/FTBMP06.png" | relative_url }})
 
-*320x240, 8-bit color*
+*320x240, 8-bit color* — The KN5000 model name with a rainbow comet graphic. Used as the closing image of the Feature Demo presentation.
 
-**Note:** FTBMP04 has a corrupted header and could not be converted.
+**Note:** All six FTBMP images reside on floppy disk (not in ROM). The "IN COLOR" text visible in the Feature Demo splash screen is pre-rendered directly into these bitmap files. Disassembly symbols: `FTDEMO_SCREEN01_TECHNICS_GLOBE` through `FTDEMO_SCREEN06_KN5000_RAINBOW`.
 
 ---
 
