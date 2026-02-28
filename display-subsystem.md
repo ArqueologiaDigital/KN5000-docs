@@ -331,6 +331,81 @@ Characters use ASCII encoding with an offset of `0x20` (space). Before lookup in
 
 Hex digits support `0-9`, `a-f`, and `A-F`.
 
+## Screen Layout and Regions
+
+### Region Architecture
+
+The display is divided into 11 independently-tracked dirty regions. Each region has its own redraw function and dirty bit. The regions are not defined by hardcoded pixel coordinates — instead, each redraw function loads **ROM descriptor tables** that define the region geometry, content, and rendering parameters. These descriptors are passed to UI rendering helper functions.
+
+### Region Update Order
+
+`Display_UpdateDirtyRegions` (0xEF5B36) updates regions in a specific order optimized for visual priority:
+
+```
+1. Region 0  - Status Bar         (mode indicators, tempo)
+2. Region 5  - Menu Area          (menu/list content)
+3. Region 7  - Parameter Display  (parameter names)
+4. Region 8  - Value Display      (parameter values)
+5. Region 9  - Indicator Area     (status indicators)
+6. Region 1  - Title Bar          (song/patch name, up to 3 title fields)
+7. Region 10 - Footer Area        (status/help text)
+8. Region 6  - Button Labels      (soft button labels, 3 rows of 8)
+9. Region 3  - Main Content       (primary display area)
+10. Region 4 - Side Panel         (side parameters)
+11. Region 2 - Selection          (highlight/cursor, drawn last for overlay)
+```
+
+### Redraw Functions
+
+Each region has a dedicated redraw function that references ROM descriptor tables:
+
+| Region | Redraw Function | Address | ROM Descriptors (examples) |
+|--------|-----------------|---------|---------------------------|
+| 0 | `Display_RedrawStatusBar` | 0xF00999 | 0xE0B905, 0xE0B92E, 0xE0B99D |
+| 1 | `Display_RedrawTitleBar` | 0xF00C89 | 0xE0BD52-0xE0BD7A (3 title fields) |
+| 2 | `Display_RedrawSelection` | 0xF00DA5 | Variable (cursor overlay) |
+| 3 | `Display_RedrawMainContent` | 0xF00C33 | 0xE0BD89 |
+| 4 | `Display_RedrawSidePanel` | 0xF00E35 | Multiple descriptor sets |
+| 5 | `Display_RedrawMenu` | 0xEFF110 | Complex menu rendering |
+| 6 | `Display_RedrawButtonLabels` | 0xF00FDC | 0xE0C764, 0xE0C8CC, 0xE0BF6E |
+| 7 | `Display_RedrawParameters` | 0xEF6F1A | State-dependent |
+| 8 | `Display_RedrawValues` | 0xEF6FA3 | State-dependent |
+| 9 | `Display_RedrawIndicators` | 0xEF704B | State-dependent |
+| 10 | `Display_RedrawFooter` | 0xF00C4A | 0xE0BDAC, 0xE0BDE8, 0xE0BE06 |
+
+### Display State
+
+The display state byte at address `0x0D65` (SFR 3429) selects the active screen mode:
+
+| Value | Mode |
+|-------|------|
+| 0 | Default/normal display |
+| 2 | Alternative layout (different descriptor sets used) |
+
+The state byte influences which ROM descriptors are selected by redraw functions, allowing the same regions to display different content based on the active screen mode.
+
+### UI Rendering Helpers
+
+The redraw functions delegate to specialized rendering helpers:
+
+| Helper | Address | Purpose |
+|--------|---------|---------|
+| `LABEL_F0212C` | 0xF0212C | General UI element renderer |
+| `LABEL_FB15F6` | 0xFB15F6 | Two-descriptor pair renderer |
+| `LABEL_FB1594` | 0xFB1594 | Simple descriptor renderer |
+| `LABEL_F01930` | 0xF01930 | Content area renderer |
+| `LABEL_F01DAB` | 0xF01DAB | Number/value display renderer |
+| `LABEL_F023CF` | 0xF023CF | Dynamic value renderer |
+| `LABEL_FB2044` | 0xFB2044 | Parameter display renderer |
+| `LABEL_FB24CB` | 0xFB24CB | Status indicator renderer |
+
+### Button Label Organization
+
+Region 6 (button labels) manages three rows of 8 soft-button labels, organized at RAM addresses:
+- Row 1: 0x0E55 (8 entries, 4 bytes apart)
+- Row 2: 0x0E75 (8 entries, 4 bytes apart)
+- Row 3: 0x0E95 (8 entries, 4 bytes apart)
+
 ### Dirty Region Tracking
 
 The display update system tracks 11 independent screen regions. Each region has a dirty bit in the bitmap at `DISPLAY_DIRTY_FLAGS` (0x205E4):
