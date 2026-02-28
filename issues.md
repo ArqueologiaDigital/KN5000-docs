@@ -8,42 +8,16 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (62 open, 175 closed)
+**Total Issues:** 237 (53 open, 183 closed)
 
 **Quick Links:** 
-[Feature Demo](#feature-demo) (2) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (49) · [Sound & Audio](#sound-audio) (1)
+[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (45) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
 ## Open Issues
 
-### Feature Demo {#feature-demo}
-
-#### ⚪ FeatureDemo: Create slide viewer/editor tool {#issue-kn5000-waa}
-
-**ID:** `kn5000-waa` | **Priority:** Low | **Created:** 2026-01-25
-
-Build a tool to parse and display Feature Demo slides outside the keyboard. Could be Python script with PIL/Pillow for rendering. Useful for: verifying extraction, editing slides, creating custom demos. Output as PNG or HTML.
-
----
-
-#### ⚪ FeatureDemo: Document demo sequence and timing {#issue-kn5000-0bq}
-
-**ID:** `kn5000-0bq` | **Priority:** Low | **Created:** 2026-01-25
-
-Create complete documentation of the Feature Demo: slide order, timing between slides, which MIDI plays when, user interaction points (if any), loop behavior. Add screenshots/video to documentation website.
-
----
-
 ### Firmware Update {#firmware-update}
-
-#### 🟡 Update: Document FDC interaction during update {#issue-kn5000-70b}
-
-**ID:** `kn5000-70b` | **Priority:** Medium | **Created:** 2026-01-25
-
-Trace how the Floppy Disk Controller (0x110000) is used during updates. Document: disk detection, file reading sequence, sector layout, error recovery, multi-disk handling (Change FD 2 of 2 message).
-
----
 
 #### 🟡 Update: Document HDAE5000 update procedure {#issue-kn5000-e7f}
 
@@ -66,22 +40,6 @@ Analyze LCD messages during update process. Correlate extracted 1-bit bitmaps wi
 **ID:** `kn5000-acu` | **Priority:** Medium | **Created:** 2026-01-25
 
 Trace update validation routines. Document: file header validation, checksum algorithms, version checking, ROM verification after write, error recovery procedures, what triggers 'Illegal Disk' message.
-
----
-
-#### 🟡 Update: Reverse engineer Flash erase algorithm {#issue-kn5000-dkx}
-
-**ID:** `kn5000-dkx` | **Priority:** Medium | **Created:** 2026-01-25
-
-Trace the Flash ROM erase routine in firmware. Document: chip unlock sequence, sector erase commands, chip erase commands, erase verification, timeout handling. Note any chip-specific variations. Cross-reference with Flash datasheet.
-
----
-
-#### 🟡 Update: Reverse engineer Flash program algorithm {#issue-kn5000-1tn}
-
-**ID:** `kn5000-1tn` | **Priority:** Medium | **Created:** 2026-01-25
-
-Trace the Flash ROM programming routine. Document: byte/word program commands, unlock sequences, program verification, error handling, write protection. Identify if using byte-program or page-buffer mode.
 
 ---
 
@@ -331,22 +289,6 @@ Phase 1 represents the critical path to functional emulation.
 
 ---
 
-#### 🟠 LLVM: Fix bug #10 — register x/y swap on inlining {#issue-kn5000-8zr}
-
-**ID:** `kn5000-8zr` | **Priority:** High | **Created:** 2026-02-21
-
-**Notes:** LLVM TLCS-900 backend bug #10: When functions are inlined, IX and IY registers get swapped in the generated code. Current workaround: use __attribute__((noinline)) on affected functions (e.g., tile_vram_ptr in Mines). This is one of 2 remaining active bugs in the TLCS-900 backend. Tracked in Mines memory (llvm-encoding-bugs.md).
-
----
-
-#### 🟠 LLVM: Fix bug #11 — for-loop with uint16_t counter exits after 1 iteration {#issue-kn5000-o3u}
-
-**ID:** `kn5000-o3u` | **Priority:** High | **Created:** 2026-02-21
-
-**Notes:** LLVM TLCS-900 backend bug #11: for-loops using uint16_t counter variables exit after only 1 iteration. Current workaround: use do-while loops with uint32_t counters. Affects VRAM clear and other iteration-heavy code. This is one of 2 remaining active bugs in the TLCS-900 backend. Tracked in Mines memory (llvm-encoding-bugs.md).
-
----
-
 #### 🟠 MAME: Audio subsystem emulation milestone {#issue-kn5000-y18}
 
 **ID:** `kn5000-y18` | **Priority:** High | **Created:** 2026-01-31
@@ -546,46 +488,6 @@ Reference: CMD_DISPATCH_TABLE at line 576 in subcpu/kn5000_subprogram_v142.asm
 This complements the internal MIDI processing already documented in midi-subsystem.md.
 
 Search maincpu for: Serial port init, MIDI-related strings, writes to Sub CPU for external events.
-
----
-
-#### 🟡 Audio: Document proprietary CC handlers (0x97, 0x9B-0x9D) {#issue-kn5000-5ck}
-
-**ID:** `kn5000-5ck` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** The Voice_CtrlChange handler in Sub CPU has handlers for proprietary Control Change numbers:
-
-- Voice_CC_97 at 0x02A496
-- Voice_CC_9B at 0x02A4AB  
-- Voice_CC_9C at 0x02A4C0
-- Voice_CC_9D at 0x02A4D5
-
-These are not standard MIDI CCs. Need to:
-1. Trace what parameters they modify
-2. Determine if they control effects, filters, or other synthesis parameters
-3. Document in midi-subsystem.md
-
-Reference: subcpu/kn5000_subprogram_v142.asm around line 25167-25210
-
----
-
-#### 🟡 Audio: Document tone generator voice allocation {#issue-kn5000-rlb}
-
-**ID:** `kn5000-rlb` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** The ToneGen_Process_Notes routine manages 16 voice slots at 0x4A4C-0x4A5C. Need to understand:
-
-1. Voice stealing algorithm (what happens when all 16 slots are full)
-2. Priority system (which notes get stolen first)
-3. How sustain pedal affects voice allocation
-4. Relationship between tone generator voices and DSP channels
-
-Key routines:
-- ToneGen_Process_Notes at 0x03D01E
-- ToneGen_Read_Voice_Data at 0x03D0C5
-- Voice slot table at 0x4A4C (16 bytes)
-
-Reference: audio-subsystem.md for current tone generator docs.
 
 ---
 
@@ -1255,6 +1157,14 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-o3u` | LLVM: Fix bug #11 — for-loop with uint16_t counter exits ... | 2026-02-28 |
+| `kn5000-rlb` | Audio: Document tone generator voice allocation | 2026-02-28 |
+| `kn5000-5ck` | Audio: Document proprietary CC handlers (0x97, 0x9B-0x9D) | 2026-02-28 |
+| `kn5000-waa` | FeatureDemo: Create slide viewer/editor tool | 2026-02-28 |
+| `kn5000-0bq` | FeatureDemo: Document demo sequence and timing | 2026-02-28 |
+| `kn5000-70b` | Update: Document FDC interaction during update | 2026-02-28 |
+| `kn5000-1tn` | Update: Reverse engineer Flash program algorithm | 2026-02-28 |
+| `kn5000-dkx` | Update: Reverse engineer Flash erase algorithm | 2026-02-28 |
 | `kn5000-z9k` | Extract hardware info from service manual schematics | 2026-02-28 |
 | `kn5000-kxw` | FeatureDemo: Extract MIDI files as standalone files | 2026-02-28 |
 | `kn5000-qjx` | FeatureDemo: Locate embedded MIDI data | 2026-02-28 |
@@ -1267,16 +1177,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | `kn5000-dqi` | FeatureDemo: Document widget parameter formats | 2026-02-28 |
 | `kn5000-x13` | FeatureDemo: Identify and catalog UI widget types | 2026-02-28 |
 | `kn5000-bds` | FeatureDemo: Reverse engineer slide record format | 2026-02-28 |
-| `kn5000-h7o` | FeatureDemo: Locate slide data structures in ROM | 2026-02-28 |
-| `kn5000-ake` | Sound: Document MIDI implementation | 2026-02-28 |
-| `kn5000-jy9` | Sound: Document audio output path | 2026-02-28 |
-| `kn5000-si0` | Sound: Document effects processing chain | 2026-02-28 |
-| `kn5000-d38` | Sound: Document Waveform ROM (IC306-307) | 2026-02-28 |
-| `kn5000-xel` | Sound: Document DAC IC310 | 2026-02-28 |
-| `kn5000-xv2` | Sound: Document DSP IC311 | 2026-02-28 |
-| `kn5000-tvq` | Sound: Document synthesis architecture | 2026-02-28 |
 
-*...and 155 more closed issues*
+*...and 163 more closed issues*
 
 ---
 
@@ -1287,21 +1189,20 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 11 |
-| Medium | 33 |
-| Low | 15 |
+| High | 9 |
+| Medium | 28 |
+| Low | 13 |
 | P4 | 1 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Feature Demo | 2 |
-| Firmware Update | 8 |
+| Firmware Update | 5 |
 | HD-AE5000 Expansion | 2 |
-| Other | 49 |
+| Other | 45 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-02-28 01:18*
+*Last updated: 2026-02-28 05:03*
