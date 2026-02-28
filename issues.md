@@ -8,56 +8,16 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (74 open, 162 closed)
+**Total Issues:** 237 (69 open, 168 closed)
 
 **Quick Links:** 
-[Feature Demo](#feature-demo) (10) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (3)
+[Feature Demo](#feature-demo) (5) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (3)
 
 ---
 
 ## Open Issues
 
 ### Feature Demo {#feature-demo}
-
-#### 🟠 FeatureDemo: Identify and catalog UI widget types {#issue-kn5000-x13}
-
-**ID:** `kn5000-x13` | **Priority:** High | **Created:** 2026-01-25
-
-Analyze slide rendering code to identify all widget types: static text, styled text, images/icons, rectangles, lines, buttons, animations, piano keyboard display, waveform display, level meters. Document rendering parameters for each type.
-
----
-
-#### 🟠 FeatureDemo: Reverse engineer slide record format {#issue-kn5000-bds}
-
-**ID:** `kn5000-bds` | **Priority:** High | **Created:** 2026-01-25
-
-Document the binary format of each slide record. Identify fields: slide type, duration/timing, background image ID, widget list pointer, MIDI file pointer, transition effects. Create struct definition documenting each field offset and size.
-
----
-
-#### 🟡 FeatureDemo: Create ASL macros for slide definitions {#issue-kn5000-4q0}
-
-**ID:** `kn5000-4q0` | **Priority:** Medium | **Created:** 2026-01-25
-
-Design and implement ASL assembler macros for concise slide definitions: SLIDE_BEGIN/END, WIDGET_TEXT, WIDGET_IMAGE, WIDGET_RECT, SLIDE_MIDI, SLIDE_TIMING, etc. Macros should emit correct binary format while being human-readable.
-
----
-
-#### 🟡 FeatureDemo: Create ASL macros for widget definitions {#issue-kn5000-br1}
-
-**ID:** `kn5000-br1` | **Priority:** Medium | **Created:** 2026-01-25
-
-Implement widget-specific macros: TEXT x,y,font,color,"string" / IMAGE x,y,id / RECT x,y,w,h,color / LINE x1,y1,x2,y2,color / BUTTON x,y,w,h,label. Ensure macros handle alignment and padding correctly.
-
----
-
-#### 🟡 FeatureDemo: Document widget parameter formats {#issue-kn5000-dqi}
-
-**ID:** `kn5000-dqi` | **Priority:** Medium | **Created:** 2026-01-25
-
-For each widget type, document all parameters: position (x,y), size (w,h), colors, font ID, text string pointer, image ID, alignment, padding, border style, animation params. Create comprehensive widget parameter reference.
-
----
 
 #### 🟡 FeatureDemo: Extract MIDI files as standalone files {#issue-kn5000-kxw}
 
@@ -1355,6 +1315,12 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-br1` | FeatureDemo: Create ASL macros for widget definitions | 2026-02-28 |
+| `kn5000-4q0` | FeatureDemo: Create ASL macros for slide definitions | 2026-02-28 |
+| `kn5000-dqi` | FeatureDemo: Document widget parameter formats | 2026-02-28 |
+| `kn5000-x13` | FeatureDemo: Identify and catalog UI widget types | 2026-02-28 |
+| `kn5000-bds` | FeatureDemo: Reverse engineer slide record format | 2026-02-28 |
+| `kn5000-h7o` | FeatureDemo: Locate slide data structures in ROM | 2026-02-28 |
 | `kn5000-ake` | Sound: Document MIDI implementation | 2026-02-28 |
 | `kn5000-jy9` | Sound: Document audio output path | 2026-02-28 |
 | `kn5000-si0` | Sound: Document effects processing chain | 2026-02-28 |
@@ -1369,14 +1335,8 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 | `kn5000-rq0` | Video: Document screen layout and regions | 2026-02-28 |
 | `kn5000-kev` | Video: Document font system and text rendering | 2026-02-28 |
 | `kn5000-gln` | Video: Reverse engineer drawing primitives | 2026-02-27 |
-| `kn5000-t8n` | HDAE5000: Reverse engineer parallel port protocol | 2026-02-27 |
-| `kn5000-9bd` | Boot: Document audio subsystem initialization | 2026-02-27 |
-| `kn5000-mhj` | Boot: Create complete boot sequence timeline | 2026-02-27 |
-| `kn5000-izk` | Boot: Document HDAE5000 detection and init | 2026-02-27 |
-| `kn5000-vql` | Boot: Document LCD splash screen sequence | 2026-02-27 |
-| `kn5000-bq4` | Boot: Document control panel initialization | 2026-02-27 |
 
-*...and 142 more closed issues*
+*...and 148 more closed issues*
 
 ---
 
@@ -1387,8 +1347,8 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 14 |
-| Medium | 41 |
+| High | 12 |
+| Medium | 38 |
 | Low | 16 |
 | P4 | 1 |
 
@@ -1396,7 +1356,7 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 | Category | Count |
 |----------|-------|
-| Feature Demo | 10 |
+| Feature Demo | 5 |
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 2 |
 | Other | 51 |
@@ -1404,4 +1364,4 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 ---
 
-*Last updated: 2026-02-28 01:10*
+*Last updated: 2026-02-28 01:14*
