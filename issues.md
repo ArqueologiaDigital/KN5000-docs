@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (75 open, 162 closed)
+**Total Issues:** 237 (74 open, 162 closed)
 
 **Quick Links:** 
-[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (3)
+[Feature Demo](#feature-demo) (10) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (3)
 
 ---
 
@@ -24,14 +24,6 @@ This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) 
 **ID:** `kn5000-x13` | **Priority:** High | **Created:** 2026-01-25
 
 Analyze slide rendering code to identify all widget types: static text, styled text, images/icons, rectangles, lines, buttons, animations, piano keyboard display, waveform display, level meters. Document rendering parameters for each type.
-
----
-
-#### 🟠 FeatureDemo: Locate slide data structures in ROM {#issue-kn5000-h7o}
-
-**ID:** `kn5000-h7o` | **Priority:** High | **Created:** 2026-01-25
-
-Find where Feature Demo presentation data is stored. Search for references to FTBMP01-06 images. Identify: slide table/index, per-slide data records, pointers to resources (images, text, MIDI). Document base addresses and overall structure.
 
 ---
 
@@ -1395,7 +1387,7 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 15 |
+| High | 14 |
 | Medium | 41 |
 | Low | 16 |
 | P4 | 1 |
@@ -1404,7 +1396,7 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 | Category | Count |
 |----------|-------|
-| Feature Demo | 11 |
+| Feature Demo | 10 |
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 2 |
 | Other | 51 |
@@ -1412,4 +1404,4 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 ---
 
-*Last updated: 2026-02-28 01:04*
+*Last updated: 2026-02-28 01:10*
