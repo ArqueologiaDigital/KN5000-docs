@@ -121,14 +121,14 @@ The `Voice_CtrlChange` routine dispatches to specific handlers based on CC numbe
 
 ### Proprietary Controllers
 
-| CC# | Handler | Parameter | Notes |
-|-----|---------|-----------|-------|
-| 0x91 | `Voice_CC_91` | Reverb Depth | Effect send level |
-| 0x95 | `Voice_CC_95` | Chorus Depth | Effect send level |
-| 0x97 | `Voice_CC_97` | Unknown | Proprietary effect |
-| 0x9B | `Voice_CC_9B` | Unknown | Proprietary effect |
-| 0x9C | `Voice_CC_9C` | Unknown | Proprietary effect |
-| 0x9D | `Voice_CC_9D` | Unknown | Proprietary effect |
+| CC# | Handler | Parameter | Voice Offset | Notes |
+|-----|---------|-----------|-------------|-------|
+| 0x91 | `Voice_CC_91` | Frequency Multiplier | +0x11 | Via lookup table at 0x011D16 |
+| 0x95 | `Voice_CC_95` | Portamento Enable | +0x04 | Boolean flag (set/clear bit) |
+| 0x97 | `Voice_CC_97` | Fine Pitch Tuning | +0x12 | Semitone-level adjustment, via lookup table |
+| 0x9B | `Voice_CC_9B` | Vibrato Depth | +0x1F | Via lookup table at 0x011D16 |
+| 0x9C | `Voice_CC_9C` | Vibrato Enable | — | Bit 8 toggle (enable/disable) |
+| 0x9D | `Voice_CC_9D` | Tremolo/AM Depth | +0x20 | Amplitude modulation depth, via lookup table |
 
 ### CC Handler Structure
 
@@ -211,5 +211,5 @@ Based on KN5000 specifications:
 - [ ] Document external MIDI serial port configuration
 - [ ] Analyze MIDI routing logic in Main CPU
 - [ ] Document Technics SysEx message format
-- [ ] Map remaining proprietary CC handlers (0x97, 0x9B-0x9D)
 - [ ] Document MIDI filter and channel assignment settings
+- [x] ~~Map remaining proprietary CC handlers (0x97, 0x9B-0x9D)~~ — Complete: CC91=freq mult, CC95=portamento, CC97=fine pitch, CC9B=vibrato depth, CC9C=vibrato enable, CC9D=tremolo depth
