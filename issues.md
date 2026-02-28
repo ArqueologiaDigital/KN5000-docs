@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (86 open, 150 closed)
+**Total Issues:** 237 (85 open, 151 closed)
 
 **Quick Links:** 
-[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11) · [Video & Display](#video-display) (3)
+[Feature Demo](#feature-demo) (11) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (51) · [Sound & Audio](#sound-audio) (11) · [Video & Display](#video-display) (2)
 
 ---
 
@@ -1425,29 +1425,6 @@ Extract raw waveform data from ROM as playable audio. Convert to WAV format. Cat
 
 ### Video & Display {#video-display}
 
-#### 🟡 Video: Document UI widget rendering {#issue-kn5000-5dc}
-
-**ID:** `kn5000-5dc` | **Priority:** Medium | **Created:** 2026-01-25
-
-Analyze how UI elements are drawn: buttons, sliders, menus, piano keyboard display, waveform displays, level meters. Document widget drawing routines, any sprite system, and how interactive elements are updated.
-
-**Notes:** UI widget rendering is essential for menu display.
-
-**Current state:** Widget types partially cataloged, rendering unknown.
-
-**Required work:**
-- Identify widget type definitions
-- Trace widget draw routines
-- Document widget hierarchy and layout
-- Map parameter binding to widgets
-
-**Phase:** 2 - Core Functionality
-**Blocks:** Menu system in emulator
-**Dependencies:** Drawing primitives (kn5000-gln), fonts (kn5000-kev)
-**Related:** kn5000-x13 (widget catalog), kn5000-4bt (UI symbols)
-
----
-
 #### ⚪ Video: Document animation and transition effects {#issue-kn5000-nmg}
 
 **ID:** `kn5000-nmg` | **Priority:** Low | **Created:** 2026-01-25
@@ -1468,6 +1445,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-rq0` | Video: Document screen layout and regions | 2026-02-28 |
 | `kn5000-kev` | Video: Document font system and text rendering | 2026-02-28 |
 | `kn5000-gln` | Video: Reverse engineer drawing primitives | 2026-02-27 |
 | `kn5000-t8n` | HDAE5000: Reverse engineer parallel port protocol | 2026-02-27 |
@@ -1487,9 +1465,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | `kn5000-87u` | Images: Find embedded image locations in main CPU ROM | 2026-02-27 |
 | `kn5000-c47b` | HDAE5000 FS: Map RAM data structures used by filesystem | 2026-02-27 |
 | `kn5000-li65` | HDAE5000 FS: Annotate file operations (Save/Load/Delete/R... | 2026-02-27 |
-| `kn5000-c5gn` | HDAE5000 FS: Annotate sector allocation and VarInt encoding | 2026-02-27 |
 
-*...and 130 more closed issues*
+*...and 131 more closed issues*
 
 ---
 
@@ -1501,7 +1478,7 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 |----------|-------|
 | Critical | 2 |
 | High | 18 |
-| Medium | 47 |
+| Medium | 46 |
 | Low | 18 |
 | P4 | 1 |
 
@@ -1514,8 +1491,8 @@ Extract font data from ROMs as usable assets. Convert to standard format (BDF, T
 | HD-AE5000 Expansion | 2 |
 | Other | 51 |
 | Sound & Audio | 11 |
-| Video & Display | 3 |
+| Video & Display | 2 |
 
 ---
 
-*Last updated: 2026-02-28 00:11*
+*Last updated: 2026-02-28 00:15*
