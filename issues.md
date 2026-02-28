@@ -8,32 +8,16 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 237 (65 open, 172 closed)
+**Total Issues:** 237 (62 open, 175 closed)
 
 **Quick Links:** 
-[Feature Demo](#feature-demo) (4) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (50) · [Sound & Audio](#sound-audio) (1)
+[Feature Demo](#feature-demo) (2) · [Firmware Update](#firmware-update) (8) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (49) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
 ## Open Issues
 
 ### Feature Demo {#feature-demo}
-
-#### 🟡 FeatureDemo: Extract MIDI files as standalone files {#issue-kn5000-kxw}
-
-**ID:** `kn5000-kxw` | **Priority:** Medium | **Created:** 2026-01-25
-
-Extract all embedded MIDI data as playable .mid files. Parse MIDI structure to find exact boundaries. Name files descriptively. Verify extracted files play correctly in standard MIDI player. Add to project assets.
-
----
-
-#### 🟡 FeatureDemo: Locate embedded MIDI data {#issue-kn5000-qjx}
-
-**ID:** `kn5000-qjx` | **Priority:** Medium | **Created:** 2026-01-25
-
-Find all embedded MIDI files in the ROM. Search for MIDI headers (4D 54 68 64 = 'MThd'). Document: offset, size, apparent purpose (demo song, UI sound, jingle). May be in main CPU ROM or table data ROM.
-
----
 
 #### ⚪ FeatureDemo: Create slide viewer/editor tool {#issue-kn5000-waa}
 
@@ -344,18 +328,6 @@ Phase 1 represents the critical path to functional emulation.
 - Ensure all target routines are disassembled
 - Document the purpose of each table
 - Create cross-references in comments
-
----
-
-#### 🟠 Extract hardware info from service manual schematics {#issue-kn5000-z9k}
-
-**ID:** `kn5000-z9k` | **Priority:** High | **Created:** 2026-01-25
-
-Analyze the KN5000 service manual (59 pages) to extract hardware architecture details. Focus on: CPU section (II-11), Control section (II-9), Block diagram (II-3/4), Control panel boards (II-35, II-38). Document IC pinouts, signal names, and interconnections.
-
-**Notes:** Significant progress: Analyzed schematic pages II-9 to II-38. Documented main CPU (TMP94C241F), all memory ICs, control panel MCUs (M37471M2196S), button mappings, serial signals. Created hardware-architecture.md page.
-
-**Depends on:** [`kn5000-bcn`](#issue-kn5000-bcn), [`kn5000-jwk`](#issue-kn5000-jwk), [`kn5000-xhi`](#issue-kn5000-xhi)
 
 ---
 
@@ -1283,6 +1255,9 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-z9k` | Extract hardware info from service manual schematics | 2026-02-28 |
+| `kn5000-kxw` | FeatureDemo: Extract MIDI files as standalone files | 2026-02-28 |
+| `kn5000-qjx` | FeatureDemo: Locate embedded MIDI data | 2026-02-28 |
 | `kn5000-xhi` | Analyze ROTA/ROTB rotary encoder circuit | 2026-02-28 |
 | `kn5000-mrx` | Sound: Extract and convert waveform samples | 2026-02-28 |
 | `kn5000-21e` | FeatureDemo: Refactor assembly to use slide macros | 2026-02-28 |
@@ -1300,11 +1275,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | `kn5000-xel` | Sound: Document DAC IC310 | 2026-02-28 |
 | `kn5000-xv2` | Sound: Document DSP IC311 | 2026-02-28 |
 | `kn5000-tvq` | Sound: Document synthesis architecture | 2026-02-28 |
-| `kn5000-061` | Sound: Trace main CPU to Sub CPU command protocol | 2026-02-28 |
-| `kn5000-dj3` | Video: Extract and document all fonts | 2026-02-28 |
-| `kn5000-nmg` | Video: Document animation and transition effects | 2026-02-28 |
 
-*...and 152 more closed issues*
+*...and 155 more closed issues*
 
 ---
 
@@ -1315,8 +1287,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 12 |
-| Medium | 35 |
+| High | 11 |
+| Medium | 33 |
 | Low | 15 |
 | P4 | 1 |
 
@@ -1324,12 +1296,12 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Category | Count |
 |----------|-------|
-| Feature Demo | 4 |
+| Feature Demo | 2 |
 | Firmware Update | 8 |
 | HD-AE5000 Expansion | 2 |
-| Other | 50 |
+| Other | 49 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-02-28 01:16*
+*Last updated: 2026-02-28 01:18*
