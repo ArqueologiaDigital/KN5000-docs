@@ -157,14 +157,48 @@ struct FeatureDemo_FileMetadata {
 
 ### UI Objects (Program ROM)
 
-48 named UI objects are defined in the Program ROM (lines 36978–42354 of the disassembly):
+48 named UI objects are referenced in the Program ROM:
 
-- `ftdemo01` through `ftdemo48` — presentation step displays
-- `Accordion` — accordion instrument display
-- `Drawbar` — drawbar organ display
-- `Sdmixer` — sound mixer display
+- `ftdemo01` through `ftdemo48` — bitmap resource names (aligned strings at lines 6240-6648)
+- `Accordion` — accordion register display (container object with sub-objects: `Accordion1`, `Accordion2`, `AcAccordionTab`)
+- `Drawbar` — digital drawbar organ display (container with `IvDrawbar1`, `IvDrawbar2`, `AcDrawbarName`)
+- `Sdmixer` — sound/sequencer mixer display (container with child parameter structures)
 
-Each object defines the visual content shown for its corresponding `<SHOW OBJ="...">` action in the SSF script.
+The `ftdemo01`–`ftdemo48` names are **bitmap resource references**, not complex widget structures. They are simple filename strings (e.g., `aligned_string "ftdemo43"`) that identify image resources loaded during the demo.
+
+The interactive objects (`Accordion`, `Drawbar`, `Sdmixer`) are **container objects** with child sub-objects, handler procedures, and rendering routines spanning hundreds of lines each:
+
+| Object | Handler | Code Location |
+|--------|---------|---------------|
+| Accordion | `IvAccordionProc` | Lines 257980-258362 |
+| Drawbar | `IvDrawbarProc` | Lines 262262-264436 |
+| Sdmixer | (TT_SDMIXER) | Line 45566 |
+
+### Object Dispatch Architecture
+
+When `AcPresentationControlProc` (0xF8450B) processes a `<SHOW OBJ="...">` action:
+
+1. The XML parser extracts the OBJ name string
+2. The name is matched against the resource/object name table
+3. For bitmap resources (ftdemo01-48): loads the image and renders to VRAM
+4. For container objects (Accordion, Drawbar, Sdmixer): activates the interactive UI handler
+
+The dispatch uses a **jump table at 0xE9F9B2** indexed by event type:
+- Event codes 0x1C00002 through 0x1C0000C branch to specific handlers
+- Each handler extracts its object pointer from the workspace and processes render/update/event actions
+
+Handler call pattern:
+```
+AcPresentationControlProc:
+    ; Calculate jump table offset from event code
+    sub xbc, 0x1C00002
+    add xbc, xbc               ; multiply by 2
+    add xbc, 0xE9F9B2          ; jump table base
+    ld bc, (xbc)               ; load handler pointer
+    ; ... dispatch to handler
+```
+
+`AcPresentationBoxProc` (0xF842B4) handles the visual frame rendering, responding to message types 0x1E0003C, 0x1E0003A, 0x1C0001B and calling display routines at 0xFA6266, 0xFA4409.
 
 ---
 
