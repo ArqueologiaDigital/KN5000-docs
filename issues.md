@@ -8,14 +8,28 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 238 (54 open, 184 closed)
+**Total Issues:** 239 (54 open, 185 closed)
 
 **Quick Links:** 
-[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (46) · [Sound & Audio](#sound-audio) (1)
+[Boot Sequence](#boot-sequence) (1) · [Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (45) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
 ## Open Issues
+
+### Boot Sequence {#boot-sequence}
+
+#### 🟠 Boot: Investigate "ALL INITIAL SETTING!" message and splash screen animation {#issue-kn5000-qv20}
+
+**ID:** `kn5000-qv20` | **Priority:** High | **Created:** 2026-02-28
+
+Two related boot sequence investigations:
+
+1. ALL INITIAL SETTING message: The boot sequence shows "ALL INITIAL SETTING!" which suggests the firmware thinks factory defaults are active. Investigate: (a) what criteria trigger this message, (b) whether MAME driver needs fixes for user settings persistence (NVRAM/SRAM), (c) what needs to change so a second run does not show this message.
+
+2. Boot splash screen animation: On real KN5000 hardware, boot shows a "KN5000" model name with spotlight-like animation and "IN COLOR" text. Investigate: (a) identify the code that performs this animation, (b) fully disassemble and document with semantic symbols, (c) determine criteria for showing it vs "ALL INITIAL SETTING!", (d) what MAME driver changes (no hacks!) would make the animation appear.
+
+---
 
 ### Firmware Update {#firmware-update}
 
@@ -716,14 +730,6 @@ Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
-#### 🟡 Mines: Remove LLVM bug workarounds from video.c {#issue-kn5000-qiw4}
-
-**ID:** `kn5000-qiw4` | **Priority:** Medium | **Created:** 2026-02-28
-
-All LLVM TLCS-900 bugs (#8, #9, #10, #11) are now fixed or resolved. Remove C-level workarounds: (1) 32-bit tile copy → byte-level (Bug #8), (2) noinline tile_vram_ptr → inline tile_vram_offset (Bug #10), (3) palette auto-increment → per-iteration index write (Bug #8/#9). Rebuild Mines and test on MAME.
-
----
-
 #### 🟡 Phase 3 Completion: Full documentation coverage {#issue-kn5000-9m6}
 
 **ID:** `kn5000-9m6` | **Priority:** Medium | **Created:** 2026-01-31
@@ -1165,6 +1171,7 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-qiw4` | Mines: Remove LLVM bug workarounds from video.c | 2026-02-28 |
 | `kn5000-8zr` | LLVM: Fix bug #10 — register x/y swap on inlining | 2026-02-28 |
 | `kn5000-o3u` | LLVM: Fix bug #11 — for-loop with uint16_t counter exits ... | 2026-02-28 |
 | `kn5000-rlb` | Audio: Document tone generator voice allocation | 2026-02-28 |
@@ -1184,9 +1191,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | `kn5000-br1` | FeatureDemo: Create ASL macros for widget definitions | 2026-02-28 |
 | `kn5000-4q0` | FeatureDemo: Create ASL macros for slide definitions | 2026-02-28 |
 | `kn5000-dqi` | FeatureDemo: Document widget parameter formats | 2026-02-28 |
-| `kn5000-x13` | FeatureDemo: Identify and catalog UI widget types | 2026-02-28 |
 
-*...and 164 more closed issues*
+*...and 165 more closed issues*
 
 ---
 
@@ -1197,8 +1203,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 9 |
-| Medium | 29 |
+| High | 10 |
+| Medium | 28 |
 | Low | 13 |
 | P4 | 1 |
 
@@ -1206,11 +1212,12 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Category | Count |
 |----------|-------|
+| Boot Sequence | 1 |
 | Firmware Update | 5 |
 | HD-AE5000 Expansion | 2 |
-| Other | 46 |
+| Other | 45 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-02-28 05:32*
+*Last updated: 2026-02-28 07:41*
