@@ -265,31 +265,125 @@ The entire pipeline is **ROM-resident** — no disk I/O occurs for the Feature D
 
 ## MAME Emulation Status and Known Issues
 
-**Current status (February 2026):** The Feature Demo does not display images in MAME. The keyboard appears to navigate to the demo mode successfully, but no FTBMP images appear on screen. Investigation is ongoing.
+**Current status (February 2026):** The Feature Demo does not display images in MAME. The keyboard navigates to the demo mode successfully, but no FTBMP images appear. The root cause has been identified through Lua trace-script investigation.
 
-### Identified blocking points
+---
 
-| Issue | Likelihood | Notes |
-|-------|-----------|-------|
-| Audio initialization delay | Low | `Audio_WaitForReady` (polls `0x420` bit 2 for up to 61,440 iterations) has a timeout — exits gracefully if SubCPU doesn't respond |
-| VRAM display mode | Medium | The LCD display may require a specific mode switch to show bitmap content vs. normal UI; if the mode switch requires SubCPU coordination, it may silently fail |
-| Event delivery | High | `AcPresentationControlProc` is entirely event-driven; if `EV_READPRESENTATION` or `EV_READACTION` events are never generated, the presentation controller stalls at the first action and never advances |
-| XML parser state | Medium | The SSF XML parser reads from hardcoded ROM and processes the script; if the internal state machine gets stuck (missing event, wrong parameter), no objects are shown |
-| `DemoMode_Main_Operation` loop | Low | Ends with `jp 0xF846BF` (continues the demo loop) — expected behaviour for an always-running demo; not a hang |
+## Workspace Allocation — Concept Explained
 
-### MAME floppy disk type bug (unrelated to FTBMP, but present)
+Before describing the root cause, it helps to understand what "allocating a workspace" means in the KN5000 firmware's event system.
 
-The MAME driver registers only a `"35dd"` (720 KB double-density) floppy connector in `kn5000_floppies`. The real hardware uses **1.44 MB HD (high-density)** drives — confirmed by:
+The KN5000 event system (centered on `SendEvent` at `0xFA9660` and `PostEventWithParam` at `0xFA9D58`) passes three registers as event parameters: XWA (target), XBC (event code), and XDE (data/parameter). For events that need to carry more than a single 32-bit value, the firmware uses a **workspace** pattern:
+
+1. A small block of memory (typically 12 bytes) is allocated from the firmware heap by calling `LABEL_FF0E80` (the workspace allocator). The returned pointer is stored in DRAM (usually somewhere in `0x000000–0x0FFFFF`).
+2. The workspace fields are populated: the first 4 bytes act as a **type-tag** (a magic 32-bit value identifying the kind of data the workspace carries), followed by payload fields.
+3. The workspace **pointer** is passed as XDE when calling `SendEvent` or `PostEventWithParam`.
+4. The receiving handler reads the workspace via the pointer, checks the type-tag, and processes the payload.
+
+Think of the workspace as a small heap-allocated struct passed by pointer via the event system.
+
+Because workspaces are allocated from a pool in DRAM and may be reused, it is critical that the event fires and the workspace is consumed **before** the memory is overwritten by another allocation or unrelated code. This is why the two distinct event-dispatch paths (queued vs. direct) produce different results.
+
+---
+
+## Confirmed Root Cause: Missing Event to GroupBoxProc
+
+### Two paths for event 0x1C0001C
+
+Deep investigation (Feb 2026, Lua trace scripts + ROM disassembly analysis) identified that there are **two completely different code paths** that send event `0x1C0001C` to `AcPresentationControlProc`:
+
+#### Path 1 — `DemoMenu_BuildItemWorkspace` (0xF83CEA) — QUEUED, WRONG TAG
+
+This function is called in a loop for each of the ~15 demo menu items (styles, sounds, rhythms). For each item it:
+
+1. Allocates a 12-byte workspace via the heap allocator (`FF0E80`).
+2. Reads the "part select" index `R` from DRAM address `0x8D3A` via `GetPartSelect()`.
+3. Computes `workspace[0..3] = table[0xE9F88C + iz*2] + R*1024`.
+   The table (at ROM `0xE9F88C`) holds 16-bit values all in the range `0x82xx–0x82CC`.
+   **This formula can never produce the value `0x0000B80A`** for any byte `R`, because the difference `0xB80A − 0x82xx` is never divisible by 1024.
+4. Posts event `0x1C0001C` via `PostEventWithParam` (`FA9D58`) — a **queued** (deferred) dispatch.
+
+When this queued event eventually reaches `AcPresentationControlProc` (`0xF8450B`), it is handled by `AcPresentCtrl_CheckSSFStart` (`0xF84625`), which checks `*(XDE) == 0xB80A`. The check **always fails** because the workspace type-tag is never `0xB80A`.
+
+#### Path 2 — `GroupBoxProc_StartSSFPresentation` (0xF9A273) — DIRECT, CORRECT TAG
+
+`GroupBoxProc` (`~0xF998xx`) is a UI container widget handler. Its event dispatch table includes:
+
+```
+cp xde, 0x1C00038
+jrl z, GroupBoxProc_StartSSFPresentation    ; direct entry
+
+cp xde, 0x1C00030
+jrl z, GroupBoxProc_Ev1C00030              ; via show-item handler
+```
+
+`GroupBoxProc_StartSSFPresentation` (0xF9A273) builds the workspace bytes **individually** from stack-resident parameters, producing `workspace[0]=0x0A, workspace[1]=0xB8, workspace[2..3]=0x00` — the type-tag `0x0000B80A`. It then sends event `0x1C0001C` via **direct** `SendEvent` (`FA9660`).
+
+When this event reaches `AcPresentCtrl_CheckSSFStart`, the type-tag check **passes**, and the handler sends event `0x1C00006` — which starts SSF presentation parsing, loads the XML from ROM, and begins rendering FTBMP images.
+
+#### Root cause summary
+
+`GroupBoxProc_StartSSFPresentation` is **never reached** during Feature Demo navigation in MAME. Events `0x1C00038` and `0x1C00030` are not routed to `GroupBoxProc` at all. Consequently:
+
+- `AcPresentationControlProc` only receives `0x1C0001C` events from Path 1 (wrong type-tag).
+- The B80A check always fails.
+- Event `0x1C00006` (SSF start) is never sent.
+- The SSF XML parser never runs.
+- No FTBMP images are ever rendered.
+
+### Call-chain overview
+
+```
+Feature Demo activated
+  → DemoModeFunc (0xF222CC)  [event 0x1C00013, XDE=1]
+    → DemoMode_Initialize (0xF869E3)
+    → DemoMode_Main_Operation (0xF8696F)
+      → DemoMenu_BuildItemWorkspace (0xF83CEA)  [×15, for each menu item]
+        → PostEventWithParam (0xFA9D58)
+          → AcPresentCtrl_CheckSSFStart (0xF84625)
+            *(workspace) == 0xB80A?  NO → SSF never starts
+
+Expected (but missing in MAME):
+  GroupBoxProc receives event 0x1C00038
+    → GroupBoxProc_StartSSFPresentation (0xF9A273)
+      → SendEvent (0xFA9660) with workspace tag 0x0000B80A
+        → AcPresentCtrl_CheckSSFStart
+          *(workspace) == 0xB80A?  YES
+            → sends 0x1C00006 → SSF parser starts → FTBMP images rendered
+```
+
+### Why GroupBoxProc doesn't receive 0x1C00038 in MAME
+
+This is the remaining open question. The firmware should route event `0x1C00038` to GroupBoxProc as part of the presentation setup sequence — likely triggered by `DemoMode_Initialize` or a sub-handler after the demo screen activates. Possible causes of the missing event in MAME:
+
+| Candidate | Notes |
+|-----------|-------|
+| Missing widget registration | If the group box widget is not registered in the UI object table during demo init, no events reach `GroupBoxProc` |
+| Wrong initialization order | `DemoMode_Initialize` may depend on SubCPU readiness or a display mode switch that doesn't complete in MAME |
+| Missing event sender | The code that sends `0x1C00038` to the group box widget may rely on a state variable that is never set in MAME |
+
+### Previously investigated (and ruled out) blocking points
+
+| Issue | Ruling |
+|-------|--------|
+| Audio initialization delay | `Audio_WaitForReady` has a 61,440-iteration timeout — exits gracefully even if SubCPU doesn't respond; not a hard block |
+| VRAM display mode | VRAM writes do occur; display mode itself is not the primary blocker |
+| XML parser state | SSF parser never starts because `0x1C00006` is never sent |
+| `DemoMode_Main_Operation` loop | Expected behaviour (`jp Seq_StartMainControl`); not a hang |
+
+### MAME floppy disk type bug (separate issue)
+
+The MAME driver previously registered only a `"35dd"` (720 KB double-density) floppy connector in `kn5000_floppies`. The real hardware uses **1.44 MB HD (high-density)** drives — confirmed by:
 - FDC format configuration supporting 1440K (18 sectors/track, 80 tracks)
 - `update_disc.img` analysis: FAT12, OEM-ID `"Technics"`, 2880 sectors, 18 sectors/track, 2 heads
 
-This means MAME currently cannot mount any real KN5000 floppy disk images (firmware update discs, style/song discs, etc.). This is a separate issue from the Feature Demo.
+This has been fixed in the MAME driver. It is a separate issue from the Feature Demo image display failure.
 
 ### Next investigation steps
 
-1. Run MAME with a Lua trace script while manually navigating to the Feature Demo, to identify the exact PC where execution stalls.
-2. Monitor `EV_READPRESENTATION` / `EV_READACTION` event constants to confirm whether the presentation controller is receiving its driving events.
-3. Check whether the display mode switch needed for full-screen bitmap rendering is properly signalled between main CPU and SubCPU.
+1. Trace what sends event `0x1C00038` (or `0x1C00030`) on real hardware — likely in `DemoMode_Initialize` or a UI setup sub-handler called from it.
+2. Check whether the widget registration that makes `GroupBoxProc` receive events completes during demo initialization in MAME.
+3. If the sender is found, verify the event reaches `GroupBoxProc` in MAME using a targeted Lua tap at the `GroupBoxProc` entry point (`~0xF99840`) with XBC == `0x1C00038`.
 
 ---
 
