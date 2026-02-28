@@ -236,22 +236,69 @@ Commands 0x60-0x7F write audio config data to a 2KB ring buffer:
 
 `Audio_Process_DSP` (called from main loop) reads commands from this buffer. The most important command is **0x2D** (DSP configuration change). See [Audio Subsystem — Command 0x2D Protocol]({{ site.baseurl }}/audio-subsystem/#inter-cpu-command-protocol-command-0x2d--dsp-configuration) for the full 4-layer protocol.
 
-### Command Processing
+### Command Byte Format
 
-```asm
-Audio_CmdHandler_00_1F:
-    ; Entry: XSP+004h = byte count, XSP+006h = data pointer
+The command byte sent to the latch encodes both the handler index and payload length:
 
-    Loop:
-        ; Read write pointer from 0x2B0D
-        ; Mask with 0xFFF (4KB buffer)
-        ; Write byte to buffer[write_ptr]
-        ; Increment write pointer
-        ; Increment byte count at 0x2B11
-        ; Repeat for all bytes
-
-    ; Exit: HL = 0 (success)
 ```
+Bits 7-5: Handler index (0-7) → selects CMD_DISPATCH_TABLE entry
+Bits 4-0: Payload length - 1 (0-31 = 1 to 32 bytes)
+
+Examples:
+  0x02 = Handler 0 (MIDI), 3 bytes   → Note On/Off or Control Change
+  0x01 = Handler 0 (MIDI), 2 bytes   → Program Change
+  0x7F = Handler 3 (DSP config), 32 bytes
+```
+
+Special command bytes bypass this encoding:
+- `0xE1`: Bulk transfer setup (6 bytes: dest_addr[4] + count[2])
+- `0xE2`: Extended parameter block (10 bytes)
+- `0xE3`: Payload ready signal (no data, sets boot flag)
+
+### MIDI Message Format (Ring Buffer at 0x2B0D)
+
+The ring buffer contains standard MIDI messages parsed by `MIDI_Dispatch` (0x020FA4):
+
+| Status Byte | Length | Format | Handler |
+|-------------|--------|--------|---------|
+| 0x80-0x8F | 3 | `[0x8n] [note] [velocity]` | Note Off (→ `Voice_NoteOn` with vel=0) |
+| 0x90-0x9F | 3 | `[0x9n] [note] [velocity]` | Note On (`Voice_NoteOn` at 0x2CF97) |
+| 0xB0-0xBF | 3 | `[0xBn] [CC#] [value]` | Control Change (`Voice_CtrlChange` at 0x2A282) |
+| 0xC0-0xCF | 2 | `[0xCn] [program]` | Program Change (`Voice_ProgChange` at 0x34A4A) |
+| 0xD0-0xDF | 2 | `[0xDn] [pressure]` | Channel Pressure (`Voice_ChanPressure` at 0x2A4EA) |
+| 0xE0-0xEF | 3 | `[0xEn] [LSB] [MSB]` | Pitch Bend (`Voice_PitchBend` at 0x2A5E6) |
+| 0xF0-0xFF | var | `[0xF0] ... [0xF7]` | System Message (`Voice_SystemMsg` at 0x2A7AF) |
+
+The channel number (`n`) is in the low nibble of the status byte (bits 3-0). The Sub CPU supports up to **26 channels** (0x00-0x19).
+
+### Supported MIDI Control Changes
+
+| CC# | Name | Description |
+|-----|------|-------------|
+| 0x01 | Mod Wheel | Modulation depth |
+| 0x07 | Volume | Channel volume |
+| 0x0A | Pan | Stereo position |
+| 0x0B | Expression | Expression controller |
+| 0x40 | Sustain | Sustain pedal (on/off) |
+| 0x5B | Sostenuto | Sostenuto pedal |
+| 0x5D | Soft | Soft pedal |
+| 0x5E | Portamento | Portamento control |
+| 0x78-0x81 | Extended | Proprietary extended functions (lookup table dispatch) |
+| 0x91-0x9D | Effects | Proprietary effects depth control |
+
+### Voice Processing
+
+Note On processing (`Voice_NoteOn` at 0x2CF97):
+1. Validates channel (must be < 0x1A = 26)
+2. If velocity = 0: triggers note off (voice release)
+3. If velocity > 0: allocates voice slot, sets pitch and velocity
+
+Voice parameters are stored in per-channel structures of **287 bytes** each at base address `0x041381`:
+```
+channel_params[channel] = 0x041381 + channel * 0x11F
+```
+
+Pitch bend uses a **14-bit value** (MSB and LSB combined): `value = (MSB << 7) | LSB`, with bit 15 set as a sign marker.
 
 ## Sub CPU Response
 
@@ -616,7 +663,10 @@ Each latch write must be followed by a context switch so the receiving CPU can p
 - [x] Document Sub CPU interrupt configuration (INTETC01, INTE0AD) — Complete
 - [x] Document HDMA-based command reception flow — Complete
 - [x] Document INT0 level-detect emulation issues — Complete
-- [ ] Document remaining ring buffer command formats (other than 0x2B, 0x2D)
-- [ ] Document handlers 2 (0x40-0x5F), 5 (0xA0-0xBF), 6-7 (0xC0-0xFF)
+- [x] Document MIDI message format in ring buffer (Note On/Off, CC, ProgramChange, PitchBend, etc.)
+- [x] Document command byte encoding (handler index in bits 7-5, length in bits 4-0)
+- [x] Document supported MIDI Control Changes (standard + proprietary 0x78-0x9D)
+- [x] Document voice processing architecture (26 channels, 287 bytes/channel at 0x041381)
+- [ ] Document handlers 2 (0x40-0x5F), 5 (0xA0-0xBF), 6-7 (0xC0-0xFF) — undocumented command ranges
 - [ ] Map status response message formats
 - [ ] Determine actual subprogram storage location (table_data vs custom_data flash)
