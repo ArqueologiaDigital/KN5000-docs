@@ -360,11 +360,32 @@ CREATE event (0x1C00001):
     │                     (posts event 0x1E000B3)
 ```
 
-**Normal splash animation**: On a successful boot with no special buttons held, the firmware displays a splash screen with the Technics/KN5000 logo and animated palette effects (palette cycling, spotlight-like illumination). The animation uses region-specific data tables — Region 2 uses different graphics than other regions. The animation is rendered via `ScreenGroup_Dispatch` (0xFDDB46) which manages UI widget groups.
+**Normal splash animation**: On a successful boot with no special buttons held, the firmware displays a splash screen with the Technics/KN5000 logo and animated palette effects (palette cycling, spotlight-like illumination). The animation uses region-specific data tables — Region 2 uses different graphics than other regions. The animation is rendered via `ScreenGroup_Dispatch` (0xFDDB46) which manages UI widget groups. The visual assets (Technics logo, world globe, "KN5000 IN COLOR" rendered text) are stored as pre-rendered bitmaps on the bootup floppy disk (files `FTBMP01`–`FTBMP06`), not in the ROM; the ROM contains only the animation control code.
 
 **"ALL INITIAL SETTING!" screen**: This appears when the firmware version button combo (GM SPECIAL + ACCORDION REGISTER + DIGITAL DRAWBAR) is held at power-on, **not** because of NVRAM loss or factory reset detection. This is a diagnostic/service mode, not an error condition.
 
 > **MAME Note**: In the emulator, the control panel MCU is HLE'd. If the HLE implementation does not correctly report "no buttons pressed" during the initial scan, the firmware may misinterpret the result and display the wrong welcome screen. This is an area for investigation.
+
+#### Sub CPU Payload Verification and the SNS (Power-Off) NMI
+
+After the Main CPU transfers the 192KB Sub CPU firmware payload, `SubCPU_Payload_Verify` (0xEF092B) verifies it by computing one's-complement checksums of two DRAM regions and comparing them against reference values:
+
+| Region | DRAM range | Size | Reference stored at |
+|--------|-----------|------|---------------------|
+| Region 1 | 0xF180 | 0x800 words (2 KB) | DRAM[0xFFD4] |
+| Region 2 | 0xF980 | 0x280 words (1.25 KB) | DRAM[0xFFD2] |
+
+**How reference checksums are stored**: `Boot_DisplayScreen` (0xEF0620) arms the NMI guard by writing `0x80` to internal CPU RAM[0x0400], then immediately clears `DRAM[0xFFD4] = 0`. On real hardware, the **SNS signal** (the power supply's "SNS" monitoring line) asserts the CPU's `~NMI` pin when power is removed. The NMI handler (at 0xEF08A5) calls `NMI_StorePayloadChecksums` (0xEF08D4), which:
+
+1. Checks the NMI guard (internal RAM[0x0400] == 0x80); returns immediately if not set
+2. Saves voice presets and flush data to SRAM
+3. Computes checksums for both regions and stores them at DRAM[0xFFD4/0xFFD2]
+4. Copies DRAM[0xF980..] to backup SRAM at 0x1E8000
+5. Executes `halt` (machine powers off)
+
+This means: every **clean power-off** stores fresh checksums; every **boot** clears them (`Boot_DisplayScreen`); the NMI at the *previous* power-off provides the values for `SubCPU_Payload_Verify` at the *next* boot.
+
+> **MAME Implementation**: The SNS NMI is implemented in the driver via two complementary mechanisms: **(A)** a write tap on DRAM[0xFFD4] that intercepts `Boot_DisplayScreen`'s zero-write and substitutes the correct checksum (reliable, always active); **(B)** a 60 Hz periodic timer that pulses the NMI line when `exit_pending` is true, allowing `NMI_StorePayloadChecksums` to run from actual ROM code at shutdown. Note: internal CPU RAM[0x0400] is on-chip and not visible on the external bus, so the NMI guard cannot be monitored via write taps — the ROM handler checks it internally. See branch [`kn5000_aided_by_claude`](https://github.com/felipesanches/mame/tree/kn5000_aided_by_claude) for the work-in-progress implementation (messy and hacky, before code review and proper MAME PR submission).
 
 #### Battery-Backed SRAM Validation
 
