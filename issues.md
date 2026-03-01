@@ -8,28 +8,14 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 239 (54 open, 185 closed)
+**Total Issues:** 241 (54 open, 187 closed)
 
 **Quick Links:** 
-[Boot Sequence](#boot-sequence) (1) · [Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (45) · [Sound & Audio](#sound-audio) (1)
+[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (46) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
 ## Open Issues
-
-### Boot Sequence {#boot-sequence}
-
-#### 🟠 Boot: Investigate "ALL INITIAL SETTING!" message and splash screen animation {#issue-kn5000-qv20}
-
-**ID:** `kn5000-qv20` | **Priority:** High | **Created:** 2026-02-28
-
-Two related boot sequence investigations:
-
-1. ALL INITIAL SETTING message: The boot sequence shows "ALL INITIAL SETTING!" which suggests the firmware thinks factory defaults are active. Investigate: (a) what criteria trigger this message, (b) whether MAME driver needs fixes for user settings persistence (NVRAM/SRAM), (c) what needs to change so a second run does not show this message.
-
-2. Boot splash screen animation: On real KN5000 hardware, boot shows a "KN5000" model name with spotlight-like animation and "IN COLOR" text. Investigate: (a) identify the code that performs this animation, (b) fully disassemble and document with semantic symbols, (c) determine criteria for showing it vs "ALL INITIAL SETTING!", (d) what MAME driver changes (no hacks!) would make the animation appear.
-
----
 
 ### Firmware Update {#firmware-update}
 
@@ -631,6 +617,14 @@ Reference: kn5000_table_data.rom combination analysis
 
 ---
 
+#### 🟡 Feature Demo: Lua script to simulate user input and trigger SSF presentation in MAME {#issue-kn5000-pgur}
+
+**ID:** `kn5000-pgur` | **Priority:** Medium | **Created:** 2026-03-01
+
+Implement and test a MAME Lua autoboot script (ftdemo_activate.lua) that simulates the DEMO button press via MAME input ports and injects the assswb buffer to trigger the Feature Demo SSF presentation without manual user interaction.
+
+---
+
 #### 🟡 Input: Document analog controller processing (wheels, pedals) {#issue-kn5000-3c7}
 
 **ID:** `kn5000-3c7` | **Priority:** Medium | **Created:** 2026-01-30
@@ -1171,6 +1165,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-1v8g` | Investigate Feature Demo (FTDEMO) display failure | 2026-03-01 |
+| `kn5000-qv20` | Boot: Investigate "ALL INITIAL SETTING!" message and spla... | 2026-02-28 |
 | `kn5000-qiw4` | Mines: Remove LLVM bug workarounds from video.c | 2026-02-28 |
 | `kn5000-8zr` | LLVM: Fix bug #10 — register x/y swap on inlining | 2026-02-28 |
 | `kn5000-o3u` | LLVM: Fix bug #11 — for-loop with uint16_t counter exits ... | 2026-02-28 |
@@ -1189,10 +1185,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | `kn5000-21e` | FeatureDemo: Refactor assembly to use slide macros | 2026-02-28 |
 | `kn5000-98j` | Sound: Document rhythm/accompaniment engine | 2026-02-28 |
 | `kn5000-br1` | FeatureDemo: Create ASL macros for widget definitions | 2026-02-28 |
-| `kn5000-4q0` | FeatureDemo: Create ASL macros for slide definitions | 2026-02-28 |
-| `kn5000-dqi` | FeatureDemo: Document widget parameter formats | 2026-02-28 |
 
-*...and 165 more closed issues*
+*...and 167 more closed issues*
 
 ---
 
@@ -1203,8 +1197,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 10 |
-| Medium | 28 |
+| High | 9 |
+| Medium | 29 |
 | Low | 13 |
 | P4 | 1 |
 
@@ -1212,12 +1206,11 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Category | Count |
 |----------|-------|
-| Boot Sequence | 1 |
 | Firmware Update | 5 |
 | HD-AE5000 Expansion | 2 |
-| Other | 45 |
+| Other | 46 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-03-01 07:30*
+*Last updated: 2026-03-01 10:03*

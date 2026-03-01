@@ -263,9 +263,23 @@ The entire pipeline is **ROM-resident** — no disk I/O occurs for the Feature D
 
 ---
 
-## MAME Emulation Status and Known Issues
+## MAME Emulation Status
 
-**Current status (February 2026):** The Feature Demo does not display images in MAME. The keyboard navigates to the demo mode successfully, but no FTBMP images appear. The root cause has been identified through Lua trace-script investigation.
+**Current status (March 2026):** **CONFIRMED WORKING.** The Feature Presentation SSF runs correctly in MAME. Navigation sequence confirmed via Lua autoboot scripts:
+
+1. Press **DEMO** button → `8D38=0xE0` (DEMONSTRATION menu appears)
+2. Press **LEFT 4** (CPL_SEG9) → `8D38=0xE4` (FEATURE PRESENTATION sub-menu appears)
+3. Press **DEMO** again in state `0xE4` → `GroupBoxProc_StartSSFPresentation` fires → SSF starts → FTBMP images rendered to VRAM
+
+FTBMP01.BMP (Technics logo) was confirmed displayed in VRAM, visible in emulator snapshots taken during the run. The SSF iterated through multiple items (9 confirmed dispatches of `0x1C0001C` via `FA9660`) before returning to normal home screen state.
+
+**How DEMO triggers SSF in state 0xE4:** The FEATURE PRESENTATION sub-menu is rendered by `GroupBoxProc`. When DEMO is pressed in state `0xE4`, the INTA soft-button event is delivered directly to `GroupBoxProc`'s event handler (not via `F98697`/`FA9945`). GroupBoxProc recognizes the DEMO button, calls `GroupBoxProc_StartSSFPresentation` (0xF9A273), which sends `0x1C0001C` with workspace type-tag `0x0000B80A` — the correct path that passes `AcPresentCtrl_CheckSSFStart`.
+
+The `fa9945=0` result (F98697 path never fired) is correct: F98697 uses the state 0xE4 FFFE pass-through table and would fire 0x1C00038 via FA9945, but it is not needed because the DEMO button in state 0xE4 reaches GroupBoxProc directly through the soft-button event system.
+
+**Reference Lua script:** `/tmp/ftdemo_v3.lua` — fully automated navigation from boot to SSF presentation.
+
+---
 
 ---
 
@@ -286,7 +300,7 @@ Because workspaces are allocated from a pool in DRAM and may be reused, it is cr
 
 ---
 
-## Confirmed Root Cause: Missing Event to GroupBoxProc
+## Investigation History: How the Solution Was Found
 
 ### Two paths for event 0x1C0001C
 
@@ -321,15 +335,9 @@ jrl z, GroupBoxProc_Ev1C00030              ; via show-item handler
 
 When this event reaches `AcPresentCtrl_CheckSSFStart`, the type-tag check **passes**, and the handler sends event `0x1C00006` — which starts SSF presentation parsing, loads the XML from ROM, and begins rendering FTBMP images.
 
-#### Root cause summary
+#### Root cause summary (initial hypothesis — superseded)
 
-`GroupBoxProc_StartSSFPresentation` is **never reached** during Feature Demo navigation in MAME. Events `0x1C00038` and `0x1C00030` are not routed to `GroupBoxProc` at all. Consequently:
-
-- `AcPresentationControlProc` only receives `0x1C0001C` events from Path 1 (wrong type-tag).
-- The B80A check always fails.
-- Event `0x1C00006` (SSF start) is never sent.
-- The SSF XML parser never runs.
-- No FTBMP images are ever rendered.
+Initial analysis concluded that `GroupBoxProc_StartSSFPresentation` was never reached via the button-press navigation path tested. Subsequent investigation revealed the correct navigation: pressing **DEMO** (not LEFT 2) in state `0xE4` triggers `GroupBoxProc`'s event handler directly, which calls `GroupBoxProc_StartSSFPresentation` and correctly builds the `0xB80A` workspace tag. See "MAME Emulation Status" above for the confirmed working sequence.
 
 ### Call-chain overview
 
@@ -432,7 +440,7 @@ Investigation used MAME Lua autoboot scripts to monitor `LABEL_F98697`, `FA9945`
 - Notifier handles from `add_machine_frame_notifier` / `add_machine_stop_notifier` must be **saved to outer-scope variables** to prevent garbage collection — otherwise callbacks silently stop
 - **Critical conflict:** `emu.add_machine_frame_notifier` + `install_read_tap` are mutually exclusive — when both are active, read taps stop firing entirely
 
-**Trace results:**
+**Early trace results (pre-solution):**
 | Monitor | Count | Observations |
 |---------|-------|-------------|
 | `LABEL_F98697` tap (0xF98696-0xF98697) | 900+ calls | All during boot init; all with `8D38=0x00` (empty table); C080 sweeps `0x00→0x9A`, C07D cycles `0x01..0x17` |
@@ -442,7 +450,16 @@ Investigation used MAME Lua autoboot scripts to monitor `LABEL_F98697`, `FA9945`
 
 **False positive explained:** The "SSF START" tap at `0xF9A272-0xF9A273` fires from the instruction `call 0xfa9660` at `0xF9A26F` (a 4-byte instruction encoding `1D 60 96 FA`). Its 3rd word occupies `0xF9A272-0xF9A273`, triggering the tap on every call to `0xFA9660` (the direct SendEvent dispatcher), not from `GroupBoxProc_StartSSFPresentation` actually executing.
 
-**Conclusion:** The Feature Demo is architecturally correct and would work on real hardware with user button navigation. In MAME's automated testing environment without simulated input, the event buffer at `0xBD3C` remains empty after boot, so `LABEL_F98697` is never called with the correct post-boot state. No emulation bug — the issue is absence of simulated user input.
+**Confirmed solution results (ftdemo_v3.lua):**
+| Monitor | Count | Observations |
+|---------|-------|-------------|
+| `LABEL_F98697` | 994 calls | Called but EF0797 pre-condition blocked all (internal RAM 0x0406 bit 7 not set in emulation context) |
+| `FA9945` for 0x1C00038 | 0 calls | Not used — DEMO button in state 0xE4 goes direct to GroupBoxProc via soft-button path |
+| `GroupBoxProc_StartSSFPresentation` tap | 9 hits | Each hit = `call 0xfa9660` at 0xF9A26F dispatching one SSF item (0x1C0001C with B80A workspace) |
+| FTBMP01.BMP in VRAM | Confirmed | "Technics" logo text visible in emulator snapshots 0124-0126 |
+| Final `8D38` state | 0x01 | Returned to normal after SSF completed |
+
+**Conclusion:** No MAME emulation bug. The Feature Demo works correctly when the correct navigation sequence is used. The DEMO button in the FEATURE PRESENTATION sub-menu (state 0xE4) triggers SSF directly through GroupBoxProc's own event handler — not via the F98697/FA9945 dispatch chain. F98697 is a post-boot state-dispatch router that handles events from the hardware key scanner, while GroupBoxProc handles soft-button events directly from the INTA system.
 
 ---
 
