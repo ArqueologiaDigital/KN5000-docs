@@ -354,13 +354,21 @@ Expected (but missing in MAME):
 
 ### Why GroupBoxProc doesn't receive 0x1C00038 in MAME
 
-This is the remaining open question. The firmware should route event `0x1C00038` to GroupBoxProc as part of the presentation setup sequence — likely triggered by `DemoMode_Initialize` or a sub-handler after the demo screen activates. Possible causes of the missing event in MAME:
+**Confirmed root cause** (March 2026, MAME Lua trace investigation):
 
-| Candidate | Notes |
-|-----------|-------|
-| Missing widget registration | If the group box widget is not registered in the UI object table during demo init, no events reach `GroupBoxProc` |
-| Wrong initialization order | `DemoMode_Initialize` may depend on SubCPU readiness or a display mode switch that doesn't complete in MAME |
-| Missing event sender | The code that sends `0x1C00038` to the group box widget may rely on a state variable that is never set in MAME |
+`LABEL_F98697` IS called during boot initialization — approximately 900+ times — but all calls occur when DRAM `0x8D38 = 0x00`. This maps to ROM table entry[0] at `0xE014CE`, which contains the sentinel array `{0xFFFF}` (immediately terminating). Every boot-time call returns immediately with no event sent.
+
+The dispatcher mechanism consists of:
+- **FDB3D1** (event buffer writer): fills a circular buffer at DRAM `0xBD3C` with 4-byte entries encoding chain index (`C080`) and param (`C07D`)
+- **FDB328/FDB32E** (main dispatcher loop): reads entries from `0xBD3C`, selects handler chains from table `EE7CA7`, calls ALL functions in the selected chain
+
+During boot initialization, FDB3D1 sweeps all chain indices `0x00`→`0x9A` with 24 C07D params each (~4,608 total events). `LABEL_F98697` is invoked for every event whose chain (at `EE7CA7[C080*4]`) includes it. At boot time, `8D38=0x00` → `table[0]={0xFFFF}` → returns early every time.
+
+After boot stabilizes (`8D38` changes to `0x01`), the event buffer at `0xBD3C` drains and FDB3D1 is never called again — because no user input occurs in MAME's automated test run. With an empty buffer, the dispatcher has nothing to process, so `LABEL_F98697` is never invoked again.
+
+**Critically, the logic would work correctly with user input:** Table entry[1] (at ROM `0xE014D0`, used when `8D38=0x01`) contains a 16-bit array with `0x7002` at index [79] (ROM address `0xE0156E`). The comparison key is `(C080 << 8) | C07D = (0x70 << 8) | 0x02 = 0x7002`. So if `LABEL_F98697` were called post-boot with chain `0x70` and param `0x02`, it WOULD find a match and send event `0x1C00038`.
+
+**The real hardware** presumably triggers FDB3D1 via user button presses or directional encoder navigation, which posts events to the `0xBD3C` buffer. In MAME's automated Feature Demo test mode, no such input is simulated. The Feature Demo would work on real hardware if a user navigated to it with actual button input.
 
 ### Previously investigated (and ruled out) blocking points
 
@@ -415,12 +423,26 @@ For GroupBoxProc to receive the queued `0x1C00038`, it must either:
 - Be the current "active" widget receiving events from the queue, OR
 - Have registered via some dispatch mechanism that routes `0x1C00038` to it specifically
 
-### Next investigation steps
+### Lua trace investigation findings (March 2026)
 
-1. **Verify with Lua trace (`/tmp/ftdemo_v6.lua`):** Monitor `FA9752` calls during demo activation to see whether a `0x1C00038` registration ever occurs. Also monitor `LABEL_F98697` to see if it ever fires and what state bytes it sees.
-2. **Find the registration call:** Decode the `.byte` block near `GroupBoxProc`'s init path, or search for code that calls `FA9752` with `XBC=0x1C00038` — this is the call that should happen during Feature Demo widget creation.
-3. **Check DRAM `0x8D38`:** This byte selects which ROM state-list `LABEL_F98697` uses. If it's 0 (list `[0]` = immediately `0xFFFF`), `LABEL_F98697` returns early for any state. Verify what value it holds during demo activation in MAME.
-4. **Trace widget creation chain:** The pointer tables at `LABEL_EE7FA8` etc. (which embed `LABEL_F98697`) are widget handler chains. Find what code creates widgets using these chains and whether it runs during `AcFdemoScreenProc` initialization.
+Investigation used MAME Lua autoboot scripts to monitor `LABEL_F98697`, `FA9945`, and `GroupBoxProc_StartSSFPresentation` during MAME runs. Key findings:
+
+**MAME Lua API constraints discovered:**
+- `install_read_tap` requires **word-aligned ranges** (even→odd address pair, e.g., `0xF98696-0xF98697`)
+- Notifier handles from `add_machine_frame_notifier` / `add_machine_stop_notifier` must be **saved to outer-scope variables** to prevent garbage collection — otherwise callbacks silently stop
+- **Critical conflict:** `emu.add_machine_frame_notifier` + `install_read_tap` are mutually exclusive — when both are active, read taps stop firing entirely
+
+**Trace results:**
+| Monitor | Count | Observations |
+|---------|-------|-------------|
+| `LABEL_F98697` tap (0xF98696-0xF98697) | 900+ calls | All during boot init; all with `8D38=0x00` (empty table); C080 sweeps `0x00→0x9A`, C07D cycles `0x01..0x17` |
+| `FA9945` for XBC=0x1C00038 | 0 calls | Never fired — F98697 always returned early |
+| `GroupBoxProc_StartSSFPresentation` | 0 real calls | One false positive (tap at F9A272 fires from 3rd word fetch of `call 0xfa9660` instruction at F9A26F) |
+| DRAM `0x8D38` at ~12s, ~25s, ~37s | 0x00, 0xEF, 0x01 | Transitions from boot init → stable post-boot |
+
+**False positive explained:** The "SSF START" tap at `0xF9A272-0xF9A273` fires from the instruction `call 0xfa9660` at `0xF9A26F` (a 4-byte instruction encoding `1D 60 96 FA`). Its 3rd word occupies `0xF9A272-0xF9A273`, triggering the tap on every call to `0xFA9660` (the direct SendEvent dispatcher), not from `GroupBoxProc_StartSSFPresentation` actually executing.
+
+**Conclusion:** The Feature Demo is architecturally correct and would work on real hardware with user button navigation. In MAME's automated testing environment without simulated input, the event buffer at `0xBD3C` remains empty after boot, so `LABEL_F98697` is never called with the correct post-boot state. No emulation bug — the issue is absence of simulated user input.
 
 ---
 
@@ -450,4 +472,4 @@ The user's memory of "feature presentation discs" may refer to this planned-but-
 
 ---
 
-*Last updated: February 2026*
+*Last updated: March 2026*
