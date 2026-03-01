@@ -379,11 +379,48 @@ The MAME driver previously registered only a `"35dd"` (720 KB double-density) fl
 
 This has been fixed in the MAME driver. It is a separate issue from the Feature Demo image display failure.
 
+### How event 0x1C00038 is generated — detailed analysis
+
+#### `LABEL_F98697` — the event sender
+
+The function `LABEL_F98697` (ROM `0xF98697`) is the code that sends event `0x1C00038`. It is **not called directly** — instead, it appears as a function-pointer entry in many UI widget handler chains (in the ROM pointer tables at `LABEL_EE7FA8`, `LABEL_EE7FD4`, `LABEL_EE7FFC`, etc.). When any widget using one of these handler chains processes certain events (typically user interaction events), it walks its handler chain and calls `LABEL_F98697`.
+
+`LABEL_F98697` logic:
+
+1. Calls `0xEF0797` to check bit 7 of DRAM `0x0406`. This flag is SET once during boot by `Boot_DisplayScreen` (call at line 89160) and CLEARED only during flash memory updates. It should be set throughout normal operation, so this check passes.
+2. Reads a byte from DRAM `0x8D38` (an array selector index `R`).
+3. Reads a ROM pointer `P = ROM[0xE01F80 + R×4]`. The pointer `P` points to a ROM array of 16-bit state values ending in `0xFFFF`.
+4. Walks the array at `P`, comparing each entry to the current selection state built from DRAM bytes `0xC07D` and `0xC080` (packed as `(0xC080 << 8) | 0xC07D`).
+5. If a match is found (or if the first array entry is `0xFFFE`, indicating "always send"), builds a 32-bit XDE parameter from `0xC07D`–`0xC080` and sends event `0x1C00038` to `XWA=0xFFFFFFFF` via `FA9945`.
+
+#### `FA9945` — the broadcast event router
+
+`FA9945` is the intermediate event-routing function called by `LABEL_F98697`. It checks a dynamic routing table in DRAM at `0x02BC34` (populated at runtime by `FA9752`). For each registered entry, it checks whether the entry's event code matches `0x1C00038` **and** whether the entry's "match value" equals the upper 16 bits of the XDE parameter. If a match is found, the event is forwarded to the registered handler (GroupBoxProc instance).
+
+#### `FA9752` — the event queue writer (`PostEvent`)
+
+`FA9752` (labeled `PostEvent` in the disassembly) **inserts events into a circular event queue** at DRAM `0x02BC34` (head/tail pointers at `0x02EC34`/`0x02EC36`). Each 12-byte queue entry holds:
+
+```
+entry[0..3]  = self pointer (XWA) — object ID posting the event
+entry[4..7]  = event code (XBC)
+entry[8..11] = param (XDE)
+```
+
+`FA9945` is the queue **processor/router**: it reads pending entries from `0x02BC34`, and for each entry with event code `0x1C00038`, checks whether the upper 16 bits of the parameter match a value stored in the entry. If the queue is empty, it posts the new event directly via `FA9D58`.
+
+The event routing for `0x1C00038` therefore works through the standard event queue. `LABEL_F98697` acts as the PRODUCER: it checks state bytes, then pushes `0x1C00038` + packed XDE into the queue via `FA9945`. The CONSUMER is whichever widget handler receives the queued event — presumably GroupBoxProc, once it has received its own event setup during initialization.
+
+For GroupBoxProc to receive the queued `0x1C00038`, it must either:
+- Be the current "active" widget receiving events from the queue, OR
+- Have registered via some dispatch mechanism that routes `0x1C00038` to it specifically
+
 ### Next investigation steps
 
-1. Trace what sends event `0x1C00038` (or `0x1C00030`) on real hardware — likely in `DemoMode_Initialize` or a UI setup sub-handler called from it.
-2. Check whether the widget registration that makes `GroupBoxProc` receive events completes during demo initialization in MAME.
-3. If the sender is found, verify the event reaches `GroupBoxProc` in MAME using a targeted Lua tap at the `GroupBoxProc` entry point (`~0xF99840`) with XBC == `0x1C00038`.
+1. **Verify with Lua trace (`/tmp/ftdemo_v6.lua`):** Monitor `FA9752` calls during demo activation to see whether a `0x1C00038` registration ever occurs. Also monitor `LABEL_F98697` to see if it ever fires and what state bytes it sees.
+2. **Find the registration call:** Decode the `.byte` block near `GroupBoxProc`'s init path, or search for code that calls `FA9752` with `XBC=0x1C00038` — this is the call that should happen during Feature Demo widget creation.
+3. **Check DRAM `0x8D38`:** This byte selects which ROM state-list `LABEL_F98697` uses. If it's 0 (list `[0]` = immediately `0xFFFF`), `LABEL_F98697` returns early for any state. Verify what value it holds during demo activation in MAME.
+4. **Trace widget creation chain:** The pointer tables at `LABEL_EE7FA8` etc. (which embed `LABEL_F98697`) are widget handler chains. Find what code creates widgets using these chains and whether it runs during `AcFdemoScreenProc` initialization.
 
 ---
 
