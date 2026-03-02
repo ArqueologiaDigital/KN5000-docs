@@ -505,12 +505,31 @@ However, as documented in the MAME investigation above, the actual Feature Demo 
 
 The gate table's primary role appears to be **gating hardware button events** — when the event buffer dispatcher (`0xFDB328`) processes button presses from the key scanner, it invokes `GroupBoxNotify_SendSSFEvent` as part of widget handler chains. The table then determines whether those hardware button events should propagate as SSF trigger events based on the current UI mode.
 
+### State-Value Arrays
+
+Each gate table entry points to a **state-value array** — a sequence of 16-bit little-endian values terminated by `0xFFFF`. Each value encodes `(chain_index << 8) | param`, matching the packed panel selection state from DRAM bytes `0xC080` (chain index) and `0xC07D` (param).
+
+Known arrays in ROM range 0xE014CE–0xE01F7E:
+
+| Label | Address | Entries | Content | Used by mode |
+|-------|---------|---------|---------|--------------|
+| `LABEL_E014CE` | 0xE014CE | 0 | `{0xFFFF}` — disabled | 0x00 (boot/init) |
+| `LABEL_E014D0` | 0xE014D0 | ~215 | Chains 0x00–0x0C, 0x91 — many states | 0x01 (normal) |
+| `LABEL_E0157E` | 0xE0157E | 0 | `{0xFFFF}` — disabled | 0x02 |
+| `LABEL_E01580` | 0xE01580 | ~215 | Chains 0x00–0x0C, 0x43, 0x48, 0x70, 0x80, 0x91, 0x98 | 0x03 |
+| `LABEL_E0174A` | 0xE0174A | 1 | Chain 0x91, param 0x00 | 0x04 |
+| **`SSF_GateStates_Mode05`** | 0xE0174E | 14 | Chain 0x92, params 0x00–0x0D | **0x05** |
+| `LABEL_E0176C` | 0xE0176C | — | Binary data (incbin) | 0x06+ |
+
+The `SSF_GateStates_Mode05` array (0xE0174E) is a representative example: when the UI is in mode 5 (`0x8D38 = 0x05`), the SSF event fires only if the current panel state has chain index `0x92` and a param value between `0x00` and `0x0D`. All other panel states are blocked.
+
 ### Source Location
 
 - **Table definition:** `maincpu/kn5000_v10_program.s`, label `SSF_PresentationGateTable` (0xE01F80)
 - **Getter function:** `LABEL_F0618F` — loads index from DRAM 0x8D38
 - **Consumer function:** `GroupBoxNotify_SendSSFEvent` (0xF98697) — reads and evaluates the table
 - **State-value arrays:** ROM range 0xE014CE–0xE01F7E (pointed to by table entries)
+- **Example array:** `SSF_GateStates_Mode05` (0xE0174E) — 14-entry filter for UI mode 5
 
 ---
 
