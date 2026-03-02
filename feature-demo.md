@@ -463,6 +463,57 @@ Investigation used MAME Lua autoboot scripts to monitor `LABEL_F98697`, `FA9945`
 
 ---
 
+## SSF Presentation Gate Table (`SSF_PresentationGateTable`, 0xE01F80)
+
+The firmware uses a 256-entry ROM lookup table at **0xE01F80** to control which UI states allow the Feature Demo to be triggered. This table is the gating mechanism that determines whether pressing a panel button sends event `0x1C00038` — the event that ultimately starts the SSF presentation.
+
+### Structure
+
+The table occupies 1024 bytes (0xE01F80–0xE02380) and consists of 256 `.long` (32-bit little-endian) pointer entries. Each pointer points to a **state-value array** — a list of 16-bit values terminated by `0xFFFF` — stored elsewhere in the ROM (0xE014CE–0xE01F7E).
+
+```
+SSF_PresentationGateTable:
+    .long LABEL_E014CE    ; entry[0x00] — boot/init state
+    .long LABEL_E014D0    ; entry[0x01] — normal operation
+    .long LABEL_E0157E    ; entry[0x02]
+    ...                   ; (256 entries total)
+    .long LABEL_E01F7E    ; entry[0xFF]
+```
+
+### How It Works
+
+1. **Index selection:** The current UI mode is stored as a byte at DRAM address `0x8D38`. The getter function at `0xF0618F` loads this value. Common values include:
+   - `0x00` — boot/initialization
+   - `0x01` — normal operation
+   - `0xE0` — DEMONSTRATION menu
+   - `0xE4` — FEATURE PRESENTATION sub-menu
+
+2. **Table lookup:** `GroupBoxNotify_SendSSFEvent` (0xF98697) reads the byte `R` from `0x8D38` and loads the pointer `P = SSF_PresentationGateTable[R]`.
+
+3. **State matching:** The 16-bit array at `P` is checked against the current panel selection state (packed from DRAM bytes `0xC07D` and `0xC080` as `(C080 << 8) | C07D`):
+   - `{0xFFFE}` — **always match**: the event fires unconditionally
+   - `{0xFFFF}` — **never match**: the entry is disabled, no event sent
+   - `{val1, val2, ..., 0xFFFF}` — **conditional**: each value is compared to the packed state; if any matches, the event fires
+
+4. **Event dispatch:** When a match is found, `GroupBoxNotify_SendSSFEvent` sends event `0x1C00038` via the broadcast router at `0xFA9945`, which forwards it to registered widgets (typically `GroupBoxProc`).
+
+### Role in Feature Demo Activation
+
+The gate table ensures the Feature Demo can only be activated from specific UI states. During boot (`0x8D38 = 0x00`), `entry[0]` points to `{0xFFFF}` — immediately terminating, blocking any SSF events. After boot stabilizes and the user navigates to the DEMONSTRATION menu, `0x8D38` transitions to values whose table entries contain valid state arrays.
+
+However, as documented in the MAME investigation above, the actual Feature Demo activation in practice bypasses this table entirely: pressing DEMO in the FEATURE PRESENTATION sub-menu (state `0xE4`) triggers `GroupBoxProc_StartSSFPresentation` directly through the soft-button event path, not through `GroupBoxNotify_SendSSFEvent`.
+
+The gate table's primary role appears to be **gating hardware button events** — when the event buffer dispatcher (`0xFDB328`) processes button presses from the key scanner, it invokes `GroupBoxNotify_SendSSFEvent` as part of widget handler chains. The table then determines whether those hardware button events should propagate as SSF trigger events based on the current UI mode.
+
+### Source Location
+
+- **Table definition:** `maincpu/kn5000_v10_program.s`, label `SSF_PresentationGateTable` (0xE01F80)
+- **Getter function:** `LABEL_F0618F` — loads index from DRAM 0x8D38
+- **Consumer function:** `GroupBoxNotify_SendSSFEvent` (0xF98697) — reads and evaluates the table
+- **State-value arrays:** ROM range 0xE014CE–0xE01F7E (pointed to by table entries)
+
+---
+
 ## Interpretation
 
 The XML presentation system — with its `EXEC` tag, `SONG` playback, `IMG` display, rich tag vocabulary, and event-driven architecture — was almost certainly designed to be more flexible than its single current usage (a hardcoded Feature Demo in ROM).
