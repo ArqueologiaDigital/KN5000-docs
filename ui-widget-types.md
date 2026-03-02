@@ -143,6 +143,85 @@ The body bytes remain as raw `.byte` directives because structure sizes vary eve
 
 ---
 
+## FD SAVE/LOAD TEST — Diagnostic Screen
+
+The FD SAVE/LOAD TEST is a factory diagnostic screen that exercises the floppy disk I/O subsystem. It is the only user of type `0x16` (DIAGLIST) widgets and provides a complete example of the Title-based screen activation system.
+
+### Activation Path
+
+The diagnostic screen is part of the **HAMA** (file/disk) subsystem, initialized at boot by `InitializeHama` (ROM `0xF1E39E`):
+
+1. **Boot registration.** `InitializeHama` calls `RegisterTitle` twice to register two diagnostic titles with the firmware's title management system:
+
+   | Title String | Address | Widget Table | Purpose |
+   |-------------|---------|-------------|---------|
+   | `TT_HDDEXT` | `0xE1FD18` | `0x7f` | FDD / HD extension test |
+   | `TT_EXTAPR` | `0xE1FD22` | `0xfc` | Extension APR test |
+
+   Both titles share the same lifecycle callback: `TestTitleFunc` at `0xF1E39A` (pointer stored at `0xE1FD2C` in `fd_test_data.s`).
+
+2. **Title activation.** When the user navigates to the diagnostic screen (exact UI path not yet fully traced; likely a hidden service mode), the title system activates the corresponding title and sends lifecycle events to `TestTitleFunc`:
+
+   | Event | Parameter (xde) | Meaning |
+   |-------|-----------------|---------|
+   | `0x1C00007` | 0 | Title new |
+   | `0x1C00007` | 1 | Title old |
+   | `0x1C00007` | 2 | Title activate |
+   | `0x1C00007` | 3 | Title inactivate |
+   | `0x1C00007` | 4--5 | Title interrupt / return |
+   | `0x1C00007` | 6 | TBIOS test |
+
+3. **User actions.** Once the screen is active, button presses generate event `0x1C00013` dispatched to `TestTitleFunc`:
+
+   | Parameter (xde) | Action |
+   |-----------------|--------|
+   | 2 | STOP FDD TEST |
+   | 3 | START FDD TEST LOOP |
+   | 4 | DIR (directory listing) |
+   | 5--6 | Debug test |
+
+4. **Dialog widget events.** The 7 dialog buttons generate events `0x1C00017`--`0x1C0001D`, handled by `FDTestDialogProc` via a word-offset jump table at `0xE1FF34`.
+
+5. **File selection.** `HamaListProc` handles event `0x1E00086` (list item selection) for the file browser widget, forwarding unhandled events to the default handler.
+
+### Screen Layout
+
+The diagnostic screen uses 3 type-`0x16` DIAGLIST widgets displaying live counters:
+
+| Widget | Address | Label | Purpose |
+|--------|---------|-------|---------|
+| 1 | `0xE1F794` | `" TOTAL :"` | Total test iterations |
+| 2 | `0xE1F7D2` | `"    NG :"` | Failed iterations |
+| 3 | `0xE1F810` | `"    OK :"` | Passed iterations |
+
+The test writes a 2KB counting pattern (`0x0000`--`0x03FF`) to `A:IMMUNITY.TST`, reads it back, and compares byte-by-byte. Directory listing uses the pattern `A:\HAMA\*.LSW`.
+
+### Source Files
+
+| File | Contents |
+|------|----------|
+| `maincpu/fd_test_code.s` | `FDLoadSaveTest`, `FDListDirectory`, `FDTestDialogProc`, `HamaListProc` |
+| `maincpu/fd_test_data.s` | DIAGLIST widgets, NAKA structures, pointer tables, diagnostic strings |
+| `maincpu/kn5000_v10_program.s` | `InitializeHama`, `TestTitleFunc`, `FDTest_PrintDiag` |
+
+### Standard Library Functions
+
+Analysis of the FD test code identified several standard library functions used throughout the firmware:
+
+| Label | Name | References | Description |
+|-------|------|-----------|-------------|
+| `0xFF0E80` | `Malloc` | 91 | Heap allocator (size on stack, returns pointer in xhl) |
+| `0xFF0AF2` | `Free` | 70 | Heap deallocator (pointer on stack) |
+| `0xFF0FFA` | `Memset` | 43 | Memory fill (buffer, byte, count on stack) |
+| `0xFF0F4D` | `Strcpy` | 314 | String copy with null termination |
+| `0xF4EB97` | `FileOpen` | 22 | Open file (mode flags: r/w/a/b/+/~/d) |
+| `0xF4EEB9` | `FileWrite` | 10 | Write to file (handle, buffer, size) |
+| `0xF4EE70` | `FileRead` | 10 | Read from file (handle, buffer, size) |
+| `0xF4F05A` | `FileClose` | 9 | Close file handle |
+| `0xF4F21F` | `FileOpenDefault` | 3 | Open file with default flags |
+
+---
+
 ## Related Pages
 
 - [UI Framework]({{ site.baseurl }}/ui-framework/) -- Widget system and event handling
