@@ -157,6 +157,8 @@ struct FeatureDemo_FileMetadata {
 
 ### UI Objects (Program ROM)
 
+The NAKA UI widget system manages all structured UI elements. See [UI Widget Types]({{ site.baseurl }}/ui-widget-types/) for full documentation of the 9 widget type bytes, structure layouts, and dispatch mechanism.
+
 48 named UI objects are referenced in the Program ROM:
 
 - `ftdemo01` through `ftdemo48` — bitmap resource names (aligned strings at lines 6240-6648)
