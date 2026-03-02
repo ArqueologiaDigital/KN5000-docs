@@ -25,6 +25,7 @@ The 32-bit LE value is `0x01600000 | type_byte`. This header is immediately foll
 
 | Type Byte | Count | Tentative Name | Key Characteristics |
 |-----------|-------|----------------|---------------------|
+| `0x16` | 3 | Diagnostic List | FD SAVE/LOAD TEST only, counter display with label string |
 | `0x1e` | 31 | Panel/Dialog | 4 sub-widget indices, full-screen bounding box |
 | `0x2b` | 765 | Label/Button | String pointer (e.g. "200 Preset"), bounding box |
 | `0x2e` | 148 | Value Display | Fixed 26 bytes, bounding box, no string pointer |
