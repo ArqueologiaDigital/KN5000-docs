@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 270 (54 open, 214 closed)
+**Total Issues:** 270 (53 open, 214 closed)
 
 **Quick Links:** 
-[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (46) · [Sound & Audio](#sound-audio) (1)
+[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (45) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
@@ -846,28 +846,6 @@ Reference: ui-framework.md for existing documentation.
 
 ---
 
-#### 🟡 Symbols: Rename remaining LABEL_* in Sub CPU audio code {#issue-kn5000-9jq}
-
-**ID:** `kn5000-9jq` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** While major audio routines were renamed, many helper labels remain as LABEL_*:
-
-Sub CPU areas needing attention:
-- Voice helper routines (LABEL_02C6CD -> Voice_SetPitch, etc.) - some done, verify completeness
-- DSP helper routines in 0x035xxx-0x036xxx range
-- Ring buffer helper labels
-- Audio processing loop internal labels
-
-Approach:
-1. Grep for remaining LABEL_02* and LABEL_03* in subcpu asm
-2. Analyze context to determine purpose
-3. Create meaningful names
-4. Add to sed script and apply
-
-Reference: audio_subsystem_rename.sed for pattern.
-
----
-
 #### 🟡 Update website with service manual findings {#issue-kn5000-8q2}
 
 **ID:** `kn5000-8q2` | **Priority:** Medium | **Created:** 2026-01-25
@@ -1198,7 +1176,7 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Critical | 2 |
 | High | 9 |
-| Medium | 28 |
+| Medium | 27 |
 | Low | 14 |
 | P4 | 1 |
 
@@ -1208,9 +1186,9 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Firmware Update | 5 |
 | HD-AE5000 Expansion | 2 |
-| Other | 46 |
+| Other | 45 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-03-03 17:37*
+*Last updated: 2026-03-03 18:11*
