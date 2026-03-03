@@ -317,92 +317,170 @@ To complete the CC-to-Lsw mapping, the NAKA widget configuration data for each s
 
 ---
 
-## Phase 3 Results: Preset Tables and DSP Effect Types
+## Phase 3 Results: DSP Command Path and Effect Type Mapping
 
-### DSP Effect Name Table (ROM 0xE33304)
+### Two Separate Command Paths
 
-The firmware maintains a master table of all DSP effect types as 16-character display strings. Each entry is 18 bytes (16 chars + null + pad). The table includes reverbs, delays, modulation effects, and distortion:
+The sound subsystem uses **two completely independent command paths** based on the inter-CPU command byte:
 
-| Index | Address | Name | Category |
-|-------|---------|------|----------|
-| 0 | E33304 | FUZZ | Distortion |
-| 1 | E33316 | OVERDRIVE | Distortion |
-| 2 | E33328 | DISTORTION | Distortion |
-| 3-6 | E3333A | *(unused)* | - |
-| 7 | E33382 | WAVE REVERB 2 | Reverb |
-| 8 | E33394 | WAVE REVERB 1 | Reverb |
-| 9 | E333A6 | BRIGHT REVERB 2 | Reverb |
-| 10 | E333B8 | BRIGHT REVERB 1 | Reverb |
-| 11 | E333CA | DARK REVERB 2 | Reverb |
-| 12 | E333DC | DARK REVERB 1 | Reverb |
-| 13 | E333EE | CONCERT REVERB 2 | Reverb |
-| 14 | E33400 | CONCERT REVERB 1 | Reverb |
-| 15 | E33412 | PLATE REVERB 2 | Reverb |
-| 16 | E33424 | PLATE REVERB 1 | Reverb |
-| 17 | E33436 | ROOM REVERB 2 | Reverb |
-| 18 | E33448 | ROOM REVERB 1 | Reverb |
-| 19 | E3345A | ROCK ROTARY | Modulation |
-| 20-22 | E3346C | *(unused)* | - |
-| 23 | E334A2 | MODULATION DELAY | Delay |
-| 24 | E334B4 | MULTI TAP DELAY | Delay |
-| 25 | E334C6 | SINGLE DELAY | Delay |
-| 26 | E334D8 | GATED REVERB | Reverb |
-| 27 | E334EA | *(unused)* | - |
-| 28 | E3350E | ENSEMBLE | Modulation |
-| 29 | E33520 | PHASER | Modulation |
-| 30 | E33532 | FLANGER | Modulation |
-| 31 | E33544 | ENHANCER | Dynamics |
-| 32 | E33556 | MODULATED CHORUS | Modulation |
-| 33 | E33568 | CHORUS | Modulation |
-| 34 | E3357A | NO OPERATION | None |
+```
+CC Path (Voice Parameters):
+  Command 0x00-0x1F → Audio_CmdHandler_00_1F
+    → Voice ring buffer (0x2B0D)
+    → Voice_CtrlChange (02A46C)
+    → Per-voice parameter store at 0x041300 + ch × 0x11F + offset
 
-Total: **22 active DSP algorithms** + 12 unused/placeholder slots.
+DSP Path (Effect Parameters):
+  Command 0x60-0x7F → Audio_CmdHandler_60_7F
+    → DSP ring buffer (0x3B60)
+    → Audio_Process_DSP (035AE5)
+    → DSP algorithm configuration and parameter setting
+```
 
-### Reverb Preset Table (ROM 0xEDB36C)
+**Command byte encoding:** `(handler_id << 5) | payload_byte_count`
+- Reverb presets use **0x63** = handler 3 (DSP), count 3
+- EQ presets use **0x64** = handler 3 (DSP), count 4
 
-The reverb preset table contains **10 pointer entries** (4 bytes each, little-endian). Each pointer targets a 24-byte preset data block. The presets are loaded by `MainRevEqPresetLoad` → `LABEL_FC9F81` when the user selects from the REVERB & EQ PRESETS screen.
+### DSP Effect Name Table (ROM 0xE331E4)
 
-| Preset | Pointer Target | Type ID (byte 0) | Parameters (bytes 1-7) |
-|--------|---------------|------------------|----------------------|
-| 0 | 0xEDA6EC | 0x11 | 32 00 0C 14 32 5D 00 |
-| 1 | 0xEDA704 | 0x10 | 18 00 61 18 63 5E 00 |
-| 2 | 0xEDA71C | 0x12 | 02 00 2D 0C 32 50 00 |
-| 3 | 0xEDA734 | 0x14 | 2E 00 1D 14 3A 50 00 |
-| 4 | 0xEDA74C | 0x15 | 20 00 3C 18 50 4E 00 |
-| 5 | 0xEDA764 | 0x16 | 14 00 15 18 34 49 00 |
-| 6 | 0xEDA77C | 0x18 | 21 00 02 00 60 4F 00 |
-| 7 | 0xEDA794 | 0x19 | 2B 00 1A 00 05 3A 00 |
-| 8 | 0xEDA7AC | 0x1A | 0F 00 11 15 17 4F 00 |
-| 9 | 0xEDA7C4 | 0x1B | 3C 00 1A 12 32 56 12 |
+The firmware maintains a master table of **all DSP effect types** as 16-character display strings starting at 0xE331E4. Each entry is 18 bytes (16 chars + null + 0xFF pad). The full table has 51 entries covering all effect categories:
+
+| Flat Index | Address | Name | Category |
+|------------|---------|------|----------|
+| 0x00 | E331E4 | VIBRATO | Modulation |
+| 0x01 | E331F6 | PITCH SHIFTER | Modulation |
+| 0x02 | E33208 | AUTO PAN | Modulation |
+| 0x05 | E3323E | CELM | Internal |
+| 0x06 | E33250 | CEL | Internal |
+| 0x0B | E332AA | PARAMETRIC EQ | EQ |
+| 0x0C | E332BC | NOISE FLANGER | Modulation |
+| 0x0D | E332CE | SLOW ATTACKER | Dynamics |
+| 0x0E | E332E0 | COMPRESSOR | Dynamics |
+| 0x0F | E332F2 | EXCITER | Dynamics |
+| 0x10 | E33304 | FUZZ | Distortion |
+| 0x11 | E33316 | OVERDRIVE | Distortion |
+| 0x12 | E33328 | DISTORTION | Distortion |
+| 0x17 | E33382 | WAVE REVERB 2 | Reverb |
+| 0x18 | E33394 | WAVE REVERB 1 | Reverb |
+| 0x19-0x22 | E333A6-E33448 | *(10 more reverbs)* | Reverb |
+| 0x23 | E3345A | ROCK ROTARY | Modulation |
+| 0x27 | E334A2 | MODULATION DELAY | Delay |
+| 0x28 | E334B4 | MULTI TAP DELAY | Delay |
+| 0x29 | E334C6 | SINGLE DELAY | Delay |
+| 0x2A | E334D8 | GATED REVERB | Reverb |
+| 0x2C-0x32 | E334FC-E33568 | ENSEMBLE..NO OPERATION | Various |
+
+(Unused/placeholder entries with "----------" at indices 0x03-0x04, 0x07-0x0A, 0x13-0x16, 0x24-0x26, 0x2B omitted.)
+
+### DSP Algorithm ID → Name Mapping (Pointer Table at 0xE32A7A)
+
+The firmware does NOT use the flat name table index as the DSP algorithm ID. Instead, it uses an **indirect pointer table** at `0xE32A7A` with **40 entries** (4 bytes each). This table maps DSP algorithm IDs (0-39) to name table entries in **reverse display order**:
+
+| Algo ID | Name | Category |
+|---------|------|----------|
+| 0 | NO OPERATION | None |
+| 1 | CHORUS | Modulation |
+| 2 | MODULATED CHORUS | Modulation |
+| 3 | ENHANCER | Dynamics |
+| 4 | FLANGER | Modulation |
+| 5 | PHASER | Modulation |
+| 6 | ENSEMBLE | Modulation |
+| 7 | *(reserved)* | - |
+| 8 | GATED REVERB | Reverb |
+| 9 | SINGLE DELAY | Delay |
+| 10 | MULTI TAP DELAY | Delay |
+| 11 | MODULATION DELAY | Delay |
+| 12-14 | *(reserved)* | - |
+| 15 | ROCK ROTARY | Modulation |
+| **16** | **ROOM REVERB 1** | **Reverb** |
+| **17** | **ROOM REVERB 2** | **Reverb** |
+| **18** | **PLATE REVERB 1** | **Reverb** |
+| **19** | **PLATE REVERB 2** | **Reverb** |
+| **20** | **CONCERT REVERB 1** | **Reverb** |
+| **21** | **CONCERT REVERB 2** | **Reverb** |
+| **22** | **DARK REVERB 1** | **Reverb** |
+| **23** | **DARK REVERB 2** | **Reverb** |
+| **24** | **BRIGHT REVERB 1** | **Reverb** |
+| **25** | **BRIGHT REVERB 2** | **Reverb** |
+| **26** | **WAVE REVERB 1** | **Reverb** |
+| **27** | **WAVE REVERB 2** | **Reverb** |
+| 28-31 | *(reserved)* | - |
+| 32 | DISTORTION | Distortion |
+| 33 | OVERDRIVE | Distortion |
+| 34 | FUZZ | Distortion |
+| 35 | EXCITER | Dynamics |
+| 36 | COMPRESSOR | Dynamics |
+| 37 | SLOW ATTACKER | Dynamics |
+| 38 | NOISE FLANGER | Modulation |
+| 39 | PARAMETRIC EQ | EQ |
+
+The display code at `DspItem0CngFunc` (F355F3) resolves names by: `name_ptr = pointer_table[algo_id]`, then copies the 16-char string to the widget display buffer.
+
+The reverb algorithms occupy IDs **16-27** (12 types = 6 pairs of variant 1/variant 2).
+
+### Reverb Preset Table (ROM 0xEDB36C) — CORRECTED
+
+With the algorithm ID → name mapping now decoded, the 10 reverb presets are:
+
+| Preset | Algo ID | Algorithm Name | Parameters (bytes 1-7) |
+|--------|---------|---------------|----------------------|
+| 0 | 17 | ROOM REVERB 2 | 32 00 0C 14 32 5D 00 |
+| 1 | 16 | ROOM REVERB 1 | 18 00 61 18 63 5E 00 |
+| 2 | 18 | PLATE REVERB 1 | 02 00 2D 0C 32 50 00 |
+| 3 | 20 | CONCERT REVERB 1 | 2E 00 1D 14 3A 50 00 |
+| 4 | 21 | CONCERT REVERB 2 | 20 00 3C 18 50 4E 00 |
+| 5 | 22 | DARK REVERB 1 | 14 00 15 18 34 49 00 |
+| 6 | 24 | BRIGHT REVERB 1 | 21 00 02 00 60 4F 00 |
+| 7 | 25 | BRIGHT REVERB 2 | 2B 00 1A 00 05 3A 00 |
+| 8 | 26 | WAVE REVERB 1 | 0F 00 11 15 17 4F 00 |
+| 9 | 27 | WAVE REVERB 2 | 3C 00 1A 12 32 56 12 |
 
 **Each preset data block is 24 bytes:**
-- **Byte 0:** DSP algorithm/type ID (0x10-0x1B)
-- **Bytes 1-7:** Parameter values (reverb time, density, diffusion, etc.)
-- **Bytes 8-21:** Zero-padded (unused parameter slots, except preset 9)
+- **Byte 0:** DSP algorithm ID (16-27 for reverb types)
+- **Bytes 1-7:** Parameter values (reverb time, pre-delay, density, diffusion, HF damping, wet/dry mix, etc.)
+- **Bytes 8-21:** Zero-padded (unused parameter slots, except preset 9 which has 2 additional non-zero bytes)
 - **Bytes 22-23:** `0x63 0x00` — command code (0x63) + terminator
 
-The preset loading loop iterates 24 times, sending each byte as a separate command to the Sub CPU with command code `0x63`. A lookup table in DRAM (at runtime address 0xFC8E) maps each byte position to a specific Sub CPU parameter identifier.
+The preset loading loop at `LABEL_FC9FC2` iterates 24 times, sending each byte with command code `0x63` via `AssswbWr` to the Sub CPU's DSP ring buffer.
 
 ### EQ Preset Table (ROM 0xEDB394)
 
-The EQ preset table follows immediately after the reverb table, also with **10 pointer entries**. EQ presets all start with type ID `0x4F` (except preset 9 which appears to be a combined reverb+EQ preset using type `0x14`).
+The EQ preset table has **10 pointer entries**. EQ presets use type byte `0x4F` (79), which is outside the DSP algorithm table range — EQ parameters are handled by a separate EQ-specific subsystem, not the DSP effect engine.
 
-| Preset | Pointer Target | Type ID | Parameters (bytes 1-7) |
-|--------|---------------|---------|----------------------|
-| 0 | 0xEDA7DC | 0x4F | 02 1C 03 97 04 D5 05 |
-| 1 | 0xEDA7F4 | 0x4F | 01 D8 02 84 04 C4 06 |
-| 2 | 0xEDA80C | 0x4F | 02 43 03 2A 04 29 04 |
-| 3 | 0xEDA824 | 0x4F | 00 CE 03 98 05 18 05 |
-| 4 | 0xEDA83C | 0x4F | 00 1C 02 54 03 14 04 |
-| 5 | 0xEDA854 | 0x4F | 01 D8 03 98 05 02 05 |
-| 6 | 0xEDA86C | 0x4F | 00 12 01 A8 05 18 05 |
-| 7 | 0xEDA884 | 0x4F | 01 C0 03 98 05 18 06 |
-| 8 | 0xEDA89C | 0x4F | 01 1D 04 EA 05 F0 06 |
-| 9 | 0xEDA8B4 | 0x14 | 36 00 0B 14 32 4A 00 |
+| Preset | Type | Parameters (bytes 1-7) |
+|--------|------|----------------------|
+| 0-8 | 0x4F (EQ) | EQ band parameters |
+| 9 | 0x14 (CONCERT REVERB 1) | Combined reverb+EQ preset |
+
+Preset 9 is a **combined reverb+EQ** preset that uses the reverb data format (algorithm ID 20 = CONCERT REVERB 1).
+
+A third preset table at **0xEDB3B8** stores combined reverb+EQ presets, loaded by `LABEL_FCA04E` (type 2 in the preset dispatcher).
+
+### Sub CPU DSP Command Processing
+
+`Audio_Process_DSP` (035AE5) reads commands from the DSP ring buffer and dispatches based on a 7-byte command header:
+
+```
+Header bytes (dequeued at DSP_Cmd_DequeueHeader):
+  [0]: Command type identifier
+  [1-6]: Command-specific data (channel, parameters, values)
+
+Command types (header byte at DRAM 17259):
+  0x00 → Select DSP algorithm (calls LABEL_030960)
+         Stores algo ID in voice structure at offset +0x68
+         Configures the DSP processing chain
+  0x03 → Effect state control (calls LABEL_030618)
+  0x10-0x17 → Set DSP parameter 0-7 (calls LABEL_030F7D)
+         Each parameter targets a specific DSP register
+  0x20 → DSP routing config (calls LABEL_0309EA)
+  0x22-0x30 → Additional DSP configuration commands
+```
+
+The 8 DSP parameters (commands 0x10-0x17) are dispatched via a **jump table at Sub CPU ROM 0x0121DB** (8 word entries), each calling `LABEL_030F7D` with the parameter index (0-7) as an argument.
 
 ### DSP Parameter Register Addresses
 
-After the effect name table at 0xE33578, a lookup table maps effect slots to DSP register addresses. The addresses increment by 0x10 per slot:
+After the effect name table at 0xE3357A, a lookup table maps effect slots to DSP register addresses. The addresses increment by 0x10 per slot:
 
 ```
 First set:  0x45, 0x55, 0x65, 0x75, 0x85, 0x95, 0xA5, 0xB5
@@ -411,8 +489,24 @@ Second set: 0x47, 0x57, 0x67, 0x77, 0x87, 0x97, 0xA7, 0xB7
 
 These correspond to the DSP chip's register-indirect access via `0x130000`/`0x130002`, suggesting 8 effect processing slots with parameters addressable in 0x10-byte increments.
 
+### Key Addresses Summary (DSP Path)
+
+| Address | CPU | Purpose |
+|---------|-----|---------|
+| 0xE32A7A | Main (ROM) | DSP algorithm ID → name pointer table (40 × 4 bytes) |
+| 0xE331E4 | Main (ROM) | Effect name string table (51 × 18 bytes) |
+| 0xE324C4 | Main (ROM) | DSP parameter name table (17 bytes/entry) |
+| 0xE32418 | Main (ROM) | DSP parameter range/limit table (2 bytes/entry) |
+| 0xE34DA4 | Main (ROM) | DspItem0CngFunc dispatch table (17 × 2 bytes) |
+| 0xEDB36C | Main (ROM) | Reverb preset pointer table (10 × 4 bytes) |
+| 0xEDB394 | Main (ROM) | EQ preset pointer table (10 × 4 bytes) |
+| 0xEDB3B8 | Main (ROM) | Combined preset pointer table |
+| 0x3B60 | Sub (DRAM) | DSP command ring buffer (2KB, controlled at 15200) |
+| 0x0121DB | Sub (ROM) | DSP parameter 0-7 jump table (8 × 2 bytes) |
+| 0x041368 | Sub (DRAM) | Voice structure base + 0x68 (DSP effect config) |
+
 ### Remaining Questions
 
-1. **Type ID → Name mapping:** The exact correspondence between preset type IDs (0x10-0x1B) and the effect name table indices (0-34) requires tracing the code that selects the display name from the type ID.
-2. **Parameter byte meanings:** The 7 non-zero parameter bytes in each preset encode specific DSP parameters (reverb time, pre-delay, density, diffusion, HF damping, wet/dry mix, etc.). Decoding these requires analyzing the Sub CPU's DSP configuration handlers.
-3. **Runtime lookup table at 0xFC8E:** This DRAM table maps preset byte positions to Sub CPU parameter identifiers. It's populated at runtime by `0xFF0D99` during preset unpacking.
+1. **Parameter byte semantics:** The 7 non-zero parameter bytes in each reverb preset encode specific DSP parameters (likely reverb time, pre-delay, density, diffusion, HF damping, wet/dry mix). Cross-referencing with the DSP parameter name table at 0xE324C4 should reveal the exact mapping.
+2. **EQ parameter format:** The EQ preset byte format (type 0x4F, 24 bytes of EQ band data) needs separate analysis from the reverb/DSP path.
+3. **DSP hardware registers:** The exact register protocol for writing to the DSP chip at 0x130000/0x130002 requires tracing the Sub CPU's DSP parameter output functions.
