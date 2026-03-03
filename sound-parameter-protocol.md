@@ -86,7 +86,7 @@ Fully trace LswReverb end-to-end — from the event `0x1E00042` through `LABEL_F
 
 **Status:** Complete
 
-### Phase 2: Systematic mapping of all 32 Lsw\* functions
+### Phase 2: Lsw\* function analysis
 
 For each of the 32 Lsw\* functions, identify:
 - Which command code it sends (e.g., 0x63 for reverb)
@@ -94,13 +94,13 @@ For each of the 32 Lsw\* functions, identify:
 - Which offset in the 287-byte voice structure it writes to
 - The valid value range
 
-**Status:** Not started
+**Status:** Partially complete — see Phase 2 Results below
 
 ### Phase 3: Preset tables
 
 Decode the preset data tables at 0xEDB36C (reverb presets) and 0xEDB394 (EQ presets) — 13 reverb types × 24 channels of parameter data.
 
-**Status:** Not started
+**Status:** In progress
 
 ### Phase 4: DSP commands
 
@@ -245,3 +245,174 @@ Main CPU:
 | 0xE953CE | Main (ROM) | Per-channel value lookup table |
 | 0xEDB36C | Main (ROM) | Reverb preset data table |
 | 0xEDB394 | Main (ROM) | EQ preset data table |
+
+---
+
+## Phase 2 Results: Lsw\* Function Architecture
+
+### Key Finding: Data-Driven Widget System
+
+The 32 Lsw\* functions are **generic widget callbacks**, not per-parameter command generators. The actual CC/command identity comes from the **NAKA widget configuration data**, not from the Lsw function code.
+
+Each Lsw function handles a specific widget TYPE (slider, on/off toggle, etc.):
+- **LswVolume, LswExpression** → numeric slider with mute state (bit 15 check)
+- **LswPan** → center-left-right slider (3-way display: "CTR", "L%2d", "R%2d")
+- **LswReverb, LswDSPEffect** → numeric slider ("%3d" format)
+- **LswSustain, LswDigitalEffect** → on/off toggle ("ON ", "OFF")
+- **LswKeyShift** → signed slider ("%+3d")
+- **LswTuning** → signed fine-tune ("%+4d")
+
+### Command Flow
+
+```
+NAKA Widget Config Data
+  (contains: CC number, value range, channel)
+    │
+    ▼
+Lsw* Function (generic handler for widget type)
+  handles event 0x1E00042 (value changed)
+    │
+    ├─ bit 13 set? → LABEL_FF0A72 (send command to Sub CPU)
+    │                  │
+    │                  ├─ st32_24 0x03c21c, widget_data  (buffer the widget config)
+    │                  ├─ LABEL_FF1048 (command encoder, reads template at 0x0AD8)
+    │                  └─ AssswbWr → ring buffer → sendCOMM → DMA → Sub CPU
+    │
+    └─ bit 13 clear? → Strcpy (format display string only, no sound command)
+```
+
+The per-channel configuration table at **0xE952AA** contains 4-byte flag words. The bit tested by each Lsw function determines whether the parameter is "active" for that channel:
+
+| Lsw Function | Bit Tested | Display Format | Send Command? |
+|-------------|-----------|---------------|---------------|
+| LswVolume | bit 15 | `"%4d"` / `"MUTE"` | Yes |
+| LswMute | bit 15 | `"%4d"` / `"MUTE"` | Yes |
+| LswPan | bit 14 | `"CTR"` / `"L%2d"` / `"R%2d"` | Yes |
+| LswReverb | bit 13 | `"%3d"` | Yes |
+| LswDSPEffect | bit 12 | `"%3d"` | Yes |
+| LswSustain | bit 11 | `"ON "` / `"OFF"` | No (Strcpy only) |
+| LswSustainLength | bit 10 | `"%2d"` | Yes |
+| LswDigitalEffect | bit 3 | `"ON "` / `"OFF"` | No (Strcpy only) |
+| LswKeyShift | - | `"%+3d"` | Yes |
+| LswTuning | - | `"%+4d"` | Yes |
+| LswBendRange | - | `"%3d"` | Yes |
+| LswSound | - | `" ------"` | No (Strcpy only) |
+| LswGlidePedal | - | `"ON "` / `"OFF"` | No (Strcpy only) |
+| LswSustainPedal | - | `"ON "` / `"OFF"` | No (Strcpy only) |
+| LswAfterTouch | - | `"ON "` / `"OFF"` | No (Strcpy only) |
+| LswKeyScaling | - | `"ON "` / `"OFF"` | No (Strcpy only) |
+| LswOrchestrator | - | various | No (Strcpy only) |
+| LswLocalControl | - | various | No (special) |
+| LswMidiChannel | - | `"CH%2d"` / `"OFF"` | Yes (3 variants) |
+| LswMasterTuning | - | `"%+4d"` | Yes (loop-based) |
+| LswLeftHold | - | (format at E952A6) | Yes |
+
+### Functions That Send Sub CPU Commands
+
+18 of the 32 Lsw functions call `LABEL_FF0A72` to send commands to the Sub CPU. The remaining 14 only update display strings via `Strcpy` — these handle parameters that are processed locally by the Main CPU (sustain toggle, digital effect on/off, sound name display, etc.).
+
+### Remaining Work
+
+To complete the CC-to-Lsw mapping, the NAKA widget configuration data for each screen needs to be decoded. The widget config contains the actual CC number for each parameter control. This is a data-driven system — the same LswReverb handler is used for ALL reverb depth sliders across all screens.
+
+---
+
+## Phase 3 Results: Preset Tables and DSP Effect Types
+
+### DSP Effect Name Table (ROM 0xE33304)
+
+The firmware maintains a master table of all DSP effect types as 16-character display strings. Each entry is 18 bytes (16 chars + null + pad). The table includes reverbs, delays, modulation effects, and distortion:
+
+| Index | Address | Name | Category |
+|-------|---------|------|----------|
+| 0 | E33304 | FUZZ | Distortion |
+| 1 | E33316 | OVERDRIVE | Distortion |
+| 2 | E33328 | DISTORTION | Distortion |
+| 3-6 | E3333A | *(unused)* | - |
+| 7 | E33382 | WAVE REVERB 2 | Reverb |
+| 8 | E33394 | WAVE REVERB 1 | Reverb |
+| 9 | E333A6 | BRIGHT REVERB 2 | Reverb |
+| 10 | E333B8 | BRIGHT REVERB 1 | Reverb |
+| 11 | E333CA | DARK REVERB 2 | Reverb |
+| 12 | E333DC | DARK REVERB 1 | Reverb |
+| 13 | E333EE | CONCERT REVERB 2 | Reverb |
+| 14 | E33400 | CONCERT REVERB 1 | Reverb |
+| 15 | E33412 | PLATE REVERB 2 | Reverb |
+| 16 | E33424 | PLATE REVERB 1 | Reverb |
+| 17 | E33436 | ROOM REVERB 2 | Reverb |
+| 18 | E33448 | ROOM REVERB 1 | Reverb |
+| 19 | E3345A | ROCK ROTARY | Modulation |
+| 20-22 | E3346C | *(unused)* | - |
+| 23 | E334A2 | MODULATION DELAY | Delay |
+| 24 | E334B4 | MULTI TAP DELAY | Delay |
+| 25 | E334C6 | SINGLE DELAY | Delay |
+| 26 | E334D8 | GATED REVERB | Reverb |
+| 27 | E334EA | *(unused)* | - |
+| 28 | E3350E | ENSEMBLE | Modulation |
+| 29 | E33520 | PHASER | Modulation |
+| 30 | E33532 | FLANGER | Modulation |
+| 31 | E33544 | ENHANCER | Dynamics |
+| 32 | E33556 | MODULATED CHORUS | Modulation |
+| 33 | E33568 | CHORUS | Modulation |
+| 34 | E3357A | NO OPERATION | None |
+
+Total: **22 active DSP algorithms** + 12 unused/placeholder slots.
+
+### Reverb Preset Table (ROM 0xEDB36C)
+
+The reverb preset table contains **10 pointer entries** (4 bytes each, little-endian). Each pointer targets a 24-byte preset data block. The presets are loaded by `MainRevEqPresetLoad` → `LABEL_FC9F81` when the user selects from the REVERB & EQ PRESETS screen.
+
+| Preset | Pointer Target | Type ID (byte 0) | Parameters (bytes 1-7) |
+|--------|---------------|------------------|----------------------|
+| 0 | 0xEDA6EC | 0x11 | 32 00 0C 14 32 5D 00 |
+| 1 | 0xEDA704 | 0x10 | 18 00 61 18 63 5E 00 |
+| 2 | 0xEDA71C | 0x12 | 02 00 2D 0C 32 50 00 |
+| 3 | 0xEDA734 | 0x14 | 2E 00 1D 14 3A 50 00 |
+| 4 | 0xEDA74C | 0x15 | 20 00 3C 18 50 4E 00 |
+| 5 | 0xEDA764 | 0x16 | 14 00 15 18 34 49 00 |
+| 6 | 0xEDA77C | 0x18 | 21 00 02 00 60 4F 00 |
+| 7 | 0xEDA794 | 0x19 | 2B 00 1A 00 05 3A 00 |
+| 8 | 0xEDA7AC | 0x1A | 0F 00 11 15 17 4F 00 |
+| 9 | 0xEDA7C4 | 0x1B | 3C 00 1A 12 32 56 12 |
+
+**Each preset data block is 24 bytes:**
+- **Byte 0:** DSP algorithm/type ID (0x10-0x1B)
+- **Bytes 1-7:** Parameter values (reverb time, density, diffusion, etc.)
+- **Bytes 8-21:** Zero-padded (unused parameter slots, except preset 9)
+- **Bytes 22-23:** `0x63 0x00` — command code (0x63) + terminator
+
+The preset loading loop iterates 24 times, sending each byte as a separate command to the Sub CPU with command code `0x63`. A lookup table in DRAM (at runtime address 0xFC8E) maps each byte position to a specific Sub CPU parameter identifier.
+
+### EQ Preset Table (ROM 0xEDB394)
+
+The EQ preset table follows immediately after the reverb table, also with **10 pointer entries**. EQ presets all start with type ID `0x4F` (except preset 9 which appears to be a combined reverb+EQ preset using type `0x14`).
+
+| Preset | Pointer Target | Type ID | Parameters (bytes 1-7) |
+|--------|---------------|---------|----------------------|
+| 0 | 0xEDA7DC | 0x4F | 02 1C 03 97 04 D5 05 |
+| 1 | 0xEDA7F4 | 0x4F | 01 D8 02 84 04 C4 06 |
+| 2 | 0xEDA80C | 0x4F | 02 43 03 2A 04 29 04 |
+| 3 | 0xEDA824 | 0x4F | 00 CE 03 98 05 18 05 |
+| 4 | 0xEDA83C | 0x4F | 00 1C 02 54 03 14 04 |
+| 5 | 0xEDA854 | 0x4F | 01 D8 03 98 05 02 05 |
+| 6 | 0xEDA86C | 0x4F | 00 12 01 A8 05 18 05 |
+| 7 | 0xEDA884 | 0x4F | 01 C0 03 98 05 18 06 |
+| 8 | 0xEDA89C | 0x4F | 01 1D 04 EA 05 F0 06 |
+| 9 | 0xEDA8B4 | 0x14 | 36 00 0B 14 32 4A 00 |
+
+### DSP Parameter Register Addresses
+
+After the effect name table at 0xE33578, a lookup table maps effect slots to DSP register addresses. The addresses increment by 0x10 per slot:
+
+```
+First set:  0x45, 0x55, 0x65, 0x75, 0x85, 0x95, 0xA5, 0xB5
+Second set: 0x47, 0x57, 0x67, 0x77, 0x87, 0x97, 0xA7, 0xB7
+```
+
+These correspond to the DSP chip's register-indirect access via `0x130000`/`0x130002`, suggesting 8 effect processing slots with parameters addressable in 0x10-byte increments.
+
+### Remaining Questions
+
+1. **Type ID → Name mapping:** The exact correspondence between preset type IDs (0x10-0x1B) and the effect name table indices (0-34) requires tracing the code that selects the display name from the type ID.
+2. **Parameter byte meanings:** The 7 non-zero parameter bytes in each preset encode specific DSP parameters (reverb time, pre-delay, density, diffusion, HF damping, wet/dry mix, etc.). Decoding these requires analyzing the Sub CPU's DSP configuration handlers.
+3. **Runtime lookup table at 0xFC8E:** This DRAM table maps preset byte positions to Sub CPU parameter identifiers. It's populated at runtime by `0xFF0D99` during preset unpacking.
