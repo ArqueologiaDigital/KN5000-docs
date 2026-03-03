@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 268 (55 open, 212 closed)
+**Total Issues:** 268 (54 open, 212 closed)
 
 **Quick Links:** 
-[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (47) · [Sound & Audio](#sound-audio) (1)
+[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (46) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
@@ -517,33 +517,6 @@ Reference: SOUND_DATA_SECTION_PTRS at 0xE023B0 in maincpu.
 **ID:** `kn5000-kc5` | **Priority:** Medium | **Created:** 2026-01-26
 
 **Notes:** At address 0xF97D8D there's a jump table that references routines at F97696, F976E4, F97835, F97C21, F97C7C, F96BBF, F96BD0, F97984, F97C4B, F97C54, F97C5B, and F96D95. These routines are currently empty ORG labels. Need to disassemble the code at these addresses. Found via jump table pattern: JP T, XIX + WA with LDA XIX, LABEL_F97D8D.
-
----
-
-#### 🟡 Disassemble and document GroupBoxProc state table interactions (F9A2FB-F9A4xx range) {#issue-kn5000-n8u2}
-
-**ID:** `kn5000-n8u2` | **Priority:** Medium | **Created:** 2026-03-01
-
-Several functions in GroupBoxProc are still in .byte or partially analyzed. Key areas:
-
-1. LABEL_F9A2FB (GroupBoxProc handler for 0x1E0006E - cancel/back):
-   Lines 280439-280500+: accesses structure array at 0x0274e8, handles cursor navigation.
-   Raw code: 'lds iz, 0; ld ix, iz; extz xix; lda_24 xiy, 0x0274e8; ...'
-
-2. LABEL_F9A43A, F9A442, F9A453, F9A464, F9A46A (handlers for 0x1E0006F-0x1E00071, 0x1E00087-0x1E00088):
-   These handle cursor movement in GroupBoxProc. Lines ~279557-279595.
-   Need analysis to understand which soft button generates which navigation event.
-
-3. LABEL_F9A470 (handlers for 0x1E00079/0x1E00078):
-   Line ~279544-279546. These are UP/DOWN navigation events.
-
-Context:
-- GroupBoxProc is the FEATURE PRESENTATION sub-menu dialog (state 0xE4).
-- It displays: '◄ Start the internal DEMO' / external demo / (cancel?)
-- Button events 0x1E0006E..0x1E00071, 0x1E00079, 0x1E00087/88 are the soft button events for GroupBoxProc navigation.
-- The DEMO button triggers F98697 FFFE pass-through → 0x1C00038 → GroupBoxProc_StartSSFPresentation.
-
-Task: Analyze the LABEL_F9A43A through F9A470 range to identify which events correspond to which GroupBoxProc navigation actions (cursor up/down, select, cancel). Document the complete GroupBoxProc event dispatch table. This will help explain why soft button presses alone don't trigger StartSSFPresentation.
 
 ---
 
@@ -1225,7 +1198,7 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Critical | 2 |
 | High | 9 |
-| Medium | 29 |
+| Medium | 28 |
 | Low | 14 |
 | P4 | 1 |
 
@@ -1235,9 +1208,9 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Firmware Update | 5 |
 | HD-AE5000 Expansion | 2 |
-| Other | 47 |
+| Other | 46 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-03-03 09:28*
+*Last updated: 2026-03-03 09:41*
