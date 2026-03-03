@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 270 (53 open, 214 closed)
+**Total Issues:** 270 (51 open, 216 closed)
 
 **Quick Links:** 
-[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (45) · [Sound & Audio](#sound-audio) (1)
+[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (43) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
@@ -512,14 +512,6 @@ Reference: SOUND_DATA_SECTION_PTRS at 0xE023B0 in maincpu.
 
 ---
 
-#### 🟡 Disassemble TODO routines at F97696-F97D8D range (jump table targets) {#issue-kn5000-kc5}
-
-**ID:** `kn5000-kc5` | **Priority:** Medium | **Created:** 2026-01-26
-
-**Notes:** At address 0xF97D8D there's a jump table that references routines at F97696, F976E4, F97835, F97C21, F97C7C, F96BBF, F96BD0, F97984, F97C4B, F97C54, F97C5B, and F96D95. These routines are currently empty ORG labels. Need to disassemble the code at these addresses. Found via jump table pattern: JP T, XIX + WA with LDA XIX, LABEL_F97D8D.
-
----
-
 #### 🟡 Document ROM interleaving formats for all ROM chips {#issue-kn5000-67g}
 
 **ID:** `kn5000-67g` | **Priority:** Medium | **Created:** 2026-01-30
@@ -803,27 +795,6 @@ Related: Storage subsystem documentation
 - All timing-critical behaviors documented
 - MAME can boot Sub CPU with correct behavior
 - Audio output produces correct results
-
----
-
-#### 🟡 Symbols: Apply semantic naming to FDC subsystem LABEL_* symbols {#issue-kn5000-ima}
-
-**ID:** `kn5000-ima` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** FDC subsystem semantic naming and documentation.
-
-**Current state:** Handler at 0x110000 identified, commands not documented.
-
-**Required work:**
-- Rename LABEL_* symbols in FDC code
-- Document uPD72068 command sequences
-- Trace sector read/write implementation
-- Document error handling
-
-**Phase:** 2 - Core Functionality
-**Blocks:** Floppy disk emulation
-**Dependencies:** None
-**Related:** kn5000-70b (FDC during update)
 
 ---
 
@@ -1143,6 +1114,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-ima` | Symbols: Apply semantic naming to FDC subsystem LABEL_* s... | 2026-03-03 |
+| `kn5000-kc5` | Disassemble TODO routines at F97696-F97D8D range (jump ta... | 2026-03-03 |
 | `kn5000-bntj` | Document data blocks with comments and NAKA macros | 2026-03-03 |
 | `kn5000-n8u2` | Disassemble and document GroupBoxProc state table interac... | 2026-03-03 |
 | `kn5000-84fw` | Disassemble and document FA9945 (EventDispatch_Direct) | 2026-03-03 |
@@ -1161,10 +1134,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | `kn5000-8o9b` | LLVM bug: XSP register encoded as 0x1D instead of 0xFD in... | 2026-03-02 |
 | `kn5000-nyof` | Extract FD SAVE/LOAD TEST to dedicated source files | 2026-03-02 |
 | `kn5000-a9iz` | Document NAKA UI Widget System and create structured macros | 2026-03-02 |
-| `kn5000-5i2w` | Extract SSF gate states to dedicated source file with .sh... | 2026-03-02 |
-| `kn5000-ukwz` | String formatting: Merge Latin-1 fragments and format poi... | 2026-03-02 |
 
-*...and 194 more closed issues*
+*...and 196 more closed issues*
 
 ---
 
@@ -1176,7 +1147,7 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Critical | 2 |
 | High | 9 |
-| Medium | 27 |
+| Medium | 25 |
 | Low | 14 |
 | P4 | 1 |
 
@@ -1186,9 +1157,9 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Firmware Update | 5 |
 | HD-AE5000 Expansion | 2 |
-| Other | 45 |
+| Other | 43 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-03-03 18:11*
+*Last updated: 2026-03-03 20:09*
