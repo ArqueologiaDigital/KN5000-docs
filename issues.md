@@ -8,7 +8,7 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 268 (54 open, 212 closed)
+**Total Issues:** 270 (54 open, 214 closed)
 
 **Quick Links:** 
 [Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (46) · [Sound & Audio](#sound-audio) (1)
@@ -1165,6 +1165,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-bntj` | Document data blocks with comments and NAKA macros | 2026-03-03 |
+| `kn5000-n8u2` | Disassemble and document GroupBoxProc state table interac... | 2026-03-03 |
 | `kn5000-84fw` | Disassemble and document FA9945 (EventDispatch_Direct) | 2026-03-03 |
 | `kn5000-lb2x` | Disassemble and document F98697 (KeyPress_StateDispatch) | 2026-03-03 |
 | `kn5000-4m2r` | DS3613GF-3BA: false ALGO SELECT from alt param write format | 2026-03-03 |
@@ -1183,10 +1185,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | `kn5000-a9iz` | Document NAKA UI Widget System and create structured macros | 2026-03-02 |
 | `kn5000-5i2w` | Extract SSF gate states to dedicated source file with .sh... | 2026-03-02 |
 | `kn5000-ukwz` | String formatting: Merge Latin-1 fragments and format poi... | 2026-03-02 |
-| `kn5000-ee4y` | LLVM: lda_24 instruction doesn't emit relocations for sym... | 2026-03-02 |
-| `kn5000-n6l2` | Format pointer+string groups in maincpu disassembly | 2026-03-02 |
 
-*...and 192 more closed issues*
+*...and 194 more closed issues*
 
 ---
 
@@ -1213,4 +1213,4 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 ---
 
-*Last updated: 2026-03-03 09:48*
+*Last updated: 2026-03-03 17:37*
