@@ -8,7 +8,7 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 257 (56 open, 199 closed)
+**Total Issues:** 268 (56 open, 210 closed)
 
 **Quick Links:** 
 [Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (48) · [Sound & Audio](#sound-audio) (1)
@@ -542,14 +542,6 @@ Reference: SOUND_DATA_SECTION_PTRS at 0xE023B0 in maincpu.
 
 ---
 
-#### 🟡 Decode LABEL_F1E3DA in hama_code.s (74 bytes) {#issue-kn5000-i926}
-
-**ID:** `kn5000-i926` | **Priority:** Medium | **Created:** 2026-03-02
-
-Undecoded .byte block at lines 130-138 of maincpu/hama/hama_code.s. ROM address F1E3DA, 74 bytes. Jump target from TestTitleFunc user action dispatch (event 0x1C00013). Decode machine code bytes into native TLCS-900 instructions.
-
----
-
 #### 🟡 Disassemble TODO routines at F97696-F97D8D range (jump table targets) {#issue-kn5000-kc5}
 
 **ID:** `kn5000-kc5` | **Priority:** Medium | **Created:** 2026-01-26
@@ -943,6 +935,14 @@ After extracting info from service manual schematics, update kn5000-docs website
 
 ---
 
+#### ⚪ DSP1: Investigate algorithm select mechanism (effect name tracking) {#issue-kn5000-n1l2}
+
+**ID:** `kn5000-n1l2` | **Priority:** Low | **Created:** 2026-03-03
+
+DSP1 (DS3613GF-3BA) never receives CMD 0x30 (algorithm select). The SubCPU's LABEL_038439 path (wa==1) never triggers for DSP1, so m_channel_algo is never populated and all effect names show 'NO OPERATION'. The algo select may be: (1) embedded in VOICE DATA bulk writes (CMD 0x01 data[0]=0x00), (2) managed purely by SubCPU voice slot allocation (0x041368), or (3) implicit in the coefficient structure. Need to trace SubCPU DSP_ParameterWriteEngine bytecode dispatch to understand when wa==1 occurs.
+
+---
+
 #### ⚪ Docs: Add code reference tables to all subsystem pages {#issue-kn5000-sf8}
 
 **ID:** `kn5000-sf8` | **Priority:** Low | **Created:** 2026-01-30
@@ -1222,6 +1222,17 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-4m2r` | DS3613GF-3BA: false ALGO SELECT from alt param write format | 2026-03-03 |
+| `kn5000-dvwg` | DSP1 standalone coefficient sub-packets produce garbage a... | 2026-03-03 |
+| `kn5000-tyjr` | DSP1 parallel port cmd 0x01 protocol decoding wrong | 2026-03-03 |
+| `kn5000-8eg2` | DSP param name off-by-one fixed | 2026-03-03 |
+| `kn5000-xxwf` | Improve HLE sound chip emulation based on DSP protocol di... | 2026-03-03 |
+| `kn5000-iug8` | Add semantic symbol names and documentation headers to di... | 2026-03-03 |
+| `kn5000-2daw` | Reverse engineer sound parameter protocol (Reverb/DSP) | 2026-03-03 |
+| `kn5000-pl1p` | Decode LABEL_F1E89A in hama_code.s (290 bytes) | 2026-03-03 |
+| `kn5000-snkc` | Decode LABEL_F1E4C1 in hama_code.s (293 bytes) | 2026-03-03 |
+| `kn5000-kenv` | Decode LABEL_F1E43B in hama_code.s (130 bytes) | 2026-03-03 |
+| `kn5000-i926` | Decode LABEL_F1E3DA in hama_code.s (74 bytes) | 2026-03-03 |
 | `kn5000-8o9b` | LLVM bug: XSP register encoded as 0x1D instead of 0xFD in... | 2026-03-02 |
 | `kn5000-nyof` | Extract FD SAVE/LOAD TEST to dedicated source files | 2026-03-02 |
 | `kn5000-a9iz` | Document NAKA UI Widget System and create structured macros | 2026-03-02 |
@@ -1231,19 +1242,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | `kn5000-n6l2` | Format pointer+string groups in maincpu disassembly | 2026-03-02 |
 | `kn5000-6ify` | Place .set-only labels at actual positions in assembly | 2026-03-01 |
 | `kn5000-oixy` | Convert raw .byte pointer tables to symbolic .long LABEL_... | 2026-03-01 |
-| `kn5000-p75d` | Fix split aligned_string declarations in maincpu assembly | 2026-03-01 |
-| `kn5000-ud00` | Disassemble and document boot test mode routines | 2026-03-01 |
-| `kn5000-pgur` | Feature Demo: Lua script to simulate user input and trigg... | 2026-03-01 |
-| `kn5000-1v8g` | Investigate Feature Demo (FTDEMO) display failure | 2026-03-01 |
-| `kn5000-qv20` | Boot: Investigate "ALL INITIAL SETTING!" message and spla... | 2026-02-28 |
-| `kn5000-qiw4` | Mines: Remove LLVM bug workarounds from video.c | 2026-02-28 |
-| `kn5000-8zr` | LLVM: Fix bug #10 — register x/y swap on inlining | 2026-02-28 |
-| `kn5000-o3u` | LLVM: Fix bug #11 — for-loop with uint16_t counter exits ... | 2026-02-28 |
-| `kn5000-rlb` | Audio: Document tone generator voice allocation | 2026-02-28 |
-| `kn5000-5ck` | Audio: Document proprietary CC handlers (0x97, 0x9B-0x9D) | 2026-02-28 |
-| `kn5000-waa` | FeatureDemo: Create slide viewer/editor tool | 2026-02-28 |
 
-*...and 179 more closed issues*
+*...and 190 more closed issues*
 
 ---
 
@@ -1255,8 +1255,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Critical | 2 |
 | High | 10 |
-| Medium | 30 |
-| Low | 13 |
+| Medium | 29 |
+| Low | 14 |
 | P4 | 1 |
 
 ### By Category
@@ -1270,4 +1270,4 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 ---
 
-*Last updated: 2026-03-03 09:05*
+*Last updated: 2026-03-03 09:20*
