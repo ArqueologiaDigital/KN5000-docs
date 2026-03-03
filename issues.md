@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 268 (56 open, 210 closed)
+**Total Issues:** 268 (55 open, 212 closed)
 
 **Quick Links:** 
-[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (48) · [Sound & Audio](#sound-audio) (1)
+[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (47) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
@@ -236,36 +236,6 @@ Phase 1 represents the critical path to functional emulation.
 **Blocks:** Audio synthesis in MAME
 **Dependencies:** Audio hardware documentation
 **Related:** kn5000-xv2 (DSP IC311), kn5000-si0 (effects chain)
-
----
-
-#### 🟠 Disassemble and document FA9945 (EventDispatch_Direct) {#issue-kn5000-84fw}
-
-**ID:** `kn5000-84fw` | **Priority:** High | **Created:** 2026-03-01
-
-FA9945 is in .byte form (line 304367+ in kn5000_v10_program.s). Called by F98697 (KeyPress_StateDispatch) with XWA=target workspace, XBC=event code (typically 0x1C00038), XDE=event param.
-
-Entry point: 0xFA9945 (maincpu ROM)
-Purpose: Direct event dispatch — routes an event to a registered workspace handler. This is the final step in the key press → event chain.
-
-Context:
-- F98697 always calls FA9945 with XBC=0x1C00038 and XWA=0xFFFFFFFF (broadcast)
-- GroupBoxProc (feature demo dialog) handles 0x1C00038 → GroupBoxProc_StartSSFPresentation
-- FA9945 is similar to FA9660/FA9D58 but with specific dispatch semantics
-
-Raw bytes (FA9945):
-bf ea 37 d7 fa 04 bf 0c 62 bf 10 61 bf 14 60 d8
-ac 1d a7 1e ef d2 36 ec 02 21 d2 34 ec 02 22 d9
-f2 6e 12 d8 ac 1d d4 1d ef af 14 20 af 10 21 af
-0c 22 78 f3 00 af 0c 20 bf 02 60 e8 cc ff 00 00
-00 bf 06 41 af 02 20 e8 ...
-
-Related functions:
-- FA9660: SendEvent(target, event, param) — send to specific workspace
-- FA9D58: BroadcastEvent(event, param) — send to all listeners
-- FA9945: DirectDispatch — called via jp from F98697, likely equivalent to FA9660 with 0xFFFFFFFF target
-
-Task: Use unidasm to decode FA9945, identify calling convention and dispatch mechanism, convert .byte to native LLVM assembly, add symbolic name and documentary comments. Cross-reference with FA9660 and FA9D58 to understand the event dispatch family.
 
 ---
 
@@ -1222,6 +1192,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-84fw` | Disassemble and document FA9945 (EventDispatch_Direct) | 2026-03-03 |
+| `kn5000-lb2x` | Disassemble and document F98697 (KeyPress_StateDispatch) | 2026-03-03 |
 | `kn5000-4m2r` | DS3613GF-3BA: false ALGO SELECT from alt param write format | 2026-03-03 |
 | `kn5000-dvwg` | DSP1 standalone coefficient sub-packets produce garbage a... | 2026-03-03 |
 | `kn5000-tyjr` | DSP1 parallel port cmd 0x01 protocol decoding wrong | 2026-03-03 |
@@ -1240,10 +1212,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | `kn5000-ukwz` | String formatting: Merge Latin-1 fragments and format poi... | 2026-03-02 |
 | `kn5000-ee4y` | LLVM: lda_24 instruction doesn't emit relocations for sym... | 2026-03-02 |
 | `kn5000-n6l2` | Format pointer+string groups in maincpu disassembly | 2026-03-02 |
-| `kn5000-6ify` | Place .set-only labels at actual positions in assembly | 2026-03-01 |
-| `kn5000-oixy` | Convert raw .byte pointer tables to symbolic .long LABEL_... | 2026-03-01 |
 
-*...and 190 more closed issues*
+*...and 192 more closed issues*
 
 ---
 
@@ -1254,7 +1224,7 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 10 |
+| High | 9 |
 | Medium | 29 |
 | Low | 14 |
 | P4 | 1 |
@@ -1265,9 +1235,9 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Firmware Update | 5 |
 | HD-AE5000 Expansion | 2 |
-| Other | 48 |
+| Other | 47 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-03-03 09:20*
+*Last updated: 2026-03-03 09:28*
