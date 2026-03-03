@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 241 (54 open, 187 closed)
+**Total Issues:** 257 (56 open, 199 closed)
 
 **Quick Links:** 
-[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (46) · [Sound & Audio](#sound-audio) (1)
+[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (48) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
@@ -236,6 +236,36 @@ Phase 1 represents the critical path to functional emulation.
 **Blocks:** Audio synthesis in MAME
 **Dependencies:** Audio hardware documentation
 **Related:** kn5000-xv2 (DSP IC311), kn5000-si0 (effects chain)
+
+---
+
+#### 🟠 Disassemble and document FA9945 (EventDispatch_Direct) {#issue-kn5000-84fw}
+
+**ID:** `kn5000-84fw` | **Priority:** High | **Created:** 2026-03-01
+
+FA9945 is in .byte form (line 304367+ in kn5000_v10_program.s). Called by F98697 (KeyPress_StateDispatch) with XWA=target workspace, XBC=event code (typically 0x1C00038), XDE=event param.
+
+Entry point: 0xFA9945 (maincpu ROM)
+Purpose: Direct event dispatch — routes an event to a registered workspace handler. This is the final step in the key press → event chain.
+
+Context:
+- F98697 always calls FA9945 with XBC=0x1C00038 and XWA=0xFFFFFFFF (broadcast)
+- GroupBoxProc (feature demo dialog) handles 0x1C00038 → GroupBoxProc_StartSSFPresentation
+- FA9945 is similar to FA9660/FA9D58 but with specific dispatch semantics
+
+Raw bytes (FA9945):
+bf ea 37 d7 fa 04 bf 0c 62 bf 10 61 bf 14 60 d8
+ac 1d a7 1e ef d2 36 ec 02 21 d2 34 ec 02 22 d9
+f2 6e 12 d8 ac 1d d4 1d ef af 14 20 af 10 21 af
+0c 22 78 f3 00 af 0c 20 bf 02 60 e8 cc ff 00 00
+00 bf 06 41 af 02 20 e8 ...
+
+Related functions:
+- FA9660: SendEvent(target, event, param) — send to specific workspace
+- FA9D58: BroadcastEvent(event, param) — send to all listeners
+- FA9945: DirectDispatch — called via jp from F98697, likely equivalent to FA9660 with 0xFFFFFFFF target
+
+Task: Use unidasm to decode FA9945, identify calling convention and dispatch mechanism, convert .byte to native LLVM assembly, add symbolic name and documentary comments. Cross-reference with FA9660 and FA9D58 to understand the event dispatch family.
 
 ---
 
@@ -512,11 +542,46 @@ Reference: SOUND_DATA_SECTION_PTRS at 0xE023B0 in maincpu.
 
 ---
 
+#### 🟡 Decode LABEL_F1E3DA in hama_code.s (74 bytes) {#issue-kn5000-i926}
+
+**ID:** `kn5000-i926` | **Priority:** Medium | **Created:** 2026-03-02
+
+Undecoded .byte block at lines 130-138 of maincpu/hama/hama_code.s. ROM address F1E3DA, 74 bytes. Jump target from TestTitleFunc user action dispatch (event 0x1C00013). Decode machine code bytes into native TLCS-900 instructions.
+
+---
+
 #### 🟡 Disassemble TODO routines at F97696-F97D8D range (jump table targets) {#issue-kn5000-kc5}
 
 **ID:** `kn5000-kc5` | **Priority:** Medium | **Created:** 2026-01-26
 
 **Notes:** At address 0xF97D8D there's a jump table that references routines at F97696, F976E4, F97835, F97C21, F97C7C, F96BBF, F96BD0, F97984, F97C4B, F97C54, F97C5B, and F96D95. These routines are currently empty ORG labels. Need to disassemble the code at these addresses. Found via jump table pattern: JP T, XIX + WA with LDA XIX, LABEL_F97D8D.
+
+---
+
+#### 🟡 Disassemble and document GroupBoxProc state table interactions (F9A2FB-F9A4xx range) {#issue-kn5000-n8u2}
+
+**ID:** `kn5000-n8u2` | **Priority:** Medium | **Created:** 2026-03-01
+
+Several functions in GroupBoxProc are still in .byte or partially analyzed. Key areas:
+
+1. LABEL_F9A2FB (GroupBoxProc handler for 0x1E0006E - cancel/back):
+   Lines 280439-280500+: accesses structure array at 0x0274e8, handles cursor navigation.
+   Raw code: 'lds iz, 0; ld ix, iz; extz xix; lda_24 xiy, 0x0274e8; ...'
+
+2. LABEL_F9A43A, F9A442, F9A453, F9A464, F9A46A (handlers for 0x1E0006F-0x1E00071, 0x1E00087-0x1E00088):
+   These handle cursor movement in GroupBoxProc. Lines ~279557-279595.
+   Need analysis to understand which soft button generates which navigation event.
+
+3. LABEL_F9A470 (handlers for 0x1E00079/0x1E00078):
+   Line ~279544-279546. These are UP/DOWN navigation events.
+
+Context:
+- GroupBoxProc is the FEATURE PRESENTATION sub-menu dialog (state 0xE4).
+- It displays: '◄ Start the internal DEMO' / external demo / (cancel?)
+- Button events 0x1E0006E..0x1E00071, 0x1E00079, 0x1E00087/88 are the soft button events for GroupBoxProc navigation.
+- The DEMO button triggers F98697 FFFE pass-through → 0x1C00038 → GroupBoxProc_StartSSFPresentation.
+
+Task: Analyze the LABEL_F9A43A through F9A470 range to identify which events correspond to which GroupBoxProc navigation actions (cursor up/down, select, cancel). Document the complete GroupBoxProc event dispatch table. This will help explain why soft button presses alone don't trigger StartSSFPresentation.
 
 ---
 
@@ -614,14 +679,6 @@ Reference: kn5000_table_data.rom combination analysis
 - All placeholder pages have substantive content
 - Code references link to assembly symbols
 - Each page has at least one diagram or table
-
----
-
-#### 🟡 Feature Demo: Lua script to simulate user input and trigger SSF presentation in MAME {#issue-kn5000-pgur}
-
-**ID:** `kn5000-pgur` | **Priority:** Medium | **Created:** 2026-03-01
-
-Implement and test a MAME Lua autoboot script (ftdemo_activate.lua) that simulates the DEMO button press via MAME input ports and injects the assswb buffer to trigger the Feature Demo SSF presentation without manual user interaction.
 
 ---
 
@@ -1165,6 +1222,18 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-8o9b` | LLVM bug: XSP register encoded as 0x1D instead of 0xFD in... | 2026-03-02 |
+| `kn5000-nyof` | Extract FD SAVE/LOAD TEST to dedicated source files | 2026-03-02 |
+| `kn5000-a9iz` | Document NAKA UI Widget System and create structured macros | 2026-03-02 |
+| `kn5000-5i2w` | Extract SSF gate states to dedicated source file with .sh... | 2026-03-02 |
+| `kn5000-ukwz` | String formatting: Merge Latin-1 fragments and format poi... | 2026-03-02 |
+| `kn5000-ee4y` | LLVM: lda_24 instruction doesn't emit relocations for sym... | 2026-03-02 |
+| `kn5000-n6l2` | Format pointer+string groups in maincpu disassembly | 2026-03-02 |
+| `kn5000-6ify` | Place .set-only labels at actual positions in assembly | 2026-03-01 |
+| `kn5000-oixy` | Convert raw .byte pointer tables to symbolic .long LABEL_... | 2026-03-01 |
+| `kn5000-p75d` | Fix split aligned_string declarations in maincpu assembly | 2026-03-01 |
+| `kn5000-ud00` | Disassemble and document boot test mode routines | 2026-03-01 |
+| `kn5000-pgur` | Feature Demo: Lua script to simulate user input and trigg... | 2026-03-01 |
 | `kn5000-1v8g` | Investigate Feature Demo (FTDEMO) display failure | 2026-03-01 |
 | `kn5000-qv20` | Boot: Investigate "ALL INITIAL SETTING!" message and spla... | 2026-02-28 |
 | `kn5000-qiw4` | Mines: Remove LLVM bug workarounds from video.c | 2026-02-28 |
@@ -1173,20 +1242,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | `kn5000-rlb` | Audio: Document tone generator voice allocation | 2026-02-28 |
 | `kn5000-5ck` | Audio: Document proprietary CC handlers (0x97, 0x9B-0x9D) | 2026-02-28 |
 | `kn5000-waa` | FeatureDemo: Create slide viewer/editor tool | 2026-02-28 |
-| `kn5000-0bq` | FeatureDemo: Document demo sequence and timing | 2026-02-28 |
-| `kn5000-70b` | Update: Document FDC interaction during update | 2026-02-28 |
-| `kn5000-1tn` | Update: Reverse engineer Flash program algorithm | 2026-02-28 |
-| `kn5000-dkx` | Update: Reverse engineer Flash erase algorithm | 2026-02-28 |
-| `kn5000-z9k` | Extract hardware info from service manual schematics | 2026-02-28 |
-| `kn5000-kxw` | FeatureDemo: Extract MIDI files as standalone files | 2026-02-28 |
-| `kn5000-qjx` | FeatureDemo: Locate embedded MIDI data | 2026-02-28 |
-| `kn5000-xhi` | Analyze ROTA/ROTB rotary encoder circuit | 2026-02-28 |
-| `kn5000-mrx` | Sound: Extract and convert waveform samples | 2026-02-28 |
-| `kn5000-21e` | FeatureDemo: Refactor assembly to use slide macros | 2026-02-28 |
-| `kn5000-98j` | Sound: Document rhythm/accompaniment engine | 2026-02-28 |
-| `kn5000-br1` | FeatureDemo: Create ASL macros for widget definitions | 2026-02-28 |
 
-*...and 167 more closed issues*
+*...and 179 more closed issues*
 
 ---
 
@@ -1197,8 +1254,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 9 |
-| Medium | 29 |
+| High | 10 |
+| Medium | 30 |
 | Low | 13 |
 | P4 | 1 |
 
@@ -1208,9 +1265,9 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Firmware Update | 5 |
 | HD-AE5000 Expansion | 2 |
-| Other | 46 |
+| Other | 48 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-03-01 10:03*
+*Last updated: 2026-03-03 00:38*
