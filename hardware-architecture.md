@@ -13,17 +13,17 @@ Detailed hardware documentation extracted from the service manual schematics.
 ## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         CONTROL PANEL                                │
-│  ┌──────────────┐  ┌─────────┐  ┌─────────┐  ┌──────────────┐      │
-│  │     CPL      │  │  CPCL   │  │  CPCR   │  │     CPR      │      │
-│  │ M37471M2196S │  │ Switches│  │ Switches│  │ M37471M2196S │      │
-│  │   8-bit MCU  │  │  LEDs   │  │         │  │   8-bit MCU  │      │
-│  └──────┬───────┘  └────┬────┘  └────┬────┘  └──────┬───────┘      │
-│         │ SIN/SOUT/CLK  │            │       SIN/SOUT/CLK │         │
-└─────────┼───────────────┴────────────┴───────────────────┼─────────┘
-          │                                                │
-          └────────────────────┬───────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│                         CONTROL PANEL                          │
+│  ┌──────────────┐  ┌─────────┐  ┌─────────┐  ┌──────────────┐  │
+│  │     CPL      │  │  CPCL   │  │  CPCR   │  │     CPR      │  │
+│  │ M37471M2196S │  │ Switches│  │ Switches│  │ M37471M2196S │  │
+│  │   8-bit MCU  │  │  LEDs   │  │         │  │   8-bit MCU  │  │
+│  └──────┬───────┘  └────┬────┘  └────┬────┘  └──────┬───────┘  │
+│         │ SIN/SOUT/CLK  │            │       SIN/SOUT/CLK │    │
+└─────────┼───────────────┴────────────┴────────────────────┼────┘
+          │                                                 │
+          └────────────────────┬────────────────────────────┘
                                │ Serial Bus
                         ┌──────┴──────┐
                         │  MAIN PCB   │
@@ -287,7 +287,7 @@ The control panel MCUs communicate with the main CPU via a serial interface:
 ```
 Main CPU (TMP94C241F)          Control Panel MCU (M37471M2196S)
         │                               │
-        │<──────── SOUT ───────────────│ (Data from panel)
+        │<──────── SOUT ────────────────│ (Data from panel)
         │                               │
         │─────────> SIN ───────────────>│ (Data to panel)
         │                               │
