@@ -11,36 +11,36 @@ The KN5000 uses a dual-CPU architecture with two identical TMP94C241F processors
 ## Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────────────────────┐
 │                           DUAL CPU ARCHITECTURE                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────┐     ┌─────────────────────────────────────┐
-│           MAIN CPU              │     │            SUB CPU                   │
-│         TMP94C241F              │     │          TMP94C241F                  │
+┌─────────────────────────────────┐     ┌──────────────────────────────────────┐
+│          MAIN CPU               │     │           SUB CPU                    │
+│          TMP94C241F             │     │           TMP94C241F                 │
 │                                 │     │                                      │
-│  Role: System Controller        │     │  Role: Audio Processor              │
+│  Role: System Controller        │     │  Role: Audio Processor               │
 │                                 │     │                                      │
-│  ┌───────────────────────────┐ │     │  ┌───────────────────────────────┐  │
-│  │ Program ROM: 2MB          │ │     │  │ Boot ROM: 128KB (internal)    │  │
-│  │ @ 0xE00000-0xFFFFFF       │ │     │  │ @ 0xFE0000-0xFFFFFF           │  │
-│  └───────────────────────────┘ │     │  └───────────────────────────────┘  │
+│  ┌───────────────────────────┐  │     │  ┌────────────────────────────────┐  │
+│  │ Program ROM: 2MB          │  │     │  │ Boot ROM: 128KB (internal)     │  │
+│  │ @ 0xE00000-0xFFFFFF       │  │     │  │ @ 0xFE0000-0xFFFFFF            │  │
+│  └───────────────────────────┘  │     │  └────────────────────────────────┘  │
 │                                 │     │                                      │
-│  ┌───────────────────────────┐ │     │  ┌───────────────────────────────┐  │
-│  │ RAM: 512KB                │ │     │  │ Payload: 192KB                │  │
-│  │ @ 0x200000-0x27FFFF       │ │     │  │ (loaded at boot from Main)    │  │
-│  └───────────────────────────┘ │     │  └───────────────────────────────┘  │
+│  ┌───────────────────────────┐  │     │  ┌────────────────────────────────┐  │
+│  │ RAM: 512KB                │  │     │  │ Payload: 192KB                 │  │
+│  │ @ 0x200000-0x27FFFF       │  │     │  │ (loaded at boot from Main)     │  │
+│  └───────────────────────────┘  │     │  └────────────────────────────────┘  │
 │                                 │     │                                      │
 │  Responsibilities:              │     │  Responsibilities:                   │
-│  ├─ User interface             │     │  ├─ DSP control                      │
-│  ├─ Menu system                │     │  ├─ DAC output                       │
-│  ├─ Control panel handling     │     │  ├─ Tone generation                  │
-│  ├─ MIDI processing            │     │  ├─ Voice management                 │
-│  ├─ Sequencer                  │     │  └─ Effects processing               │
-│  ├─ Floppy disk I/O            │     │                                      │
-│  ├─ HDAE5000 management        │     │                                      │
-│  └─ Sub CPU coordination       │     │                                      │
-└─────────────────────────────────┘     └─────────────────────────────────────┘
+│  ├─ User interface              │     │  ├─ DSP control                      │
+│  ├─ Menu system                 │     │  ├─ DAC output                       │
+│  ├─ Control panel handling      │     │  ├─ Tone generation                  │
+│  ├─ MIDI processing             │     │  ├─ Voice management                 │
+│  ├─ Sequencer                   │     │  └─ Effects processing               │
+│  ├─ Floppy disk I/O             │     │                                      │
+│  ├─ HDAE5000 management         │     │                                      │
+│  └─ Sub CPU coordination        │     │                                      │
+└─────────────────────────────────┘     └──────────────────────────────────────┘
                     │                                     ^
                     │         Communication Latch         │
                     └───────────> @ 0x120000 <────────────┘
@@ -77,21 +77,21 @@ The TMP94C241F is a Toshiba 32-bit microcontroller from the TLCS-900/H2 family.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    REGISTER FILE                             │
+│                    REGISTER FILE                            │
 ├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  XWA  ─┬─ WA' ─┬─ W' ─┬─ A'    (32/16/8/8 bit)             │
+│                                                             │
+│  XWA  ─┬─ WA' ─┬─ W' ─┬─ A'    (32/16/8/8 bit)              │
 │  XBC  ─┼─ BC' ─┼─ B' ─┼─ C'                                 │
 │  XDE  ─┼─ DE' ─┼─ D' ─┼─ E'                                 │
 │  XHL  ─┼─ HL' ─┼─ H' ─┼─ L'                                 │
-│  XIX  ─┼─ IX                                                 │
-│  XIY  ─┼─ IY                                                 │
-│  XIZ  ─┼─ IZ                                                 │
-│  XSP  ─┴─ SP            (Stack Pointer)                      │
-│                                                              │
-│  PC   ── Program Counter (24-bit)                            │
-│  SR   ── Status Register (flags, interrupt level)            │
-│                                                              │
+│  XIX  ─┼─ IX                                                │
+│  XIY  ─┼─ IY                                                │
+│  XIZ  ─┼─ IZ                                                │
+│  XSP  ─┴─ SP            (Stack Pointer)                     │
+│                                                             │
+│  PC   ── Program Counter (24-bit)                           │
+│  SR   ── Status Register (flags, interrupt level)           │
+│                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
