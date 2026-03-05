@@ -15,42 +15,42 @@ The KN5000 audio subsystem handles all sound generation, processing, and output.
 │                      MAIN CPU (TMP94C241F)                          │
 │                                                                     │
 │  Audio_Lock_Acquire ──> Audio_DMA_Transfer ──> Audio_Lock_Release   │
-│                              │                                      │
+│                                 │                                   │
 │              Latch @ 0x120000 (Inter-CPU Communication)             │
 └─────────────────────────────────┬───────────────────────────────────┘
                                   │
                                   v
-┌─────────────────────────────────────────────────────────────────────┐
-│                       SUB CPU (TMP94C241F)                          │
-│                                                                     │
-│  Boot ROM: 128KB @ 0xFE0000      Payload: 192KB (from Main CPU)     │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                  AUDIO PROCESSING LOOP                       │   │
-│  │                                                              │   │
-│  │  ToneGen_Process_Notes ──> MIDI_Dispatch ──> Audio_Process_DSP │ │
-│  │         │                       │                    │        │   │
-│  │         v                       v                    v        │   │
-│  │   [Keyboard Input]      [Ring Buffer]         [DSP State]     │   │
-│  │   @ 0x110000            @ 0x2B0D              @ 0x3B60        │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-└──────────┬─────────────────────┬──────────────────┬────────────────┘
-           │                     │                  │
-     [0x100000]            [Serial1]          [0x130000]
-     Register               UART               DSP
-     Config                Control             Config
-           │                     │                  │
-           v                     v                  v
-┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
-│  TONE GENERATOR │   │   DAC (IC313)   │   │   DUAL DSP      │
-│  IC303          │   │   PCM69AU       │   │   IC310 + IC311  │
-│                 │   │                 │   │                  │
-│  64 voices      │   │  18-bit stereo  │   │  4 channels      │
-│  28 params each │   │  (via serial)   │   │  0x20 bytes/ch   │
-└────────┬────────┘   └────────┬────────┘   └──────────────────┘
-         │                     │
-   [0x110000]            [BCK/SDOR/SDOF]
-   Keyboard Input        Serial Audio Bus
+┌───────────────────────────────────────────────────────────────────────┐
+│                       SUB CPU (TMP94C241F)                            │
+│                                                                       │
+│  Boot ROM: 128KB @ 0xFE0000      Payload: 192KB (from Main CPU)       │
+│                                                                       │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │                  AUDIO PROCESSING LOOP                         │   │
+│  │                                                                │   │
+│  │  ToneGen_Process_Notes ──> MIDI_Dispatch ──> Audio_Process_DSP │   │
+│  │         │                       │                    │         │   │
+│  │         v                       v                    v         │   │
+│  │   [Keyboard Input]        [Ring Buffer]         [DSP State]    │   │
+│  │      @ 0x110000             @ 0x2B0D             @ 0x3B60      │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+└──────────┬─────────────────────┬─────────────────────┬────────────────┘
+           │                     │                     │
+      [0x100000]             [Serial1]            [0x130000]
+       Register                UART                   DSP
+        Config                Control               Config
+           │                     │                     │
+           v                     v                     v
+  ┌─────────────────┐   ┌─────────────────┐   ┌──────────────────┐
+  │  TONE GENERATOR │   │   DAC (IC313)   │   │   DUAL DSP       │
+  │  IC303          │   │   PCM69AU       │   │   IC310 + IC311  │
+  │                 │   │                 │   │                  │
+  │  64 voices      │   │  18-bit stereo  │   │  4 channels      │
+  │  28 params each │   │  (via serial)   │   │  0x20 bytes/ch   │
+  └────────┬────────┘   └────────┬────────┘   └──────────────────┘
+           │                     │
+       [0x110000]          [BCK/SDOR/SDOF]
+     Keyboard Input        Serial Audio Bus
 ```
 
 ## Hardware Addresses
