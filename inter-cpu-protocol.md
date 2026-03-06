@@ -11,18 +11,18 @@ The KN5000 uses two TMP94C241F CPUs that communicate via a memory-mapped latch a
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                       MAIN CPU (TMP94C241F)                         │
-│                                                                     │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐ │
-│  │ Audio_Lock_     │    │ Audio_DMA_      │    │ Audio_Lock_     │ │
-│  │ Acquire         │───>│ Transfer        │───>│ Release         │ │
-│  │ (0xEF1FEE)      │    │ (0xEF341B)      │    │ (0xEF1F0F)      │ │
-│  └─────────────────┘    └────────┬────────┘    └─────────────────┘ │
-│                                  │                                  │
-│         Lock counter at (0x0532 + lock_index)                       │
-│         Linked list of waiting requests at 0x0487                   │
-└──────────────────────────────────┬──────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                        MAIN CPU (TMP94C241F)                          │
+│                                                                       │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐   │
+│  │ Audio_Lock_     │    │ Audio_DMA_      │    │ Audio_Lock_     │   │
+│  │ Acquire         │───>│ Transfer        │───>│ Release         │   │
+│  │ (0xEF1FEE)      │    │ (0xEF341B)      │    │ (0xEF1F0F)      │   │
+│  └─────────────────┘    └────────┬────────┘    └─────────────────┘   │
+│                                  │                                    │
+│         Lock counter at (0x0532 + lock_index)                         │
+│         Linked list of waiting requests at 0x0487                     │
+└──────────────────────────────────┬───────────────────────────────────┘
                                    │
                                    v
                     ┌──────────────────────────┐
@@ -35,26 +35,26 @@ The KN5000 uses two TMP94C241F CPUs that communicate via a memory-mapped latch a
                                    │
                                    v
 ┌──────────────────────────────────────────────────────────────────────┐
-│                        SUB CPU (TMP94C241F)                          │
-│                                                                      │
-│  ┌──────────────────┐    ┌──────────────────┐    ┌────────────────┐ │
-│  │ InterCPU_Latch_  │    │ MicroDMA CH0/2   │    │ CMD_DISPATCH_  │ │
-│  │ Setup (0x020C15) │───>│ Handlers         │───>│ TABLE          │ │
-│  └──────────────────┘    └──────────────────┘    └────────────────┘ │
-│                                                          │           │
-│                          ┌───────────────────────────────┘           │
-│                          v                                           │
-│  ┌────────────────────────────────────────────────────────────────┐ │
-│  │                    COMMAND HANDLERS                             │ │
-│  │                                                                 │ │
-│  │  0x00-0x1F: Audio_CmdHandler_00_1F (MIDI/notes → 0x2B0D)       │ │
-│  │  0x20-0x3F: Audio_CmdHandler_20_3F (Stub)                      │ │
-│  │  0x40-0x5F: Audio_CmdHandler_40_5F (...)                        │ │
-│  │  0x60-0x7F: Audio_CmdHandler_60_7F (Audio/DSP → 0x3B60)       │ │
-│  │  0x80-0x9F: Serial port setup (38400 baud)                     │ │
-│  │  0xA0-0xBF: Audio_CmdHandler_A0_BF (System audio)              │ │
-│  │  0xC0-0xFF: Audio_CmdHandler_C0_FF (Extended system)           │ │
-│  └────────────────────────────────────────────────────────────────┘ │
+│                        SUB CPU (TMP94C241F)                           │
+│                                                                       │
+│  ┌──────────────────┐    ┌──────────────────┐    ┌────────────────┐  │
+│  │ InterCPU_Latch_  │    │ MicroDMA CH0/2   │    │ CMD_DISPATCH_  │  │
+│  │ Setup (0x020C15) │───>│ Handlers         │───>│ TABLE          │  │
+│  └──────────────────┘    └──────────────────┘    └────────────────┘  │
+│                                                          │            │
+│                          ┌───────────────────────────────┘            │
+│                          v                                            │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │                    COMMAND HANDLERS                             │  │
+│  │                                                                │  │
+│  │  0x00-0x1F: Audio_CmdHandler_00_1F (MIDI/notes → 0x2B0D)      │  │
+│  │  0x20-0x3F: Audio_CmdHandler_20_3F (Stub)                     │  │
+│  │  0x40-0x5F: Audio_CmdHandler_40_5F (...)                       │  │
+│  │  0x60-0x7F: Audio_CmdHandler_60_7F (Audio/DSP → 0x3B60)      │  │
+│  │  0x80-0x9F: Serial port setup (38400 baud)                    │  │
+│  │  0xA0-0xBF: Audio_CmdHandler_A0_BF (System audio)             │  │
+│  │  0xC0-0xFF: Audio_CmdHandler_C0_FF (Extended system)          │  │
+│  └────────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 

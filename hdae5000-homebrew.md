@@ -514,8 +514,8 @@ Object Table (0x027ED2)                  Data Record Table
 │ +0x0A: Data pointer (4) ─────┼──────>│ +0x0A: Flags (2)               │
 └──────────────────────────────┘       │ +0x0C: ROM data ptr (4)        │
                                        │ +0x10: ROM data ptr 2 (4)      │
-Global State (saved/restored            │ +0x14: RAM workspace ptr (4)   │
- per dispatch call):                    └────────────────────────────────┘
+Global State (saved/restored           │ +0x14: RAM workspace ptr (4)   │
+ per dispatch call):                   └────────────────────────────────┘
   0x02BC14: Current object identity (SetCurrentTarget/GetCurrentTarget)
   0x02BC18-20: Root object/event/param (SetRootObject/GetRootObject etc.)
   0x02BC24-2C: Focus object/event/param (GetFocusObject/GetFocusEvent etc.)

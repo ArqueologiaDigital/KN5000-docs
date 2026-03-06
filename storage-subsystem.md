@@ -11,9 +11,9 @@ The KN5000 has multiple storage options for factory data, user data, and removab
 ## Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          STORAGE ARCHITECTURE                                │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                           STORAGE ARCHITECTURE                                │
+└──────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐
 │  TABLE DATA ROM │  │ CUSTOM DATA     │  │ FLOPPY DISK     │  │  HDAE5000    │
@@ -26,8 +26,8 @@ The KN5000 has multiple storage options for factory data, user data, and removab
 │  ├─ Sounds      │  │  ├─ Custom      │  │  ├─ Styles      │  │  ├─ Styles   │
 │  ├─ Demos       │  │  │   Sounds     │  │  ├─ Patches     │  │  ├─ Backups  │
 │  └─ Presets     │  │  └─ Sequences   │  │  └─ Sequences   │  │  └─ Quick    │
-└─────────────────┘  └─────────────────┘  └─────────────────┘  │     Load     │
-                                                               └──────────────┘
+│                 │  │                 │  │                 │  │     Load     │
+└─────────────────┘  └─────────────────┘  └─────────────────┘  └──────────────┘
 ```
 
 ## Table Data ROM
