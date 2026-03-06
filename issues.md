@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 271 (51 open, 217 closed)
+**Total Issues:** 271 (50 open, 217 closed)
 
 **Quick Links:** 
-[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (43) · [Sound & Audio](#sound-audio) (1)
+[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (42) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
@@ -742,14 +742,6 @@ All subsystems fully documented in the documentation website.
 
 ---
 
-#### 🟡 Semantic labeling: rename top-20 most-referenced LABEL_* routines in maincpu {#issue-kn5000-aksz}
-
-**ID:** `kn5000-aksz` | **Priority:** Medium | **Created:** 2026-03-06
-
-Analysis identified the top 20 most-referenced generic LABEL_* names in maincpu ROM. These are core utility functions, dispatchers, and data structures referenced hundreds of times. Renaming them dramatically improves code readability. High-confidence renames: DefaultHandler_Ret (396 refs), AccPatch_SetVoiceParam (148), SeqData_ReadNextByte (121), RingBuf_AdvanceIndex (110), SeqData_AdvancePosition (107), DisplayScript_NullNode (101), PostEvent (already named, 97), SoundGen_UpdateAndRefresh (91), Strlen (74), NoteMap_MergeEntries (72), SMF_FlushAndFinalize (65), UIState_DefaultConfig_A/B/C (64 each), ToneGen_CalcBufferAddr (59), UIState_KeyScan_Dispatch (58), Part_WriteByte (54), MIDI_ReadChannelParam (53), PartCtrl_WriteWord (50), Part_WriteWord (50).
-
----
-
 #### 🟡 Storage: Document Custom Data Flash organization at 0x300000 {#issue-kn5000-bqe}
 
 **ID:** `kn5000-bqe` | **Priority:** Medium | **Created:** 2026-01-30
@@ -1136,7 +1128,7 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Critical | 2 |
 | High | 9 |
-| Medium | 25 |
+| Medium | 24 |
 | Low | 14 |
 | P4 | 1 |
 
@@ -1146,9 +1138,9 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Firmware Update | 5 |
 | HD-AE5000 Expansion | 2 |
-| Other | 43 |
+| Other | 42 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-03-06 07:00*
+*Last updated: 2026-03-06 07:44*
