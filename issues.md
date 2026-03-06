@@ -8,7 +8,7 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 270 (51 open, 216 closed)
+**Total Issues:** 271 (51 open, 217 closed)
 
 **Quick Links:** 
 [Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (43) · [Sound & Audio](#sound-audio) (1)
@@ -742,6 +742,14 @@ All subsystems fully documented in the documentation website.
 
 ---
 
+#### 🟡 Semantic labeling: rename top-20 most-referenced LABEL_* routines in maincpu {#issue-kn5000-aksz}
+
+**ID:** `kn5000-aksz` | **Priority:** Medium | **Created:** 2026-03-06
+
+Analysis identified the top 20 most-referenced generic LABEL_* names in maincpu ROM. These are core utility functions, dispatchers, and data structures referenced hundreds of times. Renaming them dramatically improves code readability. High-confidence renames: DefaultHandler_Ret (396 refs), AccPatch_SetVoiceParam (148), SeqData_ReadNextByte (121), RingBuf_AdvanceIndex (110), SeqData_AdvancePosition (107), DisplayScript_NullNode (101), PostEvent (already named, 97), SoundGen_UpdateAndRefresh (91), Strlen (74), NoteMap_MergeEntries (72), SMF_FlushAndFinalize (65), UIState_DefaultConfig_A/B/C (64 each), ToneGen_CalcBufferAddr (59), UIState_KeyScan_Dispatch (58), Part_WriteByte (54), MIDI_ReadChannelParam (53), PartCtrl_WriteWord (50), Part_WriteWord (50).
+
+---
+
 #### 🟡 Storage: Document Custom Data Flash organization at 0x300000 {#issue-kn5000-bqe}
 
 **ID:** `kn5000-bqe` | **Priority:** Medium | **Created:** 2026-01-30
@@ -795,25 +803,6 @@ Related: Storage subsystem documentation
 - All timing-critical behaviors documented
 - MAME can boot Sub CPU with correct behavior
 - Audio output produces correct results
-
----
-
-#### 🟡 Symbols: Apply semantic naming to UI framework LABEL_* symbols {#issue-kn5000-4bt}
-
-**ID:** `kn5000-4bt` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** Following the successful audio subsystem renaming, apply the same approach to UI framework routines:
-
-1. Identify UI-related LABEL_* symbols (widget handlers, drawing, event dispatch)
-2. Analyze each routine's purpose
-3. Create semantic names (UI_DrawButton, Widget_HandleClick, etc.)
-4. Add documentation headers
-5. Update ui-framework.md with code references
-
-Many UI routines already have good names (Display_*, GridCheck_*, ClassProc_*).
-Focus on remaining LABEL_* symbols in UI code regions.
-
-Reference: ui-framework.md for existing documentation.
 
 ---
 
@@ -1114,6 +1103,7 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-9jq` | Symbols: Rename remaining LABEL_* in Sub CPU audio code | 2026-03-03 |
 | `kn5000-ima` | Symbols: Apply semantic naming to FDC subsystem LABEL_* s... | 2026-03-03 |
 | `kn5000-kc5` | Disassemble TODO routines at F97696-F97D8D range (jump ta... | 2026-03-03 |
 | `kn5000-bntj` | Document data blocks with comments and NAKA macros | 2026-03-03 |
@@ -1133,9 +1123,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | `kn5000-i926` | Decode LABEL_F1E3DA in hama_code.s (74 bytes) | 2026-03-03 |
 | `kn5000-8o9b` | LLVM bug: XSP register encoded as 0x1D instead of 0xFD in... | 2026-03-02 |
 | `kn5000-nyof` | Extract FD SAVE/LOAD TEST to dedicated source files | 2026-03-02 |
-| `kn5000-a9iz` | Document NAKA UI Widget System and create structured macros | 2026-03-02 |
 
-*...and 196 more closed issues*
+*...and 197 more closed issues*
 
 ---
 
@@ -1162,4 +1151,4 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 ---
 
-*Last updated: 2026-03-03 20:09*
+*Last updated: 2026-03-06 07:00*
