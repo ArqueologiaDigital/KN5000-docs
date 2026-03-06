@@ -413,41 +413,41 @@ The main CPU enters its event loop, handling:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                         POWER ON / RESET                              │
-│                                                                       │
-│  Initial Memory Map:                                                  │
+│                         POWER ON / RESET                             │
+│                                                                      │
+│  Initial Memory Map:                                                 │
 │    0xE00000-0xFFFFFF = Table Data ROM (contains first-stage boot)    │
-│    Program ROM not yet visible                                        │
+│    Program ROM not yet visible                                       │
 └──────────────────────────────────────────────────────────────────────┘
                                    │
                                    v
 ┌──────────────────────────────────────────────────────────────────────┐
-│                   STAGE 1: TABLE DATA BOOTLOADER                      │
-│                                                                       │
+│                   STAGE 1: TABLE DATA BOOTLOADER                     │
+│                                                                      │
 │  1. CPU fetches reset vector from 0xFFFF00 (table_data @ 0x1FFF00)   │
 │  2. Vector points to 0xFFFEE0 → JP 0xFFB4E8                          │
 │  3. Boot code configures MSAR0-5, MAMR0-5, DRAM controller           │
 │  4. Memory remap: Table Data → 0x800000, Program ROM → 0xE00000      │
-│  5. Jump to Program ROM entry point (0xEF03C6)                        │
+│  5. Jump to Program ROM entry point (0xEF03C6)                       │
 └──────────────────────────────────────────────────────────────────────┘
                                    │
                                    v
 ┌──────────────────────────────────────────────────────────────────────┐
-│                    STAGE 2: PROGRAM ROM BOOT                          │
-│                                                                       │
-│  Final Memory Map:                                                    │
+│                    STAGE 2: PROGRAM ROM BOOT                         │
+│                                                                      │
+│  Final Memory Map:                                                   │
 │    0x000000-0x0FFFFF = DRAM (1MB)                                    │
 │    0x100000-0x1FFFFF = I/O (FDC, latches, VGA, SRAM)                 │
-│    0x300000-0x3FFFFF = Custom Data Flash                              │
-│    0x400000-0x7FFFFF = Rhythm Data ROM                                │
-│    0x800000-0x9FFFFF = Table Data ROM (remapped)                      │
-│    0xE00000-0xFFFFFF = Program ROM (now visible)                      │
-│                                                                       │
-│  1. RESET_HANDLER at 0xEF03C6                                         │
-│  2. Hardware initialization (redundant memory controller setup)       │
-│  3. Release Sub CPU from reset                                        │
-│  4. Send 192KB payload to Sub CPU                                     │
-│  5. Initialize subsystems and enter main loop                         │
+│    0x300000-0x3FFFFF = Custom Data Flash                             │
+│    0x400000-0x7FFFFF = Rhythm Data ROM                               │
+│    0x800000-0x9FFFFF = Table Data ROM (remapped)                     │
+│    0xE00000-0xFFFFFF = Program ROM (now visible)                     │
+│                                                                      │
+│  1. RESET_HANDLER at 0xEF03C6                                        │
+│  2. Hardware initialization (redundant memory controller setup)      │
+│  3. Release Sub CPU from reset                                       │
+│  4. Send 192KB payload to Sub CPU                                    │
+│  5. Initialize subsystems and enter main loop                        │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1147,26 +1147,26 @@ Sub CPU Payload Loaded (E3 command)
 After all initialization completes, the main CPU enters its event loop:
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                    MAIN EVENT LOOP                        │
-├──────────────────────────────────────────────────────────┤
-│                                                          │
+┌─────────────────────────────────────────────────────────┐
+│                    MAIN EVENT LOOP                      │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
 │  │   Control   │    │   Display   │    │    MIDI     │  │
 │  │   Panel     │───>│   Update    │───>│  Processing │  │
 │  │   Poll      │    │             │    │             │  │
 │  └─────────────┘    └─────────────┘    └─────────────┘  │
-│         │                  │                  │          │
-│         v                  v                  v          │
+│         │                  │                  │         │
+│         v                  v                  v         │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
 │  │    FDC      │    │  HDAE5000   │    │   Audio     │  │
 │  │   Handler   │───>│   Frame     │───>│   Sync      │  │
 │  │             │    │   Handler   │    │             │  │
 │  └─────────────┘    └─────────────┘    └─────────────┘  │
-│                           │                              │
-│                           v                              │
-│                    Loop continues                        │
-└──────────────────────────────────────────────────────────┘
+│                           │                             │
+│                           v                             │
+│                    Loop continues                       │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ### Control Panel Communication
