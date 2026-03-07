@@ -206,11 +206,12 @@ Based on KN5000 specifications:
 - [Sequencer]({{ site.baseurl }}/sequencer/) - MIDI recording/playback
 - [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) - Local keyboard control
 - [SysEx Messages]({{ site.baseurl }}/sysex-messages/) - System Exclusive message formats
+- [MIDI Serial I/O]({{ site.baseurl }}/midi-serial-io/) - External MIDI hardware and serial port
 
 ## Research Needed
 
-- [ ] Document external MIDI serial port configuration
-- [ ] Analyze MIDI routing logic in Main CPU
+- [x] ~~Document external MIDI serial port configuration~~ — Complete: see [MIDI Serial I/O](/midi-serial-io/)
+- [x] ~~Analyze MIDI routing logic in Main CPU~~ — Complete: see [MIDI Serial I/O](/midi-serial-io/)
 - [x] ~~Document Technics SysEx message format~~ — Complete: see [SysEx Messages](/sysex-messages/)
 - [ ] Document MIDI filter and channel assignment settings
 - [x] ~~Map remaining proprietary CC handlers (0x97, 0x9B-0x9D)~~ — Complete: CC91=freq mult, CC95=portamento, CC97=fine pitch, CC9B=vibrato depth, CC9C=vibrato enable, CC9D=tremolo depth
