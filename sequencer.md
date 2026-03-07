@@ -302,6 +302,77 @@ The medley system is implemented in `maincpu/file_io/medley.asm` with ~4700 line
 
 ---
 
+## Event Storage Format
+
+The sequencer stores events in a MIDI-like format with extensions. The `SeqEvent_GetParamLength` routine (0xF3E382) defines the event record sizes:
+
+### Event Types and Sizes
+
+| Status Byte | Size (bytes) | Type | Description |
+|-------------|------|------|-------------|
+| 0x90+ch | 6 | Note On | Channel note-on with velocity |
+| 0xB0+ch | 6 | Control Change | Controller number + value |
+| 0xC0+ch | 6 | Program Change | Program number + bank info |
+| 0xA0 | 3 | Aftertouch | Channel pressure data |
+| 0xD0 | 3 | Channel Pressure | Mono aftertouch |
+| 0xD1 | 3 | Extended | Internal event type |
+| 0xD3 | 3 | Extended | Internal event type |
+| 0x80+ch | 4 | Note Off | Channel note-off |
+| 0xD2 | 4 | Extended | Internal event type |
+| 0x85 | 2 | Compact | Short internal event |
+| 0x86 | 2 | Compact | Short internal event |
+| 0x81 | 1 | Minimal | Single-byte internal event |
+| 0x82 | 1 | Minimal | Single-byte internal event |
+
+The format is optimized for storage efficiency — common MIDI events (Note On, CC, Program Change) use the standard 6-byte format while internal events use shorter encodings. Status bytes 0x81-0x86 are non-standard extensions used for compact representation of sequencer-internal control events.
+
+### Ring Buffer Write Dispatch
+
+Events enter the ring buffer via dispatch table at ROM 0xE00012:
+
+| Slot | Handler | Description |
+|------|---------|-------------|
+| 0 | `Seq_MultiWrite_Alt4` | Multi-byte write variant 4 |
+| 1 | `Seq_MultiWrite_Alt5` | Multi-byte write variant 5 |
+| 2 | `Seq_WriteMidi90` | Standard MIDI Note On (0x90) handler |
+| 3 | `Seq_MultiWrite_Alt3` | Multi-byte write variant 3 |
+| 4 | `Seq_MultiWrite_Alt1` | Multi-byte write variant 1 |
+| 5-7 | `Seq_RingBuf_Nop` | No-op (unused slots) |
+
+### Playback Processing
+
+`SeqPlay_ProcessTempoVoiceEvent` dispatches incoming events by status:
+
+| Status Range | Handler | Purpose |
+|-------------|---------|---------|
+| 0x90-0x9F | Note processing | Assign voices, set velocity |
+| 0x80-0x8F | Note off | Release voices |
+| 0xB0-0xBF | Control change | Apply CC values |
+| 0xC0-0xCF | Program change | Switch instrument |
+| 0xE0-0xEF | Pitch bend | Apply pitch bend |
+
+### Track Organization
+
+The sequencer supports 16 tracks with the following part assignments:
+
+| Track Group | Parts | Purpose |
+|------------|-------|---------|
+| Right 1 | Part 1 | Melody voice 1 |
+| Right 2 | Part 2 | Melody voice 2 |
+| Left | Part 3 | Left hand voice |
+| Part 4-15 | Parts 4-15 | Additional voices |
+| Part 16 | Part 16 | Accompaniment/control |
+
+The `SeqTrack_ScanActiveChannels` routine scans all tracks to determine which have data, and `SeqTrack_AssignFloppyChannels` assigns loaded tracks to voice channels when loading from floppy disk.
+
+### Timing
+
+Events use delta-time encoding relative to the previous event. The timing resolution is handled by `SeqMain_GetTimingValue` (0xEF27B7) and the tempo is computed by `SeqTrack_ComputeTempoScaling`.
+
+### Note Pool
+
+`SeqNotePool_Init` (0xF3E3E0) initializes a note tracking pool for managing active notes during playback. The pool uses a linked-list structure starting at DRAM address 7602, with entries containing note number (0xFF = empty), velocity, and status bytes.
+
 ## Known Information
 
 ### Features
