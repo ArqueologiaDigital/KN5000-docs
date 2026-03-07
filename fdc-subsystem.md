@@ -520,6 +520,28 @@ The FDC uses a handler dispatch table starting at 0xF97D8D:
 
 All handlers end by jumping to LABEL_F97DE1 which sets the status flag and returns.
 
+## Code References
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `SOME_DELAY` | `0xF97612` | Millisecond-scale timing delay (polls SYSTEM_TIMESTAMP) |
+| `FDC_INIT` | `0xF96BBF` | Basic FDC initialization (set control to 0xFF) |
+| `FDC_CONFIG_VERIFY` | `0xF96BD0` | Configuration and multi-step status verification |
+| `FDC_CMD_DISPATCH_SUB` | `0xF96D95` | Primary command handler subroutine |
+| `FDC_STATUS_HANDLER` | `0xF97696` | Status/interrupt polling and update |
+| `FDC_CMD_EXEC` | `0xF976E4` | Command execution with detection/validation |
+| `FDC_SECTOR_XFER` | `0xF97835` | Sector/data transfer handler |
+| `FDC_MODE_CONFIG` | `0xF97984` | Mode configuration (modes 0-5) |
+| `FDC_CMD_ENABLE` | `0xF97C21` | Enable FDC command interface |
+| `FDC_CMD_DISABLE` | `0xF97C4B` | Disable FDC command interface |
+| `FDC_STATUS_COPY` | `0xF97C54` | Copy cached status register |
+| `FDC_OUTPUT_CTRL` | `0xF97C5B` | FDC output enable/disable control |
+| `FDC_INTERRUPT_HANDLER` | `0xF97C7C` | Main FDC interrupt handler |
+| `FDC_ReadSectors` | `0xF96E00` | Read sectors from floppy disc |
+| `FDC_WriteSectors` | `0xF97000` | Write sectors to floppy disc |
+| `Check_for_Floppy_Disk_Change` | `0xEF4F5E` | Detect disc insertion/removal (Port D bit 6) |
+| `FDC_InitRecalibrate` | `0xF97E00` | Recalibrate drive head to track 0 |
+
 ---
 
-*Last updated: January 2026*
+*Last updated: March 2026*

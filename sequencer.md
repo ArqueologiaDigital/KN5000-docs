@@ -445,3 +445,57 @@ See [Audio Subsystem - Feature Demo]({{ site.baseurl }}/audio-subsystem/#feature
 - [x] Document ring buffer pipeline and instances
 - [x] Document rhythm ROM validation and loading
 - [x] Document sequencer state machine
+
+## Code References
+
+### Sequencer Core
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `Seq_TickWrapper` | `0xEF1388` | Main loop sequencer tick driver |
+| `Seq_EventProcessingTick` | `0xEF14A3` | MIDI event dispatch from ring buffer |
+| `Seq_ProcessEventLoop` | `0xEF14CA` | Event processing loop |
+| `Seq_ProcessMidiEvent` | `0xEF13CD` | Parse MIDI status byte and dispatch |
+| `Seq_DispatcherEntry` | `0xF532E1` | Dispatcher entry point |
+| `Seq_DispatcherTick` | `0xF53318` | State guard (skip if 0x10-0x16) |
+| `Seq_RhythmProcessor` | `0xF5EC75` | Main rhythm/sequencer processing |
+| `SeqState_TransitionMode` | `0xF9936D` | State machine transition (writes 0x8D36) |
+| `sendCOMM` | `0xEF32F4` | Send MIDI event to Sub CPU via latch |
+
+### Ring Buffers
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `SeqMain_WriteByte` | `0xEF276D` | Write to main sequencer buffer (0x01F37B) |
+| `SeqMain_ReadData` | `0xEF27D8` | Read from main sequencer buffer |
+| `SeqMain_InitBuffer` | `0xEF27BD` | Initialize main buffer |
+| `Seq_CheckSongEnd` | `0xEF27A5` | Check if buffer empty (WrPos == RdPos) |
+| `Seq_RingBuf_Init_256` | `0xEF2F69` | Init 256-byte ring buffer |
+| `Seq_RingBuf_Init_1024` | `0xEF3087` | Init 1024-byte ring buffer |
+
+### Rhythm ROM
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `RhythmROM_ValidateHeader` | `0xF54651` | Validate magic bytes at 0x400000 |
+| `RhythmROM_CheckValid` | `0xF5452F` | Check validation flag (0x3277) |
+| `RhythmROM_PatternDispatcher` | `0xF634F3` | Dispatch pattern loading by type |
+| `RhythmROM_LoadPattern` | `0xF6358D` | Load pattern from ROM to RAM |
+| `RhythmROM_CalcPatternAddr` | `0xF636E4` | Calculate pattern ROM address |
+| `RhythmROM_LoadDrumKit` | `0xF64550` | Load drum kit configuration |
+
+### Audio Mixer
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `AudioMix_Init` | `0xEF17F4` | Initialize audio mixer at 0x150000 |
+| `AudioMix_EnableChannels_Loop` | `0xEF1830` | Enable mixer channels |
+| `AudioMix_WriteChannelGroup` | `0xEF183D` | Write channel group config |
+
+### Demo Mode
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `DemoMode_Main_Operation` | `0xF8696F` | Demo playback handler |
+| `DemoMode_Initialize` | `0xF869E3` | First-time demo initialization |
+| `SeqState_DemoModeHandler` | `0xF993AD` | Demo mode event handler |

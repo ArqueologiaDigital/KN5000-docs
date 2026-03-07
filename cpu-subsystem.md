@@ -220,6 +220,37 @@ See `tmp94c241.inc` in the disassembly repository for implementations.
 - [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) - Communication details
 - [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) - Physical components
 
+## Code References
+
+### Main CPU Boot & Init
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| Reset Vector | `0xFFFEE0` | CPU entry point |
+| `MainCPU_self_test_routines` | `0xEF0400` | Boot-time self tests |
+| `Get_Firmware_Version` | `0xEF0534` | Read version byte from 0xFFFFE8 |
+| `MainLoop` | `0xEF1245` | Main event loop entry |
+| `INTT1_HANDLER` | `0xEF0BF9` | Timer 1 interrupt (SYSTEM_TIMESTAMP) |
+| `SC0Init_Entry` | `0xFCF890` | MIDI serial port initialization |
+| `Boot_DisplayScreen` | `0xEF05D0` | Boot screen display |
+
+### Sub CPU Boot
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| Reset Vector | `0xFFFEE0` | Sub CPU entry point (Boot ROM) |
+| `InterCPU_Latch_Setup` | `0x020B3B` | DMA and latch configuration |
+| `MICRODMA_CH0_HANDLER` | `0x020F1F` | Command dispatcher (DMA interrupt) |
+| `MIDI_Dispatch` | `0x034D93` | MIDI message parser/router |
+
+### Inter-CPU Communication
+
+| Symbol | Address | CPU | Purpose |
+|--------|---------|-----|---------|
+| `Audio_DMA_Transfer` | `0xEF32F4` | Main | Send MIDI to Sub CPU via latch |
+| `SubCPU_Payload_Transfer` | `0xEF0620` | Main | Load 192KB payload to Sub CPU |
+| `SubCPU_Payload_Verify` | `0xEF06A0` | Main | Verify payload checksums |
+
 ## External References
 
 - [TMP94C241 Datasheet](https://www.alldatasheet.com/datasheet-pdf/pdf/47265/TOSHIBA/TMP94C241.html) - CPU specifications

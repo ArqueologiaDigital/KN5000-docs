@@ -214,6 +214,38 @@ The floppy subsystem is strictly a data transport. The firmware **never executes
 - [HDAE5000 Disk Interface]({{ site.baseurl }}/hdae5000-disk-interface/) - ATA protocol
 - [Memory Map]({{ site.baseurl }}/memory-map/) - Address space
 
+## Code References
+
+### Floppy Disk Controller
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `FDC_INIT` | `0xF96BBF` | FDC hardware initialization |
+| `FDC_CONFIG_VERIFY` | `0xF96BD0` | FDC configuration verification |
+| `FDC_CMD_EXEC` | `0xF976E4` | FDC command execution |
+| `FDC_ReadSectors` | `0xF96E00` | Read sectors from floppy disc |
+| `FDC_WriteSectors` | `0xF97000` | Write sectors to floppy disc |
+| `Check_for_Floppy_Disk_Change` | `0xEF4F5E` | Detect disc insertion/removal |
+| `Detect_Disk_Type` | `0xEF42FE` | Identify update disc type (38-byte signature) |
+
+### Flash Memory
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `Flash_IdentifyAndValidateChip` | `0xEF37A5` | Probe flash chip (AMD/Fujitsu ID) |
+| `Flash_ProgramWord` | `0xEF381A` | Program one word to flash |
+| `FLASH_MEM_UPDATE` | `0xEF4F6F` | Main firmware update entry point |
+| `Erase_and_Burn____when_disk_is_valid` | `0xEF4745` | Update type dispatcher |
+
+### HDAE5000 Storage
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `ATA_IdentifyDevice` | `0x28C000` | Read drive parameters (HDAE5000 ROM) |
+| `ATA_ReadSectors` | `0x28C100` | Read sectors from HDD |
+| `ATA_WriteSectors` | `0x28C200` | Write sectors to HDD |
+| `FSB_Init` | `0x28D000` | Initialize filesystem block |
+
 ## External References
 
 - [NEC uPD72068 Datasheet](https://www.alldatasheet.com/) - FDC controller

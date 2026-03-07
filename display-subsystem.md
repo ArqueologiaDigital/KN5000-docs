@@ -680,6 +680,87 @@ UI element names "SlideMove" and "SlideBase" appear in the firmware's string tab
 - [ ] Document workspace display callbacks (0x0124, 0x0278, 0x0534) protocols
 - [ ] Reverse engineer pre-computed fade data format (BitmapFadeIn/Out blobs)
 
+## Code References
+
+### Core Display
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `Display_ResetDirtyFlags` | `0xEF5B27` | Clear all dirty flags |
+| `Display_UpdateDirtyRegions` | `0xEF5B36` | Check and redraw dirty regions |
+| `UpdateScreen` | `0xFAA61D` | Copy changed regions to VRAM |
+| `Set_XWA_to_320_times_XDE` | `0xEF5023` | Y×320 coordinate calculation |
+| `VGA_ScreenBlank` | `0xFB319A` | Blank display during updates |
+| `VGA_ScreenUnblank` | `0xFB318A` | Restore display after updates |
+| `LcdOn` | `0xFAA5D0` | Enable LCD output |
+| `LcdOff` | `0xFAA5DB` | Disable LCD output |
+
+### Drawing Primitives
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `ReadPixel` | `0xFAA7B4` | Read pixel from offscreen buffer |
+| `ModifyPixel` | `0xFAA7E4` | Write single pixel |
+| `ModifyPixelEx` | `0xFAA84A` | Write/clear/OR/AND/XOR pixel |
+| `DrawLine` | `0xFAA98A` | Bresenham line drawing |
+| `DrawLineEx` | `0xFAAA3E` | Line with drawing mode |
+| `DrawBox` | `0xFAB295` | Filled rectangle |
+| `DrawFrame` | `0xFAB400` | Rectangle outline |
+| `DrawFrameEx` | `0xFAB8CC` | Styled frame with XOR |
+| `VRAM_FillRect` | `0xEF50DF` | Direct VRAM rectangle fill |
+| `SetChangeRect` | `0xFAA760` | Expand dirty bounding box |
+| `Copy_DE_words_from_XBC_to_XWA` | `0xEF18D7` | Block memory copy (blit) |
+
+### Bitmap & Sprite
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `DrawBitmap` | `0xFABC3A` | Bitmap with transparency (0xF7) |
+| `DrawBitmapFast` | `0xFABE0E` | Opaque bitmap (no transparency) |
+| `DrawIcons` | `0xFABF61` | Icon from table at 0x938000 |
+| `MovePixels` | `0xFABA60` | Copy rectangular pixel block |
+| `DrawWall` | `0xFABB74` | Full-screen wallpaper fill |
+| `Draw_FlashMemUpdate_message_bitmap` | `0xEF5040` | 1bpp update UI bitmap renderer |
+
+### Text
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `DrawString` | `0xFACACE` | Core text renderer |
+| `DrawStringCentered` | `0xFACF17` | Center-aligned text |
+| `DrawStringLeftJustify` | `0xFACFBA` | Left-aligned text |
+| `DrawStringRightJustify` | `0xFAD004` | Right-aligned text |
+| `DrawStringReverse` | `0xFAD091` | Reversed fg/bg colors |
+| `CalcTotalWidth` | `0xFB270D` | Calculate string pixel width |
+
+### Display Regions
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `Display_RedrawStatusBar` | `0xF00999` | Region 0: Status bar |
+| `Display_RedrawTitleBar` | `0xF00C89` | Region 1: Title bar |
+| `Display_RedrawSelection` | `0xF00DA5` | Region 2: Selection highlight |
+| `Display_RedrawMainContent` | `0xF00C33` | Region 3: Main content |
+| `Display_RedrawSidePanel` | `0xF00E35` | Region 4: Side panel |
+| `Display_RedrawMenu` | `0xEFF110` | Region 5: Menu area |
+| `Display_RedrawButtonLabels` | `0xF00FDC` | Region 6: Button labels |
+| `Display_RedrawParameters` | `0xEF6F1A` | Region 7: Parameter display |
+| `Display_RedrawValues` | `0xEF6FA3` | Region 8: Value display |
+| `Display_RedrawIndicators` | `0xEF704B` | Region 9: Indicators |
+| `Display_RedrawFooter` | `0xF00C4A` | Region 10: Footer |
+
+### Palette & Effects
+
+| Symbol | Address | Purpose |
+|--------|---------|---------|
+| `ChangePalette` | `0xFAF34E` | Switch color palette |
+| `ChangeWall` | `0xFAF21C` | Load wallpaper |
+| `PaletteBankRotation` | `0xFAF346` | Fade via palette bank rotation |
+| `AcFadeSetGridBoxProc` | `0xF7514A` | Grid dissolve transition |
+| `SeqState_TransitionMode` | `0xF99579` | Full-screen mode transition |
+| `DrawProgressRectH` | `0xF99E75` | Horizontal progress bar |
+| `DrawProgressRectV` | `0xF99F7D` | Vertical progress bar |
+
 ## How to Contribute
 
 See [Help Wanted]({{ site.baseurl }}/help-wanted/) for contribution guidelines.
