@@ -313,10 +313,128 @@ See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) for the note encoding
 - [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) -- Latch communication details
 - [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) -- Full system hardware
 
+## Voice Setup Procedures
+
+The SubCPU firmware provides two voice setup paths, both called via a dispatch table at `0x012159`:
+
+### ToneGen_SetupPolyVoice (Melodic Voices)
+
+Called for standard polyphonic note-on events. Performs:
+
+1. **Copy template**: Copies 34-byte (0x22) voice parameter template from ROM `0x012115` to working buffer at `0x3B1C`
+2. **Compute pitch**: MIDI note lookup → octave calculation (`note / 12`), remainder used for fine pitch from table at `0x01217D`
+3. **Apply velocity**: `DSP_VelocityToVolume` converts MIDI velocity to volume level, OR'd into struct offset +24 (volume bank 0)
+4. **Apply effect routing**: `DSP_GetEffectRouting` determines reverb/chorus send levels, OR'd into struct offset +26
+5. **Write all parameters**: Calls `ToneGen_WriteVoiceParams` (22 register writes + key-on)
+6. **Write control register**: `ToneGen_WriteSingleReg` writes the voice control word
+
+### ToneGen_SetupPercussionVoice (Drum Voices)
+
+Similar to poly but with percussion-specific pitch handling:
+
+1. **Copy template**: Same 34-byte template from `0x012115` to `0x3B1C`
+2. **Percussion pitch**: Uses `note / 12` for octave, `note % 12` as drum index (bit 7 cleared). Shifted left 8 bits and OR'd with key-on flag
+3. **Octave lookup**: Uses separate table at `0x012195` (vs `0x01217D` for melodic)
+4. **Effect routing**: Same `DSP_GetEffectRouting` call
+5. **Fixed velocity**: Volume set to 0x0FFF (maximum)
+6. **Write parameters**: Same `ToneGen_WriteVoiceParams` + `ToneGen_WriteSingleReg` sequence
+
+### ToneGen_WriteVoiceParams — Full Register Sequence
+
+This routine writes 22 voice parameters from a 44-byte struct, in this exact order:
+
+| Step | Register Offset | Struct Offset | Group | Bank | Notes |
+|------|----------------|---------------|-------|------|-------|
+| 1 | +0x0040 | +2 | 0 | 1 | Waveform pointer low |
+| 2 | +0x0080 | +4 | 0 | 2 | Waveform pointer high (**bit 15 SET** = latch strobe) |
+| 3 | +0x00C0 | +6 | 0 | 3 | Waveform control |
+| 4 | +0x0100 | +8 | 1 | 0 | Envelope param 0 |
+| 5 | +0x0140 | +10 | 1 | 1 | Envelope param 1 |
+| 6 | +0x0180 | +12 | 1 | 2 | Envelope param 2 |
+| 7 | +0x0400 | +14 | 4 | 0 | Filter/pitch param 0 |
+| 8 | +0x0440 | +16 | 4 | 1 | Filter/pitch param 1 |
+| 9 | +0x0480 | +18 | 4 | 2 | Filter/pitch param 2 |
+| 10 | +0x04C0 | +20 | 4 | 3 | Filter/pitch param 3 |
+| 11 | +0x0500 | +22 | 5 | 0 | Modulation param 0 |
+| 12 | +0x0800 | +24 | 8 | 0 | **Volume level** (main) |
+| **KEY-ON** | +0x0000 | — | 0 | 0 | **0x8100** (active flag set) |
+| 13 | +0x0840 | +26 | 8 | 1 | Volume/pan param 1 |
+| 14 | +0x0880 | +28 | 8 | 2 | Volume/pan param 2 |
+| 15 | +0x08C0 | +30 | 8 | 3 | Volume/pan param 3 |
+| 16 | +0x0900 | +32 | 9 | 0 | Aux/send level 0 |
+| 17 | +0x0940 | +34 | 9 | 1 | Aux/send level 1 |
+| 18 | +0x0980 | +36 | 9 | 2 | Aux/send level 2 |
+| 19 | +0x09C0 | +38 | 9 | 3 | Aux/send level 3 |
+| 20 | +0x0A00 | +40 | A | 0 | Aux parameter 0 |
+| 21 | +0x0A40 | +42 | A | 1 | Aux parameter 1 |
+| 22 | +0x0080 | +4 | 0 | 2 | Same as step 2, **bit 15 CLEAR** (latch release) |
+
+Key design points:
+- **Key-on is in the middle** (after volume, before pan/aux) — ensures volume is set before the voice starts sounding
+- **Latch strobe protocol**: Register +0x0080 is written twice — first with bit 15 SET to load waveform data, last with bit 15 CLEAR to release the latch
+- **NOP timing**: 3 NOPs between each register write for bus setup/hold times
+
+## Pitch Calculation
+
+`ToneGen_Calc_Pitch` (at `0x03D11F`) converts MIDI note numbers to tone generator pitch values:
+
+### Algorithm
+
+1. **Base pitch**: `pitch = (MIDI_note & 0x7F) + 36` — adds a 3-octave offset (0x24)
+2. **Release check**: Bit 7 of the note byte indicates note-off; if set, velocity = 0 and return
+3. **Velocity scaling**: MIDI velocity is processed through a multi-step lookup:
+   - Index into velocity table at `0x01F43E` (mode × 3 lookup)
+   - Compute delta from base reference at `0x01F418`
+   - Multiply by mode-specific scaling factor from `0x01F420`
+   - Divide by reference divisor at `0x01F41A`
+4. **Octave division**: `pitch / 12` gives octave, remainder gives semitone
+5. **Mode-specific adjustment**: For certain pitch modes (1, 3, 6, 8, 10), an additional offset from table `0x01F422` is subtracted
+6. **Clamping**: Final value clamped to 0-255 range
+7. **Velocity lookup**: Clamped value indexes into `0x01F53E` for final velocity byte
+
+### Note-Off Protocol
+
+`ToneGen_WriteNoteKey` performs a two-step register write:
+1. Write register `+0xC0` (group 0, bank 3) = `0x0000` — clear waveform control
+2. Write register `+0x00` (group 0, bank 0) = `0x7E00` — set voice to idle state
+
+## Note-On Voice Allocation
+
+`Voice_Poly_NoteOn` uses **round-robin allocation** across 8 voice slots per channel:
+
+1. **Counter**: RAM `15123` holds a 3-bit counter (0-7), incremented on each note-on, wrapping with `AND 0x7`
+2. **Slot search**: The selected slot is checked for availability
+3. **Mute existing**: If the slot is active, its current voice is muted:
+   - Register `+0x840` = `0xFF00` (mute volume bank 1)
+   - Register `+0x800` = `0xFF80` (mute volume bank 0)
+4. **Dispatch**: The voice type (from bits 4-7 of the event) selects a setup function via the dispatch table at `0x012159`:
+   - Entries include `ToneGen_SetupPolyVoice` (for standard melodic voices)
+   - Different entries handle split, layer, and percussion voices
+5. **Mark active**: The note number is stored in the voice allocation table (bit 7 set = active)
+
+### Voice Processing Pipeline
+
+After note-on, the ongoing voice processing (called from `Voice_Init_Type4`) runs a chain of 14 parameter computation functions:
+- `Voice_Pitch_InterpDispatch` — pitch interpolation
+- `Voice_Pitch_WriteOutputReg_Portamento` — portamento glide
+- `Voice_Pitch_WriteOutputReg_Legato` — legato transitions
+- `Voice_Level_ComputeTriplet` — 3-component level blending
+- `Voice_PitchPack_Dispatch` — pitch word assembly
+- `Voice_PanReg_WriteDispatch` — pan position
+- `Voice_StereoLevel_Compute` — stereo balance
+- `Voice_PortaLevel_Compute` — portamento level
+- `Voice_Chan_ComputeParams` — channel parameter merge
+- `Voice_SubVoice_ComputeAndTrigger` — sub-voice triggering (for layered sounds)
+- `Voice2_UpdatePitch` — secondary pitch update
+- `Voice_ComputeExprPitchBend` — expression + pitch bend
+- `Voice_SetPitchWord_Muted` — muted pitch override
+- `Voice_ComputeAndWritePan` — final pan write
+
 ## Research Needed
 
-- [ ] Determine exact register semantics (which parameters control pitch, envelope, filter, etc.)
-- [ ] Decode voice parameter template at ROM 0xF8D5 (34 words of initial values)
+- [x] ~~Determine exact register semantics~~ — Partially: voice control, volume, aux sends documented from write sequence
+- [x] ~~Decode voice parameter template at ROM 0xF8D5~~ — 34-word (68-byte) template at `0x012115`, copied to `0x3B1C` per voice setup
+- [ ] Map remaining per-voice register semantics (groups 4/5 = filter? pitch? modulation?)
 - [ ] Analyze waveform ROM format and sample addressing
 - [ ] Document DSP1/DSP2 command sets and processing algorithms
 - [ ] Trace the PCM audio serial bus (BCK/SDOR/SDOF) connections
