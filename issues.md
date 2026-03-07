@@ -8,56 +8,14 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 271 (50 open, 217 closed)
+**Total Issues:** 271 (44 open, 226 closed)
 
 **Quick Links:** 
-[Firmware Update](#firmware-update) (5) · [HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (42) · [Sound & Audio](#sound-audio) (1)
+[HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (41) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
 ## Open Issues
-
-### Firmware Update {#firmware-update}
-
-#### 🟡 Update: Document HDAE5000 update procedure {#issue-kn5000-e7f}
-
-**ID:** `kn5000-e7f` | **Priority:** Medium | **Created:** 2026-01-25
-
-Analyze how HD-AE5000 firmware is updated. Document: separate update disk format, communication via PPI (0x160000), Flash chips on expansion board, version compatibility checks. Reference v1.10i through v2.0i updates.
-
----
-
-#### 🟡 Update: Document update progress display {#issue-kn5000-6f7}
-
-**ID:** `kn5000-6f7` | **Priority:** Medium | **Created:** 2026-01-25
-
-Analyze LCD messages during update process. Correlate extracted 1-bit bitmaps with update stages: Flash Memory Update, Please Wait, Now Erasing, FD to Flash Memory, Completed, Turn On AGAIN, Illegal Disk. Document state machine.
-
----
-
-#### 🟡 Update: Document validation and error handling {#issue-kn5000-acu}
-
-**ID:** `kn5000-acu` | **Priority:** Medium | **Created:** 2026-01-25
-
-Trace update validation routines. Document: file header validation, checksum algorithms, version checking, ROM verification after write, error recovery procedures, what triggers 'Illegal Disk' message.
-
----
-
-#### ⚪ Update: Create update file parser tool {#issue-kn5000-87m}
-
-**ID:** `kn5000-87m` | **Priority:** Low | **Created:** 2026-01-25
-
-Build Python tool to parse and analyze update floppy files. Extract: header info, version numbers, payload data, checksums. Enable creation of custom update files for homebrew development.
-
----
-
-#### ⚪ Update: Document complete update procedure for users {#issue-kn5000-7v8}
-
-**ID:** `kn5000-7v8` | **Priority:** Low | **Created:** 2026-01-25
-
-Write end-user documentation for performing system updates. Include: required materials, step-by-step instructions, troubleshooting, safety warnings about power loss during update. Add to documentation website.
-
----
 
 ### HD-AE5000 Expansion {#hd-ae5000-expansion}
 
@@ -538,14 +496,6 @@ This should be documented in:
 3. Hardware architecture docs
 
 Reference: kn5000_table_data.rom combination analysis
-
----
-
-#### 🟡 Document binary include e0176c_e01f7f.bin data structure {#issue-kn5000-jqa}
-
-**ID:** `kn5000-jqa` | **Priority:** Medium | **Created:** 2026-01-26
-
-**Notes:** Binary include at 0xE0176C-0xE01F7F (~2KB). Part of jump table area following large address table at line 36362. Need to analyze structure and determine if this is code, data tables, or other data.
 
 ---
 
@@ -1095,6 +1045,15 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-87m` | Update: Create update file parser tool | 2026-03-07 |
+| `kn5000-jqa` | Document binary include e0176c_e01f7f.bin data structure | 2026-03-07 |
+| `kn5000-7v8` | Update: Document complete update procedure for users | 2026-03-07 |
+| `kn5000-e7f` | Update: Document HDAE5000 update procedure | 2026-03-07 |
+| `kn5000-acu` | Update: Document validation and error handling | 2026-03-07 |
+| `kn5000-6f7` | Update: Document update progress display | 2026-03-07 |
+| `kn5000-koom` | Systematic .byte block decoding to native LLVM instructions | 2026-03-07 |
+| `kn5000-4bt` | Symbols: Apply semantic naming to UI framework LABEL_* sy... | 2026-03-07 |
+| `kn5000-aksz` | Semantic labeling: rename top-20 most-referenced LABEL_* ... | 2026-03-07 |
 | `kn5000-9jq` | Symbols: Rename remaining LABEL_* in Sub CPU audio code | 2026-03-03 |
 | `kn5000-ima` | Symbols: Apply semantic naming to FDC subsystem LABEL_* s... | 2026-03-03 |
 | `kn5000-kc5` | Disassemble TODO routines at F97696-F97D8D range (jump ta... | 2026-03-03 |
@@ -1106,17 +1065,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | `kn5000-dvwg` | DSP1 standalone coefficient sub-packets produce garbage a... | 2026-03-03 |
 | `kn5000-tyjr` | DSP1 parallel port cmd 0x01 protocol decoding wrong | 2026-03-03 |
 | `kn5000-8eg2` | DSP param name off-by-one fixed | 2026-03-03 |
-| `kn5000-xxwf` | Improve HLE sound chip emulation based on DSP protocol di... | 2026-03-03 |
-| `kn5000-iug8` | Add semantic symbol names and documentation headers to di... | 2026-03-03 |
-| `kn5000-2daw` | Reverse engineer sound parameter protocol (Reverb/DSP) | 2026-03-03 |
-| `kn5000-pl1p` | Decode LABEL_F1E89A in hama_code.s (290 bytes) | 2026-03-03 |
-| `kn5000-snkc` | Decode LABEL_F1E4C1 in hama_code.s (293 bytes) | 2026-03-03 |
-| `kn5000-kenv` | Decode LABEL_F1E43B in hama_code.s (130 bytes) | 2026-03-03 |
-| `kn5000-i926` | Decode LABEL_F1E3DA in hama_code.s (74 bytes) | 2026-03-03 |
-| `kn5000-8o9b` | LLVM bug: XSP register encoded as 0x1D instead of 0xFD in... | 2026-03-02 |
-| `kn5000-nyof` | Extract FD SAVE/LOAD TEST to dedicated source files | 2026-03-02 |
 
-*...and 197 more closed issues*
+*...and 206 more closed issues*
 
 ---
 
@@ -1128,19 +1078,18 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 |----------|-------|
 | Critical | 2 |
 | High | 9 |
-| Medium | 24 |
-| Low | 14 |
+| Medium | 20 |
+| Low | 12 |
 | P4 | 1 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Firmware Update | 5 |
 | HD-AE5000 Expansion | 2 |
-| Other | 42 |
+| Other | 41 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-03-07 00:53*
+*Last updated: 2026-03-07 00:56*
