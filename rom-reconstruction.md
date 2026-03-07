@@ -108,7 +108,7 @@ The Main CPU disassembly is organized into modular source files for maintainabil
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `maincpu/kn5000_v10_program.s` | ~337,000 | Main source file (includes others) |
+| `maincpu/kn5000_v10_program.s` | ~316,000 | Main source file (includes others) |
 | `maincpu/gui_constants.s` | 57 | Display state variables, offscreen buffers |
 | `maincpu/fdc_constants.s` | 75 | FDC I/O addresses, commands, status bits |
 | `maincpu/fdc_routines.s` | 1,403 | FDC read/write/seek routines |
@@ -122,6 +122,24 @@ The Main CPU disassembly is organized into modular source files for maintainabil
 | `maincpu/computer_interface_pcg.s` | 703 | Computer Interface PCG (Program Change) output |
 | `maincpu/midi_serial_routines.s` | 995 | MIDI serial communication (SC0) |
 | `maincpu/sound_editor_routines.s` | 629 | Sound Editor mode and title functions |
+| `maincpu/smf_playback.s` | 695 | SMF song playback routines |
+| `maincpu/smf_config_routines.s` | 3,263 | SMF configuration and slot parameters |
+| `maincpu/seq_step_routines.s` | 3,089 | Step-mode sequencer routines |
+| `maincpu/audio_cmd_encoder.s` | 3,100 | Audio command byte formatter |
+| `maincpu/semenu_routines.s` | 3,431 | Sound editor menu system |
+| `maincpu/setwall_routines.s` | 1,940 | Accompaniment style wall parser |
+| `maincpu/rhythm_routines.s` | 1,580 | Rhythm pattern processing |
+| `maincpu/accompseq_routines.s` | 1,961 | Accompaniment sequencer |
+| `maincpu/audioinit_routines.s` | 2,505 | Audio subsystem initialization |
+| `maincpu/bmdredit_routines.s` | 4,434 | Beat/drum editor |
+| `maincpu/drawing_primitives.s` | 4,567 | Line/box/frame/bitmap/string drawing |
+| `maincpu/bitmap_out_routines.s` | 4,347 | Bitmap output/display compositing |
+| `maincpu/rvari_routines.s` | 2,752 | Registration variation selection UI |
+| `maincpu/psgridbox_routines.s` | 1,138 | Performance settings grid box UI |
+| `maincpu/fdemotext_routines.s` | 2,334 | Feature demo text rendering |
+| `maincpu/sndparam_routines.s` | 2,042 | Sound parameter lookup/storage |
+| `maincpu/midipkt_routines.s` | 1,178 | MIDI packet construction |
+| `maincpu/msp_factory_defaults.s` | — | MSP factory default settings |
 | `maincpu/file_io/title_handlers.s` | 349 | File I/O title entry handlers |
 | `maincpu/file_io/disk_operations.s` | 1,297 | File copy, rename, format, disk info |
 | `maincpu/file_io/filename_password.s` | 807 | Filename and password UI |
@@ -131,9 +149,8 @@ The Main CPU disassembly is organized into modular source files for maintainabil
 | `maincpu/file_io/single_load.s` | 2,298 | Single file load operations |
 | `maincpu/file_io/medley.s` | 4,690 | Medley playback (disk, internal, SMF, PD, doc) |
 | `maincpu/file_io/misc_ui.s` | 969 | Jump insert, priority, setup, filename box |
-| `maincpu/sequencer_reference.s` | 163 | Sequencer function index (reference only) |
 
-**Total extracted code: ~20,000 lines across 24 files**
+**Total extracted code: ~64,000 lines across 41 include files**
 
 **Subsystem Descriptions:**
 
