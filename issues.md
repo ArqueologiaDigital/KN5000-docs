@@ -1092,4 +1092,4 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 ---
 
-*Last updated: 2026-03-07 07:19*
+*Last updated: 2026-03-07 07:23*
