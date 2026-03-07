@@ -1329,6 +1329,64 @@ Phase 6 — Final Configuration:
 - DSP program module indices: 0x00=EFF header, 0x3C=init, 0x40/0x47=patches, 0x54=chorus, 0xC8=reverb
 - The INIT CONFIG byte[2] changes from 0x3F (init mode) to 0x00 (run mode) between phases
 
+### DSP Effect Types and Algorithm Mapping
+
+The KN5000 supports 40 effect slots (indices 0-39), mapped to 12 DSP algorithm types (0-11) via a lookup table at SubCPU ROM address 0x01F596. The algorithm type determines which DSP program module and coefficient set gets uploaded to DSP1.
+
+**Effect List and Algorithm Types:**
+
+| Index | Effect Name | Algo | Index | Effect Name | Algo |
+|-------|-------------|------|-------|-------------|------|
+| 0 | NO OPERATION | 2 | 20 | CONCERT REVERB 1 | 6 |
+| 1 | CHORUS | 2 | 21 | CONCERT REVERB 2 | 6 |
+| 2 | MODULATED CHORUS | 2 | 22 | DARK REVERB 1 | 7 |
+| 3 | ENHANCER | 2 | 23 | DARK REVERB 2 | 7 |
+| 4 | FLANGER | 2 | 24 | BRIGHT REVERB 1 | 7 |
+| 5 | PHASER | 2 | 25 | BRIGHT REVERB 2 | 7 |
+| 6 | ENSEMBLE | 2 | 26 | WAVE REVERB 1 | 8 |
+| 7 | (reserved) | 2 | 27 | WAVE REVERB 2 | 8 |
+| 8 | GATED REVERB | 3 | 28-29 | (reserved) | 8-9 |
+| 9 | SINGLE DELAY | 3 | 30-31 | (reserved) | 9 |
+| 10 | MULTI TAP DELAY | 3 | 32 | DISTORTION | 9 |
+| 11 | MODULATION DELAY | 4 | 33 | OVERDRIVE | 10 |
+| 12-14 | (reserved) | 4 | 34 | FUZZ | 10 |
+| 15 | ROCK ROTARY | 5 | 35 | EXCITER | 10 |
+| 16 | ROOM REVERB 1 | 5 | 36 | COMPRESSOR | 10 |
+| 17 | ROOM REVERB 2 | 5 | 37 | SLOW ATTACKER | 11 |
+| 18 | PLATE REVERB 1 | 5 | 38 | NOISE FLANGER | 11 |
+| 19 | PLATE REVERB 2 | 6 | 39 | PARAMETRIC EQ | 11 |
+
+**Algorithm Type Groups:**
+
+| Algo | Category | Effects |
+|------|----------|---------|
+| 2 | Modulation | NO OPERATION, CHORUS, MOD CHORUS, ENHANCER, FLANGER, PHASER, ENSEMBLE |
+| 3 | Delay/Gate | GATED REVERB, SINGLE DELAY, MULTI TAP DELAY |
+| 4 | Mod Delay | MODULATION DELAY |
+| 5 | Reverb A | ROCK ROTARY, ROOM REVERB 1/2, PLATE REVERB 1 |
+| 6 | Reverb B | PLATE REVERB 2, CONCERT REVERB 1/2 |
+| 7 | Reverb C | DARK REVERB 1/2, BRIGHT REVERB 1/2 |
+| 8 | Reverb D | WAVE REVERB 1/2 |
+| 9 | Distortion A | DISTORTION |
+| 10 | Distortion B | OVERDRIVE, FUZZ, EXCITER, COMPRESSOR |
+| 11 | Dynamics | SLOW ATTACKER, NOISE FLANGER, PARAMETRIC EQ |
+
+Algo types 0 and 1 are not used by any effect and appear to be reserved for internal routing.
+
+**Effect Parameter Names** (stored at MainCPU 0xE324C4, colon-delimited 16-char fields):
+
+Each effect has up to 8 adjustable parameters selected from a shared pool of 52 parameter names. Key parameters include: VOLUME, DEPTH, LFO SPEED, RESONANCE, MANUAL, REVERB TIME, PRE DELAY, HIGH DAMP GAIN, ER.LEVEL, FEEDBACK L/R, DELAY L/R, THRESHOLD, RATIO, ATTACK/RELEASE SENS/RATE, GATE TIME.
+
+**Algorithm Selection Mechanism:**
+
+The MainCPU sends the effect index (0-39) to the SubCPU via `Audio_SendCommand` (cmd 0x4D8C, category 0xE3). The SubCPU's `DSP_Cmd2B_AlgoSelect` handler (sub-command 0x00) receives this index, looks up the algorithm type from the ROM table at 0x01F596, initializes the voice structure (287 bytes per slot, base 0x041368, stride 0x11F), then uploads the appropriate DSP program modules and coefficient data to DSP1.
+
+The algo type is stored at offset 0x5D of the voice structure. The full byte encodes both the algo type (lower nibble) and additional routing state (upper nibble). For example, 0x93 = algo type 3 with upper state 9, 0x25 = algo type 5 with upper state 2.
+
+The SubCPU maintains up to 26 voice slots. At boot, the default configuration loads reverb-type effects (algo types 3 and 5) on several slots, with DSP program modules 0xC8 (reverb) and 0x54 (chorus) uploaded to DSP1.
+
+**Effect Name Table:** MainCPU ROM address 0xE32A7A contains 40 pointers to 16-character fixed-width effect name strings (padded with spaces).
+
 ## Keybed Architecture
 
 The physical keyboard (keybed) connects **directly** to the tone generator IC303, NOT to the Sub CPU. IC303 performs hardware key scanning internally and presents note events to the Sub CPU via the keyboard input interface at 0x110000.
