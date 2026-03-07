@@ -653,6 +653,98 @@ Each latch write must be followed by a context switch so the receiving CPU can p
 1. `machine().scheduler().perfect_quantum(100µs)` — ensures tight interleaving
 2. `writing_cpu->abort_timeslice()` — forces immediate context switch
 
+## Main CPU → Sub CPU Cross-Reference
+
+This table maps Main CPU sending routines to the Sub CPU handlers that process their commands, showing the complete data flow for each command range.
+
+### Command Flow Overview
+
+```
+Main CPU                          Sub CPU
+────────                          ───────
+Audio_SendCommand
+  → Audio_CommandEncoder
+    → AssswbWr (ring buffer)
+      → sendCOMM
+        → InterCPU_Send_Data_Block  → INT0 / MICRODMA_CH0_HANDLER
+          (latch write @ 0x120000)     → CMD_DISPATCH_TABLE[bits 7-5]
+                                          → Audio_CmdHandler_XX_XX
+                                            → MIDI_Dispatch (for 0x00-0x1F)
+```
+
+### Command Range Cross-Reference
+
+| Cmd Range | Main CPU Sender | Main CPU Address | Sub CPU Handler | Purpose |
+|-----------|----------------|-----------------|-----------------|---------|
+| 0x00-0x1F | `sendCOMM` (A=0) | 0xEF32F4 | `Audio_CmdHandler_00_1F` | MIDI/audio data → ring buffer → `MIDI_Dispatch` |
+| 0x20-0x3F | `sendCOMM` (A=1) | 0xEF32F4 | `Audio_CmdHandler_20_3F` | Tone generator (stub/reserved) |
+| 0x40-0x5F | `sendCOMM` (A=2) | 0xEF32F4 | `Audio_CmdHandler_40_5F` | Buffer drain/flush (skips data) |
+| 0x60-0x7F | `sendCOMM` (A=3) | 0xEF32F4 | `Audio_CmdHandler_60_7F` | DSP streaming state machine |
+| 0x80-0x9F | `sendCOMM` (A=4) | 0xEF32F4 | `Serial1_DataTransmit_Loop` | Serial/MIDI TX to external port |
+| 0xA0-0xBF | `sendCOMM` (A=5) | 0xEF32F4 | `Audio_CmdHandler_A0_BF` | Tone generator mode/config |
+| 0xC0-0xDF | `sendCOMM` (A=6) | 0xEF32F4 | `Audio_CmdHandler_C0_FF` | Reserved (stub) |
+| 0xE0-0xFF | `sendCOMM` (A=7) | 0xEF32F4 | `Audio_CmdHandler_C0_FF` | Reserved (stub); E1/E2/E3 handled separately |
+
+### Special Command Cross-Reference
+
+| Command | Main CPU Routine | Main CPU Address | Sub CPU Handler | Purpose |
+|---------|-----------------|-----------------|-----------------|---------|
+| 0xE1 | `InterCPU_E1_Bulk_Transfer` | 0xEF3457 | `InterCPU_RX_Handler` (boot) / `CH0_State2_E1` | Two-phase bulk DMA (6-byte header + payload) |
+| 0xE2 | `InterCPU_E2_Send` | 0xEF3555 | `InterCPU_RX_Handler` (boot) / `CH0_State3_E2` | Extended parameter transfer (10-byte header) |
+| 0xE3 | `SubCPU_Send_Payload` | 0xEF0222 | `InterCPU_RX_Handler` (boot) | Payload ready signal (sets bit 6 of 0x04FE) |
+
+### Boot-Time Transfer Cross-Reference
+
+| Step | Main CPU Routine | Main CPU Address | Sub CPU Handler | Description |
+|------|-----------------|-----------------|-----------------|-------------|
+| 1 | `SubCPU_Send_Payload` | 0xEF0222 | `InterCPU_RX_Handler` | Transfer 192KB firmware payload via E1 bulk transfers |
+| 2 | `SubCPU_Send_Payload` (E3) | 0xEF0222 | `InterCPU_RX_Handler` | Signal payload ready → Sub CPU jumps to payload entry |
+| 3 | `SubCPU_Init_DMA_Channels` | 0xEF329E | `InterCPU_Latch_Setup` | Both CPUs configure DMA channels for runtime communication |
+| 4 | `SubCPU_Payload_Verify` | 0xEF092B | — | Main CPU verifies payload checksums (no Sub CPU involvement) |
+
+### Audio Command Pipeline (Runtime)
+
+The Main CPU's `Audio_SendCommand` (called from 197+ locations) is the primary interface for sending audio parameters to the Sub CPU:
+
+| Stage | Routine | Address | CPU | Description |
+|-------|---------|---------|-----|-------------|
+| 1. Lock | `Audio_Lock_Acquire` | 0xEF1FEE | Main | Acquire lock #7 (serializes audio commands) |
+| 2. Format | `Audio_CommandEncoder` | 0xFF0ABC | Main | Printf-like formatter builds command packet |
+| 3. Queue | `AssswbWr` | 0xFDBAEA | Main | Write to ring buffer at 0xBD3C (max 0x1FC bytes) |
+| 4. Send | `sendCOMM` | 0xEF32F4 | Main | Chunk into ≤32-byte blocks, call `InterCPU_Send_Data_Block` |
+| 5. Transfer | `InterCPU_Send_Data_Block` | 0xEF3492 | Main | Handshake + DMA write to latch at 0x120000 |
+| 6. Receive | `MICRODMA_CH0_HANDLER` | 0x020F1F | Sub | DMA interrupt reads from latch, dispatches to handler |
+| 7. Parse | `MIDI_Dispatch` | 0x034D93 | Sub | Parse MIDI status bytes, route to voice handlers |
+| 8. Unlock | `Audio_Lock_Release` | 0xEF1F0F | Main | Release lock #7 |
+
+### Sub CPU MIDI Voice Handlers
+
+After `MIDI_Dispatch` parses the ring buffer, it routes MIDI messages to these voice processing routines:
+
+| MIDI Status | Handler | Description |
+|-------------|---------|-------------|
+| 0x80/0x90 | `Voice_NoteOn` | Note On/Off (velocity 0 = Note Off) |
+| 0xB0 | `Voice_CtrlChange` | Control Change (CC0-CC127 + proprietary 0x78-0x9D) |
+| 0xC0 | `Voice_ProgChange` | Program Change (voice selection) |
+| 0xD0 | `Voice_ChanPressure` | Channel Pressure (aftertouch) |
+| 0xE0 | `Voice_PitchBend` | Pitch Bend (14-bit value) |
+| 0xF0 | `Voice_SystemMsg` | System messages (reset, timing, etc.) |
+
+### Naming Conventions
+
+The following naming patterns are used consistently across both CPUs:
+
+| Main CPU Pattern | Sub CPU Pattern | Relationship |
+|-----------------|-----------------|--------------|
+| `Audio_Lock_*` | — | Serialization (Main CPU only, 8 lock slots) |
+| `Audio_DMA_Transfer` | `InterCPU_DMA_Send` | Core DMA routines (one per CPU direction) |
+| `InterCPU_E1_*` | `InterCPU_E1_DMA_Transfer` | E1 bulk transfer protocol (both sides) |
+| `InterCPU_E2_Send` | `Cmd_Check_E2_Pending` | E2 parameter transfer (send vs. deferred receive) |
+| `InterCPU_Send_Data_Block` | `MICRODMA_CH0_HANDLER` | Standard command send vs. receive dispatch |
+| `SubCPU_Send_Payload` | `InterCPU_RX_Handler` (boot) | Boot-time payload transfer |
+| `SubCPU_Init_DMA_Channels` | `InterCPU_Latch_Setup` | DMA channel initialization |
+| `sendCOMM` | `Audio_CmdHandler_*` | High-level send wrapper vs. per-range handlers |
+
 ## Research Needed
 
 - [x] Document exact latch register bit layout - See Boot ROM Protocol above
@@ -667,6 +759,7 @@ Each latch write must be followed by a context switch so the receiving CPU can p
 - [x] Document command byte encoding (handler index in bits 7-5, length in bits 4-0)
 - [x] Document supported MIDI Control Changes (standard + proprietary 0x78-0x9D)
 - [x] Document voice processing architecture (26 channels, 287 bytes/channel at 0x041381)
+- [x] Cross-reference Main CPU and Sub CPU symbol names — Complete: see cross-reference tables above
 - [ ] Document handlers 2 (0x40-0x5F), 5 (0xA0-0xBF), 6-7 (0xC0-0xFF) — undocumented command ranges
 - [ ] Map status response message formats
 - [ ] Determine actual subprogram storage location (table_data vs custom_data flash)
