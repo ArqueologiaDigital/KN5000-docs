@@ -69,12 +69,83 @@ VGA I/O ports are memory-mapped to CPU address `0x170000 + port_number`:
 
 | VGA Port | CPU Address | Register | Access | Description |
 |----------|-------------|----------|--------|-------------|
+| 0x3C0 | 0x1703C0 | Attribute Controller | W | Address/Data (alternating writes) |
+| 0x3C2 | 0x1703C2 | Misc Output | W | Clock select, sync polarity |
+| 0x3C3 | 0x1703C3 | VGA Enable | W | Global enable (write 0x01 to enable) |
+| 0x3C4 | 0x1703C4 | Sequencer Index | W | Select sequencer register |
+| 0x3C5 | 0x1703C5 | Sequencer Data | R/W | Sequencer register data |
 | 0x3C6 | 0x1703C6 | DAC Mask | R/W | Palette mask (typically 0xFF) |
 | 0x3C7 | 0x1703C7 | DAC Read Index | W | Select palette entry for reading |
 | 0x3C8 | 0x1703C8 | DAC Write Index | W | Select palette entry for writing |
 | 0x3C9 | 0x1703C9 | DAC Data | R/W | RGB data (3 sequential bytes per entry) |
+| 0x3CE | 0x1703CE | Graphics Controller Index | W | Select GC register |
+| 0x3CF | 0x1703CF | Graphics Controller Data | R/W | GC register data |
 | 0x3D4 | 0x1703D4 | CRTC Index | W | Select CRTC register |
 | 0x3D5 | 0x1703D5 | CRTC Data | R/W | CRTC register data |
+| 0x3DA | 0x1703DA | Input Status 1 | R | Vertical retrace status |
+
+### VGA Initialization Values
+
+The `VGA_Setup` routine (0xEF51A5) configures the full register set at boot. Key values:
+
+**Sequencer Registers (via ports 0x3C4/0x3C5):**
+
+| Index | Value | Description |
+|-------|-------|-------------|
+| 0x00 | 0x03 | Reset (synchronous) |
+| 0x01 | 0x21 | Clocking Mode (screen off during init; 0x01 = screen on) |
+| 0x02 | 0x0F | Map Mask (all 4 planes enabled) |
+| 0x03 | 0x00 | Character Map Select |
+| 0x04 | 0x06 | Memory Mode (chain-4, no odd/even) |
+| 0x06-0x11 | various | MN89304 extended registers (LCD timing) |
+
+**CRTC Timing Registers (via ports 0x3D4/0x3D5):**
+
+| Index | Value | Description |
+|-------|-------|-------------|
+| 0x00 | 0x65 | Horizontal Total (101 chars) |
+| 0x01 | 0x27 | Horizontal Display End (39 chars = 320px/8) |
+| 0x04 | 0x28 | Start Horizontal Retrace |
+| 0x05 | 0x29 | End Horizontal Retrace |
+| 0x06 | 0xF3 | Vertical Total (243 lines) |
+| 0x07 | 0x00 | Overflow |
+| 0x10 | 0xF2 | Vertical Retrace Start (242) |
+| 0x11 | 0x03→0x80 | Vertical Retrace End (unlock→lock CRTC 0-7) |
+| 0x12 | 0xEF | Vertical Display End (239 = 240 lines) |
+| 0x13 | 0x14 | Offset (20 × 8 = 160 words = 320 bytes/row) |
+| 0x15 | 0xEF | Start Vertical Blanking |
+| 0x16 | 0xF3 | End Vertical Blanking |
+| 0x17 | 0xE3 | Mode Control |
+| 0x18 | 0xFF | Line Compare |
+| 0x19 | 0x00 | MN89304-specific |
+| 0x1A | 0x10 | MN89304-specific |
+
+**Graphics Controller (via ports 0x3CE/0x3CF):**
+
+| Index | Value | Description |
+|-------|-------|-------------|
+| 0x01 | 0x00 | Enable Set/Reset |
+| 0x03 | 0x00 | Data Rotate |
+| 0x04 | 0x00 | Read Map Select |
+| 0x05 | 0x00 | Graphics Mode |
+| 0x06 | 0x01 | Miscellaneous (chain odd/even) |
+| 0x08 | 0xFF | Bit Mask |
+
+**Misc Output:** 0xE3 (25 MHz dot clock, negative H/V sync, 60 Hz)
+
+**Boot DAC Palette (9 basic colors):**
+
+| Index | R | G | B | Color |
+|-------|---|---|---|-------|
+| 0 | 0 | 0 | 0 | Black |
+| 1 | F | F | F | White |
+| 2 | F | 0 | 0 | Red |
+| 3 | 0 | F | 0 | Green |
+| 4 | 0 | 0 | F | Blue |
+| 5 | 0 | F | F | Cyan |
+| 6 | F | F | 0 | Yellow |
+| 7 | F | 0 | F | Magenta |
+| 8 | 0 | 0 | 4 | Dark Blue |
 
 ### Palette Programming
 
@@ -668,7 +739,8 @@ UI element names "SlideMove" and "SlideBase" appear in the firmware's string tab
 
 ## Research Needed
 
-- [x] Document VGA register map at 0x170000
+- [x] Document VGA register map at 0x170000 — Complete: full register set with init values
+- [x] Document VGA initialization sequence (boot-time register programming) — Complete
 - [x] Analyze framebuffer memory layout
 - [x] Understand display update mechanism (main loop, not VBI)
 - [x] Document MN89304 differences from standard VGA (4-bit RAMDAC, offset override)
