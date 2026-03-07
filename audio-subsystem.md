@@ -1387,6 +1387,50 @@ The SubCPU maintains up to 26 voice slots. At boot, the default configuration lo
 
 **Effect Name Table:** MainCPU ROM address 0xE32A7A contains 40 pointers to 16-character fixed-width effect name strings (padded with spaces).
 
+### DSP1 Internal Address Map
+
+The DSP1 coefficient address space is organized by algorithm type. Each coefficient is a 17-bit value encoded as `((B4>>7)&1) | (B3<<1) | (B2<<9)`. Addresses are per-channel (channel base: 0x40=ch0, 0x60=ch1, 0x80=ch2, 0xA0=ch3).
+
+**Reverb Algorithm (module 0xC8, 667 bytes):**
+
+| Address | Function | Boot Default |
+|---------|----------|-------------|
+| @0x00 | Delay line tap array (26 pairs = 52 coefficients) | 33268, 0, 41925, 32768, ... |
+| @0x06 | Dry signal level | 0 (muted) |
+| @0x1D-0x3D | All-pass filter bank (8 stages × 4 coefficients each) | Stage-specific values |
+| @0x1E | Master reverb level | 32767 (0x7FFF = maximum) |
+| @0x85-0x8A | Init registers | 0 (cleared) |
+| @0x86 | Wet (reverb) output level | 101643 |
+| @0x90 | Output gain | 103268 |
+| @0x94 | Init register | 0 (cleared) |
+| @0x97 | Reverb tail feedback coefficient | 63251 |
+| @0x9E | Reverb tail filter coefficients (4 blocks) | 65566, 119222, 31803, 16916 |
+| @0xB2 | Reverb tail final coefficient | 51634 |
+| @0xD0 | Init block | 0 (cleared) |
+
+**Chorus/Modulation Algorithm (module 0x54, 352 bytes):**
+
+| Address | Function | Boot Default |
+|---------|----------|-------------|
+| @0x00 | LFO waveform table (62 bytes via CMD 0x02) | Sine/triangle LUT |
+| @0x05-0x10 | Init registers | 0 (cleared) |
+| @0x09 | LFO rate A | — |
+| @0x0A | LFO rate B / depth | — |
+| @0x1D-0x29 | All-pass filter bank (4 stages × 4 coefficients) | Stage-specific |
+| @0x26 | Delay parameters (10 coefficients) | 400, 4161, ... |
+
+**Hypothesized Parameter ↔ DSP Address Mapping:**
+
+| UI Parameter | DSP Address(es) | Notes |
+|-------------|----------------|-------|
+| REVERB TIME | @0x1D-0x3D | All-pass filter coefficients control decay time |
+| PRE DELAY | @0x00 array | Delay line tap positions set initial reflection gap |
+| HIGH DAMP GAIN | @0x9E | Tail filter coefficients control high-frequency damping |
+| ER.LEVEL | @0x1E or @0x90 | Early reflection / output gain level |
+| DRY/WET | @0x06 / @0x86 | Dry = 0 (muted), Wet = 101643 (full reverb) |
+| LFO SPEED | @0x09, @0x0A | Chorus LFO rate registers |
+| DEPTH | @0x26 | Chorus delay modulation depth |
+
 ## Keybed Architecture
 
 The physical keyboard (keybed) connects **directly** to the tone generator IC303, NOT to the Sub CPU. IC303 performs hardware key scanning internally and presents note events to the Sub CPU via the keyboard input interface at 0x110000.
