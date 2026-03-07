@@ -430,6 +430,40 @@ The DSP write routines used by the dispatcher:
 | `DSP_ParameterWriteEngine` | 0x03C9E6 | Core DSP parameter write engine |
 | `DSP_BytecodeInterpreter_Init` | 0x03C266 | Bytecode interpreter entry point |
 
+### DSP Coefficient Setup Pipeline
+
+The coefficient setup subsystem configures DSP processing parameters through a multi-stage pipeline. Eight functions handle different aspects of coefficient configuration:
+
+| Function | Size | Purpose |
+|----------|------|---------|
+| `DSP_SetCoeff_CopyDirect` | 69B | Direct coefficient copy from routing tables |
+| `DSP_SetCoeff_CopyDirect2` | 69B | Direct copy variant 2 |
+| `DSP_SetCoeff_RouteComplex` | 344B | Complex routing with multi-table lookup |
+| `DSP_SetCoeff_RouteWithCallback` | 291B | Routing with callback (calls 0x032AE0) |
+| `DSP_SetCoeff_FullPipeline` | 384B | Multi-stage processing (0x032AE0 + 0x032682) |
+| `DSP_SetCoeff_WithDispatch` | 135B | Type-dispatched coefficient selection |
+| `DSP_SetCoeff_WriteParams` | 90B | Individual parameter writes to 0x045216/17 |
+| `DSP_SetCoeff_MasterConfig` | 706B | Master configuration (calls 0x02B014) |
+
+### Voice-to-DSP Output Configuration
+
+The voice output configuration functions map synthesized voices to DSP effect channels:
+
+| Function | Size | Purpose |
+|----------|------|---------|
+| `Voice_DSP_OutputConfig` | 237B | Configure voice→DSP routing (type 1) |
+| `Voice_DSP_OutputConfig2` | 237B | Configure voice→DSP routing (type 2) |
+| `Voice_DSP_SimpleCopy` | 91B | Simple voice parameter copy to DSP |
+| `Voice_DSP_SimpleCopy2` | 91B | Simple copy variant 2 |
+| `DSP_VoiceParam_Dispatch` | 155B | Voice parameter dispatch with bit-5 routing |
+
+These functions implement the voice→DSP routing pipeline:
+1. Call `DSP_AlgoType_Dispatch1` to determine the algorithm type for the voice
+2. Store result to DSP state (0x04520E or 0x04520C)
+3. Call `Voice_BuildOutputList` to enumerate active voice outputs
+4. Iterate the output list, configuring each via `ToneGen_ExtParams56b_DataTable`
+5. Loop until all voices processed (up to 128 for full config, 64 for simple copy)
+
 ## Synthesis Architecture
 
 The KN5000 implements a **hardware wavetable synthesis** architecture: the Sub CPU firmware handles MIDI event processing, voice allocation, and parameter management, while the actual sound generation is performed entirely by the tone generator hardware (IC303, TC183C230002).
