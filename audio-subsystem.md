@@ -1431,6 +1431,57 @@ The DSP1 coefficient address space is organized by algorithm type. Each coeffici
 | LFO SPEED | @0x09, @0x0A | Chorus LFO rate registers |
 | DEPTH | @0x26 | Chorus delay modulation depth |
 
+### DSP Voice Structure Layout
+
+The SubCPU maintains 26 voice/effect slots starting at DRAM 0x041368, stride 0x11F (287 bytes). Each slot controls one DSP effect instance. Structure fields discovered through MAME dynamic analysis:
+
+| Offset | Size | Field | Description |
+|--------|------|-------|-------------|
+| +0x00 | 2 | flags | Voice configuration flags |
+| +0x06 | 3 | rom_ptr | ROM data pointer (24-bit) |
+| +0x0E | 2 | config | Configuration word |
+| +0x13 | 1 | unknown | Always 0x02 in active slots |
+| +0x18 | 1 | algo_related | Value matches algo type (5 for reverb) |
+| +0x19 | 1 | param_a | First effect parameter (e.g., REVERB TIME=26, GATED=6) |
+| +0x1A | 1 | param_b | Second parameter (usually 0) |
+| +0x1B | 1 | param_c | Third parameter (default 64 = 0x40) |
+| +0x1C | 1 | param_d | Fourth parameter (default 64 = 0x40) |
+| +0x1D-0x20 | 4 | params_e-h | Parameters 5-8 (usually 0) |
+| +0x21 | 1 | enable | Enable flag (1 = active) |
+| +0x57 | 1 | routing | Routing state (matches upper nibble of algo byte) |
+| +0x5D | 1 | algo_byte | Algorithm: lower nibble = type (2-11), upper nibble = routing |
+| +0x5E | 1 | effect_idx | Effect index (0-39, maps to algo type via ROM table at 0x01F596) |
+| +0x6E-0x70 | 3 | cfg_ptr_1 | Configuration data pointer 1 |
+| +0x71-0x86 | | algo_data_1 | Algorithm-specific coefficient data block 1 |
+| +0x87 | 1 | block_flags | Flags between data blocks |
+| +0x90-0xB3 | | algo_data_2 | Algorithm-specific coefficient data block 2 |
+| +0xB4-0xD0 | | algo_data_3 | Algorithm-specific coefficient data block 3 |
+| +0xD1-0x100 | | algo_data_4 | Algorithm-specific coefficient data block 4 |
+
+**Boot-time default voice slots (MAME 60s trace):**
+
+| Slot | Algo Type | Routing | param_a | Description |
+|------|-----------|---------|---------|-------------|
+| 2 | 3 (delay/gate) | 9 | 6 | Gated reverb default |
+| 16 | 5 (reverb A) | 2 | 26 | Room reverb 1 |
+| 17 | 5 (reverb A) | 2 | 29 | Room reverb 1 (alt params) |
+| 18 | 3 (delay/gate) | 9 | 6 | Gated reverb (duplicate of slot 2) |
+| 21 | 3 (delay/gate) | 9 | 6 | Gated reverb (duplicate of slot 2) |
+
+### Effect Routing Configuration
+
+The routing config table at SubCPU DRAM 0x00F490 (40 bytes) assigns each effect index to a routing group. This controls how the effect is connected in the audio signal chain.
+
+| Routing | Effects | Group Name |
+|---------|---------|------------|
+| 0 | 9, 11-14, 16-28 | Direct (no routing modifier) |
+| 1 | 0-3, 12-15, 29 | Modulation group A |
+| 2 | 4-7, 30 | Modulation group B |
+| 3 | 8, 10, 31 | Delay/reverb group |
+| 4-11 | 32-39 | Per-distortion/dynamics (one routing per effect) |
+
+Note: Effects 32-39 (distortion, overdrive, fuzz, exciter, compressor, slow attacker, noise flanger, parametric EQ) each have unique routing values 4-11, suggesting they require individual signal path configuration.
+
 ## Keybed Architecture
 
 The physical keyboard (keybed) connects **directly** to the tone generator IC303, NOT to the Sub CPU. IC303 performs hardware key scanning internally and presents note events to the Sub CPU via the keyboard input interface at 0x110000.
@@ -1464,7 +1515,8 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 - 4 channels × 32 registers (0x80 bytes total address space)
 - Logs register writes with channel, register offset, and semantic descriptions
 - Contains effect type name table (100 entries) and parameter name table (84 entries)
-- Tracks current effect type per channel for context-aware logging
+- Tracks DSP program module assignments per channel (0xC8=reverb, 0x54=chorus, 0x3C=init)
+- Falls back to program module type for effect category labeling in coefficient logs
 
 **DSP2 (MN19413):**
 - Serial interface via SubCPU GPIO (Port PF bit 0 = SDA, bit 2 = SCLK)
