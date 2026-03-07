@@ -1220,12 +1220,46 @@ The Main CPU ROM contains a 128-entry effect type name table at address `0xE32A7
 
 These are the hardware command bytes sent to the DSP chips via the parallel bus (P7.6=1 for command, P7.6=0 for subsequent data). They are sent by bytecode opcode 0xE and by direct calls to `DSP_DispatchCommand`/`DSP_DispatchData`.
 
-| Command | Direction | Description |
-|---------|-----------|-------------|
-| 0x01 | Write | Initialize/reset — sent during `DSP_ParameterWriteEngine` for channel 0 |
-| 0x03 | Write | Set mode/algorithm |
-| 0x30 | Write | Parameter update (followed by data bytes) |
-| 0x60 | Write | Bulk transfer / data write mode — sent after command 0x01 in parameter write |
+| Command | Direction | Via | Description |
+|---------|-----------|-----|-------------|
+| 0x01 | Write | OP3 (16-bit) | **Bulk initialization** — uploads full DSP state (150-350 data bytes). Used for EFF header (302B), reverb (272B), chorus (352B), algorithm init (117B). |
+| 0x03 | Write | OP4 (cmd only) | **Algorithm select** — sent before coefficient data blocks (OP1/OP2). No data bytes. |
+| 0x0F | Write | OP4 (cmd only) | **Disable/flush** — sent during algorithm init cleanup. No data bytes. |
+| 0x10 | Write | OP4 (cmd only) | **Enable/start** — sent during algorithm init sequence. No data bytes. |
+| 0x30 | Write | SEND_CMD (0xE) | **Parameter write** — sub-addressed, large data blocks (up to 190 bytes). Format: `0x30 [sub_addr] [data...]`. Sub-addresses 0x00, 0x03, 0x05, 0x0D seen. |
+| 0x60 | Write | OP0 | **Bulk transfer** — used in standard parameter write sequences via opcode 0 handler. |
+
+**Algorithm Configuration Sequence (from `DSP_AlgorithmChange`):**
+
+The complete algorithm change writes 8 bytecode programs to the DSPs in order:
+
+```
+1. AlgoChange_Init (0x01E63C):
+   - OP3: cmd=0x01, 117 bytes (16-bit packed DSP state init)
+   - OP4: cmd=0x10 (enable)
+   - OP4: cmd=0x10 (enable again)
+   - OP4: cmd=0x0F (flush)
+
+2. AlgoChange_Ch0 (0x01E6BE):
+   - OP0: cmd=0x01, 23 bytes (12-bit packed init)
+   - OP4: cmd=0x03 (select algorithm)
+   - OP1: 8 bytes (algorithm header)
+   - OP2: 93 bytes (coefficient data block 1)
+   - OP4: cmd=0x03 (select algorithm)
+   - OP1: 8 bytes (algorithm header 2)
+   - OP2: 93 bytes (coefficient data block 2)
+
+3-8. AlgoChange_Ch1 (4 programs with delay):
+   - SEND_CMD: cmd=0x30 sub=0x03 + 2 data bytes (mode select)
+   - STATE_CHANGE (yield to scheduler)
+   - SEND_CMD: cmd=0x30 sub=0x05 + 100-189 data bytes (coefficients)
+   - SEND_CMD: cmd=0x30 sub=0x00 + variable data (parameters)
+   - SEND_CMD: cmd=0x30 sub=0x0D + variable data (delay line config)
+```
+
+**Parameter Data Formats:**
+
+Reverb and chorus configs share a common 28-byte header (first 14 word pairs) starting with `0x00C8 0x0880 0x1300 0x0B00 0x0028 0x9415 0x0212...`, suggesting a common DSP state initialization structure where effect-specific parameters follow.
 
 The `DSP_DispatchCommand` function (0x036454) routes commands to DSP1 (`DSP_Send_Command`) or DSP2 (`DSP2_Send_Command`) based on the chip number in BC. Both use the same handshake protocol: poll PH.0 for ready, then write via Port PZ with appropriate chip-select and command/data strobes.
 
