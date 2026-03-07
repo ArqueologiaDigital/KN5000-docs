@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 271 (44 open, 226 closed)
+**Total Issues:** 280 (26 open, 252 closed)
 
 **Quick Links:** 
-[HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (41) · [Sound & Audio](#sound-audio) (1)
+[HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (23) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
@@ -176,77 +176,6 @@ Phase 1 represents the critical path to functional emulation.
 
 ---
 
-#### 🟠 Audio: Analyze DSP effects processing algorithms {#issue-kn5000-1oy}
-
-**ID:** `kn5000-1oy` | **Priority:** High | **Created:** 2026-01-30
-
-**Notes:** DSP effects processing is critical for audio emulation.
-
-**Current state:** Dual DSP architecture documented, but register meanings and effect algorithms unknown.
-
-**Required work:**
-- Trace DSP register writes at 0x130000
-- Document effect parameter mapping
-- Analyze reverb, chorus, delay implementations
-- Map effect chain configuration
-
-**Phase:** 1 - Foundation (MAME Blockers)
-**Blocks:** Audio synthesis in MAME
-**Dependencies:** Audio hardware documentation
-**Related:** kn5000-xv2 (DSP IC311), kn5000-si0 (effects chain)
-
----
-
-#### 🟠 Display: Document VGA register set for MN89304 controller {#issue-kn5000-ezo}
-
-**ID:** `kn5000-ezo` | **Priority:** High | **Created:** 2026-01-30
-
-**Notes:** The MN89304 VGA controller at 0x170000 needs complete register documentation.
-
-**Current state:** Hardware location known, but register meanings undocumented.
-
-**Required work:**
-- Identify VGA register port addresses (standard VGA at 0x3C0-0x3DF?)
-- Document initialization sequence from boot code
-- Map control registers for resolution, timing, color depth
-- Document any non-standard extensions
-
-**Phase:** 1 - Foundation (MAME Blockers)
-**Blocks:** Display rendering in MAME emulator
-**Dependencies:** None
-**Related:** kn5000-hy8 (color palette), kn5000-gln (drawing primitives)
-
----
-
-#### 🟠 Document jump tables in maincpu ROM {#issue-kn5000-6je}
-
-**ID:** `kn5000-6je` | **Priority:** High | **Created:** 2026-01-26
-
-**Notes:** The maincpu ROM contains numerous jump tables used for dispatch. Found patterns include:
-
-**Indirect call patterns:**
-- CALL T, XHL - calls through XHL register
-- CALL T, XIX - calls through XIX register
-- JP T, XIX + WA - indexed jump with WA offset
-- JP T, XIX + BC - indexed jump with BC offset
-- JP T, XIX + DE - indexed jump with DE offset
-
-**Known jump tables:**
-1. HANDLE_UPDATE_OFFSETS (0xE00178) - 16-bit offset table for update file handling
-2. LABEL_EF0D64 - 3-entry address table for state machine
-3. LABEL_EF0DA5 - 16-entry address table for sub-state handling
-4. Large address table at line 36362 (~170 entries for handler dispatch)
-5. Address tables at E1611A, E16128, E16136 (encoder handling)
-6. Jump table at F97D8D with 12+ undisassembled target routines
-
-**Work needed:**
-- Label all jump tables with meaningful names
-- Ensure all target routines are disassembled
-- Document the purpose of each table
-- Create cross-references in comments
-
----
-
 #### 🟠 MAME: Audio subsystem emulation milestone {#issue-kn5000-y18}
 
 **ID:** `kn5000-y18` | **Priority:** High | **Created:** 2026-01-31
@@ -271,6 +200,8 @@ Phase 1 represents the critical path to functional emulation.
 - Sub CPU boots from payload
 - Basic sound output works
 - MIDI input produces audio
+
+**Depends on:** [`kn5000-5msx`](#issue-kn5000-5msx)
 
 ---
 
@@ -297,6 +228,8 @@ Phase 1 represents the critical path to functional emulation.
 - LCD displays boot splash correctly
 - UI elements render accurately
 - Text/fonts appear correctly
+
+**Depends on:** [`kn5000-d12s`](#issue-kn5000-d12s)
 
 ---
 
@@ -360,174 +293,9 @@ User interaction and file I/O fully working in MAME.
 
 ---
 
-#### 🟠 Table Data: Document ROM internal structure and indexing {#issue-kn5000-d1x}
-
-**ID:** `kn5000-d1x` | **Priority:** High | **Created:** 2026-01-30
-
-**Notes:** Table Data ROM (2MB @ 0x800000) internal organization needs reverse engineering.
-
-**Current state:** 32.42% disassembled, mostly binary assets. Structure unknown.
-
-**Required work:**
-- Identify index tables for sound/style/demo data
-- Document header formats for embedded assets
-- Map data type regions within the ROM
-- Create tools to extract and catalog assets
-
-**Phase:** 1 - Foundation (MAME Blockers)
-**Blocks:** Full Table Data ROM disassembly, asset loading in emulator
-**Dependencies:** None
-**Related:** kn5000-hlw (improve match %), kn5000-16s (find images)
-
----
-
 #### 🟡 Another World: Complete floppy code injection for KN5000 port {#issue-kn5000-yhj}
 
 **ID:** `kn5000-yhj` | **Priority:** Medium | **Created:** 2026-02-21
-
----
-
-#### 🟡 Audio: Document Technics SysEx message format {#issue-kn5000-81p}
-
-**ID:** `kn5000-81p` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** The KN5000 likely uses Technics-specific System Exclusive messages for:
-
-1. Bulk data dumps (sounds, sequences, settings)
-2. Parameter editing
-3. Remote control features
-4. Device identification
-
-Need to:
-1. Find SysEx handling in Main CPU MIDI code
-2. Document manufacturer ID and message structure
-3. Catalog known SysEx commands
-4. Test with external MIDI tools if possible
-
-Search maincpu for: 0xF0 (SysEx start), 0xF7 (SysEx end), manufacturer ID bytes.
-
----
-
-#### 🟡 Audio: Document all command byte formats (0x00-0xFF) {#issue-kn5000-x95}
-
-**ID:** `kn5000-x95` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** The Sub CPU CMD_DISPATCH_TABLE routes commands by upper 3 bits:
-
-- 0x00-0x1F: Audio_CmdHandler_00_1F (writes to ring buffer) - DOCUMENTED
-- 0x20-0x3F: Audio_CmdHandler_20_3F - needs analysis
-- 0x40-0x5F: Audio_CmdHandler_40_5F - needs analysis
-- 0x60-0x7F: Audio_CmdHandler_60_7F - needs analysis
-- 0x80-0x9F: Serial port setup - partially known
-- 0xA0-0xBF: Audio_CmdHandler_A0_BF - needs analysis
-- 0xC0-0xFF: Audio_CmdHandler_C0_FF - needs analysis
-
-For each range, document:
-1. Expected byte format
-2. What parameters are affected
-3. Example command sequences
-
-Reference: CMD_DISPATCH_TABLE at line 576 in subcpu/kn5000_subprogram_v142.asm
-
----
-
-#### 🟡 Audio: Document external MIDI I/O on Main CPU {#issue-kn5000-0vs}
-
-**ID:** `kn5000-0vs` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** The Main CPU handles external MIDI IN/OUT/THRU via serial ports. Need to document:
-
-1. Serial port addresses and configuration
-2. MIDI parser routines in maincpu
-3. MIDI routing logic (how external MIDI reaches Sub CPU)
-4. MIDI OUT generation (keyboard events, sequencer playback)
-5. MIDI THRU implementation (hardware vs software)
-
-This complements the internal MIDI processing already documented in midi-subsystem.md.
-
-Search maincpu for: Serial port init, MIDI-related strings, writes to Sub CPU for external events.
-
----
-
-#### 🟡 Audio: Trace sound category data structures at 0xE023B0 {#issue-kn5000-8dy}
-
-**ID:** `kn5000-8dy` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** The Main CPU has a pointer table at 0xE023B0 with 16 sound categories:
-
-0: PIANO, 1: GUITAR, 2: STRINGS & VOCAL, 3: BRASS, 4: FLUTE,
-5: SAX & REED, 6: MALLET & ORCH PERC, 7: WORLD PERC, 8: ORGAN & ACCORDION,
-9: ORCHESTRAL PAD, 10: SYNTH, 11: BASS, 12: DIGITAL DRAWBAR,
-13: ACCORDION REG., 14: GM SPECIAL, 15: DRUM KITS
-
-Need to:
-1. Follow pointers to actual sound data
-2. Document sound data format (likely references to waveform ROM)
-3. Understand how sound selection maps to Sub CPU synthesis
-4. Document relationship to Program Change messages
-
-Reference: SOUND_DATA_SECTION_PTRS at 0xE023B0 in maincpu.
-
----
-
-#### 🟡 Document ROM interleaving formats for all ROM chips {#issue-kn5000-67g}
-
-**ID:** `kn5000-67g` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** Different ROM components use different interleaving formats. This caused confusion during table_data bitmap extraction.
-
-**Formats discovered:**
-
-| ROM | Interleaving | Notes |
-|-----|--------------|-------|
-| Main CPU | None (single chip) | 2MB linear |
-| Sub CPU Boot | None (single chip) | 128KB linear |
-| Sub CPU Payload | None (sent by maincpu) | 192KB linear |
-| Table Data | 16-bit WORD-level | odd.ic1 + even.ic3, alternating 16-bit words |
-| HDAE5000 | None (single chip) | 512KB linear |
-
-The table_data ROM is NOT byte-interleaved but WORD-interleaved:
-- Correct: even[0:2] + odd[0:2] + even[2:4] + odd[2:4] ...
-- Wrong: even[0] + odd[0] + even[1] + odd[1] ...
-
-This should be documented in:
-1. CLAUDE.md for developer reference
-2. rom-reconstruction.md (partially done)
-3. Hardware architecture docs
-
-Reference: kn5000_table_data.rom combination analysis
-
----
-
-#### 🟡 Document binary include e02510_e06baf.bin data structure (~295KB) {#issue-kn5000-c9c}
-
-**ID:** `kn5000-c9c` | **Priority:** Medium | **Created:** 2026-01-26
-
-**Notes:** Large binary include at 0xE02510-0xE06BAF (~295KB). This is one of the largest undocumented blocks in the ROM. Need to analyze structure: could be sound data, lookup tables, compressed assets, or code.
-
----
-
-#### 🟡 Document binary include e06f30_e0adcf.bin data structure (~254KB) {#issue-kn5000-gqu}
-
-**ID:** `kn5000-gqu` | **Priority:** Medium | **Created:** 2026-01-26
-
-**Notes:** Large binary include at 0xE06F30-0xE0ADCF (~254KB). Need to analyze structure: could be sound data, lookup tables, compressed assets, or code.
-
----
-
-#### 🟡 Document binary include e0b250_e0ba60.bin data structure (~8KB) {#issue-kn5000-baz}
-
-**ID:** `kn5000-baz` | **Priority:** Medium | **Created:** 2026-01-26
-
-**Notes:** Binary include at 0xE0B250-0xE0BA60 (~8KB). Relatively small block that may be easier to analyze. Check for table structure, code, or known data patterns.
-
----
-
-#### 🟡 Document binary include e0bb90_e0e974.bin data structure (~46KB) {#issue-kn5000-9os}
-
-**ID:** `kn5000-9os` | **Priority:** Medium | **Created:** 2026-01-26
-
-**Notes:** Binary include at 0xE0BB90-0xE0E974 (~46KB). Medium-sized undocumented block. Check for table structure, code, or known data patterns.
 
 ---
 
@@ -556,52 +324,6 @@ Reference: kn5000_table_data.rom combination analysis
 - All placeholder pages have substantive content
 - Code references link to assembly symbols
 - Each page has at least one diagram or table
-
----
-
-#### 🟡 Input: Document analog controller processing (wheels, pedals) {#issue-kn5000-3c7}
-
-**ID:** `kn5000-3c7` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** Pitch bend wheel, modulation wheel, and expression pedal processing needs documentation.
-
-**Current state:** Encoder IDs known from control panel protocol, processing unknown.
-
-**Required work:**
-- Trace A/D conversion routines
-- Document wheel position scaling/curves
-- Map pedal input handling
-- Document velocity/aftertouch processing if applicable
-
-**Phase:** 2 - Core Functionality
-**Blocks:** Controller emulation accuracy
-**Dependencies:** Control panel protocol (complete)
-**Related:** kn5000-unb (encoder data format)
-
----
-
-#### 🟡 Investigate shared graphics data between maincpu and table_data {#issue-kn5000-0r5}
-
-**ID:** `kn5000-0r5` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** Analysis found ~40KB of shared graphics/image data between ROMs:
-
-| Table Data | Main CPU | Size | Density |
-|------------|----------|------|---------|
-| 0x91D0EA | 0xE90090 | 13,806 bytes | 100% |
-| 0x82CDA4 | 0xE93680 | 7,198 bytes | 100% |
-| 0x921176 | 0xE7C8B0 | 9,282 bytes | 83.8% |
-| 0x809AD6 | 0xEB8190 | 8,964 bytes | 93.7% |
-
-Tasks:
-1. Identify what graphics these regions contain (UI elements? fonts?)
-2. Check if they are already documented in maincpu
-3. Determine if sharing via binclude is feasible
-4. Update image-gallery.md if new images are found
-
-The data appears to be 8-bit indexed color (lots of 0xF7 bytes = likely background color).
-
-Reference: Investigation of ROM word-level interleaving fix
 
 ---
 
@@ -690,26 +412,7 @@ All subsystems fully documented in the documentation website.
 - [ ] Symbol names in docs match assembly source
 - [ ] All P2/P3 documentation issues closed
 
----
-
-#### 🟡 Storage: Document Custom Data Flash organization at 0x300000 {#issue-kn5000-bqe}
-
-**ID:** `kn5000-bqe` | **Priority:** Medium | **Created:** 2026-01-30
-
-**Notes:** Custom Data Flash (1MB @ 0x300000) stores user settings and sequences.
-
-Current state: Address known, internal layout unknown.
-
-Required work:
-- Identify file/record structure
-- Document user settings storage format
-- Map custom sound/style save locations
-- Document sequence storage format
-
-Priority: Medium - needed for save/restore functionality
-Phase: 3 - Complete Documentation
-Dependencies: Sequencer format (for sequence storage)
-Related: Storage subsystem documentation
+**Depends on:** [`kn5000-gexo`](#issue-kn5000-gexo)
 
 ---
 
@@ -766,43 +469,19 @@ DSP1 (DS3613GF-3BA) never receives CMD 0x30 (algorithm select). The SubCPU's LAB
 
 ---
 
-#### ⚪ Docs: Add code reference tables to all subsystem pages {#issue-kn5000-sf8}
+#### ⚪ Disasm: Extract more include files for major functional areas {#issue-kn5000-imt3}
 
-**ID:** `kn5000-sf8` | **Priority:** Low | **Created:** 2026-01-30
+**ID:** `kn5000-imt3` | **Priority:** Low | **Created:** 2026-03-07
 
-**Notes:** Following the pattern established in audio-subsystem.md, add Code Reference tables to all subsystem documentation pages:
-
-Pages needing code reference tables:
-- fdc-subsystem.md
-- display-subsystem.md  
-- cpu-subsystem.md
-- storage-subsystem.md
-- sequencer.md
-
-Each table should include:
-- Routine name (with semantic name if available)
-- Address
-- Brief description
-- Link to source file and line number if possible
-
-This makes documentation more useful for MAME development and homebrew.
+The main CPU program (360K lines) has 16 include files covering well-understood subsystems. Many more functional areas could be extracted to improve organization. Candidates: sequencer routines, display/paint routines, accompaniment processing, registration memory, flash programming, boot sequence, interrupt handlers, timer handlers, DMA routines. Each extraction should group related routines into a themed .s file with documentation headers.
 
 ---
 
-#### ⚪ Docs: Cross-reference Main CPU and Sub CPU symbol names {#issue-kn5000-t2e}
+#### ⚪ Docs: Document registration memory save/recall system {#issue-kn5000-9gom}
 
-**ID:** `kn5000-t2e` | **Priority:** Low | **Created:** 2026-01-30
+**ID:** `kn5000-9gom` | **Priority:** Low | **Created:** 2026-03-07
 
-**Notes:** Ensure consistent naming between Main CPU and Sub CPU for related functionality:
-
-1. Audio lock routines: Main CPU Audio_Lock_* should match Sub CPU understanding
-2. DMA transfer: Main CPU Audio_DMA_Transfer relates to Sub CPU InterCPU_* routines
-3. Command dispatch: Document which Main CPU routines send which command ranges
-
-Create a cross-reference table in inter-cpu-protocol.md showing:
-- Main CPU routine -> Command sent -> Sub CPU handler
-
-This helps understand the full data flow.
+Registration memory allows saving/recalling complete instrument setups (sound, style, tempo, split points, effects). The Custom Data Flash page documents the storage format, but the firmware routines for saving, recalling, and managing registration banks are undocumented. Trace the registration save/load code and document the parameter set that gets saved/restored.
 
 ---
 
@@ -940,32 +619,6 @@ Production-ready emulation and homebrew support.
 
 ---
 
-#### ⚪ Symbols: Create naming convention guide in CLAUDE.md {#issue-kn5000-aar}
-
-**ID:** `kn5000-aar` | **Priority:** Low | **Created:** 2026-01-30
-
-**Notes:** Document the naming conventions established during audio subsystem renaming:
-
-Prefixes used:
-- Audio_* - General audio subsystem routines
-- MIDI_* - MIDI message parsing/dispatch
-- Voice_* - Voice parameter manipulation
-- DSP_* / DSP2_* - DSP hardware control
-- RingBuf_* - Ring buffer operations
-- InterCPU_* - Inter-CPU communication
-- ToneGen_* - Tone generator (keyboard input)
-- HDAE5000_* - HDAE5000 expansion board
-- TableData_* - Table Data ROM operations
-- FDC_* - Floppy disk controller
-- UI_* / Widget_* - UI framework
-- Display_* - Display/video routines
-- CPanel_* - Control panel protocol
-- Encoder_* - Rotary encoder handling
-
-Add to CLAUDE.md so future work maintains consistency.
-
----
-
 #### ⚪ Testing: Establish emulation validation procedures {#issue-kn5000-a8s}
 
 **ID:** `kn5000-a8s` | **Priority:** Low | **Created:** 2026-01-31
@@ -1009,28 +662,6 @@ Add to CLAUDE.md so future work maintains consistency.
 
 ---
 
-#### ⚪ LLVM: TLCS-900/H2 backend development tracking {#issue-kn5000-raw}
-
-**ID:** `kn5000-raw` | **Priority:** P4 | **Created:** 2026-01-30
-
-**Notes:** Long-term goal: LLVM compiler backend for TMP94C241F.
-
-**Current state:** Goal documented, no implementation started.
-
-**Required work:**
-- Study LLVM backend architecture
-- Document TLCS-900/H2 instruction set formally
-- Implement register allocation
-- Implement instruction selection
-- Create C/C++ support
-
-**Phase:** 5 - Future
-**Blocks:** High-level language homebrew
-**Dependencies:** Complete instruction documentation
-**Related:** kn5000-3o6 (ASL macros document encodings)
-
----
-
 ### Sound & Audio {#sound-audio}
 
 #### ⚪ Sound: Extract and catalog all instrument patches {#issue-kn5000-cox}
@@ -1045,28 +676,28 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
-| `kn5000-87m` | Update: Create update file parser tool | 2026-03-07 |
-| `kn5000-jqa` | Document binary include e0176c_e01f7f.bin data structure | 2026-03-07 |
-| `kn5000-7v8` | Update: Document complete update procedure for users | 2026-03-07 |
-| `kn5000-e7f` | Update: Document HDAE5000 update procedure | 2026-03-07 |
-| `kn5000-acu` | Update: Document validation and error handling | 2026-03-07 |
-| `kn5000-6f7` | Update: Document update progress display | 2026-03-07 |
-| `kn5000-koom` | Systematic .byte block decoding to native LLVM instructions | 2026-03-07 |
-| `kn5000-4bt` | Symbols: Apply semantic naming to UI framework LABEL_* sy... | 2026-03-07 |
-| `kn5000-aksz` | Semantic labeling: rename top-20 most-referenced LABEL_* ... | 2026-03-07 |
-| `kn5000-9jq` | Symbols: Rename remaining LABEL_* in Sub CPU audio code | 2026-03-03 |
-| `kn5000-ima` | Symbols: Apply semantic naming to FDC subsystem LABEL_* s... | 2026-03-03 |
-| `kn5000-kc5` | Disassemble TODO routines at F97696-F97D8D range (jump ta... | 2026-03-03 |
-| `kn5000-bntj` | Document data blocks with comments and NAKA macros | 2026-03-03 |
-| `kn5000-n8u2` | Disassemble and document GroupBoxProc state table interac... | 2026-03-03 |
-| `kn5000-84fw` | Disassemble and document FA9945 (EventDispatch_Direct) | 2026-03-03 |
-| `kn5000-lb2x` | Disassemble and document F98697 (KeyPress_StateDispatch) | 2026-03-03 |
-| `kn5000-4m2r` | DS3613GF-3BA: false ALGO SELECT from alt param write format | 2026-03-03 |
-| `kn5000-dvwg` | DSP1 standalone coefficient sub-packets produce garbage a... | 2026-03-03 |
-| `kn5000-tyjr` | DSP1 parallel port cmd 0x01 protocol decoding wrong | 2026-03-03 |
-| `kn5000-8eg2` | DSP param name off-by-one fixed | 2026-03-03 |
+| `kn5000-8jn0` | Disasm: Systematic semantic labeling of high-reference-co... | 2026-03-07 |
+| `kn5000-zfxb` | Docs: Document accompaniment/style playback engine | 2026-03-07 |
+| `kn5000-d12s` | Docs: Document display subsystem paint/draw primitives | 2026-03-07 |
+| `kn5000-5msx` | MAME: Trace and document tone generator register interface | 2026-03-07 |
+| `kn5000-gexo` | Disasm: Document main loop structure and top-level dispatch | 2026-03-07 |
+| `kn5000-gmcc` | Disasm: Convert 5,936 numeric call targets to symbolic la... | 2026-03-07 |
+| `kn5000-raw` | LLVM: TLCS-900/H2 backend development tracking | 2026-03-07 |
+| `kn5000-3c7` | Input: Document analog controller processing (wheels, ped... | 2026-03-07 |
+| `kn5000-fs3i` | Semantic labeling: rename top-30 most-referenced LABEL_ r... | 2026-03-07 |
+| `kn5000-bqe` | Storage: Document Custom Data Flash organization at 0x300000 | 2026-03-07 |
+| `kn5000-d1x` | Table Data: Document ROM internal structure and indexing | 2026-03-07 |
+| `kn5000-6je` | Document jump tables in maincpu ROM | 2026-03-07 |
+| `kn5000-ezo` | Display: Document VGA register set for MN89304 controller | 2026-03-07 |
+| `kn5000-aar` | Symbols: Create naming convention guide in CLAUDE.md | 2026-03-07 |
+| `kn5000-67g` | Document ROM interleaving formats for all ROM chips | 2026-03-07 |
+| `kn5000-0r5` | Investigate shared graphics data between maincpu and tabl... | 2026-03-07 |
+| `kn5000-8dy` | Audio: Trace sound category data structures at 0xE023B0 | 2026-03-07 |
+| `kn5000-t2e` | Docs: Cross-reference Main CPU and Sub CPU symbol names | 2026-03-07 |
+| `kn5000-sf8` | Docs: Add code reference tables to all subsystem pages | 2026-03-07 |
+| `kn5000-x95` | Audio: Document all command byte formats (0x00-0xFF) | 2026-03-07 |
 
-*...and 206 more closed issues*
+*...and 232 more closed issues*
 
 ---
 
@@ -1077,19 +708,18 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | Priority | Count |
 |----------|-------|
 | Critical | 2 |
-| High | 9 |
-| Medium | 20 |
-| Low | 12 |
-| P4 | 1 |
+| High | 5 |
+| Medium | 8 |
+| Low | 11 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
 | HD-AE5000 Expansion | 2 |
-| Other | 41 |
+| Other | 23 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-03-07 20:20*
+*Last updated: 2026-03-07 21:30*
