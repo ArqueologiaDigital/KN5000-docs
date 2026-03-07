@@ -15,30 +15,42 @@ Detailed hardware documentation extracted from the service manual schematics.
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │                         CONTROL PANEL                          │
-│  ┌──────────────┐  ┌─────────┐  ┌─────────┐  ┌──────────────┐  │
-│  │     CPL      │  │  CPCL   │  │  CPCR   │  │     CPR      │  │
-│  │ M37471M2196S │  │ Switches│  │ Switches│  │ M37471M2196S │  │
-│  │   8-bit MCU  │  │  LEDs   │  │         │  │   8-bit MCU  │  │
-│  └──────┬───────┘  └────┬────┘  └────┬────┘  └──────┬───────┘  │
-│         │ SIN/SOUT/CLK  │            │       SIN/SOUT/CLK │    │
-└─────────┼───────────────┴────────────┴────────────────────┼────┘
+│  ┌──────────────┐  ┌─────────┐  ┌─────────┐  ┌──────────────┐ │
+│  │     CPL      │  │  CPCL   │  │  CPCR   │  │     CPR      │ │
+│  │ M37471M2196S │  │ Switches│  │ Switches│  │ M37471M2196S │ │
+│  │   8-bit MCU  │  │  LEDs   │  │         │  │   8-bit MCU  │ │
+│  └──────┬───────┘  └────┬────┘  └────┬────┘  └──────┬───────┘ │
+│         │ SIN/SOUT/CLK  │            │       SIN/SOUT/CLK │   │
+└─────────┼───────────────┴────────────┴────────────────────┼───┘
           │                                                 │
           └────────────────────┬────────────────────────────┘
                                │ Serial Bus
-                        ┌──────┴──────┐
-                        │  MAIN PCB   │
-                        │             │
-                        │ ┌─────────┐ │
-                        │ │  IC5    │ │ TMP94C241F
-                        │ │Main CPU │ │ 32-bit TLCS-900/H2
-                        │ └────┬────┘ │
-                        │      │      │
-                        │ ┌────┴────┐ │
-                        │ │  IC27   │ │ Sub CPU
-                        │ │ SubCPU  │ │ (Tone Generator Control)
-                        │ └─────────┘ │
-                        └─────────────┘
+┌──────────────────────────────┴─────────────────────────────────┐
+│                          MAIN PCB                              │
+│                                                                │
+│  ┌─────────┐    Latch     ┌─────────┐                         │
+│  │  IC5    │◄──0x120000──►│  IC27   │                         │
+│  │Main CPU │              │ Sub CPU │                         │
+│  │TLCS-900 │              │TLCS-900 │                         │
+│  └────┬────┘              └─┬──┬──┬─┘                         │
+│       │                     │  │  │                            │
+│  ┌────┴────┐           ┌────┘  │  └────┐                      │
+│  │ IC206   │           │       │       │                      │
+│  │  LCD    │      ┌────┴───┐ ┌─┴────┐ ┌┴───────┐             │
+│  │ MN89304 │      │ IC303  │ │IC311 │ │ IC310  │             │
+│  └────┬────┘      │Tone Gen│ │ DSP1 │ │  DSP2  │             │
+│       │           │TC183C..│ │Effect│ │Mix/EQ  │             │
+│  ┌────┴────┐      └────┬───┘ └──────┘ └────────┘             │
+│  │ IC207   │           │                                      │
+│  │ VRAM    │      ┌────┴───┐                                  │
+│  │4Mbit    │      │IC304-6 │   ┌────────┐                    │
+│  └─────────┘      │Waveform│   │ IC208  │                    │
+│                    │ ROMs   │   │  FDC   │                    │
+│                    └────────┘   └────────┘                    │
+└───────────────────────────────────────────────────────────────┘
 ```
+
+**Signal flow:** Main CPU handles UI, sequencing, and high-level music control. It sends MIDI-like commands to the Sub CPU via the inter-CPU latch at 0x120000. The Sub CPU translates these into low-level register writes for the tone generator (IC303) and DSP chips (IC310, IC311). Waveform data is stored in IC304-306 (currently undumped). Audio output goes through the DSPs for effects processing and mixing before reaching the DAC.
 
 ## Control Panel MCUs
 
@@ -174,6 +186,19 @@ combined[2*i + 1] = odd[i]     (high byte of word i)
 ```
 
 This is **not** the same as byte-level interleaving (`even[0], odd[0], even[1], odd[1]`) — each chip stores complete 16-bit values, and the CPU's 16-bit data bus reads one word at a time from the appropriate chip.
+
+### Audio / Sound Generation
+
+| IC | Part Number | Function | Interface |
+|----|-------------|----------|-----------|
+| IC303 | TC183C230002 | Tone Generator | Memory-mapped at 0x100000 (SubCPU) |
+| IC310 | MN19413 | DSP2 (mixing/EQ) | Serial GPIO bit-bang (SubCPU) |
+| IC311 | DS3613GF-3BA | DSP1 (effects) | Memory-mapped at 0x130000 + parallel port (P7/PZ) |
+| IC304-306 | — | Waveform ROMs | Connected to IC303 (undumped) |
+
+The tone generator IC303 handles polyphonic synthesis with 64 voice channels, while IC311 (DSP1) provides digital effects (reverb, chorus, delay, distortion) and IC310 (DSP2) handles mixing and EQ. The SubCPU controls all three via dedicated interfaces.
+
+See [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) for detailed protocol documentation.
 
 ### Peripherals
 
