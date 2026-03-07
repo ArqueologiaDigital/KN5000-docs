@@ -41,7 +41,7 @@ The Table Data ROM contains factory-installed content.
 | Size | 2MB (2,097,152 bytes) |
 | Address | 0x800000-0x9FFFFF |
 | Type | Read-only mask ROM |
-| Organization | Split odd/even bytes |
+| Organization | 16-bit word-level interleave (odd IC1 + even IC3) |
 
 ### Physical Layout
 

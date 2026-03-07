@@ -146,6 +146,35 @@ Detailed hardware documentation extracted from the service manual schematics.
 | IC19 | QV1GFKN5KAX1 | ROM | 8Mbit | Custom Data |
 | IC21 | - | SRAM | 1Mbit | Backup (battery) |
 
+#### ROM Interleaving Formats
+
+The KN5000 uses different data organization depending on the ROM:
+
+| ROM | Chips | Interleaving | Size | Address Range |
+|-----|-------|-------------|------|---------------|
+| Program ROM | IC4 (even) + IC6 (odd) | 16-bit word-level | 2MB | 0xE00000-0xFFFFFF |
+| Table Data ROM | IC3 (even) + IC1 (odd) | 16-bit word-level | 2MB | 0x800000-0x9FFFFF |
+| Sub CPU Boot ROM | IC30 (internal) | None (single chip) | 128KB | 0xFE0000-0xFFFFFF |
+| Custom Data Flash | IC19 | None (single chip) | 1MB | 0x300000-0x3FFFFF |
+| HDAE5000 ROM | IC4 (expansion) | None (single chip) | 512KB | 0x280000-0x2FFFFF |
+| Sub CPU Payload | Transferred via latch | None (in-memory) | 192KB | 0x002000-0x031FFF |
+
+**16-bit word-level interleaving** means the two physical ROM chips store alternating 16-bit words:
+
+```
+Combined ROM:   [WORD0_LO][WORD0_HI] [WORD1_LO][WORD1_HI] [WORD2_LO][WORD2_HI] ...
+Even chip (IC3): WORD0_LO  WORD0_HI   WORD1_LO  WORD1_HI   ...  (bytes 0,1 of each word)
+Odd chip (IC1):                                                    (bytes 0,1 of each word)
+```
+
+To reconstruct the combined ROM from the two chip dumps:
+```
+combined[2*i]     = even[i]    (low byte of word i)
+combined[2*i + 1] = odd[i]     (high byte of word i)
+```
+
+This is **not** the same as byte-level interleaving (`even[0], odd[0], even[1], odd[1]`) — each chip stores complete 16-bit values, and the CPU's 16-bit data bus reads one word at a time from the appropriate chip.
+
 ### Peripherals
 
 | IC | Part Number | Function |
