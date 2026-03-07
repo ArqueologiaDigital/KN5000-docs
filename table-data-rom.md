@@ -21,6 +21,7 @@ This ROM contains factory preset data, waveform samples, fonts, UI icons, wallpa
 | `0x8E0000-0x8ECFFF` | 52KB | LZSS Compressed Presets |
 | `0x8ED000-0x937FFF` | 300KB | Wallpapers + gap data |
 | `0x938000-0x944D77` | 51KB | UI Icons |
+| `0x832000-0x850000` | 120KB | Instrument Patch Data (names + synthesis params) |
 | `0x944D78-0x9F9FFF` | 753KB | Mixed Data Tables |
 | `0x9FA000-0x9FA14F` | 336B | File Identifier Strings |
 | `0x9FA150-0x9FB4D1` | ~5KB | Boot Screen Bitmaps |
@@ -140,6 +141,19 @@ Format identification strings used to detect floppy disk file types:
 - `Technics KN5000 Table    DATA FILE PCK`
 - `Technics KN5000 CMPCUSTOMDATA FILE`
 - `Technics KN5000 HD-AEPRG DATA FILE`
+
+## Instrument Patch Data (0x832000-0x850000)
+
+This 120KB region contains the factory instrument sound definitions. Each patch is a variable-length record containing:
+
+1. **Multi-layer synthesis parameters** — envelope, filter, LFO, effects routing data (binary)
+2. **Display name** — padded ASCII string (up to 20 characters, null-terminated within the record)
+
+The region is divided into two sections:
+- **0x832000-0x845FFF**: KN5000-specific patches (~291 unique instruments)
+- **0x846000-0x84FFFF**: GM-compatible patches (~68 sounds, mostly duplicates of KN5000 patches with different parameters)
+
+The section starts with a pointer table at 0x832000 (32-bit LE pointers to individual patch records). See [Sound Categories — Instrument Patch Catalog]({{ site.baseurl }}/sound-categories/#instrument-patch-catalog) for the complete list of 303 extracted patch names.
 
 ## Boot Screen Bitmaps (0x9FA150)
 

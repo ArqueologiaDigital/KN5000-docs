@@ -171,15 +171,164 @@ When a user selects a sound:
 6. **Sub CPU processing** — `Audio_CmdHandler_00_1F` writes to ring buffer → `MIDI_Dispatch` routes to `Voice_ProgChange`
 7. **Voice activation** — Sub CPU updates the voice parameter block (287 bytes at `0x041300 + channel × 0x11F`)
 
+## Instrument Patch Catalog
+
+The Table Data ROM contains the display names for all instrument patches, embedded within variable-length sound parameter records in the 0x832000-0x850000 address range. Each patch record includes a padded ASCII name string (up to 20 characters) along with multi-layer synthesis parameters (envelope, filter, LFO, effects routing).
+
+The following catalog was extracted by scanning the Table Data ROM for ASCII name strings. Names are organized by approximate address region, which corresponds loosely to the 16 factory categories above. GM-compatible patches (0x846000-0x850000) largely duplicate KN5000-specific patches with different parameter settings.
+
+**Total: ~303 unique instrument patches** (291 KN5000-specific + 12 GM-only)
+
+### Piano (14)
+
+Piano, Bright Piano, Mellow Piano, Piano 1 Octave, Piano 2 Octave, Rock Piano, Honky-Tonk Piano, Electric Grand, Midi Grand, E.Piano 1, E.Piano 2, Suitcase E.P., Tremolo E.Piano, Wurly E.Piano
+
+### Electric Piano & Keyboard (6)
+
+Modern E.P.1, Modern E.P.2, Harpsichord, Cembalo, Synth Clavi, Music Box
+
+### Mallet & Tuned Percussion (10)
+
+Glockenspiel, Vibraphone, Vibes & Jazz Guitar, Marimba, Xylophone, Celesta, Tubular Bells, Carillon, Wind Chime, Bottle Marimba, African Mallet, Caribbean Mallet
+
+### Guitar — Acoustic (8)
+
+Classical Guitar, Spanish Guitar, Jazz Ac.Guitar, Bossa Guitar, Folk Guitar, 12 String Guitar, ElectroAc.Guitar, Guitar Harmonics
+
+### Guitar — Electric (12)
+
+Jazz Guitar 1, Jazz Guitar 2, Bright Solid Gtr, Mellow Solid Gtr, Clean Solid Gtr, Fusion Solid Gtr, Mute Guitar, Funk Mute Guitar, Distortion Gtr, Overdrive Guitar, Country Guitar, Nashville Steel
+
+### Guitar — World / Plucked (9)
+
+Banjo, Mandolin, Hawaiian Guitar 1, Hawaiian Guitar 2, Shamisen, Bouzouki, Dulcimer, Cumbus, Ukulele
+
+### Strings — Ensemble (11)
+
+Symphonic Strings, Concert Strings, Classical Strings, Marcato Strings, Violin Ensemble, Viola Ensemble, Cello Ensemble, Bass Ensemble, Slow Strings, Octave Strings, Bass Strings
+
+### Strings — Special (6)
+
+Tremolo Strings, Pizzicato Str., Synth Strings 1, Synth Strings 2, Bowed Bass, Country Fiddle
+
+### Strings — Solo (3)
+
+Violin, Jazz Violin, Viola, Cello
+
+### Vocal (9)
+
+Vocal Ah, Pop Vocal Ah, Stereo Vocal Ah, Vocal Ooh, Humming, Synth Vocal, Air Vox, Vocal Doo, Vocal Daa
+
+### Accordion — German (10)
+
+German Acdn 1-8, German Acdn Bs1, German Acdn Bs2
+
+### Accordion — Italian (10)
+
+Italian Acdn 1-8, Italian Acdn Bs1, Italian Acdn Bs2
+
+### Accordion — General (5)
+
+Bright Accordion, Mellow Accordion, Musette, Bandoneon, Folk Accordion
+
+### Organ (13)
+
+Perc Organ, Full Drawbars, Jazz Drawbars, Accomp Drawbars, Pop Organ, Soul Organ, Rock Organ, Organ Bass, Chapel Organ, Full Organ, Cathedral Organ, Theatre Organ, Theatre Accomp, Theatre Novelty
+
+### Brass — Ensemble (6)
+
+Bigband Brass, Marching Brass, Brass & Synth, Octave Brass, Octave Horns, Brass Fall
+
+### Brass — Solo (10)
+
+Trumpet, Solo Trumpet, Orchest. Trumpet, Harmon Mute Tpt, Straight Mute Tpt, Flugel Horn, Bright Trombone, Mellow Trombone, Cup Mute Trombone, Closed Fr.Horn, Open Fr.Horn, Marching Tuba, Orchestral Tuba
+
+### Brass — Synth (2)
+
+Synth Brass 1, Synth Brass 2
+
+### Saxophone (10)
+
+Soprano Sax, Alto Sax, Mellow Alto Sax, Tenor Sax 1, Tenor Sax 2, Breathy Tenor, Rock Tenor Sax, Baritone Sax, Distortion Sax, Unison Saxes
+
+### Clarinet & Reed (7)
+
+Jazz Clarinet 1, Jazz Clarinet 2, Mellow Clarinet, Classic Clarinet, Bass Clarinet, Harmonica, Blues Harmonica
+
+### Woodwind — Double Reed (3)
+
+English Horn, Bassoon, Bagpipe
+
+### Flute (12)
+
+Piccolo, Jazz Flute, Classical Flute, Alto Flute, Alto Ensemble, Flutter Flute, Pan Flute 1, Pan Flute 2, Recorder, Ocarina, Blown Bottle, Whistle
+
+### Flute — World & Special (6)
+
+Shakuhachi, Quena, Chopper Flute, Penny Whistle, Marching Whistle, Chiff Flute, Synth Calliope, Shanai
+
+### Bass — Acoustic (2)
+
+Acoustic Bass, Mellow Ac.Bass
+
+### Bass — Electric (9)
+
+Electric Bass, Bright E.Bass, Fusion E.Bass, Funky E.Bass, Fretless Bass, Picked E.Bass, Mute Bass, Slap Bass 1, Slap Bass 2
+
+### Bass — Synth (7)
+
+Killer Bass, Analog Bass, Soul Bass, Wow Bass, Dance Bass, House Bass, Plastic Bass, Basic Synth Bass, Techno Bass
+
+### World Percussion (8)
+
+Kalimba, Metal Kalimba, Steel Drum, Bonang, Sarrons, Kenong, Slentem, Talking Drum
+
+### Percussion & SFX (10)
+
+Wood Block, Taiko Drum, Melodic Tom, Synth Drum, Sleigh Bell, Tinkle Bell, Agogo, Reverse Cymbal, Orchestra Hit, Dance Hit 1, Dance Hit 2
+
+### Sound Effects (7)
+
+Fret Noise, Breath Noise, Seashore, Bird Tweet, Telephone, Helicopter, Applause, Gun Shot
+
+### Synth — Lead (12)
+
+Square Lead, Saw Lead, Sine Lead, Chiffer Lead, Charang, Metallica Solo, Talking Lead, Digi Stack, 80's Solo, Steamy Keys, Olymp Synth, Voco Synth
+
+### Synth — Pad & Texture (20)
+
+Block Synth, 5th Wave, Bass & Lead, Talking Synth, Synth Harp, Afro Dance, Digi Bells, Crystal, Mellow Ensemble, Warm Synth Pad, Spacy Pad, Metal Pad, Star Theme, Bowed Glass, Atmosphere, Fantasia, Bell Pad, Dream, Sweep Pad, Halo Pad, Echo Drops, Poly Synth, Warm Synth Brass, Ice Rain, Soundtrack
+
+### Synth — Multi Sweeper (1)
+
+Multi Sweeper
+
+### Orchestra Combo (14)
+
+Goblins, Strings & Horns, Strings & Flutes, Piano & Strings, Heavenly Strings, Warm String Pad, Chamber Orch, Cathedral, Movie Musical, Field of Voices, Horns & Woods, Dark Movie Scene, Orchestral Sweep, Moonlight Pad, Orchestra Pizz, Synth Orchestra
+
+### Orchestra Combo — Specialty (5)
+
+Unison Strings, Springtime Orch, Dreamy Strings, Many Horns, Big Band Pad
+
+### Harmonium & Misc (2)
+
+Harmonium, Rock Harmonics
+
+### GM-Only Patches (12)
+
+Pipe Organ, Accordion, Jazz Guitar, Solid Guitar, Modern E.P., E.Piano (variant), Bright Bass, Synth String 1, Synth String 2, Jazz Clarinet (variant), Brightness, Warm Pad
+
 ## Research Needed
 
 - [ ] Decode the exact binary format of large categories (PIANO, STRINGS & VOCAL, MALLET & ORCH PERC)
 - [ ] Determine meaning of sub-category indices in headers (bytes 0-7 or 0-9)
-- [ ] Map voice_id/bank pairs to actual sound names (e.g., voice 0x00 bank 0 = "Grand Piano 1")
+- [x] ~~Map voice_id/bank pairs to actual sound names~~ — 303 patch names extracted from Table Data ROM
 - [ ] Trace UI event codes that trigger sound selection
 - [ ] Document MEMORY A/B user sound storage format in DRAM
 - [ ] Understand voice IDs ≥ 0xF0 (organ drawbar mode hypothesis)
 - [ ] Analyze relationship between these voice_id values and Table Data ROM waveform indices
+- [ ] Map exact voice_id/bank → Table Data ROM patch name correspondence
 
 ## Code References
 
