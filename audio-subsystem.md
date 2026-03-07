@@ -182,10 +182,99 @@ Channel 3: 0x130060 - 0x13007F
 ```
 
 **Key Routines:**
-- `DSP_Init_Channels` - Initialize all 4 channels
-- `DSP_Write_Channel` - Write 8 bytes of config to a channel
+- `DSP_Init_Channels` - Initialize all 4 channels with test pattern
+- `DSP_Write_Channel` - Write 8 bytes of config to a channel (loop)
+- `DSP_WriteAllChannelRegs` - Write register data to all 4 channels
+- `DSP_WriteChannelRegs_Inner` - Write 8 sequential registers to one channel
 - `DSP_Send_Command` - Send command byte to DSP
 - `DSP_Send_Data` - Send data byte to DSP
+
+### DSP Voice Coefficient Routing
+
+The Sub CPU firmware includes a coefficient routing subsystem that maps voice parameters to DSP coefficient buffers. This system sits between the voice parameter tables and the DSP hardware, computing which coefficient set to apply based on voice allocation and routing type.
+
+**Memory Layout:**
+
+| Address | Size | Purpose |
+|---------|------|---------|
+| 0x041368 | 7462 bytes | Voice allocation table (26 channels × 287 bytes/channel) |
+| 0x045210 | variable | DSP coefficient output buffer (written by routing functions) |
+| 0x045310 | 4 bytes | Base pointer for routing table computation |
+| 0x045314 | 4 bytes | Pointer to routing configuration structure |
+
+The routing configuration structure (pointed to by 0x045314) contains pointers to coefficient source tables at various offsets:
+
+| Offset | Purpose |
+|--------|---------|
+| +0x44 | Type-A coefficient table (group 0, default) |
+| +0x48 | Type-A coefficient table (group 2, 128-191) |
+| +0x4C | Type-A coefficient table (group 1, 64-127) |
+| +0x50 | Type-A output pointer table |
+| +0x54 | Algorithm coefficient table (default) |
+| +0x58 | Type-B coefficient table (group 0, default) |
+| +0x5C | Type-B coefficient table (group 2) |
+| +0x60 | Type-B coefficient table (group 1) |
+| +0x64 | Type-B output pointer table |
+| +0x70 | Algorithm table (type 1) |
+| +0x7C | Algorithm table (type 2) |
+| +0x80-0x98 | Extended algorithm tables (types 3-4) |
+
+**Routing Algorithm:**
+
+The routing functions share a common pattern:
+
+1. **Extract parameters**: Mask voice number to 7 bits, extract channel (low 4 bits of BC) and type (bits 6-7 of BC)
+2. **Type dispatch**: 4-way branch based on type bits (0/64/128/192) to select coefficient source table
+3. **Compute index**: `index = (channel << 7 + voice) × 2`, used as offset into the selected table
+4. **Load source pointer**: Read 32-bit pointer from `table_base + index + (0x45310)`
+5. **Copy coefficients**: Copy 13 bytes from source to DSP coefficient buffer at 0x45210
+
+**Voice-specific routing** (`DSP_VoiceCoeffRoute`) adds a nested lookup:
+1. Compute voice allocation index: `voice × 287 + channel × 37 + 110`
+2. Read routing type from allocation entry at `0x41368 + index`
+3. Use routing type bits to select coefficient source
+4. Copy 13 coefficient bytes plus 3 extra configuration bytes
+
+**Routing Functions (Sub CPU):**
+
+| Function | Purpose |
+|----------|---------|
+| `DSP_RouteCoeffs_TypeA` | Route coefficients via type-A tables (offsets 0x44-0x50) |
+| `DSP_RouteCoeffs_TypeB` | Route coefficients via type-B tables (offsets 0x58-0x64) |
+| `DSP_CopyCoeffs_TypeA` | Direct coefficient copy (offset 0x50, no type dispatch) |
+| `DSP_CopyCoeffs_TypeB` | Direct coefficient copy (offset 0x64, no type dispatch) |
+| `DSP_VoiceCoeffRoute` | Voice-specific routing with allocation table lookup |
+| `DSP_VoiceCoeffRoute2` | Extended voice routing with filter/vibrato coefficients |
+| `DSP_AlgoCoeffLookup` | Algorithm-based coefficient selection (5-way dispatch, algo 0-4) |
+
+### DSP Register Write Protocol
+
+The `DSP_WriteChannelRegs_Inner` function reveals the register-level protocol for writing to DSP channels via 0x130000:
+
+```
+Register address = channel_number × 32 + 0x10
+
+For each of 8 registers (sequential):
+  1. Write register address byte to (0x130000)   ; select register
+  2. Write data byte to (0x130002)               ; write value
+  3. Increment register address
+
+Data sources for 8 registers:
+  Reg 0-1: From BC (caller's direct parameters)
+  Reg 2-3: From prevbank QBC (alternate register bank)
+  Reg 4-5: From DE (caller's direct parameters)
+  Reg 6-7: From prevbank QDE (alternate register bank)
+```
+
+The prevbank register usage allows passing 8 bytes of data using only 4 register pairs, by using the TLCS-900/H2's alternate register bank.
+
+**Utility Functions (Sub CPU):**
+
+| Function | Purpose |
+|----------|---------|
+| `DSP_BlockCopyWords` | Block copy words via `ldirw` instruction |
+| `DSP_FillMemWords` | Fill memory with repeated word value |
+| `DSP_ChecksumRange` | Compute one's complement checksum of 32-bit word range |
 
 ### DSP State Dispatcher Architecture
 
