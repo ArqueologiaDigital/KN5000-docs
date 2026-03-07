@@ -269,13 +269,55 @@ The firmware implements a complete graphics library for rendering to offscreen b
 
 ### Rendering Pipeline
 
+All drawing functions follow a **deferred command queue** pattern:
+
 ```
-Drawing functions write to OFFSCREEN_BUFFER_1 (0x43C00)
+Caller invokes DrawLine/DrawBox/DrawString/etc.
      │
-     ├── SetChangeRect() expands dirty bounding box
+     ├── IS_XSP_INSIDE_4K_REGION_AT_1C032 (0xFAA532)
+     │   checks if caller is running in the draw task context
+     │   (stack pointer in range 0x1C032 - 0x1D032)
      │
-     └── Display update cycle blits changed regions to VRAM (0x1A0000)
+     ├── YES (draw task context):
+     │   Execute DrawXxx_Impl directly
+     │   Write pixels to OFFSCREEN_BUFFER_1 (0x43C00)
+     │   Call SetChangeRect() to expand dirty bounding box
+     │
+     └── NO (other task context):
+         Serialize parameters into DrawQueue (circular buffer)
+         Call DisplayCmd_DequeueAndExecute
+         → TaskSched_WaitForEvent(3) until draw task picks up command
+         → Draw task executes command and signals completion
 ```
+
+This ensures all VRAM/buffer writes happen in a single task context, avoiding concurrency issues.
+
+### Draw Command Queue
+
+The draw queue is a **circular buffer** managed by `DrawQueue_Alloc` (0xFAA4ED):
+
+| Property | Value |
+|----------|-------|
+| Base address | 0x030466 |
+| Size | 8KB (0x2000 bytes) |
+| Write pointer | 0x03246A |
+| Read pointer | 0x032474 |
+| Entry count | 0x03247A (modular counter, wraps at 0x7C entries) |
+| Synchronization | Event 3 (wait/signal) + Event 4 (audio lock) |
+
+Each queued command starts with a 4-byte function pointer (the `DrawXxx_Impl` address), followed by serialized parameters (8-28 bytes depending on the primitive). When the draw task processes a command, it calls the function pointer with the parameter block.
+
+### Graphics Initialization
+
+`InitializeGraphics` (0xFAA4FA) performs the following at boot:
+
+1. Initialize draw task (`InitDrawTask`)
+2. Show screen group 5 and enable palette
+3. Initialize palette RGB tables (`InitPaletteRGB`)
+4. Set wallpaper (index 0) and palette (index 2)
+5. Clear two offscreen buffers (each 0x9600 = 38,400 bytes) at 0x43C00 with `Memset(0)`
+
+The two buffers at 0x43C00 and 0x4D200 (each 320x120 = 38,400 bytes) suggest a **split-screen double-buffering** scheme where the top and bottom halves of the 320x240 display are rendered independently.
 
 ### Address Calculation
 
@@ -749,6 +791,7 @@ UI element names "SlideMove" and "SlideBase" appear in the firmware's string tab
 - [x] Document text drawing functions (DrawString, Centered, Left/Right, Reverse, Alignment)
 - [x] Map UI widget drawing primitives (pixel, line, rect, bitmap, text, blit)
 - [x] Document page transition effects (palette fade, grid dissolve, state machine)
+- [x] ~~Document deferred draw command queue~~ -- Complete: DrawQueue circular buffer, task context check, synchronization
 - [ ] Document workspace display callbacks (0x0124, 0x0278, 0x0534) protocols
 - [ ] Reverse engineer pre-computed fade data format (BitmapFadeIn/Out blobs)
 
@@ -766,6 +809,11 @@ UI element names "SlideMove" and "SlideBase" appear in the firmware's string tab
 | `VGA_ScreenUnblank` | `0xFB318A` | Restore display after updates |
 | `LcdOn` | `0xFAA5D0` | Enable LCD output |
 | `LcdOff` | `0xFAA5DB` | Disable LCD output |
+| `DrawQueue_Alloc` | `0xFAA4ED` | Allocate space in deferred draw queue |
+| `DisplayCmd_DequeueAndExecute` | `0xFAA36A` | Process queued draw command in draw task |
+| `IS_XSP_INSIDE_4K_REGION_AT_1C032` | `0xFAA532` | Check if caller runs in draw task context |
+| `InitializeGraphics` | `0xFAA4FA` | Boot-time graphics initialization |
+| `DrawFunc` | `0xFAA48C` | Generic draw function dispatch with deferred support |
 
 ### Drawing Primitives
 
