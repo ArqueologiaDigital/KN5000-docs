@@ -6,51 +6,25 @@ permalink: /ui-framework/
 
 # UI Framework
 
-> **Documentation Status: Placeholder**
->
-> This page is a placeholder for future documentation. The UI system has been
-> observed but the framework architecture needs detailed analysis.
+The KN5000 firmware contains an object-oriented UI framework with 550+ widget handlers ("Proc" classes), event-driven dispatch, property introspection, and a drawing primitives API. The framework manages the 320x240 LCD display, processes control panel input, and routes MIDI events to UI elements.
 
-## Overview
+## Architecture
 
-The KN5000 firmware includes a sophisticated UI framework that manages menu pages, parameter editing, and user interaction across the LCD display and control panel.
+The UI framework is organized in layers:
 
-## Architecture (Presumed)
+1. **ClassProc hierarchy** - Object-oriented widget system with inheritance
+2. **Event dispatch** - Two event spaces: actions (0x1C0xxxx) and getters (0x1E0xxxx)
+3. **Drawing primitives** - Line, box, frame, bitmap, string rendering to VRAM
+4. **Page/Window navigation** - Screen, window, and page management
+5. **Resource properties** - Type-safe property system with introspection
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                      UI FRAMEWORK                         │
-├──────────────────────────────────────────────────────────┤
-│                                                           │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │
-│  │    Page     │  │    Page     │  │    Page     │ ...  │
-│  │   Manager   │  │   Stack     │  │  Renderer   │      │
-│  └─────────────┘  └─────────────┘  └─────────────┘      │
-│                                                           │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │
-│  │   Widget    │  │    Event    │  │   Focus     │      │
-│  │   System    │  │  Dispatch   │  │  Manager    │      │
-│  └─────────────┘  └─────────────┘  └─────────────┘      │
-│                                                           │
-└────────────────────────────┬─────────────────────────────┘
-                             │
-          ┌──────────────────┼──────────────────┐
-          v                  v                  v
-  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐
-  │ Control Panel │  │ LCD Display   │  │ MIDI Input    │
-  │   Buttons     │  │  Rendering    │  │  (external)   │
-  └───────────────┘  └───────────────┘  └───────────────┘
-```
+## Internal Module Names (Developer Code Names)
 
-## Known Information
+The firmware contains 11 UI subsystem modules with internal code names (likely named after original Technics/Matsushita developers). These are initialized during boot via `InitializeObjectTable` (0xFA40B3):
 
-### Internal Module Names (Developer Code Names)
-
-The firmware contains 11 UI subsystem modules with internal code names, likely named after the original Technics/Matsushita developers. These are initialized during boot via `InitializeObjectTable`:
-
-| Module Name | Init Routine | Address | Purpose (Presumed) |
-|-------------|--------------|---------|-------------------|
-| **Murai** | `InitializeMurai` | 0xFA9712 | Core UI framework |
+| Module | Init Routine | Address | Purpose |
+|--------|-------------|---------|---------|
+| **Murai** | `InitializeMurai` | 0xFA9712 | Core UI framework, event dispatch |
 | **Toshi** | `InitializeToshi` | 0xFC0969 | Tone/sound selection UI |
 | **East** | `InitializeEast` | 0xF63DFC | Eastern region/style UI |
 | **Suna** | `InitializeSuna` | 0xF1B134 | Sound parameter UI |
@@ -62,27 +36,271 @@ The firmware contains 11 UI subsystem modules with internal code names, likely n
 | **KSS** | `InitializeKSS` | 0xFC09C7 | Keyboard/panel status |
 | **Naka** | `InitializeNaka` | 0xF05A7C | Central dispatch |
 
-These modules register "object tables" that define UI component hierarchies. The naming convention suggests this was an internal practice at Matsushita's development team, possibly using staff nicknames or project code names.
+Each module registers "object tables" that define UI component hierarchies using the `RegObjTable` / `RegObjTabl` macros.
 
-**Initialization sequence** (from `InitializeObjectTable` at 0xFA40B3):
-```
-InitializeMurai  →  InitializeToshi  →  InitializeEast  →
-InitializeSuna   →  InitializeCheap  →  InitializeScoop →
-InitializeYoko   →  InitializeKubo   →  InitializeHama  →
-InitializeKSS    →  InitializeNaka
-```
+## Widget Type System (ClassProc Hierarchy)
 
-Related macros found in the source:
-- `RegObjTableHama` - Register object table (Hama variant)
-- `RegTitleHama` - Register title widget (Hama variant)
-- `HamaListProc` - List processing procedure
+All UI widgets are implemented as "Proc" handlers — functions that receive events and respond based on their widget type. The framework uses a class hierarchy with inheritance.
 
-### UI Pages
+### Base Classes
 
-ROM strings reveal these page identifiers:
+| Proc | Description |
+|------|-------------|
+| `DefaultClassProc` | Root of the class hierarchy |
+| `ClassProc` | Base class handler |
+| `ObjectProc` | Object-level handler |
+| `ViewableProc` | Base for all visible widgets |
+| `FunctionProc` | Function dispatch handler |
+| `InheritedProc` | Calls parent class handler |
 
-| Page ID | Description |
-|---------|-------------|
+### Primitive Widgets
+
+| Proc | Description |
+|------|-------------|
+| `BoxProc` | Basic rectangular container |
+| `GroupBoxProc` | Grouped container with title |
+| `WindowProc` | Top-level window |
+| `ScreenProc` | Full-screen display |
+| `StringBoxProc` | Text display box |
+| `TextBoxProc` | Text content area |
+| `LabelProc` | Static text label |
+| `BitmapProc` | Image display |
+| `IconProc` | Small icon display |
+| `LineProc` | Line element |
+| `FrameProc` | Bordered frame |
+| `EditSwProc` | Edit switch/toggle |
+
+### View Widgets (Vw* prefix)
+
+View widgets are interactive display containers:
+
+| Proc | Description |
+|------|-------------|
+| `VwBoxProc` | Interactive box container |
+| `VwMenuBoxProc` | Menu container |
+| `VwEditSwBoxProc` | Edit switch box |
+| `VwUserBitmapProc` | User bitmap display |
+| `VwUserBitmapByNameProc` | Bitmap by name lookup |
+| `VwScreenTitleProc` | Screen title bar |
+
+### Page/Settings Widgets (Ps* prefix)
+
+Settings-page widgets for parameter display:
+
+| Proc | Description |
+|------|-------------|
+| `PsParaBoxProc` | Parameter box |
+| `PsPageBoxProc` | Page container |
+| `PsMenuBoxProc` | Settings menu |
+| `PsEditSwBoxProc` | Settings edit switch |
+| `PsToggleBoxProc` | Toggle button |
+| `PsListBoxProc` | Scrollable list |
+| `PsGridBoxProc` | Grid/table layout |
+| `PsEditBoxProc` | Text edit field |
+| `PsNumEditBoxProc` | Numeric editor |
+| `PsTblEditBoxProc` | Table editor |
+| `PsRadioBoxProc` | Radio button group |
+| `PsMixerControlProc` | Mixer fader control |
+
+### Action/Control Widgets (Ac* prefix)
+
+Interactive control widgets that respond to user input:
+
+| Proc | Description |
+|------|-------------|
+| `AcOnOffBoxProc` | On/off toggle |
+| `AcIndexToggleProc` | Index selector toggle |
+| `AcFuncToggleProc` | Function toggle |
+| `AcNumEditBoxProc` | Numeric edit control |
+| `AcBitEditBoxProc` | Bit-level edit |
+| `AcStrRadioBoxProc` | String-based radio buttons |
+| `AcTempoBoxProc` | Tempo display/edit |
+| `AcGridBoxProc` | Interactive grid |
+| `AcListBoxProc` | Interactive list |
+| `AcDrawbarNameProc` | Drawbar organ label |
+| `AcAccordionTabProc` | Accordion tab control |
+| `AcMixerVolProc` | Mixer volume fader |
+| `AcPartMixerProc` | Part mixer control |
+| `AcTrackMixerProc` | Track mixer control |
+| `AcPresentationBoxProc` | SSF presentation display |
+| `AcPresentationControlProc` | SSF presentation controller |
+| `AcNamingWindowProc` | File/item naming dialog |
+
+### Specialized Grid Widgets
+
+Many domain-specific grid configurations exist:
+
+| Proc | Domain |
+|------|--------|
+| `AcEasyCmpGridBoxProc` | Easy Composer settings |
+| `AcCmpSetGridBoxProc` | Composer set grid |
+| `AcSndArgGridBoxProc` | Sound argument grid |
+| `AcCtlMsgGridBoxProc` | Control message grid |
+| `AcFadeSetGridBoxProc` | Fade settings grid |
+| `AcInOutGridBoxProc` | Input/output routing grid |
+| `AcMidiPartGridBoxProc` | MIDI part assignment grid |
+| `AcParaLoadOptGridBoxProc` | Parameter load options |
+
+### Screen Types
+
+| Proc | Description |
+|------|-------------|
+| `IvScreenProc` | Interactive screen |
+| `TtlScreenProc` | Title screen |
+| `NormScreenProc` | Normal operating screen |
+| `MsaModeScreenProc` | MSA mode screen |
+| `VariScreenProc` | Variation screen |
+| `RVariScreenProc` | Registration variation screen |
+| `PmBankScreenProc` | Panel memory bank screen |
+| `SineWaveScreenProc` | Sine wave test screen |
+| `AcFdemoScreenProc` | Feature demo screen |
+| `AcWelcomScreenProc` | Welcome/startup screen |
+
+### Interactive View Widgets (Iv* prefix)
+
+Controller widgets for page navigation and lifecycle:
+
+| Proc | Description |
+|------|-------------|
+| `IvPageControlProc` | Page control handler |
+| `IvWindowPageCtlProc` | Window-based page control |
+| `IvPmemWindowPageCtlProc` | Panel memory page control |
+| `IvExitProc` | Exit handler |
+| `IvExitWindowProc` | Window exit handler |
+| `IvWaitWinCtlProc` | Wait dialog control |
+| `IvNamingProc` | Naming dialog controller |
+| `IvShowHideProc` | Visibility toggle |
+| `IvCatchEventProc` | Event capture handler |
+| `IvDrawbarProc` | Drawbar organ display |
+| `IvAccordionProc` | Accordion display |
+
+### Property Type System
+
+The framework includes a complete type system for widget properties with introspection:
+
+**Primitive types:** `swordProc`, `uwordProc`, `scharProc`, `ucharProc`, `slongProc`, `ulongProc`, `boolProc`
+
+**Pointer types:** `pSwordProc`, `pUwordProc`, `pScharProc`, `pUcharProc`, `pSlongProc`, `pUlongProc`, `pBoolProc`, `pFuncProc`, `pProcProc`, `pStringProc`
+
+**Geometry types:** `RECTWProc`, `POINTWProc`, `PointXProc`, `PointYProc`, `RectX1Proc`, `RectY1Proc`, `RectX2Proc`, `RectY2Proc`
+
+**ID types:** `ColorIDProc`, `BorderIDProc`, `AlignmentIDProc`, `LineModeIDProc`, `FontIDProc`, `IconIDProc`, `BitmapIDProc`, `UserIDProc`, `PartIDProc`, `TrackIDProc`, `EventIDProc`
+
+**Resource types:** `ResourceProc`, `ResEventProc`, `ResMethodProc`, `ResNameProc`, `ResBitmapProc`, `ResFrameProc`, `ResIconProc`, `ResFontProc`, `ResStringProc`
+
+## Event System
+
+### Event Code Spaces
+
+Events use 32-bit codes divided into two spaces:
+
+**Action events (0x1C0xxxx)** — Request something to happen:
+
+| Event | Code | Description |
+|-------|------|-------------|
+| `EVT_MENU_OPEN` | 0x1C00001 | Open DISK MENU display |
+| `EVT_SELECT_CONFIRM` | 0x1C00002 | Confirm current selection |
+| `EVT_ACTIVATE` | 0x1C00008 | Activate entry via button press |
+| `EVT_POST_INIT` | 0x1C0000D | Post-initialization hook |
+| `EVT_INIT_HOOK` | 0x1C0000F | Custom initialization |
+| `EVT_CPANEL_EVENT` | 0x1C00013 | Control panel button/encoder event |
+| `EVT_HD_INIT_PARAMS` | 0x1C00016 | Hard disk parameter init |
+| `EVT_BUTTON_FOCUS` | 0x1C00039 | Button focus during selection |
+| `EVT_DISPLAY_CALLBACK` | 0x1CA0000 | Display update callback |
+| `EVT_DISPLAY_UPDATE` | 0x1CA0004 | Force display update |
+
+**Getter events (0x1E0xxxx)** — Query widget state:
+
+| Event | Code | Description |
+|-------|------|-------------|
+| `EVT_IDENTITY` | 0x1E00000 | Return widget identity |
+| `EVT_GET_HL` | 0x1E00001 | Return value in XHL |
+| `EVT_GET_IZ` | 0x1E00002 | Return value in XIZ |
+| `EVT_GET_CONFIG` | 0x1E00003 | Return config at XHL+0x0C |
+| `EVT_KEYPRESS` | 0x1E0000D | Keypress query |
+| `EVT_INPUT` | 0x1E0000E | Input event query |
+| `EVT_RETURN_ZERO` | 0x1E0000F | No-op (returns zero) |
+| `EVT_REDRAW` | 0x1E00014 | Request UI refresh |
+| `EVT_OBJECT_STATE_QUERY` | 0x1E0008F | Query object state |
+| `EVT_POST_ACTIVATE` | 0x1E0009C | Post-activation query |
+
+### Event Dispatch Functions
+
+| Function | Description |
+|----------|-------------|
+| `MainDispatchEvent` | Primary event router |
+| `MainSendEvent` | Direct event send |
+| `MainPostEvent` | Post event to queue |
+| `SendEvent` | Generic send |
+| `PostEvent` | Generic post |
+| `BroadcastEvent` | Send to all listeners |
+| `DispatchEvent` | Route by type |
+| `ApPostEvent` | Application-level post |
+
+## Drawing Primitives API
+
+The firmware provides a complete set of drawing primitives that render to the offscreen buffer (0x43C00) and VRAM (0x1A0000-0x1DFFFF). These are defined in `drawing_primitives.s`.
+
+### Line Drawing
+
+| Function | Description |
+|----------|-------------|
+| `DrawLine` | Draw a line between two points |
+| `DrawLineEx` | Extended line with pattern support |
+
+### Geometric Shapes
+
+| Function | Description |
+|----------|-------------|
+| `DrawBox` | Filled rectangle |
+| `DrawFrame` | Rectangle outline |
+| `DrawFrameEx` | Extended frame with style |
+| `DrawFrameSP` | Frame with special properties |
+| `DrawWall` | Tiled background fill |
+
+### Bitmap Rendering
+
+| Function | Description |
+|----------|-------------|
+| `DrawBitmap` | Standard bitmap render |
+| `DrawBitmapFast` | Optimized bitmap render |
+| `DrawBitmapSP` | Bitmap with transparency |
+| `DrawBitmapSPFast` | Optimized transparent bitmap |
+| `DrawBitmapSP2` | Bitmap variant 2 |
+| `DrawBitmapFile` | Render bitmap from file data |
+
+### Text Rendering
+
+| Function | Description |
+|----------|-------------|
+| `DrawString` | Basic text output |
+| `DrawStringCentered` | Centered text within bounds |
+| `DrawStringLeftJustify` | Left-aligned text |
+| `DrawStringRightJustify` | Right-aligned text |
+| `DrawStringAlignment` | Text with specified alignment |
+| `DrawStringReverse` | Right-to-left text |
+
+### Pixel Operations
+
+| Function | Description |
+|----------|-------------|
+| `MovePixels` | Block pixel copy/move |
+| `DrawIcons` | Render icon set |
+
+## Page Management
+
+The UI uses a hierarchy of Screens > Windows > Pages:
+
+- **Screens** (`ScreenProc`, `IvScreenProc`) — Full-screen layouts that own the entire display
+- **Windows** (`WindowProc`, `IvWindowPageCtlProc`) — Contained regions within a screen
+- **Pages** (`IvPageControlProc`, `PsPageBoxProc`) — Switchable content within a window
+
+Page controllers (`IvPageControlProc`) manage which page is visible and handle transitions when the user switches tabs or modes. Window-level controllers (`IvWindowPageCtlProc`) coordinate multiple pages within a single window.
+
+### Known Page Identifiers
+
+| Page | Description |
+|------|-------------|
 | MAIN_PAGE | Main operating screen |
 | SOUND_PAGE | Sound/voice selection |
 | STYLE_PAGE | Style selection |
@@ -93,37 +311,41 @@ ROM strings reveal these page identifiers:
 | PC_DATA_LINK_PAGE | PC connection (HDAE5000) |
 | HDD_UTIL_PAGE | Hard disk utilities |
 
-### Widget Types (Presumed)
-
-Based on UI observation:
-
-| Widget | Description |
-|--------|-------------|
-| Button | Pressable UI element |
-| Slider | Value selection bar |
-| List | Scrollable item list |
-| Text | Static or editable text |
-| Icon | Graphical indicator |
-| Meter | Level/value display |
-
-### Event Handling
-
-The control panel protocol delivers events to the UI:
-
-1. Button press/release
-2. Encoder rotation
-3. Pitch/mod wheel movement
-4. MIDI input events
-
-See [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) for event format.
-
 ## Presentation System (SSF)
 
-The firmware includes a full **XML-based presentation scripting system** used for the built-in Feature Demo. This is a separate subsystem from the general widget framework, with its own XML parser, event handlers (`EV_READPRESENTATION`, `EV_READACTION`, `EV_READSONG`), and tag vocabulary (`PRESENTATION`, `ACTION`, `SHOW`, `IMG`, `SONG`, `EXEC`, etc.).
+The firmware includes an **XML-based presentation scripting system** used for the built-in Feature Demo. This is a separate subsystem from the general widget framework, with its own XML parser, event handlers (`EV_READPRESENTATION`, `EV_READACTION`, `EV_READSONG`), and tag vocabulary (`PRESENTATION`, `ACTION`, `SHOW`, `IMG`, `SONG`, `EXEC`, etc.).
 
 The presentation controller (`AcPresentationControlProc` at `0xF8450B`) dispatches actions via a jump table, and the Feature Demo script (`hkst_55.ssf`) drives a 27-step automated demonstration with bitmap images and instrument displays.
 
 See [Feature Demo & Presentation System]({{ site.baseurl }}/feature-demo/) for full documentation.
+
+## Code References
+
+### Include Files
+
+| File | Lines | Contents |
+|------|-------|----------|
+| `drawing_primitives.s` | 4,567 | Line, box, frame, bitmap, string rendering |
+| `semenu_routines.s` | 3,431 | Sound editor menu system |
+| `bitmap_out_routines.s` | 4,347 | Bitmap output/display compositing |
+| `psgridbox_routines.s` | 1,138 | Performance settings grid box UI |
+| `rvari_routines.s` | 2,752 | Registration variation selection UI |
+| `fdemotext_routines.s` | 2,334 | Feature demo text rendering |
+| `setwall_routines.s` | 1,940 | Accompaniment style wall parser |
+| `bmdredit_routines.s` | 4,434 | Beat/drum editor |
+
+### Key Routines
+
+| Symbol | Address | Description |
+|--------|---------|-------------|
+| `InitializeObjectTable` | 0xFA40B3 | Boot-time UI module registration |
+| `MainDispatchEvent` | — | Primary event router |
+| `MainFuncCall` | — | Widget function call dispatcher |
+| `GetViewInstance` | — | Get widget view instance |
+| `RegisterObjectTable` | — | Register widget object table |
+| `DrawLine` | — | Line drawing primitive |
+| `DrawBitmapFile` | — | File-based bitmap rendering |
+| `DrawStringCentered` | — | Centered text rendering |
 
 ## Related Pages
 
@@ -131,19 +353,11 @@ See [Feature Demo & Presentation System]({{ site.baseurl }}/feature-demo/) for f
 - [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) - Input handling
 - [Display Subsystem]({{ site.baseurl }}/display-subsystem/) - Screen rendering
 - [Image Gallery]({{ site.baseurl }}/image-gallery/) - UI graphics
-- [System Overview]({{ site.baseurl }}/system-overview/) - Overall architecture
+- [Event Codes]({{ site.baseurl }}/event-codes/) - Complete event code reference
 
 ## Research Needed
 
-- [ ] Identify page management routines
-- [ ] Document widget rendering functions
-- [ ] Map event dispatch mechanism
-- [ ] Analyze focus/navigation system
-- [ ] Document parameter editing flow
-- [ ] Identify page transition routines
-
-## How to Contribute
-
-See [Help Wanted]({{ site.baseurl }}/help-wanted/) for contribution guidelines.
-
-Search the main ROM disassembly for string references like "PAGE" to locate UI-related code.
+- [ ] Document widget property layout (offset table per widget type)
+- [ ] Map complete event dispatch chain (post → queue → dispatch → handler)
+- [ ] Document focus/navigation system (tab order, encoder routing)
+- [ ] Trace widget creation flow (alloc → init → register → display)
