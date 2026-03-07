@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 280 (26 open, 252 closed)
+**Total Issues:** 280 (23 open, 255 closed)
 
 **Quick Links:** 
-[HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (23) · [Sound & Audio](#sound-audio) (1)
+[HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (20) · [Sound & Audio](#sound-audio) (1)
 
 ---
 
@@ -36,38 +36,6 @@ Reverse engineer the Windows HD-TechManager5000 software to understand the PC si
 ---
 
 ### Other {#other}
-
-#### 🔴 Phase 1 Completion: All MAME blockers resolved {#issue-kn5000-dbi}
-
-**ID:** `kn5000-dbi` | **Priority:** Critical | **Created:** 2026-01-31
-
-**Notes:** Meta-issue tracking Phase 1 completion (Foundation - MAME Blockers).
-
-## Phase 1 Goals
-Get basic MAME emulator running with display and sound output.
-
-## Component Milestones
-- kn5000-8z5: Display subsystem emulation
-- kn5000-y18: Audio subsystem emulation
-- kn5000-5a0: Fix 177 divergent bytes
-- kn5000-d1x: Table Data ROM structure
-
-## Blockers to Resolve
-1. **Display** - Need pixel format, palette, framebuffer layout
-2. **Audio** - Need DSP effects, Sub CPU command protocol
-3. **ROM** - 177 bytes at 0xFDDE5F need instruction audit
-
-## Success Criteria
-- [ ] MAME boots to splash screen
-- [ ] Basic audio output works
-- [ ] Main CPU ROM at 100%
-- [ ] All P1 display issues closed
-- [ ] All P1 audio issues closed
-
-## Timeline Estimate
-Phase 1 represents the critical path to functional emulation.
-
----
 
 #### 🔴 Plan: Long-term project roadmap and phase tracking {#issue-kn5000-3go}
 
@@ -173,63 +141,6 @@ Phase 1 represents the critical path to functional emulation.
 - Phase 2: kn5000-dnl (P1)
 - Phase 3: kn5000-9m6 (P2)
 - Phase 4: kn5000-nca (P3)
-
----
-
-#### 🟠 MAME: Audio subsystem emulation milestone {#issue-kn5000-y18}
-
-**ID:** `kn5000-y18` | **Priority:** High | **Created:** 2026-01-31
-
-**Notes:** Track completion of audio subsystem emulation for MAME.
-
-## Required Components
-- [ ] Sub CPU emulation (ROM at 0xFE0000)
-- [ ] Inter-CPU latch communication (0x120000)
-- [ ] Payload transfer from Main CPU
-- [ ] DSP effects processing
-- [ ] Tone generator/voice allocation
-- [ ] DAC output
-
-## Related Issues
-- kn5000-1oy: DSP effects processing
-- kn5000-xv2: DSP IC311 documentation
-- kn5000-xel: DAC IC310 documentation
-- kn5000-061: Main to Sub CPU command protocol
-
-## Success Criteria
-- Sub CPU boots from payload
-- Basic sound output works
-- MIDI input produces audio
-
-**Depends on:** [`kn5000-5msx`](#issue-kn5000-5msx)
-
----
-
-#### 🟠 MAME: Display subsystem emulation milestone {#issue-kn5000-8z5}
-
-**ID:** `kn5000-8z5` | **Priority:** High | **Created:** 2026-01-31
-
-**Notes:** Track completion of display subsystem emulation for MAME.
-
-## Required Components
-- [ ] VGA register emulation (MN89304 controller)
-- [ ] Framebuffer memory at 0x1A0000
-- [ ] Pixel format (16-bit RGB565 suspected)
-- [ ] Color palette handling
-- [ ] Drawing primitives
-
-## Related Issues
-- kn5000-ezo: VGA register documentation
-- kn5000-3c5: Framebuffer memory layout
-- kn5000-hy8: Pixel format and palette
-- kn5000-gln: Drawing primitives
-
-## Success Criteria
-- LCD displays boot splash correctly
-- UI elements render accurately
-- Text/fonts appear correctly
-
-**Depends on:** [`kn5000-d12s`](#issue-kn5000-d12s)
 
 ---
 
@@ -676,6 +587,9 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-dbi` | Phase 1 Completion: All MAME blockers resolved | 2026-03-07 |
+| `kn5000-y18` | MAME: Audio subsystem emulation milestone | 2026-03-07 |
+| `kn5000-8z5` | MAME: Display subsystem emulation milestone | 2026-03-07 |
 | `kn5000-8jn0` | Disasm: Systematic semantic labeling of high-reference-co... | 2026-03-07 |
 | `kn5000-zfxb` | Docs: Document accompaniment/style playback engine | 2026-03-07 |
 | `kn5000-d12s` | Docs: Document display subsystem paint/draw primitives | 2026-03-07 |
@@ -693,11 +607,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | `kn5000-67g` | Document ROM interleaving formats for all ROM chips | 2026-03-07 |
 | `kn5000-0r5` | Investigate shared graphics data between maincpu and tabl... | 2026-03-07 |
 | `kn5000-8dy` | Audio: Trace sound category data structures at 0xE023B0 | 2026-03-07 |
-| `kn5000-t2e` | Docs: Cross-reference Main CPU and Sub CPU symbol names | 2026-03-07 |
-| `kn5000-sf8` | Docs: Add code reference tables to all subsystem pages | 2026-03-07 |
-| `kn5000-x95` | Audio: Document all command byte formats (0x00-0xFF) | 2026-03-07 |
 
-*...and 232 more closed issues*
+*...and 235 more closed issues*
 
 ---
 
@@ -707,8 +618,8 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 
 | Priority | Count |
 |----------|-------|
-| Critical | 2 |
-| High | 5 |
+| Critical | 1 |
+| High | 3 |
 | Medium | 8 |
 | Low | 11 |
 
@@ -717,9 +628,9 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | Category | Count |
 |----------|-------|
 | HD-AE5000 Expansion | 2 |
-| Other | 23 |
+| Other | 20 |
 | Sound & Audio | 1 |
 
 ---
 
-*Last updated: 2026-03-07 21:33*
+*Last updated: 2026-03-07 22:55*
