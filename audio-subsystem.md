@@ -545,9 +545,40 @@ Opcodes 0-5 dispatch to native TLCS-900 machine code subroutines within the `DSP
 | 4 | 0x473 | 0x03C7A1 | 26 bytes |
 | 5 | 0x48D | 0x03C7BB | ~70 bytes |
 
-These handlers use prevbank registers (D7 prefix), auto-increment addressing `(xRR+)`, and register-indirect compact forms to efficiently write multiple DSP registers in sequence. They read data bytes from the bytecode stream and route them to the DSP hardware via the parallel bus protocol.
+These handlers use prevbank registers (D7 prefix), auto-increment addressing `(xRR+)`, and register-indirect compact forms to efficiently write multiple DSP registers in sequence. They read data bytes from the bytecode stream and route them to the DSP hardware via the parallel bus protocol. After completing, each handler jumps to `DSP_BytecodeInterpreter_CheckEnd` to continue the interpreter loop.
 
 A secondary offset table at `OFFSETS_14745` (0x014745) provides shorter offsets for a variant dispatch path, suggesting some handlers have fast-path entry points.
+
+**Common Handler Idiom:**
+
+All opcode 0-5 handlers share this recurring pattern for reading and sending bytes:
+```
+ld XWA,(XSP+0x1a)     ; load bytecode program pointer
+ld C,(XWA+)            ; read next byte (auto-increment pointer)
+ld (XSP+0x1a),XWA     ; store updated pointer
+ld A,C                 ; copy byte to A
+extz WA                ; zero-extend to 16-bit
+ld BC,(XSP+0x14)       ; load DSP channel number from stack
+call DSP_DispatchCommand ; or DSP_DispatchData
+ld QIZ,HL              ; save result to prevbank register
+```
+
+**Handler Parameter Packing:**
+
+Different handlers use different parameter widths for DSP register values:
+
+| Opcode | Packing | Shift | Config Param Used | Description |
+|--------|---------|-------|-------------------|-------------|
+| 0 | 12-bit | `srl 4` / `sll 4` | stack[10] (word 1) | Complex multi-path: branches on data byte value (0x00, 0x0A, or other) |
+| 1 | 12-bit | `srl 4` / `sll 4` | stack[10] | Extended write with different branching |
+| 2 | 12-bit | `srl 4` / `sll 4` | stack[10] | Multi-register variant |
+| 3 | 16-bit | `srl 8` / `sll 8` | stack[14] (word 3) | Full 16-bit parameter values |
+| 4 | — | — | — | Command-only: sends 1 byte as command, then returns |
+| 5 | — | — | — | Command + data: sends command byte then data byte |
+
+For 12-bit parameters, the value is packed across 2 bytecode bytes as `byte0[7:0] << 4 | byte1[7:4]`. This is split into two DSP data writes: high byte (`value >> 4`) and low byte (`(value << 4) & 0xFF`). This indicates **DSP registers use 12-bit parameter values** for most effect parameters.
+
+For 16-bit parameters (opcode 3), the full 16-bit value is packed as `byte0[7:0] << 8 | byte1[7:0]`, split into high byte and low byte data writes.
 
 **Execution Flow Example:**
 
@@ -1283,6 +1314,7 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 - [x] ~~Map remaining proprietary CC handlers (0x97-0x9D)~~ — Complete: CC91=freq mult, CC95=portamento, CC97=fine pitch, CC9B=vibrato depth, CC9C=vibrato enable, CC9D=tremolo depth
 - [x] ~~Decode tone generator register semantics~~ — Partial: voice control state machine, key-on/off flags, volume/level groups, latched parameter updates documented; pitch/envelope/filter register mapping still needs work
 - [x] ~~Document synthesis architecture~~ — Complete: 64-voice wavetable, 26 MIDI channels, dynamic voice allocation, hardware ADSR, LFO modes, proprietary CCs
-- [ ] Reverse-engineer DSP register semantics by analyzing the native code handlers within `DSP_Bytecode_Programs` (opcodes 0-5, ~1200 bytes of prevbank/auto-increment register write code at 0x3C32E)
+- [ ] Reverse-engineer DSP register semantics by tracing actual bytecode program data through the decoded handlers (need to decode config tables at 0x14777/0x147B3 entry-by-entry)
+- [x] ~~Analyze native code handlers within DSP_Bytecode_Programs~~ — Complete: 6 handlers at 0x3C32E, opcodes 0-2 use 12-bit parameter packing (4-bit shift), opcode 3 uses 16-bit (8-bit shift), opcode 4=command-only, opcode 5=command+data. All share common read-from-stream idiom with prevbank result storage.
 - [ ] Determine if DSP internal ROM can be extracted (decapping, JTAG, etc.)
 - [x] ~~Document bytecode interpreter opcode set completely (opcodes 0x0-0xF)~~ — Complete: 2-byte header format, opcodes 0-5 (native code dispatch), 0xD (yield), 0xE (send command+data), 0xF (end). Config entries are 12 bytes (4 words + 1 pointer). Handlers at `DSP_Bytecode_Programs` (0x3C32E) are native TLCS-900 subroutines.
