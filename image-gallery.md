@@ -319,6 +319,19 @@ Most icons have bounding box `0x18` × `0x18` (24×24). The `DrawIcons` routine 
 - **LCD resolution**: 320x240 pixels (QVGA)
 - **LCD controller**: MN89304 with 4Mbit Video RAM (IC207)
 
+## Cross-ROM Shared Graphics
+
+Analysis found ~39 KB of near-identical graphics data shared between the Main CPU Program ROM and Table Data ROM. These are **not exact duplicates** — they match 89-96% at the byte level, with differences primarily in adjacent byte ordering (suggesting different rendering passes of the same source artwork).
+
+| Main CPU Image | Main CPU Address | Table Data Address | Size | Match |
+|---------------|-----------------|-------------------|------|-------|
+| BitmapTechnicsLogo (tail) | 0xE90090 | 0x91D0EA | 13,806 B | 93.5% |
+| BitmapKN5000Logo (tail) | 0xE93680 | 0x82CDA4 | 7,198 B | 89.8% |
+| BitmapBmphk (tail) | 0xE7C8B0 | 0x921176 | 9,282 B | 95.9% |
+| FadeIn/FadeOut bitmaps | 0xEB8190 | 0x809AD6 | 8,964 B | 94.3% |
+
+**Conclusion:** Because the copies are not byte-identical, sharing via `binclude` is not feasible. Both ROMs were compiled independently with their own bitmap rendering, resulting in near-identical but distinct binary representations of the same visual content.
+
 ## Converting New Images
 
 When new images are extracted as `.bin` files:
