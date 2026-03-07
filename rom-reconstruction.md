@@ -108,7 +108,7 @@ The Main CPU disassembly is organized into modular source files for maintainabil
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `maincpu/kn5000_v10_program.s` | ~316,000 | Main source file (includes others) |
+| `maincpu/kn5000_v10_program.s` | ~43,000 | Main source file (includes 94 other files) |
 | `maincpu/gui_constants.s` | 57 | Display state variables, offscreen buffers |
 | `maincpu/fdc_constants.s` | 75 | FDC I/O addresses, commands, status bits |
 | `maincpu/fdc_routines.s` | 1,403 | FDC read/write/seek routines |
@@ -150,7 +150,27 @@ The Main CPU disassembly is organized into modular source files for maintainabil
 | `maincpu/file_io/medley.s` | 4,690 | Medley playback (disk, internal, SMF, PD, doc) |
 | `maincpu/file_io/misc_ui.s` | 969 | Jump insert, priority, setup, filename box |
 
-**Total extracted code: ~64,000 lines across 41 include files**
+| `maincpu/accompaniment_engine.s` | 32,516 | Accompaniment, auto-play, pedal, style engine |
+| `maincpu/sequencer_engine.s` | 32,056 | Sequencer part/play, note editing |
+| `maincpu/note_voice_mapping.s` | 26,090 | Note mapping, voice management, MIDI routing |
+| `maincpu/ui_widget_defs.s` | 19,616 | UI widget definitions, screen/window/view IDs |
+| `maincpu/sound_editor_ui.s` | 16,567 | Sound editor menus and grids |
+| `maincpu/drawbar_panel_ui.s` | 15,526 | Drawbar, accordion, panel memory UI |
+| `maincpu/sequencer_ui.s` | 14,292 | Sequencer playback/edit UI |
+| `maincpu/mode_screens.s` | 12,905 | MSA mode, panel memory, effect mode screens |
+| `maincpu/midi_voice_routing.s` | 11,498 | MIDI dispatch, voice routing |
+| `maincpu/scoop_display.s` | 10,363 | Display update manager |
+| `maincpu/naka_dispatch.s` | 9,746 | Central dispatch, UI state |
+| `maincpu/naka_descriptors.s` | 9,324 | Descriptor tables, bitmap data |
+| `maincpu/file_demo_proc.s` | 8,355 | File I/O, demo processing |
+| `maincpu/style_data_init.s` | 8,246 | Style data, task scheduling |
+| `maincpu/voice_synth.s` | 8,042 | Sound generation, voice synthesis |
+| `maincpu/dsp_config_sysex.s` | 5,881 | DSP config, SysEx handlers |
+| `maincpu/naka_style_bitmap.s` | 5,909 | Style groups, bitmap data |
+| `maincpu/tonegen_voice_ctrl.s` | 5,185 | Tone generator, voice control |
+| `maincpu/voice_midi_buf.s` | 4,202 | Voice MIDI buffers |
+
+**Total extracted code: ~384,000 lines across 94 include files (90% of main CPU source)**
 
 **Subsystem Descriptions:**
 
