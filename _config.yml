@@ -21,6 +21,7 @@ header_pages:
   - subcpu-payload-loading.md
   - rom-reconstruction.md
   - table-data-rom.md
+  - custom-data-flash.md
   # Subsystems & Protocols
   - audio-subsystem.md
   - tone-generator.md
