@@ -793,6 +793,45 @@ The data wheel (large rotary dial next to LCD) uses the left panel MCU's ROTA/RO
 
 The exact packet-level mechanism for how the MCU's quadrature decoder communicates data wheel direction to the main CPU is not yet fully traced. The MCU likely reports direction as part of its button/status response packets.
 
+### MIDI Parameter Delta Processing
+
+The main loop calls `MidiParam_ProcessDeltas` (0xFC6ED1) every iteration (when input processing is enabled) to detect changes in MIDI controller parameters and re-route them through the encoder value processing pipeline.
+
+**Two-channel processing:**
+
+| Channel | Status Register | Output Buffer | Previous Value | Encoder ID | Controller |
+|---------|----------------|---------------|---------------|------------|------------|
+| 0 | `ENCODER_0_STATUS` (0x8F04) | `ENCODER_0_OUTPUT` (0x8F10) | 0x8EDC | 2 (Modwheel) | Modulation |
+| 1 | `ENCODER_1_STATUS` (0x8F06) | `ENCODER_1_OUTPUT` (0x8F16) | 0x8EDE | 5 (Volume) | Volume |
+
+Each channel reads the current MIDI parameter value via `MidiChannel_GetParamByIndex`, computes the delta against the previously stored value, applies debounce filtering through `MIDI_ComputeParamDelta`, and if the delta is confirmed valid, re-dispatches through `CPanel_EncoderDispatch` to apply lookup table conversion. The result is stored in the output buffer with bit 7 of the flags byte set to indicate a value change.
+
+**`MIDI_ComputeParamDelta` — Noise/Debounce Filter (0xFC6F86):**
+
+This routine filters encoder value changes to reject electrical noise and debounce mechanical jitter. It uses a 3-level threshold system:
+
+| Absolute Delta | Action | Status Bits |
+|---------------|--------|-------------|
+| ≤ 2 | **Noise rejection** — ignore change, clear debounce counter | Clear bits 0-1 |
+| 3-6 | **Debounce phase** — increment debounce counter, wait for sustained change | Set bit 2, increment bits 0-1 |
+| > 6 | **Confirmed change** — if debounce counter saturated (bits 0-1 = 3), set valid flag; otherwise increment counter | Set bit 3 (valid) when confirmed |
+
+Status register bit definitions:
+- **Bits 0-1:** Debounce counter (0-3, saturates at 3 → triggers bit 3)
+- **Bit 2:** Debounce active flag (change detected, awaiting confirmation)
+- **Bit 3:** Valid delta flag (checked and cleared by caller to accept the change)
+
+**`MidiChannel_GetParamByIndex` (0xFC6EA8):**
+
+Returns a pointer to MIDI channel parameters based on channel index (0-3). The parameter block base addresses in internal RAM:
+
+| Channel | Base Address (decimal) | RAM |
+|---------|----------------------|-----|
+| 0 | 288 (0x120) | Internal |
+| 1 | 290 (0x122) | Internal |
+| 2 | 292 (0x124) | Internal |
+| 3 | 294 (0x126) | Internal |
+
 ### MIDI Controller Output
 
 Encoder and analog input values are converted to MIDI Control Change messages and stored in RAM variables before being sent to the sound engine:
