@@ -551,6 +551,69 @@ The user's memory of "feature presentation discs" may refer to this planned-but-
 
 ---
 
+## Demo Timer State Machine
+
+The Feature Demo uses a timer-driven state machine to sequence through demo items. The timer variable is at DRAM address 3375 (0xD2F).
+
+### Timer-Driven Entry Point
+
+`Demo_SelectEntry_TimerTick` (0xF86D45) is called from the main loop timer. Each tick:
+
+1. Checks control panel state (`Demo_SelectEntry_CheckCPanel`)
+2. Decrements the countdown at address 3375
+3. At count=10 (`0x0A`): loads the next song pattern and starts playback
+4. At count=3: calls `Demo_SelectEntry_StartPlayback` to begin accompaniment
+5. At count=1: updates display state
+
+### Song Processing Flow
+
+`Demo_SelectEntry_ProcessSongList` (0xF86D86) manages song selection:
+
+1. Checks if song list at address 10420 is empty — if so, goes to countdown
+2. Checks bit 3 of address 10413 for auto-play vs manual mode
+3. In auto-play: compares current song index (10404) with target (4439)
+4. Calls `Demo_WaitForDisplayBit` — busy-wait loop checking bit 2 of address 1056 (display ready flag) with 0xFFFFFF timeout
+5. Calls `Banner_Loop_Check` — sends note-off commands (status 0xD3) to all 16 channels, cleaning up active notes
+6. Increments song index at address 4440 and loops
+
+### Display Wait
+
+`Demo_WaitForDisplayBit` (0xF86F2C) is a timeout-protected busy-wait:
+
+```
+Loop 0xFFFFFF times:
+    If bit 2 of DRAM[0x420] == 0: return (display ready)
+Return after timeout
+```
+
+This ensures display operations complete before the next slide loads. The timeout prevents a hard hang if the display never becomes ready.
+
+### Why the Demo Runs Fast in MAME
+
+The SSF presentation completes all 9 items in ~5 frames because:
+- Without waveform ROMs, audio never actually plays
+- Song "playback" starts and immediately completes (no audio data to process)
+- The timer countdown runs through all states rapidly since no real audio timing occurs
+- The `Demo_WaitForDisplayBit` timeout fires quickly since the display subsystem processes faster than expected
+
+On real hardware, each song would play for 10-30 seconds, giving time for the corresponding FTBMP bitmap to be displayed. In MAME, all 9 items cycle through in under a second.
+
+### Key DRAM Addresses
+
+| Address | Description |
+|---------|-------------|
+| 1056 (0x420) | Display status flags (bit 2 = display busy) |
+| 3375 (0xD2F) | Demo timer countdown value |
+| 3379 (0xD33) | Debounce counter |
+| 4439 (0x1157) | Target song index |
+| 4440 (0x1158) | Current song index |
+| 10404 (0x28A4) | Active demo entry index |
+| 10413 (0x28AD) | Demo control flags (bit 3 = auto-play) |
+| 10420 (0x28B4) | Song list pointer |
+| 36148 (0x8D34) | UI state byte |
+| 36152 (0x8D38) | UI sub-state byte (0xE4 = Feature Presentation) |
+| 36686 (0x8F4E) | Playback state flag |
+
 ## Related Pages
 
 - [UI Framework]({{ site.baseurl }}/ui-framework/) — Widget system and event handling
