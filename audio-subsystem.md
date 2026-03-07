@@ -295,21 +295,59 @@ Audio_Main_Loop (0x01FAEB)          -- at runtime
         -> ... -> LABEL_036E3D -> DSP_State_Dispatcher (same chain)
 ```
 
-The master dispatcher (`DSP_State_Dispatcher`) calls 11 sub-routines sequentially:
+The master dispatcher (`DSP_State_Dispatcher`) takes a pointer to a state structure in XWA:
 
-| Step | Routine | Description | Debug String |
-|------|---------|-------------|--------------|
-| 1 | `DSP_ResetLoop` | DSP reset loop (DSP 0,1) | "DSP %d reset." |
-| 2 | `EFF_MuteLoop` | EFF mute loop (EFF 0-4) | "EFF %d mute." |
-| 3 | `DSP_MuteLoop` | DSP mute loop (DSP 0,1) | "DSP %d mute." |
-| 4 | `DSP_AlgorithmChangeCheck` | Argo change check | "argo change %d" |
-| 5 | `EFF_WriteHeader` | EFF header (for EFF 0) | "EFF %d headder" |
-| 6 | `EFF_DisconnectLoop` | EFF disconnect loop | "EFF %d disconnect." |
-| 7 | `DSP_UnmuteLoop` | DSP antimute loop | "DSP %d antimute." |
-| 8 | `EFF_HeaderChangeDataLoop` | EFF header+change+data | "EFF %d change %d", "EFF %d data change %d" |
-| 9 | `EFF_LinkLoop` | EFF link loop | "EFF %d link." |
-| 10 | `EFF_VolumeLoop` | EFF volume loop | "EFF %d vol %d", "EFF %d para%d edit %d" |
-| 11 | `EFF_SecondaryLinkPath` | Secondary EFF link | "EFF %d disconnect." |
+```
+State structure (at RAM, passed via XWA → XIZ):
+  +0: (base)
+  +2: algorithm change flag (1 = needs algorithm change)
+  +4: mode flag (1 = reset/disconnect mode, other = normal)
+  +6: algorithm number
+```
+
+The dispatcher follows a conditional 11-step pipeline:
+
+| Step | Routine | Condition | Description |
+|------|---------|-----------|-------------|
+| 1a | `DSP_ResetLoop` | mode == 1 | Reset both DSP chips (assert/deassert reset lines) |
+| 1b | `EFF_MuteLoop` | mode != 1 | Mute all 5 EFF channels via `DSP_WriteEFFConfig` |
+| 2 | `DSP_MuteLoop` | always | Mute DSP hardware chips 0-1 via `DSP_WriteGlobalConfig` |
+| 3 | `DSP_AlgorithmChangeCheck` | always | If global algo-change flag set, call `DSP_AlgorithmChange` |
+| 4a | `EFF_WriteHeader` | mode==1 or algo_change | Write EFF header config for channel 0 |
+| 4b | `EFF_DisconnectLoop` | mode==1 or algo_change | Disconnect all effect slots (iterate 4→0) |
+| 5 | `DSP_UnmuteLoop` | always | Unmute DSP hardware chips 0-1 via `DSP_WriteGlobalConfig` |
+| 6 | `EFF_HeaderChangeDataLoop` | always | Process per-slot header changes + parameter changes (5 slots) |
+| 7 | `EFF_LinkLoop` | always | Re-link connected effect slots (iterate 4→0) |
+| 8 | `EFF_VolumeLoop` | always | Update volume parameters for all effect slots (iterate 4→0) |
+| 9 | `EFF_SecondaryLinkPath` | always | Two-pass: compute max delay, then re-link secondary paths |
+| 10 | Algo state update loop | always | Iterate slots 4→0, update algorithm state at 0x12226 |
+
+**EFF_MuteLoop Detail (Step 1b):**
+Iterates EFF slots 0-4. For each slot with its mute flag set (at RAM 18736 + slot×2), sends mute config from pointer table at 0x1F3BC via `DSP_WriteEFFConfig`. If any slot was muted, schedules a 20-unit delay via `DSP_ScheduleDelay`.
+
+**DSP_AlgorithmChange Detail (Step 3):**
+When the DSP algorithm changes, loads 7 configuration blocks sequentially from ROM:
+
+| Order | ROM Address | Channel | Purpose |
+|-------|------------|---------|---------|
+| 1 | 0x01E63C | 0 | Initial global config |
+| 2 | 0x01E6BE | 0 | Channel 0 config |
+| 3 | 0x01E996 | 1 | Channel 1 config A |
+| 4 | 0x01EA12 | 1 | Channel 1 config B |
+| — | (1-unit delay) | — | Wait for DSP to settle |
+| 5 | 0x01E7C5 | 1 | Channel 1 post-delay A |
+| 6 | 0x01E8A7 | 1 | Channel 1 post-delay B |
+| 7 | 0x01E891 | 1 | Channel 1 post-delay C |
+| 8 | 0x01E947 | 1 | Channel 1 post-delay D |
+
+If mode == 1, de-asserts DSP2 reset before loading channel configs.
+
+**EFF_HeaderChangeDataLoop Detail (Step 6):**
+Calls `EFF_Change_Handler` for each dirty slot. The handler dispatches by slot number:
+- Slots 0-1: Standard EFF change path → `EFF_Change_WithDebug`
+- Slots 2-4: Algorithm-dependent path (mode==1 uses `EFF_Change_WithDebug`, otherwise `EFF_DataChange_WithDebug`)
+
+`EFF_Change_WithDebug` writes two config blocks per change: a primary config from table at 0x1ED7C and a secondary from 0x1EF0C, both indexed by the change type. Special handling for channel 1 with types 0x9 and 0xA (hardcoded reverb/chorus ROM addresses).
 
 All 13 diagnostic format strings (at ROM 0x0122CC-0x012397) are triggered through this dispatcher. The strings are output via `Debug_Print_String` (0x038365) which sends characters through boot ROM serial output at `0xFFFEA1`.
 
@@ -429,6 +467,108 @@ The DSP write routines used by the dispatcher:
 | `DSP_WriteParameter` | 0x03C190 | Parameter-specific DSP write (algo-indexed tables) |
 | `DSP_ParameterWriteEngine` | 0x03C9E6 | Core DSP parameter write engine |
 | `DSP_BytecodeInterpreter_Init` | 0x03C266 | Bytecode interpreter entry point |
+
+### DSP Bytecode Interpreter
+
+The Sub CPU uses a bytecode interpreter to batch-write DSP register configurations. This is **not** DSP microcode — it's a Sub CPU-side interpreter that translates compact ROM-resident programs into sequences of hardware register writes to the DSP chips.
+
+**Entry Points:**
+
+| Routine | Address | Config Table | Purpose |
+|---------|---------|-------------|---------|
+| `DSP_WriteEFFConfig` | 0x03C161 | 0x14777 | Per-effect channel writes (looks up DSP chip from channel mapping at 0x1ED6D) |
+| `DSP_WriteGlobalConfig` | 0x03C181 | 0x147B3 | Global DSP writes (always targets DSP chip 0) |
+
+Both call `DSP_BytecodeInterpreter_Init` (0x03C266) which loads a 12-byte config entry from the table and begins execution.
+
+**Config Entry Format (12 bytes per entry, indexed by channel/slot):**
+
+```
+Offset  Size  Description
++0      word  Config parameter 0 (passed to handlers via stack)
++2      word  Config parameter 1
++4      word  Config parameter 2
++6      word  Config parameter 3
++8      long  Pointer to bytecode program data in ROM
+```
+
+Entries are indexed by channel number: entry address = table_base + channel × 12.
+
+**Bytecode Format:**
+
+Each instruction has a 2-byte header followed by data bytes:
+
+```
+Byte 0: [opcode:4][count_high:4]
+Byte 1: [count_low:8]
+
+count = (count_high << 8) | count_low - 2
+```
+
+The `count` field gives the number of data bytes following the header (after subtracting 2 for the header itself).
+
+**Opcode Set:**
+
+| Opcode | Name | Description |
+|--------|------|-------------|
+| 0x0 | DSP Write Type 0 | Basic DSP register write (offset 0x000 in handler table) |
+| 0x1 | DSP Write Type 1 | Extended parameter write (offset 0x23A) |
+| 0x2 | DSP Write Type 2 | Multi-register write variant (offset 0x333) |
+| 0x3 | DSP Write Type 3 | Complex routing write (offset 0x3DA) |
+| 0x4 | DSP Write Type 4 | Short parameter write (offset 0x473) |
+| 0x5 | DSP Write Type 5 | Short config write (offset 0x48D) |
+| 0x6-0xC | — | Invalid (skipped) |
+| 0xD | State Change | Yields to task scheduler (`TaskSched_PreemptiveYield_INT`), then continues |
+| 0xE | Send Command | Sends command byte + data bytes directly to DSP hardware |
+| 0xF | End | Terminates bytecode execution |
+
+**Opcode 0xE Detail (Send Command):**
+
+```
+[0xE | count] [cmd_byte] [data_byte_1] ... [data_byte_N]
+```
+
+1. First data byte sent via `DSP_DispatchCommand` (sets command register)
+2. Remaining bytes sent via `DSP_DispatchData` (writes data to selected register)
+3. `DSP_DispatchCommand`/`DSP_DispatchData` route to DSP1 or DSP2 based on the channel parameter
+
+**Opcodes 0-5 Detail (Native Code Handlers):**
+
+Opcodes 0-5 dispatch to native TLCS-900 machine code subroutines within the `DSP_Bytecode_Programs` block at 0x03C32E. The dispatch table at `OFFSETS_14739` (0x014739) contains 16-bit offsets from 0x03C32E:
+
+| Opcode | Offset | Handler Address | Approximate Size |
+|--------|--------|----------------|-----------------|
+| 0 | 0x000 | 0x03C32E | 570 bytes |
+| 1 | 0x23A | 0x03C568 | 249 bytes |
+| 2 | 0x333 | 0x03C661 | 167 bytes |
+| 3 | 0x3DA | 0x03C708 | 153 bytes |
+| 4 | 0x473 | 0x03C7A1 | 26 bytes |
+| 5 | 0x48D | 0x03C7BB | ~70 bytes |
+
+These handlers use prevbank registers (D7 prefix), auto-increment addressing `(xRR+)`, and register-indirect compact forms to efficiently write multiple DSP registers in sequence. They read data bytes from the bytecode stream and route them to the DSP hardware via the parallel bus protocol.
+
+A secondary offset table at `OFFSETS_14745` (0x014745) provides shorter offsets for a variant dispatch path, suggesting some handlers have fast-path entry points.
+
+**Execution Flow Example:**
+
+When `DSP_WriteGlobalConfig` is called to mute DSP chip 0:
+
+```
+1. DSP_WriteGlobalConfig called with WA=0 (channel 0), XBC=pointer to mute config
+2. Sets DE=0 (fixed for global writes)
+3. Pushes XBC (config pointer), loads bytecode table pointer 0x147B3
+4. Calls DSP_BytecodeInterpreter_Init:
+   a. Loads 12-byte entry from 0x147B3 + 0*12 (channel 0)
+   b. Copies 4 config words + 1 program pointer to stack frame
+   c. Falls through to BytecodeInterpreter_CheckEnd
+5. Interpreter reads first bytecode header from program pointer
+6. Dispatches on opcode:
+   - 0xE → sends command+data to DSP hardware
+   - 0x0-0x5 → jumps to native handler for bulk register writes
+   - 0xD → yields to scheduler, then continues
+   - 0xF → terminates
+7. Repeats until 0xF terminator encountered
+```
 
 ### DSP Coefficient Setup Pipeline
 
@@ -1047,12 +1187,16 @@ The Main CPU ROM contains a 128-entry effect type name table at address `0xE32A7
 
 ### Known DSP Commands
 
+These are the hardware command bytes sent to the DSP chips via the parallel bus (P7.6=1 for command, P7.6=0 for subsequent data). They are sent by bytecode opcode 0xE and by direct calls to `DSP_DispatchCommand`/`DSP_DispatchData`.
+
 | Command | Direction | Description |
 |---------|-----------|-------------|
-| 0x01 | Write | Initialize/reset |
+| 0x01 | Write | Initialize/reset — sent during `DSP_ParameterWriteEngine` for channel 0 |
 | 0x03 | Write | Set mode/algorithm |
 | 0x30 | Write | Parameter update (followed by data bytes) |
-| 0x60 | Write | Bulk transfer start |
+| 0x60 | Write | Bulk transfer / data write mode — sent after command 0x01 in parameter write |
+
+The `DSP_DispatchCommand` function (0x036454) routes commands to DSP1 (`DSP_Send_Command`) or DSP2 (`DSP2_Send_Command`) based on the chip number in BC. Both use the same handshake protocol: poll PH.0 for ready, then write via Port PZ with appropriate chip-select and command/data strobes.
 
 ## Keybed Architecture
 
@@ -1139,6 +1283,6 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 - [x] ~~Map remaining proprietary CC handlers (0x97-0x9D)~~ — Complete: CC91=freq mult, CC95=portamento, CC97=fine pitch, CC9B=vibrato depth, CC9C=vibrato enable, CC9D=tremolo depth
 - [x] ~~Decode tone generator register semantics~~ — Partial: voice control state machine, key-on/off flags, volume/level groups, latched parameter updates documented; pitch/envelope/filter register mapping still needs work
 - [x] ~~Document synthesis architecture~~ — Complete: 64-voice wavetable, 26 MIDI channels, dynamic voice allocation, hardware ADSR, LFO modes, proprietary CCs
-- [ ] Reverse-engineer DSP register semantics by analyzing bytecode programs at 0x14777/0x147B3
+- [ ] Reverse-engineer DSP register semantics by analyzing the native code handlers within `DSP_Bytecode_Programs` (opcodes 0-5, ~1200 bytes of prevbank/auto-increment register write code at 0x3C32E)
 - [ ] Determine if DSP internal ROM can be extracted (decapping, JTAG, etc.)
-- [ ] Document bytecode interpreter opcode set completely (opcodes 0x0-0xF)
+- [x] ~~Document bytecode interpreter opcode set completely (opcodes 0x0-0xF)~~ — Complete: 2-byte header format, opcodes 0-5 (native code dispatch), 0xD (yield), 0xE (send command+data), 0xF (end). Config entries are 12 bytes (4 words + 1 pointer). Handlers at `DSP_Bytecode_Programs` (0x3C32E) are native TLCS-900 subroutines.
