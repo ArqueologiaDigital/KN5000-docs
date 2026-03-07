@@ -1263,6 +1263,72 @@ Reverb and chorus configs share a common 28-byte header (first 14 word pairs) st
 
 The `DSP_DispatchCommand` function (0x036454) routes commands to DSP1 (`DSP_Send_Command`) or DSP2 (`DSP2_Send_Command`) based on the chip number in BC. Both use the same handshake protocol: poll PH.0 for ready, then write via Port PZ with appropriate chip-select and command/data strobes.
 
+### DSP Boot Sequence (MAME Dynamic Trace)
+
+The following sequence was captured from MAME emulation during the first 60 seconds of boot. All DSP1 activity occurs via the parallel port (CMD 0x01); no CMD 0x30 register writes target DSP1 during boot (DSP2 receives CMD 0x30 writes for addr 0xD0, 0xD3, 0xF6, 0x3C).
+
+```
+Phase 1 — Hardware Init:
+  DSP2: REG WRITE addr=0xD0 value=0x0000
+  DSP2: REG WRITE addr=0xD3 value=0x0000
+  DSP1: INIT CONFIG [0xFB 0xDA 0x3F 0xA0 0x1A]  (CMD 0x04, 5 bytes)
+  DSP1: STATUS/MODE value=0x003C                  (CMD 0x09)
+  DSP1: CONTROL [0x00 0x55 0x55]                  (CMD 0x0C)
+
+Phase 2 — DSP Program Loading (CMD 0x01, bytecode):
+  DSP1: PROGRAM module=0x3C (117 bytes)   — AlgoChange_Init bytecode
+  DSP1: RESET × 2, SYNC
+  DSP1: coefficient clear (ch1, @0x06/@0x86 = 0)
+  DSP1: COEFF UPLOAD @0x50 (92 bytes) — lookup table A
+  DSP1: COEFF UPLOAD @0x6E (92 bytes) — lookup table B
+  DSP1: COEFF UPLOAD @0x8C (2 bytes)  — table terminator
+
+Phase 3 — DSP2 Enable:
+  DSP2: REG WRITE addr=0xD0 value=0x4000
+  DSP2: REG WRITE addr=0xF6 value=0x4FB0
+
+Phase 4 — Effect Configuration:
+  DSP1: PROGRAM module=0x00 (302 bytes) — EFF header (main program)
+  DSP1: PROGRAM module=0x47 (7 bytes)   — config patch A
+  DSP1: PROGRAM module=0x40 (7 bytes)   — config patch B
+  DSP1: second INIT CONFIG [0xFB 0xDA 0x00 0xA0 0x1A]
+  DSP2: REG WRITE addr=0x3C value=0x4000
+  DSP1: second STATUS/MODE value=0x003C
+
+Phase 5 — Effect Algorithm Loading:
+  DSP1: PROGRAM module=0x00 (302 bytes) — EFF header (repeated)
+  DSP1: PROGRAM module=0x47 (7 bytes)
+  DSP1: PROGRAM module=0xC8 (667 bytes) — reverb algorithm bytecode
+    → Heavy coefficient upload: 30 blocks, many with 4-coeff groups
+    → Addresses: @0xD0, @0x85, @0x94, @0x87, @0x8A (init zeros)
+    → then @0x00-0x3D (26 coefficient pairs — delay line taps)
+    → @0x1E (master reverb level = 32767 = 0x7FFF)
+    → @0x90, @0xAE (lookup tables)
+    → @0x97, @0x9E-0xB2 (reverb tail coefficients)
+    → @0x1D-0x3D (groups of 4: all-pass filter stages × 8)
+    → @0x90 (final gain = 103268)
+  DSP1: PROGRAM module=0x00 (302 bytes) — third EFF header
+  DSP1: PROGRAM module=0x40 (7 bytes)
+  DSP1: PROGRAM module=0x54 (352 bytes) — chorus/modulation algorithm
+    → Coefficient upload: @0x07-0x0E (zeros), @0x26 (10 delay params)
+    → @0x00 table upload (62 bytes), @0x09/@0x0A (LFO rates)
+    → @0x1D-0x3D (all-pass stages × 4)
+
+Phase 6 — Final Configuration:
+  DSP1: PROGRAM module=0x47 (7 bytes)   — updated config patch
+  DSP1: PROGRAM module=0x40 (7 bytes)   — updated config patch
+  DSP1: coefficient write @0x06 = 0, @0x86 = 101643 (dry/wet mix)
+  DSP1: Memory-mapped register writes: ch0-ch3 param[0-7] = 0
+  DSP1: ch0-ch3 config = 0x01 (enable all channels)
+```
+
+**Key findings from dynamic trace:**
+- The default boot effect is reverb on channel 1 with coefficients loaded at DSP internal addresses 0x00-0xB2
+- All coefficient uploads target channel 1 (base 0x60); channels 0, 2, 3 receive only parameter clears
+- The coefficient data structure matches a late-reflection reverb: 8 all-pass filter stages (addresses 0x1D-0x3D in groups of 4), 26 delay line taps (0x00+ sequence), and lookup tables (0x90, 0xAE)
+- DSP program module indices: 0x00=EFF header, 0x3C=init, 0x40/0x47=patches, 0x54=chorus, 0xC8=reverb
+- The INIT CONFIG byte[2] changes from 0x3F (init mode) to 0x00 (run mode) between phases
+
 ## Keybed Architecture
 
 The physical keyboard (keybed) connects **directly** to the tone generator IC303, NOT to the Sub CPU. IC303 performs hardware key scanning internally and presents note events to the Sub CPU via the keyboard input interface at 0x110000.
