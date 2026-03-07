@@ -65,6 +65,77 @@ The KN5000 audio subsystem handles all sound generation, processing, and output.
 
 See [Tone Generator]({{ site.baseurl }}/tone-generator/) for the complete register map and chip inventory.
 
+### DSP Port I/O Control (Sub CPU Internal Ports)
+
+The dual DSP chips (IC310 + IC311) are controlled via the Sub CPU's internal I/O ports, using a parallel bus protocol with explicit chip-select, command/data, and strobe signals:
+
+| Port | Bit | Signal | Function |
+|------|-----|--------|----------|
+| 0x1C (P7) | 6 | DSPCD | Command/Data select (0=command, 1=data) |
+| 0x1C (P7) | 5 | DSP1_CS | DSP1 chip select (active low) |
+| 0x1C (P7) | 4 | RD | Read strobe (active low) |
+| 0x1C (P7) | 3 | WR | Write strobe (active low) |
+| 0x38 (PE) | 6 | DSP2_CS | DSP2 chip select (active low) |
+| 0x38 (PE) | 0 | MUTE | Audio mute control |
+| 0x44 (PH) | 2 | DSP2_RST | DSP2 reset (active low) |
+| 0x44 (PH) | 1 | DSP1_RST | DSP1 reset (active low) |
+| 0x44 (PH) | 0 | DSP_RDY | DSP ready/status (read) |
+| 0x68 (PZ) | 7:0 | DATA | 8-bit data port (command/data bytes) |
+
+**Write Protocol (command or data byte):**
+
+```
+1. Deassert RD and WR (both high)
+2. Select chip: assert DSP1_CS or DSP2_CS (drive low)
+3. Poll DSP_RDY until ready (timeout: 8000 iterations)
+4. Set DSPCD: 0 for command byte, 1 for data byte
+5. Assert WR (drive low)
+6. Write byte to PZ (port 0x68)
+7. Deassert WR (drive high)
+8. Deselect chip: deassert CS
+9. Set DSPCD back to data mode (1)
+```
+
+**Key Low-Level Functions:**
+
+| Function | Address | Description |
+|----------|---------|-------------|
+| `DSP1_Assert_Reset` | 0x038396 | Reset DSP1 (clear PH.1) |
+| `DSP1_Deassert_Reset` | 0x03839A | Release DSP1 reset (set PH.1) |
+| `DSP2_Assert_Reset` | 0x03839E | Reset DSP2 (clear PH.2) |
+| `DSP2_Deassert_Reset` | 0x0383A2 | Release DSP2 reset (set PH.2) |
+| `DSP_Set_Command_Mode` | 0x0383A7 | DSPCD=0 (command register) |
+| `DSP_Set_Data_Mode` | 0x0383AB | DSPCD=1 (data register) |
+| `DSP_Select_Chip` | 0x0383BF | Assert CS for chip 0 or 1 |
+| `DSP_Deselect_Chip` | 0x0383DB | Deassert CS |
+| `DSP_Read_Status` | 0x0383F7 | Read ready bit from PH.0 |
+| `DSP_Send_Command` | 0x036331 | Full command byte write (with polling) |
+| `DSP_Send_Data` | 0x0367EE | Full data byte write (with polling) |
+| `DSP2_Send_Command` | 0x036599 | DSP2-specific command write |
+| `DSP2_Send_Data` | 0x036855 | DSP2-specific data write |
+| `DSP_DispatchCommand` | 0x03C0D4 | Route command to DSP1 or DSP2 |
+| `DSP_DispatchData` | 0x03C0F3 | Route data to DSP1 or DSP2 |
+| `DSP_WriteParamWord` | 0x03C112 | Write 16-bit parameter (high byte, low byte) |
+
+### DSP Channel Register Map (Memory-Mapped at 0x130000)
+
+The memory-mapped interface at 0x130000 provides a second access path to DSP registers, used for channel initialization:
+
+```
+Channel register address = channel_number × 0x20 + 0x10
+
+Channel 0: registers 0x10-0x17 (8 bytes)
+Channel 1: registers 0x30-0x37
+Channel 2: registers 0x50-0x57
+Channel 3: registers 0x70-0x77
+
+Write sequence:
+  (0x130000) ← register address byte
+  (0x130002) ← register data byte
+```
+
+Initialization writes test pattern 0x5A5A5A5A to all 4 channels, then sets initial config value 0x101001F with 0x20 channel spacing.
+
 ## Sub CPU Audio Processing
 
 ### Main Loop
