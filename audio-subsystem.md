@@ -67,7 +67,7 @@ See [Tone Generator]({{ site.baseurl }}/tone-generator/) for the complete regist
 
 ### DSP Port I/O Control (Sub CPU Internal Ports)
 
-The dual DSP chips (IC310 + IC311) are controlled via the Sub CPU's internal I/O ports, using a parallel bus protocol with explicit chip-select, command/data, and strobe signals:
+The dual DSP chips are controlled via the Sub CPU's internal I/O ports. DSP1 (IC311, DS3613GF-3BA) uses a parallel bus protocol with Port PZ/P7 for command/data handshake. DSP2 (IC310, MN19413) uses GPIO bit-bang serial on Port F. Both share chip-select lines:
 
 | Port | Bit | Signal | Function |
 |------|-----|--------|----------|
@@ -1201,19 +1201,40 @@ The Sub CPU controls both DSPs via GPIO pins:
 |-----|------|----------|
 | P7.3 | Port 7 bit 3 | Write strobe (active low) |
 | P7.4 | Port 7 bit 4 | Read strobe (active low) |
-| P7.5 | Port 7 bit 5 | CS1 — DSP1 chip select (IC310, MN19413) |
+| P7.5 | Port 7 bit 5 | CS1 — DSP1 chip select (IC311, DS3613GF-3BA) |
 | P7.6 | Port 7 bit 6 | Command/Data select (1=command, 0=data) |
-| PE.6 | Port E bit 6 | CS2 — DSP2 chip select (IC311, DS3613GF-3BA) |
+| PE.6 | Port E bit 6 | CS2 — DSP2 chip select (IC310, MN19413) |
 | PH.0 | Port H bit 0 | Status input (busy/ready) |
 | PZ[7:0] | Port Z | 8-bit bidirectional data bus |
 
-**Handshake sequence** (DSP command write):
+**DSP1 handshake sequence** (parallel bus command write):
 1. Set PZ = data byte
 2. Set P7.6 = 1 (command mode) or 0 (data mode)
-3. Assert CS (P7.5 or PE.6 low)
+3. Assert CS1 (P7.5 low)
 4. Assert write strobe (P7.3 low)
 5. Wait for PH.0 ready
 6. Deassert write/CS
+
+**DSP2 serial protocol** (GPIO bit-bang):
+
+DSP2 uses a different interface from DSP1. Instead of the parallel bus, it uses GPIO bit-bang serial on Port F:
+
+| Pin | Function |
+|-----|----------|
+| PF.0 | SDA — Serial data to DSP2 |
+| PF.2 | SCLK — Serial clock to DSP2 |
+| PE.6 | CS2 — Chip select (active low) |
+
+Each byte is transmitted MSB-first with one CS assert/deassert cycle per byte. Both `DSP2_Send_Command` and `DSP2_Send_Data` produce **9 SCLK rising edges** per byte (8 data bits + 1 trailing). The command variant adds an extra `ClockPulseHigh` before the bit loop, but this doesn't create an additional rising edge because the first bit loop iteration's SCLK-high is absorbed (SCLK already high from the pulse).
+
+```
+Command byte: CS↓ → ClkHigh → [SDA=bit7, CLK↑(absorbed), CLK↓] → [SDA=bit6, CLK↑, CLK↓] × 7 → trailing CLK↑ → CS↑
+Data byte:    CS↓ → [SDA=bit7, CLK↑, CLK↓] × 8 → trailing CLK↑ → CS↑
+```
+
+Transaction boundaries are marked by `DSP2_SPI_BusIdle` (PF.0=0, PF.2=0), called by bytecode Op0D between command groups.
+
+Register writes use CMD 0x30 followed by 4-byte data groups: `[0x00, addr, val_hi, val_lo]`. Boot-time writes observed: REG[0xD0]=0x0000, REG[0xD3]=0x0000, REG[0x3C]=0x4000.
 
 ### DSP Firmware / Microcode Loading
 
@@ -1678,7 +1699,7 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 |--------|------|----|-----------|------------|--------|
 | Tone Generator | TC183C230002 | IC303 | Memory-mapped (0x100000) | `tc183c230002_device` | Stub with config register logging, keybed event injection |
 | DSP1 | DS3613GF-3BA | IC311 | Memory-mapped (0x130000) | `ds3613gf3ba_device` | Stub with per-channel register logging, effect type/parameter name tables |
-| DSP2 | MN19413 | IC310 | Serial (GPIO bit-bang) | `mn19413_device` | Stub with serial bit sampling, command context tracking |
+| DSP2 | MN19413 | IC310 | Serial (GPIO bit-bang) | `mn19413_device` | Stub with transaction detection, register write decoding, idle-based framing |
 
 **Tone Generator (TC183C230002):**
 - Register-indirect config interface (address port + data port)
