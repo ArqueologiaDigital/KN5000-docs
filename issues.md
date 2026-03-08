@@ -8,24 +8,14 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 282 (8 open, 273 closed)
+**Total Issues:** 284 (7 open, 276 closed)
 
 **Quick Links:** 
-[HD-AE5000 Expansion](#hd-ae5000-expansion) (1) · [Other](#other) (7)
+[Other](#other) (7)
 
 ---
 
 ## Open Issues
-
-### HD-AE5000 Expansion {#hd-ae5000-expansion}
-
-#### ⚪ HDAE5000: Analyze HD-TechManager5000 software {#issue-kn5000-qnf}
-
-**ID:** `kn5000-qnf` | **Priority:** Low | **Created:** 2026-01-25
-
-Reverse engineer the Windows HD-TechManager5000 software to understand the PC side of the parallel port protocol. Extract command definitions, file format handling, and UI functionality. Installation disks available at archive.org.
-
----
 
 ### Other {#other}
 
@@ -216,6 +206,9 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-qnf` | HDAE5000: Analyze HD-TechManager5000 software | 2026-03-08 |
+| `kn5000-0bx2` | HDAE5000: Document hard disk control protocol (low-level ... | 2026-03-08 |
+| `kn5000-4qqo` | HDAE5000: Full ROM disassembly with semantic labels and d... | 2026-03-08 |
 | `kn5000-5jy` | Homebrew: Development toolkit and SDK planning | 2026-03-08 |
 | `kn5000-9zb` | Homebrew: Create SDK documentation and examples | 2026-03-08 |
 | `kn5000-a8s` | Testing: Establish emulation validation procedures | 2026-03-08 |
@@ -233,11 +226,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-wgc` | Sequencer: Document event storage format and track organi... | 2026-03-07 |
 | `kn5000-9gom` | Docs: Document registration memory save/recall system | 2026-03-07 |
 | `kn5000-mzz` | HDAE5000: Document interface cable pinout | 2026-03-07 |
-| `kn5000-8q2` | Update website with service manual findings | 2026-03-07 |
-| `kn5000-dbi` | Phase 1 Completion: All MAME blockers resolved | 2026-03-07 |
-| `kn5000-y18` | MAME: Audio subsystem emulation milestone | 2026-03-07 |
 
-*...and 253 more closed issues*
+*...and 256 more closed issues*
 
 ---
 
@@ -250,15 +240,14 @@ Production-ready emulation and homebrew support.
 | Critical | 1 |
 | High | 1 |
 | Medium | 2 |
-| Low | 4 |
+| Low | 3 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| HD-AE5000 Expansion | 1 |
 | Other | 7 |
 
 ---
 
-*Last updated: 2026-03-08 08:46*
+*Last updated: 2026-03-08 09:31*
