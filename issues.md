@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 282 (10 open, 271 closed)
+**Total Issues:** 282 (8 open, 273 closed)
 
 **Quick Links:** 
-[HD-AE5000 Expansion](#hd-ae5000-expansion) (1) · [Other](#other) (9)
+[HD-AE5000 Expansion](#hd-ae5000-expansion) (1) · [Other](#other) (7)
 
 ---
 
@@ -50,21 +50,22 @@ All Phase 1 sub-issues complete. MAME boots with display and audio subsystem tra
 ### Phase 2: Core Functionality - kn5000-dnl (OPEN)
 *Goal: User interaction and file I/O working*
 
-**UI/Input (kn5000-1vz):**
-- kn5000-kev: Font system [P2]
-- kn5000-5dc: Widget rendering [P2]
-- kn5000-qhm: Control panel HLE [P2]
-- kn5000-3c7: Analog controllers [P2]
+**UI/Input (kn5000-1vz): ✅ CLOSED**
+- All sub-issues complete. UI navigation verified working in MAME.
 
-**Storage (kn5000-a0k):**
-- kn5000-ima: FDC subsystem [P2]
-- kn5000-kuu: HDAE5000 ROM [P1]
+**Storage (kn5000-a0k): OPEN**
+- FDC documentation complete. MAME testing pending (no floppy images available).
+- HDAE5000 ROM: complete.
 
-### Phase 3: Complete Documentation - kn5000-9m6 (OPEN)
+### Phase 3: Complete Documentation - kn5000-9m6 ✅ CLOSED
 *Goal: All subsystems fully documented*
+All subsystem pages documented, no placeholders remain.
 
 ### Phase 4: Quality & Polish - kn5000-nca (OPEN)
 *Goal: Production-ready emulation and homebrew support*
+- Validation test suite: created (boot/menu/display tests)
+- SDK documentation: comprehensive (1442 lines, Quick Start guide, Makefile template)
+- Homebrew toolkit: documented (kn5000-5jy closed)
 
 ## Current Status (Mar 2026)
 - **ROM reconstruction: ALL 6 ROMs 100% byte-perfect match**
@@ -74,23 +75,24 @@ All Phase 1 sub-issues complete. MAME boots with display and audio subsystem tra
   - Table Data: 100% (1,678 native instructions)
   - HDAE5000: 100% (502 native instructions)
   - Custom Data: 100% (data-only)
-  - Total: 279,441 native instructions, zero .byte fallbacks (except HDAE5000 ~4,663)
+  - Total: 279,441 native instructions, zero .byte fallbacks
 - **Build system:** LLVM with custom TLCS-900 backend (authoritative)
-- **Issue tracker:** 280 issues (265 closed, 13 open, 2 in progress)
-- **Documentation:** cpu-subsystem, audio-subsystem, midi-subsystem, inter-cpu-protocol all updated
-- **MAME:** Boots with display, audio/DSP logging. Phase 2 input/storage work remains.
+- **Issue tracker:** 282 issues (272 closed, 9 open, 1 in progress)
+- **DSP research:** 16 effect types traced, 10 distinct algorithms, chip mapping documented
+- **Homebrew SDK:** Complete docs with Quick Start, API reference, Makefile templates
+- **MAME:** Boots with display, audio/DSP logging. Phase 2 storage testing remains.
 
 ## Success Criteria
 - [x] All ROMs 100% byte-matching
 - [ ] MAME driver merged upstream
-- [ ] All subsystems documented
-- [ ] Homebrew SDK available
+- [x] All subsystems documented (Phase 3 closed)
+- [x] Homebrew SDK available (kn5000-9zb, kn5000-5jy closed)
 
 ## Phase Tracking Issues
 - Phase 1: kn5000-dbi (P0 - ✅ CLOSED)
-- Phase 2: kn5000-dnl (P1 - Current Focus)
-- Phase 3: kn5000-9m6 (P2)
-- Phase 4: kn5000-nca (P3)
+- Phase 2: kn5000-dnl (P1 - Storage testing remains)
+- Phase 3: kn5000-9m6 (P2 - ✅ CLOSED)
+- Phase 4: kn5000-nca (P3 - In progress)
 
 ---
 
@@ -162,71 +164,6 @@ With the DSP2 register map established (112 addresses), the next step is to trac
 
 ---
 
-#### ⚪ Homebrew: Create SDK documentation and examples {#issue-kn5000-9zb}
-
-**ID:** `kn5000-9zb` | **Priority:** Low | **Created:** 2026-01-30
-
-**Notes:** Enable homebrew development for KN5000 hardware.
-
-**Current state:** Assembly knowledge accumulated, no SDK exists.
-
-**Required work:**
-- Create getting-started guide
-- Document essential APIs (display, audio, input)
-- Provide example programs
-- Document memory map for user code
-- Create build system templates
-
-**Phase:** 4 - Quality & Polish
-**Blocks:** Community homebrew development
-**Dependencies:** Complete subsystem documentation
-**Related:** All subsystem documentation issues
-
----
-
-#### ⚪ Homebrew: Development toolkit and SDK planning {#issue-kn5000-5jy}
-
-**ID:** `kn5000-5jy` | **Priority:** Low | **Created:** 2026-01-31
-
-**Notes:** Plan and track homebrew development toolkit creation.
-
-## Toolkit Components
-
-### Assembly Development
-- ASL macro library for common patterns
-- TMP94C241 instruction reference
-- Memory map constants file
-- Example programs
-
-### C Development (Long-term)
-- LLVM backend for TLCS-900/H2 (tracked in kn5000-raw)
-- libc port or minimal runtime
-- Hardware abstraction layer
-
-### Tools
-- Image converter (bin <-> PNG/BMP)
-- MIDI file extractor
-- ROM patcher/builder
-- Emulator integration
-
-## Documentation Needed
-- Getting started guide
-- Hardware programming reference
-- API documentation
-- Example walkthrough
-
-## Related Issues
-- kn5000-9zb: SDK documentation and examples
-- kn5000-raw: LLVM backend development
-- kn5000-pkx: Image converter
-
-## Success Criteria
-- Documented build process for homebrew
-- At least one working example program
-- Community can build and test code
-
----
-
 #### ⚪ Maintain documentation website {#issue-kn5000-9a0}
 
 **ID:** `kn5000-9a0` | **Priority:** Low | **Created:** 2026-01-25
@@ -279,6 +216,8 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-5jy` | Homebrew: Development toolkit and SDK planning | 2026-03-08 |
+| `kn5000-9zb` | Homebrew: Create SDK documentation and examples | 2026-03-08 |
 | `kn5000-a8s` | Testing: Establish emulation validation procedures | 2026-03-08 |
 | `kn5000-gkpv` | DSP2 (MN19413): Map register functions from boot-time writes | 2026-03-08 |
 | `kn5000-1vz` | MAME: Input/Control subsystem emulation milestone | 2026-03-08 |
@@ -297,10 +236,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-8q2` | Update website with service manual findings | 2026-03-07 |
 | `kn5000-dbi` | Phase 1 Completion: All MAME blockers resolved | 2026-03-07 |
 | `kn5000-y18` | MAME: Audio subsystem emulation milestone | 2026-03-07 |
-| `kn5000-8z5` | MAME: Display subsystem emulation milestone | 2026-03-07 |
-| `kn5000-8jn0` | Disasm: Systematic semantic labeling of high-reference-co... | 2026-03-07 |
 
-*...and 251 more closed issues*
+*...and 253 more closed issues*
 
 ---
 
@@ -313,15 +250,15 @@ Production-ready emulation and homebrew support.
 | Critical | 1 |
 | High | 1 |
 | Medium | 2 |
-| Low | 6 |
+| Low | 4 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
 | HD-AE5000 Expansion | 1 |
-| Other | 9 |
+| Other | 7 |
 
 ---
 
-*Last updated: 2026-03-08 01:59*
+*Last updated: 2026-03-08 08:46*
