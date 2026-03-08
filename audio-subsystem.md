@@ -860,6 +860,91 @@ The SubCPU ROM contains 6 key tables for DSP effect configuration:
 
 **Register and Parameter Mapping Tables (0x1F09C, 0x1F22C):** Both are indexed by algorithm type (0-11). Types 0, 7, 11 have NULL register pointers (they use extended-ID-specific programs instead). The parameter mapping table has a fallback at 0x017425 for these types. Both tables point to variable-length bytecode programs with opcodes like 0x21 (interpolation), 0x40 (pan scaling), 0x61-0x78 (dispatch), terminated by 0x7A/0xF0.
 
+### Parameter Translation Opcodes (Level 2 Bytecodes)
+
+The `DSP_PerParameterTranslator` at SubCPU 0x03CB8E dispatches parameter translation opcodes that convert MIDI parameter values (0-127) into DSP chip coefficient writes. Each opcode implements a different mathematical transformation:
+
+**Special Opcodes:**
+
+| Opcode | Name | Description |
+|--------|------|-------------|
+| 0x21 | Interp2Point | 2-point linear interpolation (same as 0x66) |
+| 0x24 | InterpMultiStep | Multi-step interpolation with breakpoints |
+| 0x40 | PanScale | Pan/balance simple scaling |
+| 0x7A | EndSection | End of parameter section |
+| 0xF0 | Terminate | End of entire table |
+
+**Regular Opcodes (0x61-0x78), dispatched via jump table at SubCPU 0x014745:**
+
+| Opcode | Transform | Output | Description |
+|--------|-----------|--------|-------------|
+| 0x61 | SingleTableFetch | OscParam | Direct LUT lookup |
+| 0x62 | AlgoTypeTableFetch | FreqParam | Algorithm-specific LUT |
+| 0x63 | AlgoParamDecode | OscParam | Effect type/variant selection |
+| 0x64 | PitchScale | FreqParam | Frequency domain scaling |
+| 0x65 | VolumeScale | OscParam | Amplitude domain scaling |
+| 0x66 | Interp2Point | OscParam | 2-point coefficient blend |
+| 0x67 | InterpFPScale | OscParam+Offset | Fixed-point scaling with offset |
+| 0x68 | InterpDiv0xB4 | FreqParam | Time constant ÷ 0xB4 |
+| 0x69 | VolumeCurveFP | OscParam | Fixed-point volume curve |
+| 0x6A | FreqCurveFP | FreqParam | Fixed-point frequency curve |
+| 0x6B | FreqInterp2Point | FreqParam | Frequency 2-point interpolation |
+| 0x6C | Interp3PointOffset | FreqParam | 3-point interpolation with offset |
+| 0x6D | ReverbCurveFP | OscParam | Reverb decay time curve |
+| 0x6E | InterpFPComplex | OscParam | Complex fixed-point interpolation |
+| 0x6F | PanPiecewiseLin | OscParam | Piecewise-linear pan curve |
+| 0x70 | BiquadCoeff | (direct) | Biquad filter coefficient computation |
+| 0x71 | DetuneSigned | OscParam | Signed detune curve |
+| 0x72 | BiquadWarp | (direct) | Biquad frequency warping |
+| 0x73 | InterpDiv0xC6 | OscParam | Time constant ÷ 0xC6 |
+| 0x74 | LUTParamSet | (direct) | Multi-parameter LUT write |
+| 0x75 | ParamEQCurve | OscParam | Parametric EQ curve |
+| 0x76 | SOSCoeff | (direct) | Second-order section coefficients |
+| 0x77 | Interp2PointB | OscParam | 2-point variant B |
+| 0x78 | VolScaleB | OscParam | Volume scale variant B |
+
+Output targets: **OscParam** writes oscillator/amplitude registers, **FreqParam** writes frequency/timing registers, **(direct)** writes multiple registers directly.
+
+### Named Effect Parameters
+
+The MainCPU ROM at 0xE324C4 contains 86 parameter name entries (17 bytes each: 16-char name + ':' separator). Key named parameters:
+
+| Index | Name | Index | Name |
+|-------|------|-------|------|
+| 0x01 | VOLUME | 0x22 | REVERB TIME |
+| 0x03 | REV SEND | 0x23 | PRE DELAY |
+| 0x04 | DRIVE | 0x24 | HIGH DAMP GAIN |
+| 0x05 | ADJUST | 0x25 | ER.LEVEL |
+| 0x06 | EMPHASIS GAIN | 0x26 | PITCH L |
+| 0x07 | DEPTH | 0x27 | PITCH R |
+| 0x08 | LFO SPEED | 0x28 | THRESHOLD |
+| 0x09 | SLOW LFO SPEED | 0x29 | RATIO |
+| 0x0A | FAST LFO BALANCE | 0x33 | BAND EMPHASIS FC |
+| 0x0B | RESONANCE | 0x34 | BAND EMPHASIS Q |
+| 0x0C | MANUAL | 0x35 | BAND EMPHASIS G |
+| 0x0D | SLOW/FAST | 0x38 | FEEDBACK |
+| 0x1D | PHASER DRY/WET | 0x3B | WAH CENTER FC |
+| 0x52 | INTENSITY | — | — |
+
+### Effect Algorithm Type Summary
+
+40 effect indices map to 10 algorithm types (2-11). Each algorithm defines which named parameters control the DSP, and which translation opcodes transform MIDI values:
+
+| Algo | Effects | Key Parameters | Transforms Used |
+|------|---------|----------------|-----------------|
+| 2 | STAGE, BATH ROOM, KARAOKE, ROOM... | RESONANCE, MANUAL, SLOW/FAST, VOLUME, EMPHASIS GAIN | Interp2Point, VolumeScale, AlgoDecode |
+| 3 | PEQ+COMPRESSOR, PEQ+VIBRATO, PEQ+FLANGER | LFO SPEED, RESONANCE, MANUAL, DRIVE, SLOW/FAST | AlgoTypeFetch, PitchScale, SOSCoeff |
+| 4 | PEQ+S.DELAY, PEQ+CHORUS, AUTO WAH+S.DELAY | LFO SPEED, MANUAL, ADJUST, SLOW LFO, PAN | InterpDiv0xB4, Interp3Point, VolumeScale |
+| 5 | S.DELAY+PHASER/VIBRATO/FLANGER | ADJUST, EMPHASIS, LFO, VOLUME, MANUAL | Interp2Point, VolumeScale |
+| 6 | STRING, DEEP SPACE, SYMPHONIC | VOLUME, DRIVE, EMPHASIS, RESONANCE, SLOW | Interp2PointB |
+| 7 | PERCUSSIVE, STANDARD, MIX UP, HARS EFFECT | DRIVE, PITCH, ADJUST, EMPHASIS | InterpFPComplex, PitchScale |
+| 8 | RING MOD, ROTARY, AUTO WAH, PEDAL WAH | DELAY, REV SEND, DEPTH, PAN, BASS, VOLUME ADJUST | ParamEQ, SOSCoeff, ReverbCurve |
+| 9 | VIBRATO, PITCH SHIFTER, AUTO PAN | PITCH, THRESHOLD, REV SEND, VOLUME, SLOW LFO | PitchScale, SOSCoeff, InterpDiv0xC6 |
+| 10 | CELM, CEL, PARAMETRIC EQ, NOISE FLANGER | REV SEND, DRIVE, ADJUST, THRESHOLD, RATIO | InterpFP, SOSCoeff, BiquadCoeff |
+| 11 | SLOW ATTACKER, COMPRESSOR, EXCITER | DRIVE, PITCH, ADJUST, EMPHASIS | InterpFPComplex, PitchScale |
+
+Every algorithm ends with: opcode 0x63 (AlgoDecode with EMPHASIS GAIN) to select the specific effect variant, opcode 0x21 with data 0x90 for global output scaling, and opcode 0x74 (LUTParamSet with PHASER DRY/WET) for dry/wet mix control.
+
 ### DSP Coefficient Setup Pipeline
 
 The coefficient setup subsystem configures DSP processing parameters through a multi-stage pipeline. Eight functions handle different aspects of coefficient configuration:
