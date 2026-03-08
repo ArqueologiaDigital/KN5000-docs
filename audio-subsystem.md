@@ -1525,6 +1525,84 @@ Phase 6 — Final Configuration:
 - DSP program module indices: 0x00=EFF header, 0x3C=init, 0x40/0x47=patches, 0x54=chorus, 0xC8=reverb
 - The INIT CONFIG byte[2] changes from 0x3F (init mode) to 0x00 (run mode) between phases
 
+### DSP2 Register Map (CMD 0x30 Writes)
+
+The MN19413 (DSP2) receives register writes via CMD 0x30 + 4-byte groups `[0x00, addr, val_hi, val_lo]`. During the first 60 seconds of boot, 679 writes target 112 unique register addresses across the full 0x00-0xFF range.
+
+**Initialization Registers (written first):**
+
+| Order | Address | Value | Function |
+|-------|---------|-------|----------|
+| 1 | 0xD0 | 0x0000 | Reset/control (cleared on init) |
+| 2 | 0xD3 | 0x0000 | Reset/control (cleared on init) |
+| 3 | 0xD0 | 0x4000 | Enable (set during Phase 3) |
+| 4 | 0x3C | 0x4000 | Master enable (set during Phase 4) |
+
+REG[0xD0] and REG[0xD3] are cleared first, then 0xD0 is set to 0x4000 to enable the DSP. REG[0x3C] = 0x4000 appears to be a master configuration enable.
+
+**Channel Registers (stride 0x10, offset 0x_8 — 16 channels):**
+
+All 16 addresses at offset 0x_8 (0x08, 0x18, 0x28, ... 0xF8) are written during boot. Initial values suggest delay line tap positions:
+
+| Channel | Address | Init Value | Final Value | Writes |
+|---------|---------|-----------|-------------|--------|
+| 0 | 0x08 | 0x02F6 | 0x02F6 | 1 |
+| 1 | 0x18 | 0x3FC0 | 0x860C | 3 |
+| 2 | 0x28 | 0x2FD0 | 0x0014 | 3 |
+| 3 | 0x38 | 0x1FE0 | 0x0093 | 9 |
+| 4 | 0x48 | 0x0FF0 | 0x0FF0 | 1 |
+| 5 | 0x58 | 0x0093 | 0x0093 | 1 |
+| 6 | 0x68 | 0x4510 | 0x4510 | 1 |
+| 7 | 0x78 | 0x00E3 | 0x8001 | 5 |
+| 8 | 0x88 | 0x2530 | 0x0203 | 15 |
+| 9 | 0x98 | 0x1540 | 0x1540 | 1 |
+| 10 | 0xA8 | 0x8092 | 0x0077 | 3 |
+| 11 | 0xB8 | 0x4A60 | 0xCC18 | 3 |
+| 12 | 0xC8 | 0x3A70 | 0x3A70 | 1 |
+| 13 | 0xD8 | 0x8002 | 0x2A80 | 3 |
+| 14 | 0xE8 | 0x0000 | 0x1A90 | 2 |
+| 15 | 0xF8 | 0x0AA0 | 0xD230 | 2 |
+
+**High-Traffic Registers (control/routing):**
+
+| Address | Writes | Unique Values | Function Hypothesis |
+|---------|--------|---------------|---------------------|
+| 0x40 | 107 | 32 | Primary control/routing register |
+| 0x00 | 87 | 47 | Secondary control/routing register |
+| 0x80 | 86 | 26 | Tertiary control/routing register |
+| 0x89 | 29 | 4 | Effect parameter A |
+| 0xA9 | 29 | 9 | Effect parameter B |
+| 0x02 | 26 | 11 | Algorithm/mode selector |
+| 0x81 | 17 | 4 | Effect parameter C |
+| 0xA1 | 16 | 2 | Effect parameter D |
+| 0x88 | 15 | 3 | Channel 8 config (also 0x_8 family) |
+| 0x04 | 13 | 8 | Configuration register |
+| 0x42 | 11 | 8 | Routing configuration |
+
+REG[0x00], REG[0x40], and REG[0x80] are the most-written addresses, each receiving 80+ writes with dozens of unique values. These likely serve as command/data ports for a secondary register-indirect interface within the DSP.
+
+**Coefficient Registers (monotonically incrementing):**
+
+| Address | Values | Range | Avg Step |
+|---------|--------|-------|----------|
+| 0xE6 | 7 | 0x7C13 - 0x7CCD | 31.0 |
+| 0xE7 | 8 | 0x7405 - 0x74E7 | 32.3 |
+
+These registers receive steadily increasing values, consistent with filter coefficient ramp tables or LFO modulation parameters.
+
+**Common Value Patterns:**
+
+| Value | Registers Hit | Possible Meaning |
+|-------|---------------|------------------|
+| 0x8002 | 18 registers | Enable flag (type 2) |
+| 0x8001 | 12 registers | Enable flag (type 1) |
+| 0x0093 | 9 registers | Bypass/mute or default coefficient |
+| 0xD003 | 6 registers | Routing/connection descriptor |
+| 0x4000 | 13 registers | Master enable or half-scale coefficient |
+| 0x0203 | 6 registers | Status/mode flag |
+
+The pattern of 0x80xx values written to many registers suggests a register format where bit 15 is an enable/valid flag and the lower bits encode type or parameter data.
+
 ### DSP Effect Types and Algorithm Mapping
 
 The KN5000 supports 40 effect slots (indices 0-39), mapped to 12 DSP algorithm types (0-11) via a lookup table at SubCPU ROM address 0x01F596. The algorithm type determines which DSP program module and coefficient set gets uploaded to DSP1.
@@ -1699,7 +1777,7 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 |--------|------|----|-----------|------------|--------|
 | Tone Generator | TC183C230002 | IC303 | Memory-mapped (0x100000) | `tc183c230002_device` | Stub with config register logging, keybed event injection |
 | DSP1 | DS3613GF-3BA | IC311 | Memory-mapped (0x130000) | `ds3613gf3ba_device` | Stub with per-channel register logging, effect type/parameter name tables |
-| DSP2 | MN19413 | IC310 | Serial (GPIO bit-bang) | `mn19413_device` | Stub with transaction detection, register write decoding, idle-based framing |
+| DSP2 | MN19413 | IC310 | Serial (GPIO bit-bang) | `mn19413_device` | Protocol-aware decoder: CMD 0x30 reg writes parsed, 256-entry register file, idle-timeout framing |
 
 **Tone Generator (TC183C230002):**
 - Register-indirect config interface (address port + data port)
@@ -1717,7 +1795,10 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 **DSP2 (MN19413):**
 - Serial interface via SubCPU GPIO (Port PF bit 0 = SDA, bit 2 = SCLK)
 - MSB-first serial data sampling on SCLK rising edge
-- Logs received commands with bit count and shift register state
+- Protocol-aware stream decoder: CMD 0x30 register writes auto-parsed as 4-byte groups
+- 256-entry register file tracking all written values
+- Idle timeout (50ms) for transaction boundary detection on non-register commands
+- Full register write logging with address and value decode
 
 ### Key Emulation Challenges
 
@@ -1745,7 +1826,7 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 - [ ] Document waveform ROM format and sample layout
 - [ ] Decode per-algorithm parameter mapping tables at `0x1F22C`/`0x1F09C` (12-byte stride entries)
 - [ ] Map MainCPU parameter indices (e.g., 33=REVERB TIME) to EFF block word positions per algorithm
-- [ ] Decode DSP register semantics per channel (what registers 0x10-0x17 control)
+- [x] ~~Decode DSP register semantics per channel~~ — Partial: DSP2 112-register map from boot-time analysis (stride-0x10 channel regs at offset 0x_8, control regs 0x00/0x40/0x80, coefficient regs 0xE6/0xE7). DSP1 channel regs 0x10-0x17 still need semantic mapping.
 - [ ] Document remaining inter-CPU command types (beyond 0x2D and 0xE1/E2/E3)
 - [ ] Investigate why song engine never writes MIDI events to ring buffer (putc_mrx has zero hits)
 - [ ] Determine what sets the startup flag at 0x0251D8 on real hardware
