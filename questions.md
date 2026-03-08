@@ -53,9 +53,9 @@ Things we don't know yet and need to investigate.
 - [x] Are there handshaking signals? **Yes: status flags at 0x04FE (bit 6=payload ready, bit 7=xfer complete)**
 
 ### HDAE5000 Hard Disk Expansion
-- [ ] What is the command interface via PPI at `0x160000`?
-- [ ] How does it communicate file data to the keyboard?
-- [ ] What is the protocol for directory listing and file loading?
+- [x] What is the command interface via PPI at `0x160000`? **i8255 PPI for PC parallel port (LPT) communication** — used by HD-TechManager5000 Windows software for backup/restore. See [HDAE5000]({{ site.baseurl }}/hdae5000/) and [HDAE5000 Disk Interface]({{ site.baseurl }}/hdae5000-disk-interface/)
+- [x] How does it communicate file data to the keyboard? **IDE/ATA at 0x130010-0x130020** (CHS addressing, PIO mode, 4 ATA commands: Read Sectors, Write Sectors, Identify Device, Set Features). See [HDAE5000 Disk Interface]({{ site.baseurl }}/hdae5000-disk-interface/)
+- [x] What is the protocol for directory listing and file loading? **Custom FSB/FGB/FEB filesystem** — File System Block, File Group Block, File Entry Block hierarchy with sector-based allocation. See [HDAE5000 Filesystem]({{ site.baseurl }}/hdae5000-filesystem/)
 
 ## ROM Reconstruction
 
@@ -65,16 +65,16 @@ Things we don't know yet and need to investigate.
 - [x] ~~Can they be fixed in the assembler or source?~~ — Fixed by custom LLVM backend with correct TLCS-900 encoding
 
 ### Table Data
-- [ ] What is the structure of the table data ROM?
-- [ ] What file formats are embedded (images, samples)?
-- [ ] How is data indexed/accessed?
+- [x] What is the structure of the table data ROM? **2MB ROM at 0x800000-0x9FFFFF** — contains rhythm patterns, sound parameter tables, bitmap images, demo songs, SSF presentation data. See [Storage Subsystem]({{ site.baseurl }}/storage-subsystem/)
+- [x] What file formats are embedded (images, samples)? **BMP bitmap data** (FTBMP format for Feature Demo), **SSF XML** (presentation scripts), **rhythm pattern data**, **sound parameter tables**
+- [x] How is data indexed/accessed? **Via pointer tables in main program ROM** — e.g., file entry index at 0x8CE01C for bitmap lookup, SSF data at 0x88000E
 
 ## Needs Technical Documentation
 
 These areas would benefit from official datasheets or service manuals:
 
 - [ ] **TMP94C241F datasheet** - Full instruction encoding tables
-- [ ] **HDAE5000 documentation** - Hard disk expansion interface
+- [x] **HDAE5000 documentation** - ✓ Fully reverse engineered: ROM, IDE/ATA protocol, filesystem, PC software. See [HDAE5000]({{ site.baseurl }}/hdae5000/)
 - [x] **KN5000 Service Manual** - ✓ Have it! (EMID971655 A5, 59 pages)
 - [x] **Control panel schematic** - ✓ Analyzed pages II-35 to II-38
 
