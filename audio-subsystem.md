@@ -1832,13 +1832,15 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 
 | Device | Chip | IC | Interface | MAME Class | Status |
 |--------|------|----|-----------|------------|--------|
-| Tone Generator | TC183C230002 | IC303 | Memory-mapped (0x100000) | `tc183c230002_device` | Stub with config register logging, keybed event injection |
+| Tone Generator | TC183C230002 | IC303 | Memory-mapped (0x100000) | `tc183c230002_device` | 64-voice sine wave HLE with envelope, keybed input, voice status readback |
 | DSP1 | DS3613GF-3BA | IC311 | Memory-mapped (0x130000) | `ds3613gf3ba_device` | Stub with per-channel register logging, effect type/parameter name tables |
 | DSP2 | MN19413 | IC310 | Serial (GPIO bit-bang) | `mn19413_device` | Protocol-aware decoder: CMD 0x30 reg writes parsed, 256-entry register file, idle-timeout framing |
 
 **Tone Generator (TC183C230002):**
 - Register-indirect config interface (address port + data port)
-- 64 voices tracked with per-voice state (group, bank, channel, register, data)
+- 64-voice sine wave synthesis at 48kHz with release envelope (~125ms decay)
+- KEY ON (0x8100) / KEY OFF (0x7E00) voice management with per-voice hold timer
+- Voice status readback: reports KEY ON while hold timer active (2s after key-on)
 - Keyboard input interface with `inject_key_event()` for MAME input port integration
 - Logs all register writes with voice/register/data breakdown
 
@@ -1875,8 +1877,8 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 
 ### Known Issues
 
-- **Feature Demo produces no note events** — The sequencer dispatcher runs and reads rhythm ROM data, but the song engine never writes MIDI events to the ring buffer. The pipeline breaks between pattern data loading and event generation. Rhythm ROM validation passes (rhy_ofs=0), state machine is correct (0xE0→0xE4), but `putc_mrx` (ring buffer write function) has zero executions. See [Feature Demo](#feature-demo) for detailed diagnostic analysis and [Sequencer]({{ site.baseurl }}/sequencer/) for the full architecture.
-- **No audio output** — All three audio device classes are logging stubs; no sound synthesis or effects processing is implemented.
+- **Feature Demo timing** — The SSF presentation runs too fast because `Seq_IsMelodyActive` sees voices as inactive almost immediately after KEY OFF. Root cause: the tone generator HLE's release envelope completes in ~125ms. Fix: a 2-second hold timer was added per voice so firmware status queries still see voices as active, matching the real hardware's longer envelope times. Needs MAME testing to verify.
+- **No DSP effects audio** — DSP device classes are logging stubs with register tracking. Tone generator produces sine wave output but no effects processing (reverb, chorus, etc.).
 
 ## Research Needed
 
