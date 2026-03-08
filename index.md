@@ -120,26 +120,30 @@ Choose based on your goal:
 
 ### ROM Reconstruction Progress
 
-**Overall ROM-set Progress: 59.54%** (2,466,047 bytes remaining)
+**All 6 ROMs: 100% byte-perfect match.** Built with a custom [LLVM TLCS-900 backend](https://github.com/felipesanches/llvm-project/tree/tlcs900_backend) -- 279,441 native instructions, zero workaround macros.
 
 | Component | Size | Match | Status |
 |-----------|------|-------|--------|
-| Main CPU Program | 2MB | **100%** | Complete |
-| Sub CPU Payload | 192KB | **100%** | Complete |
-| Sub CPU Boot ROM | 128KB | **100%** | Complete |
-| Table Data | 2MB | 33.30% | Mostly binary assets |
-| Custom Data | 1MB | 0% | User storage, not reconstructed |
-| HDAE5000 ROM | 512KB | **100%** | Complete, images extracted |
+| Main CPU Program | 2MB | **100%** | 239,683 native instructions |
+| Sub CPU Payload | 192KB | **100%** | 35,721 native instructions |
+| Sub CPU Boot ROM | 128KB | **100%** | 1,357 native instructions |
+| Table Data | 2MB | **100%** | 1,678 native instructions + binary data |
+| Custom Data | 1MB | **100%** | Binary data (no code) |
+| HDAE5000 ROM | 512KB | **100%** | 502 native instructions |
 
-**Code Organization:** The disassembly uses modular source files with 1,074 lines of shared code across 7 files in the `shared/` directory, plus extracted subsystem files (`fdc_constants.asm`, `fdc_routines.asm`, `gui_constants.asm`).
+### Homebrew Development
+
+A [homebrew SDK]({{ site.baseurl }}/hdae5000-homebrew/) is available for writing custom HDAE5000 extension ROMs. Features a Quick Start guide, C + assembly build pipeline, and a fully playable [Minesweeper game](https://github.com/ArqueologiaDigital/Mines/tree/kn5000_port/platforms/kn5000) as a working example.
 
 ### MAME Emulation
 
 | Component | Status |
 |-----------|--------|
 | MAME Driver | [PR #14558](https://github.com/mamedev/mame/pull/14558) in progress |
-| Control Panel HLE | Protocol documented, implementation ongoing |
-| HDAE5000 Emulation | ATA and PPI interfaces implemented |
+| Display | 320x240 LCD working (VGA controller emulated) |
+| Audio | DSP protocol decoded, tone generator HLE |
+| Control Panel | Protocol documented, button state arrays emulated |
+| HDAE5000 | Extension board detected, homebrew ROMs loadable |
 
 ## Quick Links
 
