@@ -22,6 +22,224 @@ The HD-AE5000 extension slot can run custom code on the KN5000's main CPU. By re
 - **MAME** with KN5000 driver for testing
 - Knowledge of the [HDAE5000 firmware protocol]({{ site.baseurl }}/hdae5000/)
 
+## Quick Start
+
+This section walks through building a minimal "hello world" extension ROM that draws a colored rectangle on the KN5000 LCD. For the full protocol details, see the sections below.
+
+### 1. Set Up the Toolchain
+
+```bash
+# Build LLVM with TLCS-900 backend
+git clone https://github.com/felipesanches/llvm-project.git -b tlcs900_backend
+cd llvm-project
+mkdir build && cd build
+cmake -G Ninja ../llvm -DLLVM_TARGETS_TO_BUILD="TLCS900" \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" -DCMAKE_BUILD_TYPE=Release
+ninja
+```
+
+### 2. Create the Project Structure
+
+```
+my_extension/
+  startup.s       # XAPR header + entry points (assembly)
+  main.c          # Your C code
+  kn5000.ld       # Linker script
+  Makefile
+```
+
+### 3. Minimal Startup Assembly (startup.s)
+
+```asm
+.equ VIDEO_RAM_BASE, 0x1A0000
+.equ WORKSPACE_PTR,  0x200008
+.equ GAME_ACTIVE,    0x200000
+.equ STACK_TOP,      0x203000
+.equ SAVED_SP,       0x200044
+
+.globl GAME_ACTIVE
+.globl yield_to_firmware
+
+.section .startup, "ax", @progbits
+
+; XAPR Header (8 bytes)
+        .ascii  "XAPR"
+        .byte   0x34, 0xA1, 0x2F, 0x00
+
+; Entry Point 1: Boot_Init (offset 0x08)
+        jp      Boot_Init
+        ret
+        .byte   0x00, 0x00, 0x00
+
+; Entry Point 2: Frame_Handler (offset 0x10)
+        jp      Frame_Handler
+        ret
+        .byte   0x00, 0x00, 0x00
+
+; Entry Points 3-4: Unused
+        ret
+        .byte   0x00, 0x00, 0x00
+        ret
+        .byte   0x00, 0x00, 0x00
+
+Boot_Init:
+        ld      (WORKSPACE_PTR), xwa    ; Save workspace pointer
+        ret
+
+Frame_Handler:
+        push    xwa
+        push    xbc
+        push    xde
+        push    xhl
+        push    xix
+        push    xiy
+        push    xiz
+
+        ; Check if game is active
+        ld      xhl, GAME_ACTIVE
+        ld      xwa, (xhl)
+        and     xwa, 0xFF
+        cp      xwa, 0
+        jrl     z, .Lframe_done
+
+        ; First frame: set up stack and call main()
+        ld      xwa, xsp
+        ld      (SAVED_SP), xwa
+        ld      xsp, STACK_TOP
+        call    main
+
+        ; main() returned — deactivate
+        ld      xhl, GAME_ACTIVE
+        ld      xwa, 0
+        ld      (xhl), xwa
+        ld      xwa, (SAVED_SP)
+        ld      xsp, xwa
+
+.Lframe_done:
+        pop     xiz
+        pop     xiy
+        pop     xix
+        pop     xhl
+        pop     xde
+        pop     xbc
+        pop     xwa
+        ret
+
+; yield_to_firmware: save game context, return to firmware main loop.
+; Firmware calls Frame_Handler next frame, which resumes here.
+yield_to_firmware:
+        ; (See Mines startup.s for full cooperative multitasking implementation)
+        ret
+```
+
+### 4. Minimal C Code (main.c)
+
+```c
+#include <stdint.h>
+
+#define VRAM_BASE  ((volatile uint8_t *)0x1A0000)
+#define LCD_WIDTH  320
+#define LCD_HEIGHT 240
+
+#define VGA_DAC_WRITE_INDEX ((volatile uint8_t *)0x1703C8)
+#define VGA_DAC_DATA        ((volatile uint8_t *)0x1703C9)
+
+void set_palette_entry(uint8_t index, uint8_t r, uint8_t g, uint8_t b) {
+    *VGA_DAC_WRITE_INDEX = index;
+    *VGA_DAC_DATA = r;  /* 6-bit values (0-63) */
+    *VGA_DAC_DATA = g;
+    *VGA_DAC_DATA = b;
+}
+
+void main(void) {
+    /* Set palette: index 1 = bright green */
+    set_palette_entry(1, 0, 63, 0);
+
+    /* Draw a green rectangle */
+    for (int y = 80; y < 160; y++) {
+        for (int x = 100; x < 220; x++) {
+            VRAM_BASE[y * LCD_WIDTH + x] = 1;
+        }
+    }
+
+    /* Spin (in a real app, use yield_to_firmware() for cooperative multitasking) */
+    while (1) {}
+}
+```
+
+### 5. Linker Script (kn5000.ld)
+
+```
+MEMORY {
+  ROM (rx)  : ORIGIN = 0x280000, LENGTH = 512K
+  RAM (rwx) : ORIGIN = 0x200000, LENGTH = 12K
+}
+SECTIONS {
+  .startup 0x280000 : { startup.o(.startup) } > ROM
+  .text             : { *(.text*) } > ROM
+  .rodata           : { *(.rodata*) } > ROM
+  .data             : { *(.data*) } > RAM AT > ROM
+  .bss              : { *(.bss*) } > RAM
+}
+```
+
+### 6. Makefile
+
+```makefile
+LLVM_BIN := /path/to/llvm-project/build/bin
+CLANG    := $(LLVM_BIN)/clang
+LLC      := $(LLVM_BIN)/llc
+LLD      := $(LLVM_BIN)/ld.lld
+OBJCOPY  := $(LLVM_BIN)/llvm-objcopy
+
+CFLAGS   := -target tlcs900 -ffreestanding -nostdlib -O2
+LLC_FLAGS := -mtriple=tlcs900 -mcpu=tmp94c241 -O2
+
+BUILD    := build
+
+all: $(BUILD)/extension.bin
+
+$(BUILD):
+	mkdir -p $(BUILD)
+
+$(BUILD)/main.ll: main.c | $(BUILD)
+	$(CLANG) $(CFLAGS) -S -emit-llvm -o $@ $<
+
+$(BUILD)/main.o: $(BUILD)/main.ll
+	$(LLC) $(LLC_FLAGS) -filetype=obj -o $@ $<
+
+$(BUILD)/startup.o: startup.s | $(BUILD)
+	$(CLANG) -target tlcs900 -mcpu=tmp94c241 -c -o $@ $<
+
+$(BUILD)/extension.elf: $(BUILD)/startup.o $(BUILD)/main.o kn5000.ld
+	$(LLD) -T kn5000.ld -o $@ $(BUILD)/startup.o $(BUILD)/main.o
+
+$(BUILD)/extension.bin: $(BUILD)/extension.elf
+	$(OBJCOPY) -O binary $< $@
+	@SIZE=$$(stat -c%s "$@"); \
+	if [ "$$SIZE" -lt 524288 ]; then \
+		dd if=/dev/zero bs=1 count=$$((524288 - $$SIZE)) 2>/dev/null | \
+		tr '\0' '\377' >> $@; \
+	fi
+
+clean:
+	rm -rf $(BUILD)
+```
+
+### 7. Build and Test
+
+```bash
+make
+# Copy to MAME ROM set
+cp build/extension.bin /path/to/romset/kn5000/hd-ae5000_v2_06i.ic4
+# Run (game activation requires Lua or handler registration — see below)
+mame kn5000 -rompath /path/to/romset -extension hdae5000 -window
+```
+
+> **Note:** This minimal example skips handler registration and DISK MENU integration. The `GAME_ACTIVE` flag at `0x200000` must be set to 1 for Frame_Handler to call `main()`. For automated testing, use a MAME Lua script: `emu.register_periodic(function() if manager.machine.time:as_double() > 30 then manager.machine.devices[":maincpu"].spaces["program"]:write_u8(0x200000, 1) end end)`. For proper DISK MENU integration with button activation, see [Handler Registration](#handler-registration) and [DISK MENU Activation](#disk-menu-activation-mechanism).
+
+For a complete working example with handler registration, input, display management, and cooperative multitasking, see the [Mines game source code](https://github.com/ArqueologiaDigital/Mines/tree/kn5000_port/platforms/kn5000).
+
 ## Extension ROM Protocol
 
 ### XAPR Header Format
@@ -772,33 +990,86 @@ See the [Event Codes Reference]({{ site.baseurl }}/event-codes/) for a complete 
 
 ## Control Panel Input
 
-The KN5000 control panel communicates with the main CPU via SC1 synchronous serial at 250 kHz. The firmware manages this communication in its main event loop.
+The KN5000 control panel communicates with the main CPU via SC1 synchronous serial at 250 kHz. The firmware's interrupt-driven state machine continuously polls the panel and stores button bitmaps in RAM arrays. Extension ROMs read these arrays directly — no SC1 serial access needed, no interference with firmware operation.
 
-### Input Routing Considerations
+### Reading Button State from Firmware RAM
 
-For homebrew projects that need button input:
+The firmware maintains two button state arrays in internal RAM, one per panel half:
 
-1. **Direct SC1 access** -- Reading SC1BUF directly works but may conflict with the firmware's own panel polling. The firmware polls the control panel every main loop iteration, and concurrent access to SC1 could corrupt the serial protocol state.
+| Array | Address | Description |
+|-------|---------|-------------|
+| Right panel | `0x8E4A` + segment | Segments 0-10, 1 byte each |
+| Left panel | `0x8E5A` + segment | Segments 0-10, 1 byte each |
 
-2. **Firmware-mediated input** -- The firmware's callback dispatch system likely provides a way for extensions to receive input events. The workspace callbacks at offsets `0x0244`, `0x0248`, and `0x024C` in Handler Table A are labeled as "UI callbacks" and may provide this mechanism.
+Each byte is a bitmap of pressed buttons in that segment. Read them with simple memory loads:
 
-3. **Interrupt-based input** -- The SC1 RX interrupt (`INTRX1`) could be used, but would need careful coordination with the firmware's interrupt handlers.
+```c
+/* Read right panel segment 4 (direction buttons) */
+uint8_t right_seg4 = *(volatile uint8_t *)0x8E4E;  /* 0x8E4A + 4 */
 
-**Current approach in Mines:** Direct SC1 serial access works for basic testing in MAME, with edge detection to convert held buttons into single-press events. For production use on real hardware, firmware-mediated input would be more reliable.
+if (right_seg4 & 0x02)  /* bit 1 */ { /* UP pressed */ }
+if (right_seg4 & 0x10)  /* bit 4 */ { /* LEFT pressed */ }
+if (right_seg4 & 0x20)  /* bit 5 */ { /* DOWN pressed */ }
+if (right_seg4 & 0x40)  /* bit 6 */ { /* RIGHT pressed */ }
+```
+
+**Edge detection:** Button state is level-based (1 = currently held). For single-press events, track previous state and detect rising edges:
+
+```c
+static uint32_t prev_buttons = 0;
+uint32_t buttons = /* ... read current state ... */;
+uint32_t pressed = buttons & ~prev_buttons;  /* newly pressed only */
+prev_buttons = buttons;
+```
+
+**Event queue suppression:** While your extension has display control, suppress the firmware's control panel event queue to prevent it from acting on button presses meant for your code:
+
+```c
+/* Equalize read/write pointers to discard queued events */
+*(volatile uint16_t *)0x8D9D = *(volatile uint16_t *)0x8D9F;   /* raw serial */
+*(volatile uint16_t *)0x02F838 = *(volatile uint16_t *)0x02F83A; /* app events */
+```
 
 ### Button Mapping
 
 See the [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) page for the full serial protocol. For game-like input, useful buttons include:
 
-| Button Group | Panel | Segment | Bit | Suggested Use |
-|-------------|-------|---------|-----|---------------|
-| Part Select: Right 2 | Right | 4 | 1 | UP |
-| Conductor: Left | Right | 4 | 4 | LEFT |
-| Conductor: Right 2 | Right | 4 | 5 | DOWN |
-| Conductor: Right 1 | Right | 4 | 6 | RIGHT |
-| Variation 4 | Left | 4 | 3 | ACTION (open cell) |
-| Page Up | Left | 2 | 7 | SECONDARY (flag) |
-| Exit | Left | 7 | 3 | QUIT |
+| Button Group | Panel | Segment | Bit | Address | Suggested Use |
+|-------------|-------|---------|-----|---------|---------------|
+| Part Select: Right 2 | Right | 4 | 1 | `0x8E4E` | UP |
+| Conductor: Left | Right | 4 | 4 | `0x8E4E` | LEFT |
+| Conductor: Right 2 | Right | 4 | 5 | `0x8E4E` | DOWN |
+| Conductor: Right 1 | Right | 4 | 6 | `0x8E4E` | RIGHT |
+| Variation 4 | Left | 4 | 3 | `0x8E5E` | ACTION (open cell) |
+| Variation 1 | Left | 4 | 0 | `0x8E5E` | SECONDARY (flag) |
+| Exit | Left | 7 | 3 | `0x8E61` | QUIT |
+
+### Cooperative Multitasking for Input
+
+Button state arrays are updated by the firmware's SC1 interrupt handler during the firmware's main loop. Your extension must periodically yield control back to the firmware so it can process serial data and update the arrays.
+
+The Mines game implements this with a `yield_to_firmware()` function (see [Build Pipeline](#build-pipeline)): the game saves its stack pointer, restores the firmware's stack, and returns from `Frame_Handler`. On the next frame, the firmware calls `Frame_Handler` again, which restores the game's stack and resumes execution. This cooperative multitasking ensures button state stays fresh.
+
+## Audio
+
+The KN5000's audio subsystem is managed entirely by the SubCPU (a second TMP94C241F). The main CPU communicates with it via shared DRAM and the inter-CPU protocol (see [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/)). Extension ROMs on the main CPU cannot directly control the tone generator, DSP effects, or MIDI output.
+
+### What Extensions Can Do
+
+- **Trigger sounds via firmware callbacks:** The firmware's workspace contains callback pointers for triggering MIDI notes and sound effects. These are accessible through the handler table (workspace offsets in Handler Table A). This is unexplored territory — the exact API for triggering notes from extension code is not yet documented.
+- **Write to shared DRAM:** The inter-CPU command buffer in DRAM could theoretically be used to send commands to the SubCPU, but the protocol is complex and interference with normal firmware operation is likely.
+
+### What Extensions Cannot Do
+
+- Directly program the tone generator (MN89316, at `0x100000-0x15FFFF` — these registers are written by both CPUs but controlled by SubCPU firmware logic)
+- Directly program the DSP effect processors (MN19413 / DS3613GF — connected via SubCPU GPIO, no main CPU access)
+- Bypass the SubCPU for audio output
+
+### Practical Guidance
+
+For homebrew projects needing audio: the firmware continues running while your extension is active (via cooperative multitasking). The keyboard's normal sound engine remains operational — keys pressed on the physical keyboard will still produce sound. A future area of research is triggering specific notes or sound effects programmatically through the firmware's callback system.
+
+See the [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) documentation for hardware details.
 
 ## LLVM TLCS-900 Backend Bugs
 
@@ -1023,6 +1294,109 @@ Frame_Handler:
     ret
 ```
 
+### Complete Makefile Template
+
+A production Makefile for multi-file C projects with MAME ROM set creation. Adapted from the [Mines game](https://github.com/ArqueologiaDigital/Mines/tree/kn5000_port/platforms/kn5000):
+
+```makefile
+# HDAE5000 Extension ROM Build System
+# Requires: LLVM with TLCS-900 backend
+
+LLVM_BIN := /path/to/llvm-project/build/bin
+CLANG    := $(LLVM_BIN)/clang
+LLC      := $(LLVM_BIN)/llc
+LLD      := $(LLVM_BIN)/ld.lld
+OBJCOPY  := $(LLVM_BIN)/llvm-objcopy
+LLVM_LINK := $(LLVM_BIN)/llvm-link
+
+BUILD    := build
+CFLAGS   := -target tlcs900 -ffreestanding -nostdlib -O2
+LLC_FLAGS := -mtriple=tlcs900 -mcpu=tmp94c241 -O2
+
+# Source files (add your .c files here)
+C_SRCS   := main.c
+
+# MAME ROM set
+ORIGINAL_ROMS := /path/to/kn5000_original_roms/kn5000
+ROMSET_DIR    := romset/kn5000
+ROM_NAME      := hd-ae5000_v2_06i.ic4
+
+ORIGINAL_ROM_FILES := \
+    kn5000_v10_program.rom \
+    kn5000_subcpu_boot.ic30 \
+    kn5000_subprogram_v142_compressed.rom \
+    kn5000_table_data_rom_even.ic3 \
+    kn5000_table_data_rom_odd.ic1 \
+    kn5000_rhythm_data_rom.ic14 \
+    kn5000_waveform_rom.ic307 \
+    kn5000_custom_data_rom.ic19
+
+# Derived file lists
+LL_FILES := $(patsubst %.c,$(BUILD)/%.ll,$(C_SRCS))
+
+all: romset
+
+$(BUILD):
+	mkdir -p $(BUILD)
+
+# Step 1: C -> LLVM IR
+$(BUILD)/%.ll: %.c | $(BUILD)
+	$(CLANG) $(CFLAGS) -S -emit-llvm -o $@ $<
+
+# Step 2: Link LLVM IR modules
+$(BUILD)/all_c.ll: $(LL_FILES)
+	$(LLVM_LINK) -S -o $@ $^
+
+# Step 3: LLVM IR -> object
+$(BUILD)/all_c.o: $(BUILD)/all_c.ll
+	$(LLC) $(LLC_FLAGS) -filetype=obj -o $@ $<
+
+# Step 4: Assemble startup
+$(BUILD)/startup.o: startup.s | $(BUILD)
+	$(CLANG) -target tlcs900 -mcpu=tmp94c241 -c -o $@ $<
+
+# Step 5: Link
+$(BUILD)/extension.elf: $(BUILD)/startup.o $(BUILD)/all_c.o kn5000.ld
+	$(LLD) -T kn5000.ld -o $@ $(BUILD)/startup.o $(BUILD)/all_c.o
+
+# Step 6: Binary + pad to 512KB
+$(BUILD)/extension.bin: $(BUILD)/extension.elf
+	$(OBJCOPY) -O binary $< $@
+	@SIZE=$$(stat -c%s "$@" 2>/dev/null || stat -f%z "$@"); \
+	if [ "$$SIZE" -lt 524288 ]; then \
+		dd if=/dev/zero bs=1 count=$$((524288 - $$SIZE)) 2>/dev/null | \
+		tr '\0' '\377' >> $@; \
+	fi
+	@echo "ROM: $$(stat -c%s "$@" 2>/dev/null || stat -f%z "$@") bytes"
+
+# Create MAME ROM set
+romset: $(BUILD)/extension.bin
+	mkdir -p $(ROMSET_DIR)
+	@for rom in $(ORIGINAL_ROM_FILES); do \
+		cp "$(ORIGINAL_ROMS)/$$rom" "$(ROMSET_DIR)/" 2>/dev/null || \
+		echo "WARNING: Missing $$rom"; \
+	done
+	cp $< $(ROMSET_DIR)/$(ROM_NAME)
+
+# Run in MAME
+test: romset
+	mame kn5000 -rompath romset -extension hdae5000 -window
+
+clean:
+	rm -rf $(BUILD)
+```
+
+### Key Build Flags
+
+| Flag | Purpose |
+|------|---------|
+| `-target tlcs900` | Target the TLCS-900 architecture |
+| `-mcpu=tmp94c241` | Specific CPU model (enables all instructions) |
+| `-ffreestanding` | No hosted C library assumptions |
+| `-nostdlib` | No standard library linking |
+| `-O2` | Optimization (recommended — `-O0` generates larger code) |
+| `-S -emit-llvm` | Emit LLVM IR text (for linking step) |
+
 ## Memory Map for Custom ROMs
 
 | Address Range | Size | Region | Use |
@@ -1035,6 +1409,8 @@ Frame_Handler:
 | 0x1703C9 | 1B | VGA DAC Data | RGB data (write 3 bytes sequentially) |
 | 0x1703D4 | 1B | VGA CRTC Index | CRTC register select |
 | 0x1703D5 | 1B | VGA CRTC Data | CRTC register data |
+| 0x8E4A-0x8E54 | 11B | Right Panel Buttons | Firmware button state (1 byte per segment) |
+| 0x8E5A-0x8E64 | 11B | Left Panel Buttons | Firmware button state (1 byte per segment) |
 | 0x0D53 | 1B | Display Flags | Bit 3: display disable (firmware SFR) |
 | 0x03DD04 | 1B | XAPR Flag | Extension ROM detection (1=present) |
 
