@@ -8,24 +8,16 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 280 (23 open, 255 closed)
+**Total Issues:** 282 (10 open, 271 closed)
 
 **Quick Links:** 
-[HD-AE5000 Expansion](#hd-ae5000-expansion) (2) · [Other](#other) (20) · [Sound & Audio](#sound-audio) (1)
+[HD-AE5000 Expansion](#hd-ae5000-expansion) (1) · [Other](#other) (9)
 
 ---
 
 ## Open Issues
 
 ### HD-AE5000 Expansion {#hd-ae5000-expansion}
-
-#### 🟡 HDAE5000: Document interface cable pinout {#issue-kn5000-mzz}
-
-**ID:** `kn5000-mzz` | **Priority:** Medium | **Created:** 2026-01-25
-
-Determine the pinout of the cable connecting HD-AE5000 to KN5000. Identify connector types, signal assignments (accent data, accent control, accent bus, accent power), and voltage levels. Reference service manual if available.
-
----
 
 #### ⚪ HDAE5000: Analyze HD-TechManager5000 software {#issue-kn5000-qnf}
 
@@ -51,25 +43,11 @@ Reverse engineer the Windows HD-TechManager5000 software to understand the PC si
 
 ## Phase Structure with Tracking Issues
 
-### Phase 1: Foundation (MAME Blockers) - kn5000-dbi
+### Phase 1: Foundation (MAME Blockers) - kn5000-dbi ✅ CLOSED
 *Goal: Get basic emulator running with display and sound*
+All Phase 1 sub-issues complete. MAME boots with display and audio subsystem traffic logged.
 
-**Display System (kn5000-8z5):**
-- kn5000-ezo: VGA register documentation [P1]
-- kn5000-3c5: Framebuffer memory layout [P1]
-- kn5000-hy8: Pixel format and palette [P1]
-- kn5000-gln: Drawing primitives [P1]
-
-**Audio System (kn5000-y18):**
-- kn5000-1oy: DSP effects processing [P1]
-- kn5000-xv2: DSP IC311 documentation [P1]
-- kn5000-xel: DAC IC310 documentation [P1]
-
-**ROM Reconstruction:**
-- kn5000-5a0: Fix 177 divergent bytes [P1]
-- kn5000-d1x: Table Data ROM structure [P1]
-
-### Phase 2: Core Functionality - kn5000-dnl
+### Phase 2: Core Functionality - kn5000-dnl (OPEN)
 *Goal: User interaction and file I/O working*
 
 **UI/Input (kn5000-1vz):**
@@ -82,96 +60,37 @@ Reverse engineer the Windows HD-TechManager5000 software to understand the PC si
 - kn5000-ima: FDC subsystem [P2]
 - kn5000-kuu: HDAE5000 ROM [P1]
 
-### Phase 3: Complete Documentation - kn5000-9m6
+### Phase 3: Complete Documentation - kn5000-9m6 (OPEN)
 *Goal: All subsystems fully documented*
 
-**Documentation (kn5000-8ro):**
-- Complete all placeholder subsystem pages
-- audio-subsystem.md, display-subsystem.md, midi-subsystem.md
-- ui-framework.md, sequencer.md, storage-subsystem.md
-
-**Audio Details:**
-- kn5000-81p: Technics SysEx format
-- kn5000-5ck: Proprietary CC handlers
-- kn5000-rlb: Voice allocation
-
-**Storage Details:**
-- kn5000-bqe: Custom Data Flash
-- kn5000-44c: HDAE5000 filesystem
-
-**Boot/Init:**
-- kn5000-mhj: Complete boot timeline
-- kn5000-izk: HDAE5000 detection
-
-### Phase 4: Quality & Polish - kn5000-nca
+### Phase 4: Quality & Polish - kn5000-nca (OPEN)
 *Goal: Production-ready emulation and homebrew support*
 
-**Symbol Cleanup:**
-- kn5000-9jq: Sub CPU symbols
-- kn5000-4bt: UI framework symbols
-- kn5000-aar: Naming convention guide
-
-**Tools (kn5000-5jy):**
-- kn5000-waa: Slide viewer/editor
-- kn5000-87m: Update file parser
-- kn5000-pkx: Image converter
-
-**Documentation:**
-- kn5000-9a0: Website maintenance
-- kn5000-sf8: Code reference tables
-
-**Validation (kn5000-a8s):**
-- Emulation validation procedures
-
-## Current Status (Jan 2026)
-- ROM reconstruction: 59.54% overall
-- Main CPU: 99.99% (177 bytes divergent)
-- Sub CPU: 100% complete
-- Table Data: 32.42%
-- MAME PR: #14558 in progress
+## Current Status (Mar 2026)
+- **ROM reconstruction: ALL 6 ROMs 100% byte-perfect match**
+  - Main CPU: 100% (239,683 native instructions, 15,683 symbolic .long)
+  - Sub CPU boot: 100% (1,357 native instructions)
+  - Sub CPU payload: 100% (35,721 native instructions)
+  - Table Data: 100% (1,678 native instructions)
+  - HDAE5000: 100% (502 native instructions)
+  - Custom Data: 100% (data-only)
+  - Total: 279,441 native instructions, zero .byte fallbacks (except HDAE5000 ~4,663)
+- **Build system:** LLVM with custom TLCS-900 backend (authoritative)
+- **Issue tracker:** 280 issues (265 closed, 13 open, 2 in progress)
+- **Documentation:** cpu-subsystem, audio-subsystem, midi-subsystem, inter-cpu-protocol all updated
+- **MAME:** Boots with display, audio/DSP logging. Phase 2 input/storage work remains.
 
 ## Success Criteria
-- [ ] All ROMs 100% byte-matching
+- [x] All ROMs 100% byte-matching
 - [ ] MAME driver merged upstream
 - [ ] All subsystems documented
 - [ ] Homebrew SDK available
 
 ## Phase Tracking Issues
-- Phase 1: kn5000-dbi (P0 - Current Focus)
-- Phase 2: kn5000-dnl (P1)
+- Phase 1: kn5000-dbi (P0 - ✅ CLOSED)
+- Phase 2: kn5000-dnl (P1 - Current Focus)
 - Phase 3: kn5000-9m6 (P2)
 - Phase 4: kn5000-nca (P3)
-
----
-
-#### 🟠 MAME: Spurious button events during boot (voice dialog, transpose B) {#issue-kn5000-0eo}
-
-**ID:** `kn5000-0eo` | **Priority:** High | **Created:** 2026-02-21
-
-**Notes:** Running 'make fsanches_test' outside the VM, after boot sequence completes, some actions happen without user input: a dialog for selecting an instrument voice appears, and the screen shows transposition set to B (half step below default C). This suggests spurious button press events (possibly a 'transpose -' event). The control panel HLE or serial protocol may be generating ghost events. Needs investigation in MAME driver or control panel emulation.
-
----
-
-#### 🟠 MAME: Update HLE based on audio subsystem findings {#issue-kn5000-0o6}
-
-**ID:** `kn5000-0o6` | **Priority:** High | **Created:** 2026-01-30
-
-**Notes:** The audio subsystem reverse engineering provides new information for MAME HLE:
-
-Key findings for emulation:
-1. Command dispatch table with 8 handler ranges
-2. Ring buffer at 0x2B0D for MIDI-like commands
-3. MIDI status byte parsing (0x80-0xF0)
-4. Voice parameter handlers for each message type
-5. Control Change handlers including proprietary CCs
-6. DSP channel configuration at 0x130000
-
-Update mame_driver/ reference files:
-- Document command byte ranges in comments
-- Add state machine for MIDI parsing if not present
-- Ensure CC handlers match discovered behavior
-
-Reference: audio-subsystem.md, midi-subsystem.md, inter-cpu-protocol.md
 
 ---
 
@@ -210,62 +129,6 @@ User interaction and file I/O fully working in MAME.
 
 ---
 
-#### 🟡 Documentation: Complete all subsystem placeholder pages {#issue-kn5000-8ro}
-
-**ID:** `kn5000-8ro` | **Priority:** Medium | **Created:** 2026-01-31
-
-**Notes:** Track completion of all documentation website subsystem pages.
-
-## Placeholder Pages Needing Content
-1. audio-subsystem.md - Sound hardware and protocols
-2. display-subsystem.md - LCD and graphics system
-3. midi-subsystem.md - MIDI I/O and processing
-4. ui-framework.md - Widget system and rendering
-5. sequencer.md - Song/sequence playback
-6. storage-subsystem.md - Partial, needs completion
-
-## Pages Already Documented
-- control-panel-protocol.md ✓
-- inter-cpu-protocol.md ✓
-- hdae5000-disk-interface.md ✓
-- boot-sequence.md ✓
-- rom-reconstruction.md ✓
-
-## Success Criteria
-- All placeholder pages have substantive content
-- Code references link to assembly symbols
-- Each page has at least one diagram or table
-
----
-
-#### 🟡 MAME: Input/Control subsystem emulation milestone {#issue-kn5000-1vz}
-
-**ID:** `kn5000-1vz` | **Priority:** Medium | **Created:** 2026-01-31
-
-**Notes:** Track completion of input and control subsystem emulation for MAME.
-
-## Required Components
-- [ ] Control panel HLE (MCU ROM not dumped)
-- [ ] Button matrix scanning
-- [ ] LED control responses
-- [ ] Rotary encoder simulation
-- [ ] Analog controllers (wheels, pedals)
-
-## Related Issues
-- kn5000-9ye: Control panel protocol
-- kn5000-qhm: Control panel HLE design
-- kn5000-3c7: Analog controllers
-- kn5000-j3c: Button index mapping
-- kn5000-ljl: LED index mapping
-- kn5000-unb: Rotary encoder format
-
-## Success Criteria
-- Keyboard input responds to user
-- UI navigation works
-- LEDs reflect state changes
-
----
-
 #### 🟡 MAME: Storage subsystem emulation milestone {#issue-kn5000-a0k}
 
 **ID:** `kn5000-a0k` | **Priority:** Medium | **Created:** 2026-01-31
@@ -291,108 +154,11 @@ User interaction and file I/O fully working in MAME.
 
 ---
 
-#### 🟡 Phase 3 Completion: Full documentation coverage {#issue-kn5000-9m6}
+#### ⚪ DSP2: Trace bytecode programs to map registers to effect parameters {#issue-kn5000-ht11}
 
-**ID:** `kn5000-9m6` | **Priority:** Medium | **Created:** 2026-01-31
+**ID:** `kn5000-ht11` | **Priority:** Low | **Created:** 2026-03-08
 
-**Notes:** Meta-issue tracking Phase 3 completion (Complete Documentation).
-
-## Phase 3 Goals
-All subsystems fully documented in the documentation website.
-
-## Deliverables
-- kn5000-8ro: All placeholder pages completed
-- Audio details: SysEx format, CC handlers, voice allocation
-- Storage details: Custom Data Flash, HDAE5000 filesystem
-- Boot/Init: Complete timeline documentation
-
-## Documentation Pages to Complete
-1. audio-subsystem.md
-2. display-subsystem.md
-3. midi-subsystem.md
-4. ui-framework.md
-5. sequencer.md
-6. storage-subsystem.md (expand)
-
-## Depends On
-- Phase 2 completion (functional emulation enables testing)
-
-## Success Criteria
-- [ ] No placeholder pages remaining
-- [ ] All subsystem pages have code references
-- [ ] Symbol names in docs match assembly source
-- [ ] All P2/P3 documentation issues closed
-
-**Depends on:** [`kn5000-gexo`](#issue-kn5000-gexo)
-
----
-
-#### 🟡 Sub CPU: Complete emulation accuracy documentation {#issue-kn5000-b0h}
-
-**ID:** `kn5000-b0h` | **Priority:** Medium | **Created:** 2026-01-31
-
-**Notes:** Document all requirements for accurate Sub CPU emulation.
-
-## Current Status
-- Sub CPU boot ROM: 100% disassembled
-- Sub CPU payload: 100% disassembled
-- Inter-CPU latch protocol: Documented
-
-## Missing Documentation
-- Exact timing requirements for latch communication
-- DMA transfer behavior
-- Interrupt priority and timing
-- Audio output synchronization
-
-## Related Issues
-- kn5000-51z: Boot sequence handshake
-- kn5000-1ru: Payload memory layout
-- kn5000-ayt: Sub CPU type identification
-
-## Hardware Details
-- Sub CPU: 65C02 variant at IC27
-- Boot ROM: 0xFE0000-0xFFFFFF
-- Payload loaded to: 0x000400
-- Communication via latch at 0x120000
-
-## Success Criteria
-- All timing-critical behaviors documented
-- MAME can boot Sub CPU with correct behavior
-- Audio output produces correct results
-
----
-
-#### 🟡 Update website with service manual findings {#issue-kn5000-8q2}
-
-**ID:** `kn5000-8q2` | **Priority:** Medium | **Created:** 2026-01-25
-
-After extracting info from service manual schematics, update kn5000-docs website: add hardware architecture page, update control-panel-protocol.md with confirmed signals (DATA/BCK/ROTA/ROTB), add IC reference table, include block diagram description.
-
-**Depends on:** [`kn5000-z9k`](#issue-kn5000-z9k)
-
----
-
-#### ⚪ DSP1: Investigate algorithm select mechanism (effect name tracking) {#issue-kn5000-n1l2}
-
-**ID:** `kn5000-n1l2` | **Priority:** Low | **Created:** 2026-03-03
-
-DSP1 (DS3613GF-3BA) never receives CMD 0x30 (algorithm select). The SubCPU's LABEL_038439 path (wa==1) never triggers for DSP1, so m_channel_algo is never populated and all effect names show 'NO OPERATION'. The algo select may be: (1) embedded in VOICE DATA bulk writes (CMD 0x01 data[0]=0x00), (2) managed purely by SubCPU voice slot allocation (0x041368), or (3) implicit in the coefficient structure. Need to trace SubCPU DSP_ParameterWriteEngine bytecode dispatch to understand when wa==1 occurs.
-
----
-
-#### ⚪ Disasm: Extract more include files for major functional areas {#issue-kn5000-imt3}
-
-**ID:** `kn5000-imt3` | **Priority:** Low | **Created:** 2026-03-07
-
-The main CPU program (360K lines) has 16 include files covering well-understood subsystems. Many more functional areas could be extracted to improve organization. Candidates: sequencer routines, display/paint routines, accompaniment processing, registration memory, flash programming, boot sequence, interrupt handlers, timer handlers, DMA routines. Each extraction should group related routines into a themed .s file with documentation headers.
-
----
-
-#### ⚪ Docs: Document registration memory save/recall system {#issue-kn5000-9gom}
-
-**ID:** `kn5000-9gom` | **Priority:** Low | **Created:** 2026-03-07
-
-Registration memory allows saving/recalling complete instrument setups (sound, style, tempo, split points, effects). The Custom Data Flash page documents the storage format, but the firmware routines for saving, recalling, and managing registration banks are undocumented. Trace the registration save/load code and document the parameter set that gets saved/restored.
+With the DSP2 register map established (112 addresses), the next step is to trace through the firmware's bytecode programs (at ROM 0x14777) entry-by-entry to understand which registers correspond to which effect parameters (reverb time, chorus depth, etc). This requires decoding the 6 bytecode handler types and their data operands. Cross-reference with DSP1's known coefficient addresses.
 
 ---
 
@@ -509,106 +275,32 @@ Production-ready emulation and homebrew support.
 
 ---
 
-#### ⚪ Sequencer: Document event storage format and track organization {#issue-kn5000-wgc}
-
-**ID:** `kn5000-wgc` | **Priority:** Low | **Created:** 2026-01-30
-
-**Notes:** The 16-track MIDI sequencer data format needs reverse engineering.
-
-**Current state:** Basic capability known, internal format undocumented.
-
-**Required work:**
-- Locate sequence data in RAM/storage
-- Document event record format (note, CC, timing)
-- Trace track organization structure
-- Document timing resolution and sync
-
-**Phase:** 3 - Complete Documentation
-**Blocks:** Sequencer emulation
-**Dependencies:** MIDI subsystem
-**Related:** Custom Data Flash (kn5000-bqe)
-
----
-
-#### ⚪ Testing: Establish emulation validation procedures {#issue-kn5000-a8s}
-
-**ID:** `kn5000-a8s` | **Priority:** Low | **Created:** 2026-01-31
-
-**Notes:** Define testing procedures for validating MAME emulation accuracy.
-
-## Testing Categories
-
-### Boot Sequence Validation
-- ROM checksum verification
-- Peripheral init order matches real hardware
-- Sub CPU payload transfer timing
-
-### Display Validation
-- Boot splash appearance
-- UI element positioning
-- Font rendering accuracy
-- Color reproduction
-
-### Audio Validation
-- Basic tone generation
-- MIDI input response
-- Effects processing
-- Timing/latency
-
-### Input Validation
-- Button press response
-- Rotary encoder behavior
-- Analog controller range
-
-## Test Data Needed
-- Screenshots from real hardware
-- Audio recordings
-- Timing measurements
-- Logic analyzer captures
-
-## Success Criteria
-- Documented test procedures
-- Baseline captures from real hardware
-- Automated comparison where possible
-
----
-
-### Sound & Audio {#sound-audio}
-
-#### ⚪ Sound: Extract and catalog all instrument patches {#issue-kn5000-cox}
-
-**ID:** `kn5000-cox` | **Priority:** Low | **Created:** 2026-01-25
-
-Extract instrument definitions from ROM. Document: patch names, sample mappings, envelope settings, filter settings, effects assignments. Create patch list matching front panel sound groups.
-
----
-
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-a8s` | Testing: Establish emulation validation procedures | 2026-03-08 |
+| `kn5000-gkpv` | DSP2 (MN19413): Map register functions from boot-time writes | 2026-03-08 |
+| `kn5000-1vz` | MAME: Input/Control subsystem emulation milestone | 2026-03-08 |
+| `kn5000-0eo` | MAME: Spurious button events during boot (voice dialog, t... | 2026-03-08 |
+| `kn5000-9m6` | Phase 3 Completion: Full documentation coverage | 2026-03-08 |
+| `kn5000-n1l2` | DSP1: Investigate algorithm select mechanism (effect name... | 2026-03-08 |
+| `kn5000-b0h` | Sub CPU: Complete emulation accuracy documentation | 2026-03-08 |
+| `kn5000-8ro` | Documentation: Complete all subsystem placeholder pages | 2026-03-08 |
+| `kn5000-0o6` | MAME: Update HLE based on audio subsystem findings | 2026-03-08 |
+| `kn5000-1oy` | Audio: Analyze DSP effects processing algorithms | 2026-03-08 |
+| `kn5000-cox` | Sound: Extract and catalog all instrument patches | 2026-03-07 |
+| `kn5000-imt3` | Disasm: Extract more include files for major functional a... | 2026-03-07 |
+| `kn5000-wgc` | Sequencer: Document event storage format and track organi... | 2026-03-07 |
+| `kn5000-9gom` | Docs: Document registration memory save/recall system | 2026-03-07 |
+| `kn5000-mzz` | HDAE5000: Document interface cable pinout | 2026-03-07 |
+| `kn5000-8q2` | Update website with service manual findings | 2026-03-07 |
 | `kn5000-dbi` | Phase 1 Completion: All MAME blockers resolved | 2026-03-07 |
 | `kn5000-y18` | MAME: Audio subsystem emulation milestone | 2026-03-07 |
 | `kn5000-8z5` | MAME: Display subsystem emulation milestone | 2026-03-07 |
 | `kn5000-8jn0` | Disasm: Systematic semantic labeling of high-reference-co... | 2026-03-07 |
-| `kn5000-zfxb` | Docs: Document accompaniment/style playback engine | 2026-03-07 |
-| `kn5000-d12s` | Docs: Document display subsystem paint/draw primitives | 2026-03-07 |
-| `kn5000-5msx` | MAME: Trace and document tone generator register interface | 2026-03-07 |
-| `kn5000-gexo` | Disasm: Document main loop structure and top-level dispatch | 2026-03-07 |
-| `kn5000-gmcc` | Disasm: Convert 5,936 numeric call targets to symbolic la... | 2026-03-07 |
-| `kn5000-raw` | LLVM: TLCS-900/H2 backend development tracking | 2026-03-07 |
-| `kn5000-3c7` | Input: Document analog controller processing (wheels, ped... | 2026-03-07 |
-| `kn5000-fs3i` | Semantic labeling: rename top-30 most-referenced LABEL_ r... | 2026-03-07 |
-| `kn5000-bqe` | Storage: Document Custom Data Flash organization at 0x300000 | 2026-03-07 |
-| `kn5000-d1x` | Table Data: Document ROM internal structure and indexing | 2026-03-07 |
-| `kn5000-6je` | Document jump tables in maincpu ROM | 2026-03-07 |
-| `kn5000-ezo` | Display: Document VGA register set for MN89304 controller | 2026-03-07 |
-| `kn5000-aar` | Symbols: Create naming convention guide in CLAUDE.md | 2026-03-07 |
-| `kn5000-67g` | Document ROM interleaving formats for all ROM chips | 2026-03-07 |
-| `kn5000-0r5` | Investigate shared graphics data between maincpu and tabl... | 2026-03-07 |
-| `kn5000-8dy` | Audio: Trace sound category data structures at 0xE023B0 | 2026-03-07 |
 
-*...and 235 more closed issues*
+*...and 251 more closed issues*
 
 ---
 
@@ -619,18 +311,17 @@ Extract instrument definitions from ROM. Document: patch names, sample mappings,
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 3 |
-| Medium | 8 |
-| Low | 11 |
+| High | 1 |
+| Medium | 2 |
+| Low | 6 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| HD-AE5000 Expansion | 2 |
-| Other | 20 |
-| Sound & Audio | 1 |
+| HD-AE5000 Expansion | 1 |
+| Other | 9 |
 
 ---
 
-*Last updated: 2026-03-08 01:26*
+*Last updated: 2026-03-08 01:34*
