@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 284 (7 open, 276 closed)
+**Total Issues:** 285 (6 open, 277 closed)
 
 **Quick Links:** 
-[Other](#other) (7)
+[Other](#other) (6)
 
 ---
 
@@ -43,9 +43,11 @@ All Phase 1 sub-issues complete. MAME boots with display and audio subsystem tra
 **UI/Input (kn5000-1vz): ✅ CLOSED**
 - All sub-issues complete. UI navigation verified working in MAME.
 
-**Storage (kn5000-a0k): OPEN**
-- FDC documentation complete. MAME testing pending (no floppy images available).
-- HDAE5000 ROM: complete.
+**Storage (kn5000-a0k): IN PROGRESS**
+- FDC documentation complete. Floppy image creation in progress.
+- HDAE5000 ROM: complete. IDE/ATA wiring in progress (kn5000-492z).
+- Custom Data Flash: mapped, NVRAM-backed.
+- Table Data ROM: working (sequencer reads rhythm data).
 
 ### Phase 3: Complete Documentation - kn5000-9m6 ✅ CLOSED
 *Goal: All subsystems fully documented*
@@ -57,20 +59,21 @@ All subsystem pages documented, no placeholders remain.
 - SDK documentation: comprehensive (1442 lines, Quick Start guide, Makefile template)
 - Homebrew toolkit: documented (kn5000-5jy closed)
 
+## Active Unblocking Work (Mar 8)
+Three parallel efforts to resolve blockers:
+1. **Tone generator timing fix** — Add voice hold time in tc183c230002.cpp to fix Feature Demo speed (kn5000-y7t5)
+2. **Floppy disk images** — Create test FAT12 images for MAME FDC testing (kn5000-a0k)
+3. **HDAE5000 IDE wiring** — Connect ata_interface_device in hdae5000.cpp (kn5000-492z)
+
 ## Current Status (Mar 2026)
 - **ROM reconstruction: ALL 6 ROMs 100% byte-perfect match**
-  - Main CPU: 100% (239,683 native instructions, 15,683 symbolic .long)
-  - Sub CPU boot: 100% (1,357 native instructions)
-  - Sub CPU payload: 100% (35,721 native instructions)
-  - Table Data: 100% (1,678 native instructions)
-  - HDAE5000: 100% (502 native instructions)
-  - Custom Data: 100% (data-only)
   - Total: 279,441 native instructions, zero .byte fallbacks
 - **Build system:** LLVM with custom TLCS-900 backend (authoritative)
-- **Issue tracker:** 282 issues (272 closed, 9 open, 1 in progress)
+- **Issue tracker:** 284 issues (276 closed, 8 open)
 - **DSP research:** 16 effect types traced, 10 distinct algorithms, chip mapping documented
 - **Homebrew SDK:** Complete docs with Quick Start, API reference, Makefile templates
-- **MAME:** Boots with display, audio/DSP logging. Phase 2 storage testing remains.
+- **MAME:** Boots with display, audio/DSP logging. Phase 2 storage testing in progress.
+- **Proactive unblocking policy:** Added as strict policy (Mar 8)
 
 ## Success Criteria
 - [x] All ROMs 100% byte-matching
@@ -80,9 +83,9 @@ All subsystem pages documented, no placeholders remain.
 
 ## Phase Tracking Issues
 - Phase 1: kn5000-dbi (P0 - ✅ CLOSED)
-- Phase 2: kn5000-dnl (P1 - Storage testing remains)
+- Phase 2: kn5000-dnl (P1 - Storage in progress, Input done)
 - Phase 3: kn5000-9m6 (P2 - ✅ CLOSED)
-- Phase 4: kn5000-nca (P3 - In progress)
+- Phase 4: kn5000-nca (P3 - Open)
 
 ---
 
@@ -118,31 +121,6 @@ User interaction and file I/O fully working in MAME.
 #### 🟡 Another World: Complete floppy code injection for KN5000 port {#issue-kn5000-yhj}
 
 **ID:** `kn5000-yhj` | **Priority:** Medium | **Created:** 2026-02-21
-
----
-
-#### 🟡 MAME: Storage subsystem emulation milestone {#issue-kn5000-a0k}
-
-**ID:** `kn5000-a0k` | **Priority:** Medium | **Created:** 2026-01-31
-
-**Notes:** Track completion of storage subsystem emulation for MAME.
-
-## Required Components
-- [ ] FDC emulation (floppy disk controller at 0x110000)
-- [ ] HDAE5000 expansion interface
-- [ ] Custom Data Flash at 0x300000
-- [ ] Table Data ROM access
-
-## Related Issues
-- kn5000-ima: FDC subsystem symbols
-- kn5000-kuu: HDAE5000 ROM disassembly
-- kn5000-bqe: Custom Data Flash organization
-- kn5000-44c: HDAE5000 filesystem
-
-## Success Criteria
-- Floppy disk loading works
-- Custom styles/songs can be saved/loaded
-- HDAE5000 (if present) is detected
 
 ---
 
@@ -206,6 +184,7 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-492z` | MAME: Wire HDAE5000 IDE/ATA interface using MAME ata_inte... | 2026-03-08 |
 | `kn5000-qnf` | HDAE5000: Analyze HD-TechManager5000 software | 2026-03-08 |
 | `kn5000-0bx2` | HDAE5000: Document hard disk control protocol (low-level ... | 2026-03-08 |
 | `kn5000-4qqo` | HDAE5000: Full ROM disassembly with semantic labels and d... | 2026-03-08 |
@@ -225,9 +204,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-imt3` | Disasm: Extract more include files for major functional a... | 2026-03-07 |
 | `kn5000-wgc` | Sequencer: Document event storage format and track organi... | 2026-03-07 |
 | `kn5000-9gom` | Docs: Document registration memory save/recall system | 2026-03-07 |
-| `kn5000-mzz` | HDAE5000: Document interface cable pinout | 2026-03-07 |
 
-*...and 256 more closed issues*
+*...and 257 more closed issues*
 
 ---
 
@@ -239,15 +217,15 @@ Production-ready emulation and homebrew support.
 |----------|-------|
 | Critical | 1 |
 | High | 1 |
-| Medium | 2 |
+| Medium | 1 |
 | Low | 3 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 7 |
+| Other | 6 |
 
 ---
 
-*Last updated: 2026-03-08 09:31*
+*Last updated: 2026-03-08 09:34*
