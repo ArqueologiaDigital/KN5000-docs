@@ -133,9 +133,10 @@ The 2MB Main CPU ROM is organized as:
 | Metric | Value |
 |--------|-------|
 | ROM Size | 2MB (2,097,152 bytes) |
-| Match | 99.99% |
-| Divergent Bytes | 177 |
-| Cause | Instruction encoding variations |
+| Match | 100% byte-perfect |
+| Native Instructions | 239,683 |
+| Symbolic `.long` References | 15,683 |
+| Build System | LLVM (`llvm-mc` + `ld.lld` + `llvm-objcopy`) |
 
 ## Sub CPU
 
@@ -143,74 +144,124 @@ The 2MB Main CPU ROM is organized as:
 
 | Address Range | Size | Description |
 |---------------|------|-------------|
-| 0x000000-0x001FFF | 8KB | Internal RAM |
-| 0x002000-0x031FFF | 192KB | Payload RAM |
+| 0x000000-0x000FFF | 4KB | Internal CPU RAM (on-chip, bypasses external bus) |
+| 0x002B00-0x002B1F | 32B | Ring buffer control (MIDI message queue from Main CPU) |
+| 0x002000-0x031FFF | 192KB | Payload RAM (loaded from Main CPU at boot) |
+| 0x100000-0x10FFFF | 64KB | Tone Generator hardware registers |
+| 0x120000 | 1B | Inter-CPU communication latch |
+| 0x130000-0x130002 | 4B | DSP registers (DS3613GF-3BA: address + data) |
 | 0xFE0000-0xFFFFFF | 128KB | Boot ROM |
 
 ### Boot Process
 
-1. Sub CPU starts from reset vector in Boot ROM
-2. Waits for payload from Main CPU via latch
-3. Receives 192KB payload via DMA
-4. Jumps to payload entry point
-5. Enters audio processing loop
+1. Sub CPU starts from reset vector in Boot ROM (0xFFFEE0)
+2. Initializes DMA and latch configuration (`InterCPU_Latch_Setup` at 0x020B3B)
+3. Receives 192KB payload from Main CPU via DMA transfer
+4. Main CPU verifies payload checksums (`SubCPU_Payload_Verify`)
+5. Jumps to payload entry point
+6. Enters audio processing main loop
 
 ### Firmware Components
 
-| Component | Size | Status |
-|-----------|------|--------|
-| Boot ROM | 128KB | 100% reconstructed |
-| Payload | 192KB | 100% reconstructed |
+| Component | Size | Status | Native Instructions |
+|-----------|------|--------|-------------------|
+| Boot ROM | 128KB | 100% byte-match | 1,357 |
+| Payload | 192KB | 100% byte-match | 35,721 |
+
+### Audio Processing Architecture
+
+The Sub CPU's primary role is real-time audio synthesis and effects processing. It manages:
+
+**Voice Management (26 channels):**
+- Receives MIDI-like messages from Main CPU via ring buffer at 0x2B0D
+- `MIDI_Dispatch` (0x034D93) parses status bytes and routes to voice handlers
+- Supports Note On/Off, Control Change, Program Change, Pitch Bend, Channel Pressure
+- 26 internal voice channels (0x00-0x19) with per-voice parameter tables
+- See [MIDI Subsystem]({{ site.baseurl }}/midi-subsystem/) for full protocol details
+
+**Tone Generator Control:**
+- Direct register writes to hardware at 0x100000-0x10FFFF
+- Per-channel filter frequency (0x04520A), filter Q (0x04520E), output (0x0451CC)
+- Filter frequency clamped to max 0x1C
+
+**DSP Effects Processing (DS3613GF-3BA):**
+- Memory-mapped DSP at 0x130000 (address) / 0x130002 (data)
+- 4 effect channels × 32 registers each
+- Bytecode interpreter at 0x03C32E (1,613 bytes, 6 native handlers)
+- Real-time parameter updates via `DSP_ParameterWriteEngine` (0x03C673)
+- See [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) for DSP details
+
+**Hardware I/O:**
+- Port E bit 0: Audio mute control (confirmed by `MUTE_AND_HALT` routine at 0x9360)
+- Parallel port (P7/PZ): DSP command/data protocol for effect program loading
+- DMA Channel 0: Inter-CPU latch data transfer (interrupt-driven)
 
 ## Inter-CPU Communication
 
-The CPUs communicate via a latch at 0x120000:
+The CPUs communicate via a hardware latch at 0x120000. The Main CPU sends MIDI-like command streams to the Sub CPU for audio synthesis control.
 
-### Main CPU Side
-```c
-// Send byte to Sub CPU
-*(volatile uint8_t*)0x120000 = data;
+### Transfer Mechanism
 
-// Read status/response
-uint8_t response = *(volatile uint8_t*)0x120000;
-```
+| Component | Main CPU | Sub CPU |
+|-----------|----------|---------|
+| Latch Address | 0x120000 (write) | 0x120000 (read) |
+| Transfer Function | `Audio_DMA_Transfer` (0xEF32F4) | `MICRODMA_CH0_HANDLER` (0x020F1F) |
+| Direction | Main → Sub (primary) | Sub → Main (status/ack) |
 
-### Sub CPU Side
-```c
-// Receive byte from Main CPU
-uint8_t data = *(volatile uint8_t*)LATCH_ADDR;
+### Data Flow
 
-// Send acknowledgment
-*(volatile uint8_t*)LATCH_ADDR = ACK;
-```
+1. Main CPU writes MIDI-like messages to latch at 0x120000
+2. Sub CPU's MicroDMA Channel 0 fires interrupt on data arrival
+3. `MICRODMA_CH0_HANDLER` dispatches received bytes to command parser
+4. Bytes accumulate in ring buffer at 0x2B0D
+5. `MIDI_Dispatch` processes complete messages from the ring buffer
 
-See [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for protocol details.
+### Payload Transfer (Boot Only)
+
+At boot, the Main CPU transfers the 192KB Sub CPU payload via the same latch:
+
+| Function | Address | CPU | Purpose |
+|----------|---------|-----|---------|
+| `SubCPU_Payload_Transfer` | 0xEF0620 | Main | Send 192KB payload |
+| `SubCPU_Payload_Verify` | 0xEF06A0 | Main | Verify checksums (DRAM 0xFFD2/0xFFD4) |
+
+The payload checksums are stored in Main CPU DRAM at 0xFFD2 and 0xFFD4, preserved across power cycles via NVRAM save (triggered by SNS NMI).
+
+See [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for full protocol details.
 
 ## Programming Considerations
 
-### Assembler
+### Build System
 
-The project uses **ASL Macro Assembler** (Alfred Arnold's) for TLCS-900:
+The project uses **LLVM** with a custom TLCS-900 backend as the authoritative build system for all 6 ROMs:
 
 ```bash
-# Build command
-asl -cpu tmp94c241 source.asm -o output.p
-p2bin output.p output.bin
+# Build all ROMs (from roms-disasm/)
+make all
+
+# Pipeline: llvm-mc → ld.lld → llvm-objcopy → raw binary
+llvm-mc -triple=tlcs900 -filetype=obj source.s -o output.o
+ld.lld -T linker.ld output.o -o output.elf
+llvm-objcopy -O binary output.elf output.bin
 ```
 
-**Note**: ASL supports TMP96C141 natively; some TMP94C241-specific instructions require macros in `tmp94c241.inc`.
+All 6 ROMs (Main CPU, Sub CPU boot, Sub CPU payload, Table Data, HDAE5000, Custom Data) achieve **100% byte-perfect match** against the original firmware dumps, totalling 279,441 native instructions across ~8MB of ROM data.
 
-### Unsupported Instructions
+The ASL Macro Assembler (used historically) is archived in `archive/asl/`.
 
-Some TMP94C241 instructions require manual encoding:
+### Remaining `.byte` Fallbacks
 
-| Instruction | Workaround |
-|-------------|------------|
-| `LDI`, `LDIR` | Macro with raw bytes |
-| `MUL/DIV` variants | Macro with raw bytes |
-| Extended shifts | Macro with raw bytes |
+Some addressing modes not yet supported by the LLVM backend require `.byte` encoding:
 
-See `tmp94c241.inc` in the disassembly repository for implementations.
+| Category | Count | Notes |
+|----------|-------|-------|
+| `(R+d16)` addressing | ~970 | Register + 16-bit displacement |
+| 16-bit direct memory | ~470 | Direct memory addressing |
+| 8-bit direct memory | ~210 | Direct memory addressing |
+| F2 immediate stores | ~400 | Store immediate to memory |
+| Complex addressing | ~300 | Various compound modes |
+
+These are concentrated in the HDAE5000 ROM (~4,663 instances). All other ROMs have zero `.byte` fallbacks.
 
 ## Related Pages
 
@@ -219,6 +270,9 @@ See `tmp94c241.inc` in the disassembly repository for implementations.
 - [Boot Sequence]({{ site.baseurl }}/boot-sequence/) - Startup process
 - [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) - Communication details
 - [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) - Physical components
+- [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) - DSP effects and tone generation
+- [MIDI Subsystem]({{ site.baseurl }}/midi-subsystem/) - MIDI processing and voice management
+- [TLCS-900 Instruction Encoding]({{ site.baseurl }}/tlcs900-instruction-encoding/) - Instruction set reference
 
 ## Code References
 
@@ -234,7 +288,7 @@ See `tmp94c241.inc` in the disassembly repository for implementations.
 | `SC0Init_Entry` | `0xFCF890` | MIDI serial port initialization |
 | `Boot_DisplayScreen` | `0xEF05D0` | Boot screen display |
 
-### Sub CPU Boot
+### Sub CPU
 
 | Symbol | Address | Purpose |
 |--------|---------|---------|
@@ -242,6 +296,12 @@ See `tmp94c241.inc` in the disassembly repository for implementations.
 | `InterCPU_Latch_Setup` | `0x020B3B` | DMA and latch configuration |
 | `MICRODMA_CH0_HANDLER` | `0x020F1F` | Command dispatcher (DMA interrupt) |
 | `MIDI_Dispatch` | `0x034D93` | MIDI message parser/router |
+| `Voice_NoteOn` | `0x02CF97` | Voice note-on processing |
+| `Voice_CtrlChange` | `0x02A282` | Voice CC processing and dispatch |
+| `Voice_LoadFilterTable_Ch` | `0x022071` | Per-channel filter frequency/LPF |
+| `DSP_Bytecode_Programs` | `0x03C32E` | DSP effect bytecode interpreter (1,613B) |
+| `DSP_ParameterWriteEngine` | `0x03C673` | Real-time DSP parameter update engine |
+| `MUTE_AND_HALT` | `0x009360` | Audio mute via PE.0 and halt |
 
 ### Inter-CPU Communication
 
@@ -255,4 +315,4 @@ See `tmp94c241.inc` in the disassembly repository for implementations.
 
 - [TMP94C241 Datasheet](https://www.alldatasheet.com/datasheet-pdf/pdf/47265/TOSHIBA/TMP94C241.html) - CPU specifications
 - [TLCS-900 Programming Manual](https://archive.org/details/toshiba-tlcs900) - Instruction set reference
-- [ASL Assembler](http://john.ccac.rwth-aachen.de:8000/as/) - Build tool
+- [LLVM TLCS-900 Backend](https://github.com/niclasr/llvm-project) - Custom LLVM backend for TLCS-900
