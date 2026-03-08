@@ -1887,9 +1887,9 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 - [ ] Map MainCPU parameter indices (e.g., 33=REVERB TIME) to EFF block word positions per algorithm
 - [x] ~~Decode DSP register semantics per channel~~ — Partial: DSP2 112-register map from boot-time analysis (stride-0x10 channel regs at offset 0x_8, control regs 0x00/0x40/0x80, coefficient regs 0xE6/0xE7). DSP1 channel regs 0x10-0x17 still need semantic mapping.
 - [ ] Document remaining inter-CPU command types (beyond 0x2D and 0xE1/E2/E3)
-- [ ] Investigate why song engine never writes MIDI events to ring buffer (putc_mrx has zero hits)
+- [ ] Investigate why song engine never writes MIDI events to ring buffer (putc_mrx has zero hits) — may be resolved by voice hold timer fix
 - [ ] Determine what sets the startup flag at 0x0251D8 on real hardware
-- [ ] Trace the path from rhythm ROM pattern data to ring buffer write calls
+- [ ] Trace the path from rhythm ROM pattern data to ring buffer write calls — partially addressed by Feature Demo analysis
 - [ ] Decode voice parameter template at ROM 0xF8D5 (34 words — which map to pitch, waveform select, envelope mode, etc.)
 - [x] ~~Investigate why Feature Demo sequencer never reaches Note On events~~ — Ring buffer at 0x01F37B is never written; sequencer dispatcher and rhythm ROM reading work correctly but event generation stage never fires
 - [x] ~~Identify the timing mechanism or subcpu response that advances the sequencer~~ — Partially resolved: Timer7, state machine, and dispatcher pipeline traced; the issue is in the song engine output stage, not the input/timing stage
