@@ -542,6 +542,21 @@ All handlers end by jumping to LABEL_F97DE1 which sets the status flag and retur
 | `Check_for_Floppy_Disk_Change` | `0xEF4F5E` | Detect disc insertion/removal (Port D bit 6) |
 | `FDC_InitRecalibrate` | `0xF97E00` | Recalibrate drive head to track 0 |
 
+## MAME Emulation Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| FDC device | **Working** | UPD72067 at 0x110008/0x11000A, 32MHz clock |
+| DMA data port | **Working** | 0x120000 for software DMA channel 3 |
+| IRQ routing | **Working** | INT4 (command complete), INT5 (DRQ) |
+| Floppy connector | **Working** | 3.5" HD (1.44MB), MFI format supported |
+| TC signal | **TODO** | Timer 0 output to FDC TC input not connected |
+| Disk images | **Available** | v5-v10 firmware update disks from [archive.org](https://archive.org/details/technics-kn5000-system-update-disks) |
+
+**Test command:** `mame kn5000 -flop <disk_image.mfi>`
+
+The TC (Terminal Count) signal is needed to terminate multi-sector FDC transfers. Without it, single-sector reads should work but multi-sector transfers may hang. The Main CPU Timer 0 output (TO0) is wired to the FDC TC input on the real hardware.
+
 ---
 
 *Last updated: March 2026*
