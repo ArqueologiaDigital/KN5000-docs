@@ -779,6 +779,19 @@ All scrolling is software-based — no VGA hardware scroll registers are used. S
 
 UI element names "SlideMove" and "SlideBase" appear in the firmware's string table (0xEAB8D8), suggesting slide animation support for UI transitions.
 
+## MAME Emulation Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| MN89304 VGA Controller | **Working** | Register map emulated, 320×240 8bpp LCD output |
+| VRAM | **Working** | 256KB at 0x1A0000-0x1DFFFF, linear framebuffer |
+| Palette | **Working** | 256-color palette with 4-bit RAMDAC (VGA DAC at 0x170000) |
+| Display output | **Working** | Full screen rendering visible, UI widgets draw correctly |
+| Font rendering | **Working** | All firmware text drawing functions operate correctly |
+| Page transitions | **Partial** | Palette fade works; grid dissolve not verified |
+
+The display is one of the most complete subsystems in MAME emulation. The MN89304 VGA controller is emulated as a custom device with the KN5000-specific RAMDAC and offset override behaviors.
+
 ## Research Needed
 
 - [x] Document VGA register map at 0x170000 — Complete: full register set with init values
