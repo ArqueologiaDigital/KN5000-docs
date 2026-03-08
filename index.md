@@ -62,6 +62,7 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 | [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) | MCU serial communication |
 | [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) | Main/Sub CPU latch protocol |
 | [HDAE5000 Disk Interface]({{ site.baseurl }}/hdae5000-disk-interface/) | IDE/ATA and PC parallel port |
+| [HDAE5000 Filesystem]({{ site.baseurl }}/hdae5000-filesystem/) | Custom FSB/FGB/FEB filesystem |
 
 ### Firmware Analysis
 
