@@ -8,7 +8,7 @@ permalink: /help-wanted/
 
 This is a community reverse engineering project. Here's how you can contribute:
 
-**Current Progress:** Main CPU ROM at 99.99% (177 bytes), Sub CPU Boot at **100%**, Sub CPU Payload at **100%**. See the [Project Issues]({{ site.baseurl }}/issues/) page for many open tasks organized by category.
+**Current Progress:** All 6 ROMs at **100% byte-perfect match** (279,441 native instructions). Built with custom LLVM TLCS-900 backend. See the [Project Issues]({{ site.baseurl }}/issues/) page for remaining open tasks.
 
 ## High Priority
 
@@ -20,9 +20,9 @@ We're missing ROM dumps for several chips:
 
 If you have a KN5000 and can dump ROMs, please reach out!
 
-### Main CPU ROM (99.99% match)
+### ROM Disassembly Improvements
 
-The Main CPU ROM has only 177 bytes remaining. Analysis needed to identify and fix the remaining divergences, which may be due to instruction encoding differences between TMP94C241F and TMP96C141 (what ASL supports).
+All ROMs achieve 100% byte-perfect match. Remaining work includes converting ~4,663 `.byte` fallbacks in the HDAE5000 ROM to native LLVM instructions (requires LLVM backend additions for additional addressing modes), and semantic label renaming across ~16,000 remaining `LABEL_XXXXXX` symbols.
 
 ### HDAE5000 ROM Disassembly
 
@@ -77,7 +77,7 @@ If you have a working KN5000:
 
 ### Tooling
 
-- Extend ASL Macro Assembler support for TMP94C241F-specific instructions
+- Extend LLVM TLCS-900 backend for additional addressing modes (R+d16, direct memory, F2 stores)
 - Create visualization tools for protocol analysis
 - Build comparison/diff tools for ROM analysis
 
@@ -142,14 +142,12 @@ See `CLAUDE.md` in the repository for complete policy details.
 
 ### Higher-Level Compiler
 
-We envision eventually porting a higher-level compiler to target the TMP94C241F (TLCS-900/H2) CPU, enabling C or C++ development for the KN5000 instead of assembly-only programming.
+A **custom LLVM backend for TLCS-900** is already operational and used as the authoritative build system for all ROM reconstruction. It supports C compilation targeting the TMP94C241F, and has been used to build the Minesweeper homebrew game.
 
-**Potential approaches:**
-- **LLVM backend** - Create a new LLVM target for TLCS-900
-- **GCC port** - Port GCC to generate TLCS-900 code
-- **SDCC extension** - Extend Small Device C Compiler
-
-This is a significant undertaking requiring compiler development expertise. If you have experience with LLVM backends or retargeting compilers, we'd love to hear from you.
+**Remaining compiler work:**
+- Additional addressing modes (R+d16, direct memory, F2 immediate stores)
+- Optimization passes for code density
+- Standard library support for homebrew development
 
 ## Skills We Need
 

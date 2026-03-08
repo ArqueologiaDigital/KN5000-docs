@@ -180,15 +180,15 @@ See [Memory Map]({{ site.baseurl }}/memory-map/) for complete details.
 
 | Subsystem | Status | Notes |
 |-----------|--------|-------|
-| Main CPU Firmware | 99.99% | 177 bytes divergent in rebuild |
+| Main CPU Firmware | 100% | Byte-perfect match (239,683 native instructions) |
 | Sub CPU Boot ROM | 100% | Complete disassembly |
 | Sub CPU Payload | 100% | Complete disassembly |
 | Control Panel Protocol | Documented | HLE in progress for MAME |
 | HDAE5000 | 100% | ROM complete, protocol documented |
 | FDC Subsystem | Partial | Handler identified, needs integration |
-| Audio Subsystem | Placeholder | Basic hardware info only |
-| Display Subsystem | Placeholder | VGA mapping known |
-| MIDI Subsystem | Placeholder | I/O addresses known |
+| Audio Subsystem | Documented | DSP effects, tone gen, voice management |
+| Display Subsystem | Documented | Framebuffer layout, palette, VGA registers |
+| MIDI Subsystem | Documented | 26-channel voice routing, CC handlers, SysEx |
 | UI Framework | Placeholder | Structure partially understood |
 | Sequencer | Placeholder | Basic understanding only |
 

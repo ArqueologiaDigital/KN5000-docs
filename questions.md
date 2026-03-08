@@ -59,10 +59,10 @@ Things we don't know yet and need to investigate.
 
 ## ROM Reconstruction
 
-### Main CPU Divergences
-- [ ] What instructions produce the 177 divergent bytes?
-- [ ] Are they encoding issues or data issues?
-- [ ] Can they be fixed in the assembler or source?
+### Main CPU Reconstruction
+- [x] ~~What instructions produce the 177 divergent bytes?~~ — Resolved: all divergences fixed, 100% byte-perfect match achieved via LLVM TLCS-900 backend
+- [x] ~~Are they encoding issues or data issues?~~ — Were instruction encoding variations; fixed by migrating from ASL to LLVM
+- [x] ~~Can they be fixed in the assembler or source?~~ — Fixed by custom LLVM backend with correct TLCS-900 encoding
 
 ### Table Data
 - [ ] What is the structure of the table data ROM?
