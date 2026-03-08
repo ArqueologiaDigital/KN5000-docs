@@ -265,21 +265,68 @@ The entire pipeline is **ROM-resident** — no disk I/O occurs for the Feature D
 
 ---
 
+## Button Sequence for Feature Demo
+
+The correct button sequence to activate the Feature Demo from the home screen:
+
+1. Press **DEMO** button → `8D38` transitions from `0x01` (normal) to `0xE0` (DEMONSTRATION menu appears)
+2. Press **LEFT 4** (4th from top, CPL_SEG9) → `8D38` transitions to `0xE4` (FEATURE PRESENTATION sub-menu appears)
+3. Press **LEFT 2** (CPL_SEG10) → `8D38` transitions to `0xE1` (demonstration/performances begin playing)
+
+### Demo Menu UI States
+
+| State (`0x8D38`) | Description |
+|-------------------|-------------|
+| `0x01` | Normal operation (home screen) |
+| `0xE0` | DEMONSTRATION menu (top-level) |
+| `0xE4` | FEATURE PRESENTATION sub-menu |
+| `0xE1` | Demonstration/performances playing |
+
+---
+
+## Two Separate Systems in the Feature Demo
+
+The Feature Demo consists of two independent subsystems that operate in parallel:
+
+### 1. Demo Timer System (Song Cycling)
+
+- **Timer variable:** DRAM address `0x0D2F` (3375 decimal)
+- **Purpose:** Independent countdown timer that controls song cycling through demo items
+- **Entry point:** `Demo_SelectEntry_TimerTick` (0xF86D45), called from the main loop timer
+- **MAME status:** **Works correctly** with the tone gen hold timer fix
+
+The Demo Timer System handles the musical demonstration — it sequences through songs, manages auto-play timing, and coordinates playback state transitions. This is the system responsible for the audio content of the Feature Demo.
+
+### 2. SSF Visual Presentation (Bitmap Rendering)
+
+- **Trigger event:** `0x1C00038`
+- **Purpose:** Handles FTBMP bitmap rendering — the visual slideshow of images (Technics logo, subwoofers, floppy discs, etc.)
+- **Handler:** `GroupBoxProc_StartSSFPresentation` (0xF9A273) — should create workspace with tag `0xB80A` and dispatch to `AcPresentCtrl_CheckSSFStart`
+- **MAME status:** **Currently broken** — event `0x1C00038` does not reach `GroupBoxProc_StartSSFPresentation`
+
+The SSF system parses the XML script (`hkst_55.ssf`) and renders the FTBMP bitmap images to VRAM. Without this system working, the demo plays songs but does not display the accompanying visual presentation.
+
+### SSF Gate State 0xE4
+
+The gate table entry for state `0xE4` (FEATURE PRESENTATION sub-menu) contains the **unconditional marker** `0xFFFE`. This means any key press in state `0xE4` should broadcast event `0x1C00038` — the gate is wide open.
+
+### Workspace Tag Mismatch
+
+The root cause of the SSF failure involves a workspace type-tag mismatch between two code paths:
+
+- **`DemoMenu_BuildItemWorkspace`** (0xF83CEA): Creates workspaces with `0x82xx` tags (computed from table at `0xE9F88C` plus a part-select offset). These tags **never** equal `0xB80A`.
+- **`AcPresentCtrl_CheckSSFStart`** (0xF84625): Requires workspace tag `0xB80A` to start the SSF presentation.
+- **`GroupBoxProc_StartSSFPresentation`** (0xF9A273): Should create the correct `0xB80A` tag, but **never receives event `0x1C00038`** in the current MAME emulation.
+
+The mismatch means that even though `DemoMenu_BuildItemWorkspace` fires event `0x1C0001C` repeatedly (once per menu item), the workspace tag check at `AcPresentCtrl_CheckSSFStart` always fails. The correct path requires `GroupBoxProc_StartSSFPresentation` to receive `0x1C00038` first and build the `0xB80A`-tagged workspace, but this event never arrives.
+
+---
+
 ## MAME Emulation Status
 
-**Current status (March 2026):** **CONFIRMED WORKING.** The Feature Presentation SSF runs correctly in MAME. Navigation sequence confirmed via Lua autoboot scripts:
+**Current status (March 2026):** **Partially working.** The Demo Timer System (song cycling) works correctly in MAME. The SSF Visual Presentation (FTBMP bitmap rendering) is currently broken — event `0x1C00038` does not reach `GroupBoxProc_StartSSFPresentation`.
 
-1. Press **DEMO** button → `8D38=0xE0` (DEMONSTRATION menu appears)
-2. Press **LEFT 4** (CPL_SEG9) → `8D38=0xE4` (FEATURE PRESENTATION sub-menu appears)
-3. Press **DEMO** again in state `0xE4` → `GroupBoxProc_StartSSFPresentation` fires → SSF starts → FTBMP images rendered to VRAM
-
-FTBMP01.BMP (Technics logo) was confirmed displayed in VRAM, visible in emulator snapshots taken during the run. The SSF iterated through multiple items (9 confirmed dispatches of `0x1C0001C` via `FA9660`) before returning to normal home screen state.
-
-**How DEMO triggers SSF in state 0xE4:** The FEATURE PRESENTATION sub-menu is rendered by `GroupBoxProc`. When DEMO is pressed in state `0xE4`, the INTA soft-button event is delivered directly to `GroupBoxProc`'s event handler (not via `F98697`/`FA9945`). GroupBoxProc recognizes the DEMO button, calls `GroupBoxProc_StartSSFPresentation` (0xF9A273), which sends `0x1C0001C` with workspace type-tag `0x0000B80A` — the correct path that passes `AcPresentCtrl_CheckSSFStart`.
-
-The `fa9945=0` result (F98697 path never fired) is correct: F98697 uses the state 0xE4 FFFE pass-through table and would fire 0x1C00038 via FA9945, but it is not needed because the DEMO button in state 0xE4 reaches GroupBoxProc directly through the soft-button event system.
-
-**Reference Lua script:** `/tmp/ftdemo_v3.lua` — fully automated navigation from boot to SSF presentation.
+**Reference Lua script:** `/tmp/ftdemo_v3.lua` — automated navigation from boot to Feature Demo activation.
 
 ---
 
@@ -624,4 +671,4 @@ On real hardware, each song would play for 10-30 seconds, giving time for the co
 
 ---
 
-*Last updated: March 2026*
+*Last updated: March 8, 2026*
