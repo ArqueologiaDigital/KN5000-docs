@@ -179,6 +179,92 @@ Based on KN5000 specifications:
 | System | Clock, Start/Stop/Continue |
 | SysEx | Technics-specific messages |
 
+## MIDI Channel Assignment and Voice Routing
+
+The KN5000 supports 26 internal voice channels (0x00-0x19) mapped to 16 external MIDI channels (0-15). The Main CPU manages the voice-to-channel mapping via data structures in DRAM.
+
+### Voice Data Tables
+
+| Address | Purpose | Stride |
+|---------|---------|--------|
+| `0xEDB264` | Voice data pointer by MIDI channel (32 entries) | 4 bytes |
+| `0xEDAE64` | Voice data pointer by index | 4 bytes |
+| `0xEE8EB8` | Voice channel configuration | variable |
+| `0xEE8ED8` | Channel assignment data (active flags) | variable |
+| `0xEE8F22` | Voice allocation table | 5 bytes |
+| `0xEE8F2E` | Voice layer table (layers 0-4) | 13 bytes |
+| `0xED92F2` | Voice index lookup table | variable |
+
+### Channel Lookup Functions
+
+**`VoiceData_LookupPtrByChannel`** (Main CPU, `file_io_engine.s`):
+- Input: A = MIDI channel (0x00-0x1F standard, 0x48 = drum)
+- Looks up pointer at `0xEDB264 + channel * 4`
+- Returns pointer in XHL (or 0xFFFFFFFF if not found)
+
+**`VoiceData_LookupPtrByIndex`** (Main CPU, `file_io_engine.s`):
+- Input: A = voice index
+- Looks up pointer at `0xEDAE64 + index * 4`
+- Returns pointer in XHL
+
+**`NoteMap_LookupVoice`** (Main CPU, `note_voice_mapping.s`):
+- Input: E = voice layer (0-4), C = MIDI channel (rejects > 0x20)
+- Searches voice tables at `0xEE8F2E` with 13-byte stride
+- Matches channel + instrument + layer to find voice slot
+
+### MIDI Message Routing (Main CPU)
+
+**`MIDI_CHANNEL_MESSAGE_DISPATCHER`** (`midi_serial_routines.s`):
+- Entry point for external MIDI input
+- Routes to channel-specific handlers via jump table
+- Supports Note On/Off, CC, Program Change, Pitch Bend, Pressure
+
+**`MIDI_DispatchCC`** (`midi_voice_routing.s`):
+- Dispatches Control Change by CC number
+- Jump table at `0xFD175E` (192 entries × 4 bytes for CC 0x00-0xBF)
+- CC > 0xBF rejected
+
+**`MIDI_DistributeParamToChannels`** (`file_io_engine.s`):
+- Distributes a parameter update across all active channels
+- Input: A = channel (0x00-0x1F standard), C = parameter, E = value
+- Special case: channel 0x48 = drum channel (max 16 parameters)
+
+### Voice Channel Architecture
+
+The KN5000 uses a multi-layer voice system where each MIDI channel can have multiple voice layers:
+
+- **26 internal voice channels** (0x00-0x19): Used by Sub CPU for tone generation
+- **16 external MIDI channels** (0-15): Standard MIDI, mapped to voice channels
+- **Voice layers** (0-4): Each MIDI channel can split into up to 5 layers (e.g., left hand, right hand, split zones)
+- **Drum channel** (0x48): Special-cased in routing code, uses separate voice assignment
+
+### Sub CPU Voice Filtering
+
+**`Voice_LoadFilterTable_Ch`** (Sub CPU, 0x22071):
+- Loads per-channel filter frequency and LPF tables
+- Writes to tone generator registers:
+  - `0x04520A`: Filter frequency
+  - `0x04520E`: Filter Q
+  - `0x0451CC`: Output register
+- Clamps filter frequency to max 0x1C
+
+**`Voice_LoadFilterTable_All`** (Sub CPU, 0x22161):
+- Applies filter settings across all voice channels
+- Dispatches per-channel filter loads in a loop
+
+### Accompaniment MIDI Filtering
+
+The accompaniment engine has its own MIDI filter system:
+
+**`AccompSeq_MidiFilterCodeBlock`** (`accompseq_routines.s`):
+- Embedded code block for accompaniment channel filtering
+- Filters MIDI events based on chord changes and accompaniment state
+- Manages state machine for accompaniment voice allocation
+
+**`AccVoice_DispatchWithChannel`** (`accompaniment_engine.s`):
+- Dispatches accompaniment voice events with channel info
+- Three dispatch types: 0x0E (indexed table), 0x0F (ROM lookup), default (computed copy)
+
 ## Code References
 
 ### Sub CPU (`subcpu/kn5000_subprogram_v142.asm`)
@@ -199,6 +285,21 @@ Based on KN5000 specifications:
 | `Voice_CC_Volume` | 0x02A31C | Volume handler |
 | `Voice_CC_Pan` | 0x02A340 | Pan handler |
 
+### Main CPU (`maincpu/`)
+
+| Routine | File | Description |
+|---------|------|-------------|
+| `MIDI_CHANNEL_MESSAGE_DISPATCHER` | `midi_serial_routines.s` | External MIDI message dispatcher |
+| `MIDI_DispatchCC` | `midi_voice_routing.s` | CC dispatch via jump table at 0xFD175E |
+| `MidiChannel_ConfigureController` | `midi_voice_routing.s` | Configure MIDI controller for voice channel |
+| `MIDI_DistributeParamToChannels` | `file_io_engine.s` | Distribute param to all active channels |
+| `VoiceData_LookupPtrByChannel` | `file_io_engine.s` | Channel → voice data pointer (0xEDB264) |
+| `VoiceData_LookupPtrByIndex` | `file_io_engine.s` | Index → voice data pointer (0xEDAE64) |
+| `NoteMap_LookupVoice` | `note_voice_mapping.s` | Find voice slot for note event |
+| `NoteMap_SetChannelParam` | `note_voice_mapping.s` | Set MIDI channel parameter in note map |
+| `Voice_DecodeNoteChannel` | `kn5000_v10_program.s` | Decode note channel to voice assignment |
+| `Voice_InitAllChannelEntries` | `kn5000_v10_program.s` | Initialize all 23 voice channel entries |
+
 ## Related Pages
 
 - [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) - Sound generation
@@ -213,5 +314,5 @@ Based on KN5000 specifications:
 - [x] ~~Document external MIDI serial port configuration~~ — Complete: see [MIDI Serial I/O](/midi-serial-io/)
 - [x] ~~Analyze MIDI routing logic in Main CPU~~ — Complete: see [MIDI Serial I/O](/midi-serial-io/)
 - [x] ~~Document Technics SysEx message format~~ — Complete: see [SysEx Messages](/sysex-messages/)
-- [ ] Document MIDI filter and channel assignment settings
+- [x] ~~Document MIDI filter and channel assignment settings~~ — Complete: 26 voice channels, voice data tables (0xEDB264, 0xEDAE64, 0xEE8EB8-0xEE8F70), channel lookup functions, multi-layer voice system (0-4 layers per channel), drum channel special-casing (0x48), Sub CPU filter tables, accompaniment MIDI filtering
 - [x] ~~Map remaining proprietary CC handlers (0x97, 0x9B-0x9D)~~ — Complete: CC91=freq mult, CC95=portamento, CC97=fine pitch, CC9B=vibrato depth, CC9C=vibrato enable, CC9D=tremolo depth
