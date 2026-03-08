@@ -144,7 +144,8 @@ A [homebrew SDK]({{ site.baseurl }}/hdae5000-homebrew/) is available for writing
 | Display | 320x240 LCD working (VGA controller emulated) |
 | Audio | DSP protocol decoded, tone generator HLE |
 | Control Panel | Protocol documented, button state arrays emulated |
-| HDAE5000 | Extension board detected, homebrew ROMs loadable |
+| HDAE5000 | Extension board detected, IDE/ATA wired, homebrew ROMs loadable |
+| Floppy | UPD72067 FDC emulated, disk images available |
 
 ## Quick Links
 
