@@ -614,38 +614,130 @@ Opcodes 0-5 dispatch to native TLCS-900 machine code subroutines within the `DSP
 | 2 | 0x333 | 0x03C661 | 167 bytes |
 | 3 | 0x3DA | 0x03C708 | 153 bytes |
 | 4 | 0x473 | 0x03C7A1 | 26 bytes |
-| 5 | 0x48D | 0x03C7BB | ~70 bytes |
+| 5 | 0x48D | 0x03C7BB | 448 bytes |
 
-These handlers use prevbank registers (D7 prefix), auto-increment addressing `(xRR+)`, and register-indirect compact forms to efficiently write multiple DSP registers in sequence. They read data bytes from the bytecode stream and route them to the DSP hardware via the parallel bus protocol. After completing, each handler jumps to `DSP_BytecodeInterpreter_CheckEnd` to continue the interpreter loop.
-
-A secondary offset table at `OFFSETS_14745` (0x014745) provides shorter offsets for a variant dispatch path, suggesting some handlers have fast-path entry points.
+Total native handler code: 1,613 bytes. These handlers use prevbank registers (D7 prefix), auto-increment addressing `ld C,(XWA+)`, and register-indirect compact forms to efficiently read data from the bytecode stream and route it to the DSP hardware via the parallel bus protocol. After completing, each handler jumps to `DSP_BytecodeInterpreter_CheckEnd` to continue the interpreter loop.
 
 **Common Handler Idiom:**
 
-All opcode 0-5 handlers share this recurring pattern for reading and sending bytes:
+All opcode 0-5 handlers share this recurring 13-byte "read-and-send" pattern:
 ```
-ld XWA,(XSP+0x1a)     ; load bytecode program pointer
+ld XWA,(XSP+0x1a)     ; load bytecode stream pointer
 ld C,(XWA+)            ; read next byte (auto-increment pointer)
 ld (XSP+0x1a),XWA     ; store updated pointer
 ld A,C                 ; copy byte to A
 extz WA                ; zero-extend to 16-bit
-ld BC,(XSP+0x14)       ; load DSP channel number from stack
+ld BC,(XSP+0x14)       ; load DSP chip_id from stack (0=DSP1, 1=DSP2)
 call DSP_DispatchCommand ; or DSP_DispatchData
-ld QIZ,HL              ; save result to prevbank register
+ld QIZ,HL              ; save return status to prevbank register
 ```
 
-**Handler Parameter Packing:**
+**Stack Frame Layout (set up by `DSP_BytecodeInterpreter_Init`):**
 
-Different handlers use different parameter widths for DSP register values:
+| Offset | Size | Contents |
+|--------|------|----------|
+| +0x04 | word | Loop counter |
+| +0x06 | word | Data count (from bytecode header, 12-bit) |
+| +0x08 | word | Accumulator (handler 1) |
+| +0x0A | word | Accumulator (handler 0) |
+| +0x0C | word | Accumulator (handler 5) |
+| +0x0E | word | Accumulator (handler 3) |
+| +0x10 | long | Runtime parameter value (32-bit, from caller) |
+| +0x14 | word | DSP chip_id (BC register) |
+| +0x1A | long | Bytecode stream pointer (XWA register) |
 
-| Opcode | Packing | Shift | Config Param Used | Description |
-|--------|---------|-------|-------------------|-------------|
-| 0 | 12-bit | `srl 4` / `sll 4` | stack[10] (word 1) | Complex multi-path: branches on data byte value (0x00, 0x0A, or other) |
-| 1 | 12-bit | `srl 4` / `sll 4` | stack[10] | Extended write with different branching |
-| 2 | 12-bit | `srl 4` / `sll 4` | stack[10] | Multi-register variant |
-| 3 | 16-bit | `srl 8` / `sll 8` | stack[14] (word 3) | Full 16-bit parameter values |
-| 4 | — | — | — | Command-only: sends 1 byte as command, then returns |
-| 5 | — | — | — | Command + data: sends command byte then data byte |
+**Handler 4 — Simple Command (26 bytes):**
+
+Reads 1 byte from stream, sends as DSP command. No data follows. Used for standalone operations like algorithm select or mode switch.
+
+**Handler 3 — Command + 16-bit Address + Raw Data (153 bytes):**
+
+1. Read 1 byte → send as DSP command
+2. Read 2-byte field → compute 16-bit DSP coefficient address:
+   - `addr = (byte0 << 8) | byte1 + accumulator[0x0E]`
+   - Send `(addr >> 8) & 0xFF` as data (address high byte)
+   - Send `addr & 0xFF` as data (address low byte)
+3. Advance stream by 2
+4. Loop: read and send 1 raw data byte per iteration, for remaining `(count - 3)` bytes
+
+Used for coefficient writes that need a full 16-bit address prefix.
+
+**Handler 2 — Command + 2 Preamble + Groups of 3 (167 bytes):**
+
+1. Read 1 byte → send as DSP command
+2. Read 2 bytes → send as 2 data values
+3. Loop: `(count - 3) / 3` iterations, each reads 3 bytes and sends as 3 data values
+
+Used for bulk writes of 3-byte coefficient entries (e.g., 24-bit parameters or address+value pairs).
+
+**Handler 1 — Command + 2 Preamble + Groups of 5 with 4-bit Address (249 bytes):**
+
+1. Read 1 byte → send as DSP command
+2. Read 2 bytes → send as 2 preamble data values
+3. Loop: `(count - 3) / 5` iterations, each processing 5 stream bytes:
+   a. Read 2 raw bytes → send as data
+   b. Read 2-byte field → compute 12-bit coefficient address:
+      - `addr = (byte0 << 4) | (byte1 >> 4) + accumulator[0x08]`
+      - Send `(addr >> 4) & 0xFF` as data (address high nibble)
+      - Send `((addr << 4) & 0xFF) | 1` as data (address low nibble + flag)
+   c. Advance stream by 2, read 1 more raw byte → send as data
+
+Used for interleaved coefficient/address writes with 12-bit packed addresses.
+
+**Handler 0 — Command + 2 Preamble + Groups of 5 with 3-way Branching (570 bytes):**
+
+Most complex handler. Processes data in groups of 5 bytes but branches based on the first byte of each group:
+
+1. Read 1 byte → send as DSP command
+2. Read 2 bytes → send as 2 preamble data values
+3. Loop: `(count - 3) / 5` iterations, with 3-way branch per group:
+
+   **Branch A** (first byte == 0x00 — static coefficient):
+   - Read 2 raw bytes → send as data
+   - Read 2-byte field → compute 12-bit address (4-bit shift), send as 2 data bytes
+   - Advance stream by 2, read 1 more raw byte → send
+
+   **Branch B** (first byte == 0x0A — raw passthrough):
+   - Read and send 5 raw bytes directly as data (no computation)
+
+   **Branch C** (any other value — parameter-modified coefficient):
+   - Read 1 raw byte → send as data
+   - Use 32-bit runtime parameter from `(XSP+0x10)` to compute 4 data bytes:
+     - `data0 = stream[0] + ((param >> 1) & 0x7F)`
+     - `data1 = stream[1] + ((param >> 9) & 0xFF)`
+     - `data2 = stream[2] + ((param >> 1) & 0xFF)`
+     - `data3 = stream[3] + ((param << 7) & 0x80)`
+   - Send 4 computed data bytes, advance stream by 4
+
+This is the key handler for **real-time parameter control**: bytecode programs contain template coefficient data, and the Branch C path mixes in the runtime parameter value to create dynamically-adjusted coefficients. Branch A handles static coefficients (address writes), Branch B handles raw data, and Branch C applies the parameter offset.
+
+**Handler 5 — Command + 2 Preamble + Groups of 5, Variant (448 bytes):**
+
+Very similar to Handler 0 but with different branching logic:
+
+1. Read 1 byte → send as DSP command
+2. Read 2 bytes → send as 2 preamble data values
+3. Loop: `(count - 3) / 5` iterations, with 2-way branch:
+
+   **Branch A** (first byte == 0x08 — 12-bit address with mask):
+   - Same as Handler 0 Branch A, but additionally masks IZ high byte to 0
+   - Uses `ld IZH, 0` to ensure address stays within 8-bit range
+
+   **Branch B** (any other value — parameter-modified):
+   - Same computation as Handler 0 Branch C
+
+Handler 5 is used for DSP programs that need both address-masked coefficient writes and parameter-modified coefficients.
+
+**Parameter Packing Summary:**
+
+| Opcode | Address Width | Shift | Group Size | Loop Divisor | Accumulator |
+|--------|-------------|-------|-----------|-------------|-------------|
+| 0 | 12-bit | 4 | 5 bytes | 5 | stack[0x0A] |
+| 1 | 12-bit | 4 | 5 bytes | 5 | stack[0x08] |
+| 2 | — (raw) | — | 3 bytes | 3 | — |
+| 3 | 16-bit | 8 | 1 byte | 1 | stack[0x0E] |
+| 4 | — | — | — | — | — |
+| 5 | 12-bit | 4 | 5 bytes | 5 | stack[0x0C] |
 
 For 12-bit parameters, the value is packed across 2 bytecode bytes as `byte0[7:0] << 4 | byte1[7:4]`. This is split into two DSP data writes: high byte (`value >> 4`) and low byte (`(value << 4) & 0xFF`). This indicates **DSP registers use 12-bit parameter values** for most effect parameters.
 
@@ -671,6 +763,18 @@ When `DSP_WriteGlobalConfig` is called to mute DSP chip 0:
    - 0xF → terminates
 7. Repeats until 0xF terminator encountered
 ```
+
+**Real-Time Parameter Modification:**
+
+The `DSP_ParameterWriteEngine` (0x03C673) enables real-time control of DSP effects. When a MIDI parameter changes (e.g., reverb depth, chorus rate), the engine:
+
+1. Looks up the parameter index in a translation table at 0x1ED6D
+2. Walks through algorithm-specific bytecode programs (table at 0x1F22C for program pointers, 0x1F09C for register addresses)
+3. Calls `DSP_PerParameterTranslator` to map the MIDI value to a 32-bit DSP parameter
+4. Re-runs the bytecode program with the new parameter value in `(XSP+0x10)`
+5. Handler 0/5 Branch C applies the parameter offset to template coefficients during write
+
+This allows a single MIDI parameter change to update multiple DSP registers simultaneously, with the bytecode program encoding which registers to modify and how to transform the parameter value for each one.
 
 ### DSP Coefficient Setup Pipeline
 
@@ -1640,6 +1744,6 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 - [x] ~~Decode tone generator register semantics~~ — Partial: voice control state machine, key-on/off flags, volume/level groups, latched parameter updates documented; pitch/envelope/filter register mapping still needs work
 - [x] ~~Document synthesis architecture~~ — Complete: 64-voice wavetable, 26 MIDI channels, dynamic voice allocation, hardware ADSR, LFO modes, proprietary CCs
 - [ ] Reverse-engineer DSP register semantics by tracing actual bytecode program data through the decoded handlers (need to decode config tables at 0x14777/0x147B3 entry-by-entry)
-- [x] ~~Analyze native code handlers within DSP_Bytecode_Programs~~ — Complete: 6 handlers at 0x3C32E, opcodes 0-2 use 12-bit parameter packing (4-bit shift), opcode 3 uses 16-bit (8-bit shift), opcode 4=command-only, opcode 5=command+data. All share common read-from-stream idiom with prevbank result storage.
+- [x] ~~Analyze native code handlers within DSP_Bytecode_Programs~~ — **Fully decoded** (1,613 bytes → 6 handlers). Op0/5: complex 5-byte groups with 3-way branching (static/raw/parameter-modified coefficients). Op1: 5-byte groups with 12-bit address. Op2: 3-byte raw groups. Op3: 16-bit address + raw tail. Op4: command-only. Key finding: Handlers 0/5 Branch C implement real-time parameter control by mixing a 32-bit runtime parameter into template coefficient data during DSP writes.
 - [ ] Determine if DSP internal ROM can be extracted (decapping, JTAG, etc.)
 - [x] ~~Document bytecode interpreter opcode set completely (opcodes 0x0-0xF)~~ — Complete: 2-byte header format, opcodes 0-5 (native code dispatch), 0xD (yield), 0xE (send command+data), 0xF (end). Config entries are 12 bytes (4 words + 1 pointer). Handlers at `DSP_Bytecode_Programs` (0x3C32E) are native TLCS-900 subroutines.
