@@ -824,14 +824,41 @@ The number of H0/H5/H2 groups varies by effect type (more complex effects have m
 
 **EFF Chip Mapping (0x1ED6D):** Maps effect channels to DSP hardware:
 
-| Channel | DSP Chip | Notes |
-|---------|----------|-------|
-| 0 | DSP1 (DS3613GF-3BA) | |
-| 1 | DSP1 | Hardcoded reverb/chorus programs |
-| 2 | DSP2 (MN19413) | |
-| 3 | DSP2 | |
-| 4 | DSP2 | |
-| 5-9 | (invalid) | Channel IDs > 4 not used for DSP |
+| Channel | DSP Chip | Max Params | Notes |
+|---------|----------|-----------|-------|
+| 0 | DSP1 (DS3613GF-3BA) | 28 | |
+| 1 | DSP1 | 24 | Hardcoded reverb/chorus programs |
+| 2 | DSP2 (MN19413) | 46 | Most parameters |
+| 3 | DSP2 | 20 | |
+| 4 | DSP2 | 20 | |
+| 5-9 | (invalid) | — | Channel IDs > 4 not used for DSP |
+
+Parameter count limits are stored at 0x1ED72 (5 bytes, one per channel).
+
+### Algorithm and Parameter ROM Tables
+
+The SubCPU ROM contains 6 key tables for DSP effect configuration:
+
+| Table | Address | Format | Entries | Purpose |
+|-------|---------|--------|---------|---------|
+| Chip Mapping | 0x1ED6D | 1B × 5 | 5 | Channel → DSP chip (0=DSP1, 1=DSP2) |
+| Param Limits | 0x1ED72 | 1B × 5 | 5 | Max parameters per channel (20-46) |
+| Algorithm Programs | 0x1ED7C | 4B × 100 | 100 | Pointers to algorithm bytecode (indexed by full algo ID 0-99) |
+| Parameter Programs | 0x1EF0C | 4B × 100 | 100 | Pointers to parameter bytecode (47 unique programs) |
+| Register Addresses | 0x1F09C | 4B × 12 | 12 | Per-algo-type register address bytecode pointers |
+| Parameter Mapping | 0x1F22C | 4B × 12 | 12 | Per-algo-type parameter mapping bytecode pointers |
+| Algo Type Lookup | 0x1F596 | 1B × 40 | 40 | Effect index (0-39) → algorithm type (2-11) |
+
+**Algorithm Program Table (0x1ED7C):** 100 entries indexed by full algorithm ID. Unique programs for types 2-6, 8-10, 15 (Rotary). Types 0, 7, 11 share a common program at 0x017263. Extended IDs 16-27 (reverb subtypes) share algorithm programs with their base type but have unique parameter programs.
+
+**Parameter Program Table (0x1EF0C):** 47 unique parameter programs covering:
+- 10 base algorithm types
+- 12 individual reverb subtypes (IDs 16-27)
+- 6 distortion/dynamics variants (IDs 32-36, 39)
+- 6 extended effects (auto pan, pitch shifter, pedal wah, rotary, ring mod, HARS)
+- Combination effects, presets, GEQ
+
+**Register and Parameter Mapping Tables (0x1F09C, 0x1F22C):** Both are indexed by algorithm type (0-11). Types 0, 7, 11 have NULL register pointers (they use extended-ID-specific programs instead). The parameter mapping table has a fallback at 0x017425 for these types. Both tables point to variable-length bytecode programs with opcodes like 0x21 (interpolation), 0x40 (pan scaling), 0x61-0x78 (dispatch), terminated by 0x7A/0xF0.
 
 ### DSP Coefficient Setup Pipeline
 
@@ -1883,8 +1910,8 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 ## Research Needed
 
 - [ ] Document waveform ROM format and sample layout
-- [ ] Decode per-algorithm parameter mapping tables at `0x1F22C`/`0x1F09C` (12-byte stride entries)
-- [ ] Map MainCPU parameter indices (e.g., 33=REVERB TIME) to EFF block word positions per algorithm
+- [x] ~~Decode per-algorithm parameter mapping tables at `0x1F22C`/`0x1F09C`~~ — Complete: both are 12-entry pointer tables (indexed by algo type 0-11) pointing to variable-length bytecode programs with opcodes 0x21/0x24/0x40/0x61-0x78, terminated by 0x7A/0xF0
+- [x] ~~Map MainCPU parameter indices to EFF block word positions~~ — Partial: 84 named parameters extracted from MainCPU 0xE324C4. DSP2 master list at 0xE4475C maps 14 SubCPU param indices to UI names. Final register-to-parameter mapping requires runtime bytecode tracing
 - [x] ~~Decode DSP register semantics per channel~~ — Partial: DSP2 112-register map from boot-time analysis (stride-0x10 channel regs at offset 0x_8, control regs 0x00/0x40/0x80, coefficient regs 0xE6/0xE7). DSP1 channel regs 0x10-0x17 still need semantic mapping.
 - [ ] Document remaining inter-CPU command types (beyond 0x2D and 0xE1/E2/E3)
 - [ ] Investigate why song engine never writes MIDI events to ring buffer (putc_mrx has zero hits) — may be resolved by voice hold timer fix
@@ -1904,7 +1931,7 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 - [x] ~~Map remaining proprietary CC handlers (0x97-0x9D)~~ — Complete: CC91=freq mult, CC95=portamento, CC97=fine pitch, CC9B=vibrato depth, CC9C=vibrato enable, CC9D=tremolo depth
 - [x] ~~Decode tone generator register semantics~~ — Partial: voice control state machine, key-on/off flags, volume/level groups, latched parameter updates documented; pitch/envelope/filter register mapping still needs work
 - [x] ~~Document synthesis architecture~~ — Complete: 64-voice wavetable, 26 MIDI channels, dynamic voice allocation, hardware ADSR, LFO modes, proprietary CCs
-- [ ] Reverse-engineer DSP register semantics by tracing actual bytecode program data through the decoded handlers (need to decode config tables at 0x14777/0x147B3 entry-by-entry)
+- [ ] Reverse-engineer DSP register semantics by runtime bytecode tracing — static analysis decoded all table structures (7 ROM tables, 47 unique parameter programs, 100 algorithm entries) but actual register addresses are embedded in variable-length bytecode and require interpreter execution to extract
 - [x] ~~Analyze native code handlers within DSP_Bytecode_Programs~~ — **Fully decoded** (1,613 bytes → 6 handlers). Op0/5: complex 5-byte groups with 3-way branching (static/raw/parameter-modified coefficients). Op1: 5-byte groups with 12-bit address. Op2: 3-byte raw groups. Op3: 16-bit address + raw tail. Op4: command-only. Key finding: Handlers 0/5 Branch C implement real-time parameter control by mixing a 32-bit runtime parameter into template coefficient data during DSP writes.
 - [ ] Determine if DSP internal ROM can be extracted (decapping, JTAG, etc.)
 - [x] ~~Document bytecode interpreter opcode set completely (opcodes 0x0-0xF)~~ — Complete: 2-byte header format, opcodes 0-5 (native code dispatch), 0xD (yield), 0xE (send command+data), 0xF (end). Config entries are 12 bytes (4 words + 1 pointer). Handlers at `DSP_Bytecode_Programs` (0x3C32E) are native TLCS-900 subroutines.
