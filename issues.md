@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 286 (7 open, 277 closed)
+**Total Issues:** 286 (6 open, 278 closed)
 
 **Quick Links:** 
-[Other](#other) (7)
+[Other](#other) (6)
 
 ---
 
@@ -86,14 +86,6 @@ Three parallel efforts to resolve blockers:
 - Phase 2: kn5000-dnl (P1 - Storage in progress, Input done)
 - Phase 3: kn5000-9m6 (P2 - ✅ CLOSED)
 - Phase 4: kn5000-nca (P3 - Open)
-
----
-
-#### 🟠 MAME: Implement TMP94C241 timer output callbacks and wire FDC TC signal {#issue-kn5000-m7iu}
-
-**ID:** `kn5000-m7iu` | **Priority:** High | **Created:** 2026-03-08
-
-The FDC TC (Terminal Count) signal is needed to terminate multi-sector floppy transfers. Real hardware wires CPU Timer 0 output (TO0) to FDC TC input. MAME's TMP94C241 implementation lacks timer output callbacks. Fix: add devcb_write_line for TO0, then wire m_maincpu->to0().set(m_fdc, FUNC(tc_line_w)) in kn5000.cpp.
 
 ---
 
@@ -192,6 +184,7 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-m7iu` | MAME: Implement TMP94C241 timer output callbacks and wire... | 2026-03-08 |
 | `kn5000-492z` | MAME: Wire HDAE5000 IDE/ATA interface using MAME ata_inte... | 2026-03-08 |
 | `kn5000-qnf` | HDAE5000: Analyze HD-TechManager5000 software | 2026-03-08 |
 | `kn5000-0bx2` | HDAE5000: Document hard disk control protocol (low-level ... | 2026-03-08 |
@@ -211,9 +204,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-cox` | Sound: Extract and catalog all instrument patches | 2026-03-07 |
 | `kn5000-imt3` | Disasm: Extract more include files for major functional a... | 2026-03-07 |
 | `kn5000-wgc` | Sequencer: Document event storage format and track organi... | 2026-03-07 |
-| `kn5000-9gom` | Docs: Document registration memory save/recall system | 2026-03-07 |
 
-*...and 257 more closed issues*
+*...and 258 more closed issues*
 
 ---
 
@@ -224,7 +216,7 @@ Production-ready emulation and homebrew support.
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 2 |
+| High | 1 |
 | Medium | 1 |
 | Low | 3 |
 
@@ -232,8 +224,8 @@ Production-ready emulation and homebrew support.
 
 | Category | Count |
 |----------|-------|
-| Other | 7 |
+| Other | 6 |
 
 ---
 
-*Last updated: 2026-03-08 10:45*
+*Last updated: 2026-03-08 10:46*

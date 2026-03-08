@@ -550,12 +550,12 @@ All handlers end by jumping to LABEL_F97DE1 which sets the status flag and retur
 | DMA data port | **Working** | 0x120000 for software DMA channel 3 |
 | IRQ routing | **Working** | INT4 (command complete), INT5 (DRQ) |
 | Floppy connector | **Working** | 3.5" HD (1.44MB), MFI format supported |
-| TC signal | **TODO** | Timer 0 output to FDC TC input not connected |
+| TC signal | **Working** | Timer 0 output (TO0) wired to FDC TC via TMP94C241 timer callbacks |
 | Disk images | **Available** | v5-v10 firmware update disks from [archive.org](https://archive.org/details/technics-kn5000-system-update-disks) |
 
 **Test command:** `mame kn5000 -flop <disk_image.mfi>`
 
-The TC (Terminal Count) signal is needed to terminate multi-sector FDC transfers. Without it, single-sector reads should work but multi-sector transfers may hang. The Main CPU Timer 0 output (TO0) is wired to the FDC TC input on the real hardware.
+The TC (Terminal Count) signal terminates multi-sector FDC transfers. It is wired from the Main CPU Timer 0 output (TO0) to the FDC TC input via TMP94C241 timer output callbacks added to the MAME CPU core.
 
 ---
 
