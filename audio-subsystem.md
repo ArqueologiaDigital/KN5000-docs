@@ -776,6 +776,63 @@ The `DSP_ParameterWriteEngine` (0x03C673) enables real-time control of DSP effec
 
 This allows a single MIDI parameter change to update multiple DSP registers simultaneously, with the bytecode program encoding which registers to modify and how to transform the parameter value for each one.
 
+### Effect Type Bytecode Programs
+
+Each of the 16 effect types has two bytecode programs: an **algorithm program** (Primary Table at 0x1ED7C) that loads the DSP algorithm, and a **parameter program** (Secondary Table at 0x1EF0C) that writes tunable coefficients.
+
+**Algorithm Programs (Primary Table):** All use a single Handler 3 instruction with CMD=0x01 and DSP address 0x0054 (generic channels) or 0x00C8 (channel 1 reverb/chorus). The Handler 3 data size varies by algorithm complexity:
+
+| Type | Algorithm Program | Size | Shared With | Notes |
+|------|------------------|------|-------------|-------|
+| 0 | 0x017263 | 250B | 7, 11-14 | Default/base algorithm |
+| 1 | 0x0153C1 | 355B | — | |
+| 2 | 0x015664 | 430B | — | |
+| 3 | 0x015986 | 500B | — | |
+| 4 | 0x015D43 | 330B | — | |
+| 5 | 0x015FFE | 535B | — | Largest generic algorithm |
+| 6 | 0x0177C3 | 485B | — | |
+| 8 | 0x01743B | 515B | — | |
+| 9 | 0x017F1F | 245B | — | |
+| 10 | 0x018141 | 345B | — | |
+| 15 | 0x016ACF | 435B | — | |
+
+Types 0, 7, 11, 12, 13, and 14 share the same algorithm (0x017263). This indicates 10 distinct algorithms and 6 aliases.
+
+**Channel 1 Special Programs:** Reverb (type 0x9) and Chorus (type 0xA) have hardcoded programs bypassing the table lookup, using DSP address 0x00C8 instead of 0x0054:
+
+| Effect | Algorithm | Param Program | Algorithm Size |
+|--------|-----------|--------------|----------------|
+| Reverb (P1) | 0x1DFA5 | — | 275B |
+| Reverb (P2) | — | 0x1E0B9 | 197B |
+| Chorus (P1) | 0x1E1DE | — | 355B |
+| Chorus (P2) | — | 0x1E342 | 199B |
+
+**Parameter Program Structure:** All 16 types follow the same template:
+
+```
+H0 (9-31 groups × 5B)     ← Static/parameter-modified coefficients
+H4 CMD=0x03               ← Section separator
+H5 (3-21 groups × 5B)     ← Runtime-adjustable coefficients
+H4 CMD=0x03               ← Section separator
+H1 (8B)                   ← Address computation block
+H2 (12-31 groups × 3B)    ← Bulk coefficient data
+H4 CMD=0x03               ← Section separator
+END
+```
+
+The number of H0/H5/H2 groups varies by effect type (more complex effects have more parameters). Type 5 (Flanger?) and types 3/15 have an extra H0 block before H5, suggesting additional parameter stages.
+
+**EFF Chip Mapping (0x1ED6D):** Maps effect channels to DSP hardware:
+
+| Channel | DSP Chip | Notes |
+|---------|----------|-------|
+| 0 | DSP1 (DS3613GF-3BA) | |
+| 1 | DSP1 | Hardcoded reverb/chorus programs |
+| 2 | DSP2 (MN19413) | |
+| 3 | DSP2 | |
+| 4 | DSP2 | |
+| 5-9 | (invalid) | Channel IDs > 4 not used for DSP |
+
 ### DSP Coefficient Setup Pipeline
 
 The coefficient setup subsystem configures DSP processing parameters through a multi-stage pipeline. Eight functions handle different aspects of coefficient configuration:
