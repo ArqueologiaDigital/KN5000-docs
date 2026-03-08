@@ -47,13 +47,13 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 | Page | Status | Description |
 |------|--------|-------------|
 | [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) | Documented | Serial protocol for buttons, LEDs, encoders |
-| [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) | Partial | DSP, DAC, tone generation |
+| [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) | Documented | DSP effects, tone generation, voice management |
 | [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) | Documented | Hardware key scanning, note encoding, voice slots |
-| [Display Subsystem]({{ site.baseurl }}/display-subsystem/) | Placeholder | LCD controller, VGA interface |
-| [Storage Subsystem]({{ site.baseurl }}/storage-subsystem/) | Partial | Floppy, flash, Table Data ROM |
-| [MIDI Subsystem]({{ site.baseurl }}/midi-subsystem/) | Placeholder | MIDI I/O handling |
-| [UI Framework]({{ site.baseurl }}/ui-framework/) | Placeholder | Menu system, widgets |
-| [Sequencer]({{ site.baseurl }}/sequencer/) | Placeholder | 16-track MIDI sequencer |
+| [Display Subsystem]({{ site.baseurl }}/display-subsystem/) | Documented | Framebuffer layout, palette, VGA registers |
+| [Storage Subsystem]({{ site.baseurl }}/storage-subsystem/) | Documented | Floppy, flash, Table Data ROM, HDAE5000 |
+| [MIDI Subsystem]({{ site.baseurl }}/midi-subsystem/) | Documented | 26-channel voice routing, CC handlers, SysEx |
+| [UI Framework]({{ site.baseurl }}/ui-framework/) | Documented | 550+ widget handlers, event system, drawing API |
+| [Sequencer]({{ site.baseurl }}/sequencer/) | Documented | 16-track engine, ring buffer, style system |
 
 ### Protocols
 

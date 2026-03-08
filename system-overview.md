@@ -189,8 +189,8 @@ See [Memory Map]({{ site.baseurl }}/memory-map/) for complete details.
 | Audio Subsystem | Documented | DSP effects, tone gen, voice management |
 | Display Subsystem | Documented | Framebuffer layout, palette, VGA registers |
 | MIDI Subsystem | Documented | 26-channel voice routing, CC handlers, SysEx |
-| UI Framework | Placeholder | Structure partially understood |
-| Sequencer | Placeholder | Basic understanding only |
+| UI Framework | Documented | 550+ widget handlers, event system, drawing API, property types |
+| Sequencer | Documented | 16-track engine, ring buffer pipeline, style system, medley playback |
 
 ## Learning Paths
 
