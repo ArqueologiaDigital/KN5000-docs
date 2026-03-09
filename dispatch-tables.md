@@ -10,17 +10,60 @@ This page catalogs all indirect call/jump dispatch tables found in the KN5000 RO
 
 **Last updated:** March 9, 2026
 
-## Summary
+## Progress: 494 / 1583 dispatch sites documented (31%)
 
-| Dispatch Type | Total Sites | Documented | Undocumented |
-|---------------|-------------|------------|--------------|
-| `call (xreg)` — indirect call through pointer table | 49 | 25 | 24 |
-| `jp (xreg)` — indirect jump through pointer table | 18 | 10 | 8 |
-| `jp_dri` — register-indexed jump via offset table | 317 | 80 | 237 |
-| `jp_dri` handler targets (case labels) | ~442 | ~397 | ~45 |
-| **Total** | **~826** | **~512** | **~314** |
+A dispatch site is "documented" when the containing function has a meaningful semantic label (not a generic `LABEL_XXXXXX` name).
 
-"Documented" means the dispatch site and/or its table have meaningful semantic labels. "Undocumented" means they still use auto-generated `LABEL_XXXXXX` names.
+### Per-File Coverage
+
+| File | jp_dri | call/jp | Total | Labeled | Coverage |
+|------|--------|---------|-------|---------|----------|
+| hdae5000/hd-ae5000_v2_06i.s | 2/54 | 98/1003 | 1057 | 100 | 9% |
+| maincpu/sound_editor_ui.s | 16/17 | 4/41 | 58 | 20 | 34% |
+| maincpu/ui_widget_defs.s | 4/11 | 6/20 | 31 | 10 | 32% |
+| maincpu/drawbar_panel_ui.s | 8/15 | 2/14 | 29 | 10 | 34% |
+| maincpu/kn5000_v10_program.s | 44/46 | 2/3 | 49 | 46 | 94% |
+| maincpu/file_io/single_load.s | 0/0 | 28/33 | 33 | 28 | 85% |
+| maincpu/sequencer_ui.s | 29/33 | 0/0 | 33 | 29 | 88% |
+| subcpu/kn5000_subprogram_v142.s | 14/21 | 1/2 | 23 | 15 | 65% |
+| maincpu/mode_screens.s | 22/23 | 1/1 | 24 | 23 | 96% |
+| maincpu/seq_task_sched.s | 2/2 | 14/16 | 18 | 16 | 89% |
+| maincpu/sequencer_engine.s | 14/16 | 0/0 | 16 | 14 | 88% |
+| maincpu/file_io_engine.s | 0/0 | 10/14 | 14 | 10 | 71% |
+| maincpu/midi_voice_routing.s | 3/3 | 4/7 | 10 | 7 | 70% |
+| maincpu/dsp_config_sysex.s | 3/3 | 4/7 | 10 | 7 | 70% |
+| maincpu/midipkt_routines.s | 0/0 | 9/10 | 10 | 9 | 90% |
+| maincpu/note_voice_mapping.s | 3/8 | 1/1 | 9 | 4 | 44% |
+| maincpu/voice_midi_buf.s | 6/6 | 1/2 | 8 | 7 | 88% |
+| maincpu/accompaniment_engine.s | 23/23 | 5/5 | 28 | 28 | 100% |
+| maincpu/audio_cmd_encoder.s | 1/1 | 56/56 | 57 | 57 | 100% |
+| maincpu/seq_step_routines.s | 3/3 | 3/3 | 6 | 6 | 100% |
+| maincpu/scoop_display.s | 0/0 | 3/5 | 5 | 3 | 60% |
+| maincpu/style_data_init.s | 1/1 | 3/4 | 5 | 4 | 80% |
+| maincpu/hama/hama_code.s | 2/2 | 3/3 | 5 | 5 | 100% |
+| maincpu/sndparam_routines.s | 0/0 | 5/5 | 5 | 5 | 100% |
+| maincpu/file_demo_proc.s | 2/2 | 0/2 | 4 | 2 | 50% |
+| maincpu/voice_synth.s | 1/4 | 0/0 | 4 | 1 | 25% |
+| maincpu/cpanel_routines.s | 0/0 | 4/4 | 4 | 4 | 100% |
+| maincpu/demo_routines.s | 3/3 | 0/0 | 3 | 3 | 100% |
+| maincpu/tonegen_voice_ctrl.s | 2/3 | 0/0 | 3 | 2 | 67% |
+| table_data/kn5000_table_data.s | 1/1 | 2/2 | 3 | 3 | 100% |
+| maincpu/sysex_routines.s | 6/6 | 0/0 | 6 | 6 | 100% |
+| maincpu/computer_interface_pcg.s | 1/2 | 0/0 | 2 | 1 | 50% |
+| maincpu/fdc_routines.s | 1/2 | 0/0 | 2 | 1 | 50% |
+| Other files (100%) | 8/8 | 67/67 | 15 | 15 | 100% |
+| **TOTAL** | **222/316** | **272/1267** | **1583** | **494** | **31%** |
+
+### Coverage by ROM
+
+| ROM | Total Sites | Labeled | Coverage |
+|-----|-------------|---------|----------|
+| Main CPU | 502 | 379 | 75% |
+| Sub CPU | 24 | 15 | 63% |
+| HDAE5000 | 1057 | 100 | 9% |
+| Table Data | 3 | 3 | 100% |
+
+**Note:** The HDAE5000 extension ROM dominates the count (67% of all sites). Its 1003 `call (xhl)` sites mostly follow a vtable dispatch pattern: `ld_sril XHL, (xwa + offset)` then `call (xhl)`. Documenting the vtable structure and method offsets will cover many sites at once.
 
 ---
 
@@ -53,9 +96,18 @@ lda_24 xix, <dispatch_base> ; load dispatch base address
 jp_dri 8, ...              ; jump to base + offset
 ```
 
-Table contains 16-bit relative offsets. More compact than pointer tables. Used extensively (317 sites).
+Table contains 16-bit relative offsets. More compact than pointer tables. Used extensively (316 sites).
 
-### Pattern 3: Two-Level Dispatch
+### Pattern 3: Vtable Dispatch (HDAE5000)
+
+```asm
+ld_sril XHL, (xwa + 0x00e4)  ; load method from object vtable
+call (xhl)                     ; dispatch to method
+```
+
+HDAE5000 uses an object-oriented vtable pattern where XWA points to an object, and the method pointer is loaded from a fixed offset within the object structure. ~1003 call sites use this pattern with various method offsets.
+
+### Pattern 4: Two-Level Dispatch
 
 ```asm
 ; Level 1: byte lookup
@@ -263,16 +315,34 @@ These tables had meaningful semantic labels before the documentation sprint.
 
 ---
 
-## Remaining Undocumented — By File
+## Remaining Work — Priority Order
 
-Handler target labeling is largely complete. Remaining work is on files not yet addressed:
+### 1. HDAE5000 Extension ROM (957 unlabeled sites)
 
-| File | Remaining | Notes |
-|------|----------|-------|
-| hdae5000/hd-ae5000_v2_06i.s | ~54 jp_dri (inline) | Extension ROM — all targets inline, no LABEL_ |
-| subcpu/kn5000_subprogram_v142.s | 0 | Fully documented |
-| Other maincpu files | ~45 scattered targets | Miscellaneous UI/system handlers |
-| **Total remaining targets** | **~45** | |
+The HDAE5000 has 1,057 dispatch sites total (54 jp_dri + 1,003 call/jp). Only 100 are in semantically-labeled functions. The ~1,003 `call (xhl)` sites use a vtable dispatch pattern where method pointers are loaded from object structures at fixed offsets. Key vtable offsets include:
+
+- `+0x00E4` — RegisterObjectTable (most common, ~400+ call sites)
+- `+0x0270` — Special dispatch
+- `+0x03C4`, `+0x0538`, `+0x053C`, `+0x0124`, `+0x0108` — Various methods
+
+Documenting the vtable structure and labeling the handler functions will cover many call sites at once.
+
+### 2. Maincpu Files Below 100%
+
+| File | Unlabeled | Priority |
+|------|-----------|----------|
+| sound_editor_ui.s | 38 | High — mostly call(xhl) |
+| ui_widget_defs.s | 21 | High — UI framework |
+| drawbar_panel_ui.s | 19 | Medium |
+| note_voice_mapping.s | 5 | Medium |
+| voice_synth.s | 3 | Low |
+| file_io_engine.s | 4 | Low |
+| dsp_config_sysex.s | 3 | Low |
+| midi_voice_routing.s | 3 | Low |
+
+### 3. Sub CPU (8 unlabeled sites)
+
+The Sub CPU has 8 unlabeled jp_dri sites in `kn5000_subprogram_v142.s`.
 
 ---
 
