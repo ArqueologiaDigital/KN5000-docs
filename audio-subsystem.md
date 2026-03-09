@@ -928,22 +928,28 @@ The MainCPU ROM at 0xE324C4 contains 86 parameter name entries (17 bytes each: 1
 
 ### Effect Algorithm Type Summary
 
-40 effect indices map to 10 algorithm types (2-11). Each algorithm defines which named parameters control the DSP, and which translation opcodes transform MIDI values:
+40 effect indices map to 10 algorithm types (2-11). Each algorithm defines which named parameters control the DSP, and which translation opcodes transform MIDI values.
 
-| Algo | Effects | Key Parameters | Transforms Used |
-|------|---------|----------------|-----------------|
-| 2 | STAGE, BATH ROOM, KARAOKE, ROOM... | RESONANCE, MANUAL, SLOW/FAST, VOLUME, EMPHASIS GAIN | Interp2Point, VolumeScale, AlgoDecode |
-| 3 | PEQ+COMPRESSOR, PEQ+VIBRATO, PEQ+FLANGER | LFO SPEED, RESONANCE, MANUAL, DRIVE, SLOW/FAST | AlgoTypeFetch, PitchScale, SOSCoeff |
-| 4 | PEQ+S.DELAY, PEQ+CHORUS, AUTO WAH+S.DELAY | LFO SPEED, MANUAL, ADJUST, SLOW LFO, PAN | InterpDiv0xB4, Interp3Point, VolumeScale |
-| 5 | S.DELAY+PHASER/VIBRATO/FLANGER | ADJUST, EMPHASIS, LFO, VOLUME, MANUAL | Interp2Point, VolumeScale |
-| 6 | STRING, DEEP SPACE, SYMPHONIC | VOLUME, DRIVE, EMPHASIS, RESONANCE, SLOW | Interp2PointB |
-| 7 | PERCUSSIVE, STANDARD, MIX UP, HARS EFFECT | DRIVE, PITCH, ADJUST, EMPHASIS | InterpFPComplex, PitchScale |
-| 8 | RING MOD, ROTARY, AUTO WAH, PEDAL WAH | DELAY, REV SEND, DEPTH, PAN, BASS, VOLUME ADJUST | ParamEQ, SOSCoeff, ReverbCurve |
-| 9 | VIBRATO, PITCH SHIFTER, AUTO PAN | PITCH, THRESHOLD, REV SEND, VOLUME, SLOW LFO | PitchScale, SOSCoeff, InterpDiv0xC6 |
-| 10 | CELM, CEL, PARAMETRIC EQ, NOISE FLANGER | REV SEND, DRIVE, ADJUST, THRESHOLD, RATIO | InterpFP, SOSCoeff, BiquadCoeff |
-| 11 | SLOW ATTACKER, COMPRESSOR, EXCITER | DRIVE, PITCH, ADJUST, EMPHASIS | InterpFPComplex, PitchScale |
+**Parameter Mapping Bytecode Format:** Each entry is `[flags:1] [total_length:1] [opcode:1] [data:length-3]`. The first data byte is the primary parameter index. Additional data bytes may be secondary parameter indices or coefficient data. Programs terminate with 0xF0.
 
-Every algorithm ends with: opcode 0x63 (AlgoDecode with EMPHASIS GAIN) to select the specific effect variant, opcode 0x21 with data 0x90 for global output scaling, and opcode 0x74 (LUTParamSet with PHASER DRY/WET) for dry/wet mix control.
+**Complete Parameter→Transform Mappings (decoded from ROM tables at 0x1EF0C):**
+
+| Algo | Effects | Parameter Mappings (ordered) |
+|------|---------|------------------------------|
+| 0,7,11 | PERCUSSIVE, STANDARD, MIX UP, HARS, SLOW ATTACKER, COMPRESSOR, EXCITER | Interp2Point(DRIVE) → InterpFPScale(PITCH L) → InterpFPComplex(ADJUST,EMPHASIS GAIN) → AlgoParamDecode(EMPHASIS GAIN) → Interp2Point(GLOBAL_SCALE) |
+| 1 | (base type 1) | Interp2Point(SLOW LFO SPEED,FAST LFO BAL) → VolumeScale(VOLUME) → AlgoParamDecode(EMPHASIS GAIN) → Interp2Point(GLOBAL_SCALE) → LUTParamSet(DRY/WET) |
+| 2 | STAGE, BATH ROOM, KARAOKE, ROOM... | Interp2Point(RESONANCE,MANUAL,SLOW/FAST,+2more) → VolumeScale(VOLUME) → AlgoParamDecode(EMPHASIS GAIN) → Interp2Point(GLOBAL_SCALE) → LUTParamSet(DRY/WET) |
+| 3 | PEQ+COMPRESSOR, PEQ+VIBRATO, PEQ+FLANGER | AlgoTypeTableFetch(LFO SPEED,SLOW LFO,+2more) → PitchScale(RESONANCE,MANUAL) → SOSCoeff(VOLUME,DRIVE,SLOW/FAST,+1) → FreqInterp2Point(+2) → AlgoParamDecode(EMPHASIS GAIN) → Interp2Point(GLOBAL_SCALE) → LUTParamSet(DRY/WET) |
+| 4 | PEQ+S.DELAY, PEQ+CHORUS, AUTO WAH+S.DELAY | Interp2Point(LFO SPEED,MANUAL) → VolumeScale(ADJUST,SLOW LFO) → Interp3PointOffset(PARAM_50,INTENSITY) → InterpDiv0xB4(LFO SPEED,SLOW LFO) → InterpDiv0xC6(VOLUME,+3) → AlgoParamDecode(EMPHASIS GAIN) → Interp2Point(GLOBAL_SCALE) → LUTParamSet(DRY/WET) |
+| 5 | S.DELAY+PHASER/VIBRATO/FLANGER | Interp2Point(ADJUST,EMPHASIS GAIN,LFO SPEED,SLOW LFO) → VolumeScale(VOLUME,MANUAL) → InterpDiv0xB4(+2) → InterpDiv0xC6(+2) → AlgoParamDecode(EMPHASIS GAIN) → Interp2Point(GLOBAL_SCALE) → LUTParamSet(DRY/WET) |
+| 6 | STRING, DEEP SPACE, SYMPHONIC | VolumeScale(VOLUME) → Interp2PointB(REV RETURN,DRIVE,EMPHASIS GAIN,SLOW LFO,RESONANCE,SLOW/FAST) → AlgoParamDecode(EMPHASIS GAIN) → Interp2Point(GLOBAL_SCALE) → LUTParamSet(DRY/WET) |
+| 8 | RING MOD, ROTARY, AUTO WAH, PEDAL WAH | Interp2Point(+1) → ParamEQCurve(REV SEND) → SOSCoeff(DEPTH,+1) → PanPiecewiseLin(+2) → ReverbCurveFP(+2) → InterpFPScale(PITCH L) → AlgoParamDecode(EMPHASIS GAIN) → Interp2Point(GLOBAL_SCALE) |
+| 9 | VIBRATO, PITCH SHIFTER, AUTO PAN | InterpFPScale(PITCH L,THRESHOLD) → SOSCoeff(REV SEND,EMPHASIS GAIN,MANUAL,+1) → InterpDiv0xC6(VOLUME,+3) → AlgoParamDecode(EMPHASIS GAIN) → Interp2Point(GLOBAL_SCALE) → LUTParamSet(DRY/WET) |
+| 10 | CELM, CEL, PARAMETRIC EQ, NOISE FLANGER | Interp2Point(REV SEND,DRIVE,ADJUST,EMPHASIS GAIN) → InterpFPScale(PITCH L,THRESHOLD,RATIO,+1) → SOSCoeff(LFO SPEED,RESONANCE) → InterpDiv0xC6(DEPTH) → AlgoParamDecode(EMPHASIS GAIN) → Interp2Point(GLOBAL_SCALE) → LUTParamSet(DRY/WET) |
+
+**Common suffix:** Every algorithm ends with AlgoParamDecode(EMPHASIS GAIN) for effect variant selection, Interp2Point(GLOBAL_SCALE) for output level, and (most) LUTParamSet(PHASER DRY/WET) for dry/wet mix control.
+
+**Register Address Programs (ROM table at 0x1F09C):** Each algorithm type also has a register address program that specifies which DSP register addresses each parameter writes to. The register programs use the same bytecode format as the parameter mapping but contain DSP coefficient addresses (12-bit or 16-bit) and fixed-point default values. Algo types 0, 7, 11 share a fallback that doesn't have register address programs (NULL pointers).
 
 ### DSP Coefficient Setup Pipeline
 
