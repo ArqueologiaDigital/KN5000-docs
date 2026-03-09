@@ -324,7 +324,7 @@ The mismatch means that even though `DemoMenu_BuildItemWorkspace` fires event `0
 
 ## MAME Emulation Status
 
-**Current status (March 2026):** **Partially working.** The Demo Timer System (song cycling) works correctly in MAME. The SSF Visual Presentation (FTBMP bitmap rendering) is currently broken — event `0x1C00038` does not reach `GroupBoxProc_StartSSFPresentation`.
+**Current status (March 2026):** **Partially working.** The Demo Timer System (song cycling) works correctly in MAME — the timer counts down, songs cycle, and `PlaySong` returns after ~16 seconds of SwbtWr buffer processing. The SSF Visual Presentation (FTBMP bitmap rendering) is currently broken — event `0x1C00038` does not reach `GroupBoxProc_StartSSFPresentation`.
 
 **Reference Lua script:** `/tmp/ftdemo_v3.lua` — automated navigation from boot to Feature Demo activation.
 
@@ -635,15 +635,13 @@ Return after timeout
 
 This ensures display operations complete before the next slide loads. The timeout prevents a hard hang if the display never becomes ready.
 
-### Why the Demo Runs Fast in MAME
+### Demo Timer Behavior in MAME
 
-The SSF presentation completes all 9 items in ~5 frames because:
-- Without waveform ROMs, audio never actually plays
-- Song "playback" starts and immediately completes (no audio data to process)
-- The timer countdown runs through all states rapidly since no real audio timing occurs
-- The `Demo_WaitForDisplayBit` timeout fires quickly since the display subsystem processes faster than expected
+When the timer reaches 10, `Demo_SelectEntry_PlaySong` is called. This function calls `SwbtWr_ReinitBothBanks`, which runs the SwbtWr dispatch loop inline — processing 450+ buffered tone generator events. Each callback takes ~35ms, causing a **~16 second blocking period** where the main loop is paused.
 
-On real hardware, each song would play for 10-30 seconds, giving time for the corresponding FTBMP bitmap to be displayed. In MAME, all 9 items cycle through in under a second.
+After SwbtWr processing completes (~960 frames), PlaySong returns (sets `DRAM[0x8F4E]` from `0x04` to `0x06`), and the timer resumes counting down from 10. The tone generator hold timer (2 seconds per voice) then controls the pacing of subsequent song transitions.
+
+**Note:** The 16-second initial delay may differ from real hardware where DSP writes are faster (direct hardware registers vs. HLE emulation). See [research log]({{ site.baseurl }}/feature-demo-investigation-2026-03-09/) for detailed investigation.
 
 ### Key DRAM Addresses
 
@@ -671,4 +669,4 @@ On real hardware, each song would play for 10-30 seconds, giving time for the co
 
 ---
 
-*Last updated: March 8, 2026*
+*Last updated: March 9, 2026*
