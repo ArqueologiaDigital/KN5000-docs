@@ -647,6 +647,8 @@ After SwbtWr processing completes (~960 frames), PlaySong returns (sets `DRAM[0x
 
 **Note:** The 16-second initial delay may differ from real hardware where DSP writes are faster (direct hardware registers vs. HLE emulation). See [research log]({{ site.baseurl }}/feature-demo-investigation-2026-03-09/) for detailed investigation.
 
+**MAME Bug Found (March 9, 2026):** The sequencer tick counters never increment because INTTR5 never fires. Two bugs in `tmp94c241.cpp`'s `timer_16bits` lambda: (1) TREG_HIGH match sets wrong interrupt flag (0x08/INTTR4 instead of 0x80/INTTR5), (2) T4FFCR bits incorrectly gate the entire match instead of just the flip-flop. Fix implemented, not yet tested. See [timer bug research log]({{ site.baseurl }}/feature-demo-timer-bug-2026-03-09/).
+
 ### Key DRAM Addresses
 
 | Address | Description |
