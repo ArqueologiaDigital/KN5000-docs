@@ -8,7 +8,7 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 286 (6 open, 278 closed)
+**Total Issues:** 288 (6 open, 280 closed)
 
 **Quick Links:** 
 [Other](#other) (6)
@@ -95,18 +95,24 @@ Three parallel efforts to resolve blockers:
 
 Modified HDAE5000 ROM that implements:
 1. FAT filesystem reading from IDE hard disk
-2. Filesystem navigation UI on the KN5000 display
+2. App Loader menu UI on the KN5000 display with app icons and names
 3. Generic program loader that can boot multiple applications
 4. Currently supported apps: Mines game, Another World game
 
-Architecture: Only the HDAE5000 ROM is modified. The KN5000 hardware is unmodified. Programs are stored on the hard disk as files. The loader reads the FAT filesystem, presents a file browser, and loads the selected program into DRAM for execution.
+Architecture: Only the HDAE5000 ROM is modified. The KN5000 hardware is unmodified. Programs and assets are stored on the hard disk. The loader reads the FAT filesystem, scans for application manifest files, and presents a graphical App Loader menu showing each app's icon and name. Selecting an app loads it into DRAM for execution.
+
+App Manifest: Each application provides a manifest file containing:
+- App name (displayed in menu)
+- Icon bitmap (displayed in menu)
+- Entry point address
+- List of asset files to load and their target addresses
 
 This replaces the previous floppy code injection approach. The HD approach solves the 512KB ROM size limit (974KB of Another World resources couldn't fit) and provides a reusable platform for any future homebrew.
 
 Key components:
 - FAT16/FAT32 filesystem driver (read-only initially)
 - IDE/ATA disk I/O routines (already in HDAE5000 ROM, need adaptation)
-- Display routines for file browser UI
+- App Loader menu with icon/name display from manifests
 - Program loading: read executable + assets from HD into DRAM
 - Application launcher: jump to loaded program entry point
 
@@ -201,6 +207,8 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-asm6` | LLVM TLCS-900: LDA with displacement > d8 generates inval... | 2026-03-08 |
+| `kn5000-8gqi` | LLVM TLCS-900: Variable shift SLA Rx,Ry generates wrong e... | 2026-03-08 |
 | `kn5000-m7iu` | MAME: Implement TMP94C241 timer output callbacks and wire... | 2026-03-08 |
 | `kn5000-492z` | MAME: Wire HDAE5000 IDE/ATA interface using MAME ata_inte... | 2026-03-08 |
 | `kn5000-qnf` | HDAE5000: Analyze HD-TechManager5000 software | 2026-03-08 |
@@ -219,10 +227,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-0o6` | MAME: Update HLE based on audio subsystem findings | 2026-03-08 |
 | `kn5000-1oy` | Audio: Analyze DSP effects processing algorithms | 2026-03-08 |
 | `kn5000-cox` | Sound: Extract and catalog all instrument patches | 2026-03-07 |
-| `kn5000-imt3` | Disasm: Extract more include files for major functional a... | 2026-03-07 |
-| `kn5000-wgc` | Sequencer: Document event storage format and track organi... | 2026-03-07 |
 
-*...and 258 more closed issues*
+*...and 260 more closed issues*
 
 ---
 
@@ -244,4 +250,4 @@ Production-ready emulation and homebrew support.
 
 ---
 
-*Last updated: 2026-03-08 16:07*
+*Last updated: 2026-03-09 02:51*
