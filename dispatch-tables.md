@@ -17,7 +17,8 @@ This page catalogs all indirect call/jump dispatch tables found in the KN5000 RO
 | `call (xreg)` — indirect call through pointer table | 49 | 25 | 24 |
 | `jp (xreg)` — indirect jump through pointer table | 18 | 10 | 8 |
 | `jp_dri` — register-indexed jump via offset table | 317 | 80 | 237 |
-| **Total** | **384** | **115** | **269** |
+| `jp_dri` handler targets (case labels) | ~442 | ~397 | ~45 |
+| **Total** | **~826** | **~512** | **~314** |
 
 "Documented" means the dispatch site and/or its table have meaningful semantic labels. "Undocumented" means they still use auto-generated `LABEL_XXXXXX` names.
 
@@ -72,7 +73,13 @@ jp_dri ...
 
 ## Recently Documented (March 9, 2026)
 
-The following 81 dispatch sites were labeled with semantic names during the dispatch table documentation sprint:
+A total of **502 dispatch labels** were created during the dispatch table documentation sprint:
+- 105 dispatch site labels (jp_dri/call/jp instruction sites)
+- 397 dispatch handler target labels (case handlers within dispatch tables)
+
+### Phase 1: Dispatch Sites (105 labels)
+
+The following dispatch sites were labeled with semantic names:
 
 ### Batch 1: Core Dispatch Sites (7 sites)
 | Label | File | Type | Description |
@@ -172,6 +179,19 @@ The following 81 dispatch sites were labeled with semantic names during the disp
 | `TitleProc_EventDispatch` | ui_widget_defs.s | Title proc event dispatch |
 | `SeqEvent_Dispatch` ... (3 more) | sequencer_engine.s | Sequencer engine dispatches |
 
+### Phase 2: Handler Targets (~397 labels)
+
+Dispatch handler targets (individual case labels) were labeled across these files:
+
+| File | Targets Labeled | Key Handler Groups |
+|------|----------------|-------------------|
+| kn5000_v10_program.s | 152 | System (EditSwParam, WindowField, DirmdEmu, DSPCfg), Title functions (SqTrAs, SqMdlyPly, DkMdlyPly, DpMdly*, DpDoc*, DpPd*, DpSmf*, SqTrSel), Voice (AcVocalGrid, VocalistGrid, ParaLoadOpt) |
+| sound_editor_ui.s | 68 | PartGrid columns, NoteEvent buffers, CmpSetP1/EasyCmp/FdcFormat grids, SndArgGrid, PsSCTxtBox |
+| drawbar_panel_ui.s | 44 | ComSetGrid, PmemOutL, CtlMsgGrid, MidiSetup, IvSdpart, PsMixer, DemoMenu, AcPresCtrl |
+| accompaniment_engine.s | 78 | RhythmParam, CmpMenuTtl/SetTtl/RealTtl, CmpBkslTtl fill-ins, CmpEsyTtl/NcpTtl, MainCmpSet, MspMenu/Name/Rec |
+| sequencer_ui.s | 59 | TrAsGrid, MuteChSel, DemoMedDsp, NoteEditBox, Entertainer, SqedtFunc, DspItem0/Equalizer |
+| sequencer_engine.s | 30 | SeqData/Event, AppEvent chain, SeqState, NoteEditSy, MainExeCall |
+
 ---
 
 ## Previously Documented Dispatch Tables
@@ -245,19 +265,14 @@ These tables had meaningful semantic labels before the documentation sprint.
 
 ## Remaining Undocumented — By File
 
-| File | Remaining Undocumented | Notes |
-|------|----------------------|-------|
-| kn5000_v10_program.s | ~41 jp_dri | Core firmware logic, event handling |
-| accompaniment_engine.s | ~23 jp_dri | Chord processing, rhythm dispatch |
-| hdae5000/hd-ae5000_v2_06i.s | ~54 jp_dri | Extension ROM command dispatch |
-| subcpu/kn5000_subprogram_v142.s | ~19 jp_dri | Sub CPU audio processing |
-| sound_editor_ui.s | ~17 jp_dri | Sound editing UI |
-| drawbar_panel_ui.s | ~15 jp_dri + ~14 call | Drawbar organ interface |
-| sequencer_ui.s | ~11 jp_dri | Sequencer UI (21 sites done) |
-| sequencer_engine.s | ~7 jp_dri | Core sequencer (7 sites done) |
-| mode_screens.s | ~1 jp_dri | Mode selection UI (22 sites done) |
-| Other files (19) | ~67 scattered | UI widgets, file I/O, sysex, FDC |
-| **Total remaining** | **~269** | |
+Handler target labeling is largely complete. Remaining work is on files not yet addressed:
+
+| File | Remaining | Notes |
+|------|----------|-------|
+| hdae5000/hd-ae5000_v2_06i.s | ~54 jp_dri (inline) | Extension ROM — all targets inline, no LABEL_ |
+| subcpu/kn5000_subprogram_v142.s | 0 | Fully documented |
+| Other maincpu files | ~45 scattered targets | Miscellaneous UI/system handlers |
+| **Total remaining targets** | **~45** | |
 
 ---
 
