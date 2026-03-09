@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 288 (6 open, 280 closed)
+**Total Issues:** 291 (7 open, 280 closed)
 
 **Quick Links:** 
-[Other](#other) (6)
+[Other](#other) (7)
 
 ---
 
@@ -147,11 +147,57 @@ User interaction and file I/O fully working in MAME.
 
 ---
 
-#### ⚪ DSP2: Trace bytecode programs to map registers to effect parameters {#issue-kn5000-ht11}
+#### 🟠 Trace full code path: Feature Demo selection → FTBMP bitmap render, identify MAME driver gaps {#issue-kn5000-y7t5}
 
-**ID:** `kn5000-ht11` | **Priority:** Low | **Created:** 2026-03-08
+**ID:** `kn5000-y7t5` | **Priority:** High | **Created:** 2026-03-01
 
-With the DSP2 register map established (112 addresses), the next step is to trace through the firmware's bytecode programs (at ROM 0x14777) entry-by-entry to understand which registers correspond to which effect parameters (reverb time, chorus depth, etc). This requires decoding the 6 bytecode handler types and their data operands. Cross-reference with DSP1's known coefficient addresses.
+MOTIVATION: The Feature Presentation SSF was confirmed to trigger GroupBoxProc_StartSSFPresentation (9 times), but only the Technics logo was briefly visible and the SSF ran abnormally fast, completing all 9 items in ~5 frames. We need to understand whether all intermediate conditions along the full execution path are satisfied in MAME, or whether some HW emulation gaps prevent the presentation from running correctly (e.g., timing, events not reaching their targets, missing display ownership, etc.).
+
+GOAL: Trace the complete code path from:
+  ENTRY: DEMO button pressed in state 0xE4 (GroupBoxProc active)
+  → GroupBoxProc event handler for DEMO button
+  → GroupBoxProc_StartSSFPresentation (0xF9A273)
+  → Sends 0x1C0001C with workspace tag 0xB80A via FA9660 → AcPresentCtrl_CheckSSFStart (0xF84625)
+  → Check passes → sends 0x1C00006 → SSF XML parser starts
+  → XML parser reads hkst_55.ssf (at 0x88000E), processes each ACT element
+  → For each SHOW OBJ='ftdemoXX' → name table lookup → FTDEMO_SCREEN structure
+  → FTDEMO_SCREEN.filename_ptr → lookup in file entry index at 0x8CE01C
+  → ROM BMP data pointer retrieved
+  EXIT: VwUserBitmapByNameProc / DrawBitmapFile renders FTBMP pixel data to VRAM (0x1A0000-0x1DFFFF)
+
+ANALYSIS REQUIRED:
+1. Disassemble/trace the GroupBoxProc DEMO button handler (what event code does it use to call StartSSFPresentation?)
+2. Confirm how AcPresentCtrl_CheckSSFStart (0xF84625) verifies the workspace tag - is there any timing issue?
+3. Trace AcPresentationControlProc (0xF8450B) processing of 0x1C00006 → how does it start the XML parser?
+4. Trace the XML parser (AcPresentCtrlProc_ParseSSF or equivalent) - how does it loop through ACT items? What event/callback fires for each SHOW?
+5. Identify each FTBMP bitmap load call: VwUserBitmapByNameProc arguments, display ownership required?
+6. Check if there's a 'delay' or 'wait for display update' step between frames - does the SSF rely on a hardware vsync or timer that MAME may handle differently?
+7. Identify any conditions/guards along the path that might silently abort (e.g., checking GAME_ACTIVE, checking display mode, checking audio ready, etc.)
+
+For each code section that is still in .byte form along this path, create disassembly issues and cross-reference them here.
+
+KEY ADDRESSES ALREADY KNOWN:
+- GroupBoxProc: ~0xF998xx (partially decoded in file)
+- GroupBoxProc_StartSSFPresentation: 0xF9A273
+- AcPresentCtrl_CheckSSFStart: 0xF84625
+- AcPresentationControlProc: 0xF8450B (jump table at 0xE9F9B2)
+- FA9660: SendEvent (direct)
+- FA9945: EventDispatch_Direct (in .byte form - kn5000-84fw)
+- FA9D58: BroadcastEvent
+- hkst_55.ssf XML: 0x88000E (Table Data ROM)
+- File entry index: 0x8CE01C
+- FTBMP BMP data: 0x880418 (FTBMP01), 0x89344E (FTBMP02), etc.
+- VwUserBitmapByNameProc / DrawBitmapFile: address TBD (find via disasm)
+
+HARDWARE ACCURACY CONSTRAINT: No hacks or shortcuts. All identified gaps must be fixed via accurate hardware emulation in the MAME driver (kn5000.cpp). Document findings on feature-demo.md website page.
+
+---
+
+#### 🟡 TMP94C241: Internal RAM range 0xC00-0xFFF missing from address map {#issue-kn5000-rqtw}
+
+**ID:** `kn5000-rqtw` | **Priority:** Medium | **Created:** 2026-03-09
+
+The TMP94C241 datasheet says internal RAM is 2KB at 0x800-0xFFF. MAME currently maps 0x400-0xBFF as RAM, missing 0xC00-0xFFF. Extending to 0xFFF breaks KN5000 demo timer (0x0D2F) because the KN5000 driver maps external DRAM at 0x000000-0x0FFFFF overlapping internal RAM. Adding internal RAM at 0xC00-0xFFF shadows the DRAM, causing the timer to get stuck. Needs investigation: (1) Are other MAME drivers affected? (2) Should KN5000 driver start DRAM at 0x1000? (3) Do DMA transfers access internal RAM or external bus?
 
 ---
 
@@ -239,15 +285,16 @@ Production-ready emulation and homebrew support.
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 2 |
-| Low | 3 |
+| High | 3 |
+| Medium | 1 |
+| Low | 2 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 6 |
+| Other | 7 |
 
 ---
 
-*Last updated: 2026-03-09 06:17*
+*Last updated: 2026-03-09 12:04*
