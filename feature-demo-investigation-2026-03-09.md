@@ -82,31 +82,45 @@ MAME Lua traces confirmed:
 
 ---
 
+## Follow-Up: Timer Blocking is Temporary (CORRECTION)
+
+**Update (March 9, same day):** After rebuilding MAME (to eliminate stale debug messages) and running the trace for 120 seconds instead of 60, the blocking was found to be **temporary, not permanent**.
+
+| Frame | Event |
+|-------|-------|
+| 1225 | Timer reaches 10, PlaySong called |
+| 1237 | SwbtWr buffer processing begins (`buf_idx` starts climbing) |
+| 1600 | `buf_idx` reaches 452, then resets (second bank init) |
+| 1686–2100 | Second bank processing cycle (buf_idx 0→488) |
+| ~2200 | **`8F4E` changes to `0x06` — PlaySong RETURNED** |
+| 2600 | Timer resumes counting: 10→9→8→... |
+| 3000 | Timer at 4, system functioning normally |
+
+**Total blocking time:** ~960 frames (~16 seconds). The dispatch loop processes 452+ events across multiple bank reinitializations. Each callback takes ~35ms, which is consistent with the volume of work.
+
+**Previous diagnosis was wrong** because the trace only ran for 1500 frames (25 seconds total, only 5 seconds after LEFT 2). The 16-second blocking period hadn't completed when the trace ended.
+
+**Open question:** Does the ~16 second blocking match real hardware behavior? On real hardware with waveform ROMs present, the tone generator callbacks may complete faster (or slower), affecting the blocking duration.
+
+---
+
 ## What Was NOT Resolved
 
-### 1. Why SwbtWr Callbacks Are So Slow
+### 1. Whether 16-Second Blocking Matches Real Hardware
 
-Each tone generator callback takes ~5 frames (~80ms) per event. This seems abnormally slow. Possible causes:
-- Tone generator HLE performance (emulation overhead)
-- Missing waveform ROM data causing timeouts in audio processing
-- Incorrect timing in the tone generator status readback
+The ~16 second SwbtWr processing delay may or may not be correct. On real hardware:
+- Tone generator writes go to actual DSP hardware (fast)
+- In MAME, they go to HLE (potentially different timing)
+- The real question is whether users would notice a 16-second pause when entering the Feature Demo
 
-### 2. SwbtWr Buffer Terminator
-
-The buffer at `0xBD3C` was not verified to contain a proper `0xFF` terminator. If the terminator is missing or far into the buffer, the dispatch loop would process an enormous number of events (or run until hitting random `0xFF` bytes in memory).
-
-### 3. SSF Visual Presentation Event Routing
+### 2. SSF Visual Presentation Event Routing
 
 While the timer blocking was traced, the SSF event routing remains separately broken:
 - Event `0x1C00038` requires `LABEL_F98697` to be called with the correct UI state
 - LEFT 2 button generates param upper16 = `0xAA0A`, which doesn't match any of the 5 registered filters (`0x1000`–`0x1400`)
 - `demo_state` at `0x0251D8` stays `0x0000` throughout
 
-### 4. C07D Debug Messages
-
-Running MAME produced hundreds of `*** C07D=0x0A!` debug messages that obscured Lua trace output. The source could not be found in the current MAME source code (grep returned no matches), suggesting a stale MAME binary that wasn't rebuilt after removing debug code.
-
-### 5. Demo Song Pointer Table
+### 3. Demo Song Pointer Table
 
 The table at `0x9C4000` in Table Data ROM holds 19 valid entries (indices 0–18). Entry 18 = `0x008E0000`. Entry 19 = NULL (end-of-list). The demo cycles through these using index stored at DRAM `0x28A4` (10404). The index was confirmed set to 18 (`stda8 10404, a` at `drawbar_panel_ui.s:15232`).
 
