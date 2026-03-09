@@ -14,10 +14,10 @@ This page catalogs all indirect call/jump dispatch tables found in the KN5000 RO
 
 | Dispatch Type | Total Sites | Documented | Undocumented |
 |---------------|-------------|------------|--------------|
-| `call (xreg)` — indirect call through pointer table | 49 | 16 | 33 |
+| `call (xreg)` — indirect call through pointer table | 49 | 25 | 24 |
 | `jp (xreg)` — indirect jump through pointer table | 18 | 10 | 8 |
-| `jp_dri` — register-indexed jump via offset table | 317 | 8 | 309 |
-| **Total** | **384** | **34** | **350** |
+| `jp_dri` — register-indexed jump via offset table | 317 | 80 | 237 |
+| **Total** | **384** | **115** | **269** |
 
 "Documented" means the dispatch site and/or its table have meaningful semantic labels. "Undocumented" means they still use auto-generated `LABEL_XXXXXX` names.
 
@@ -58,7 +58,7 @@ Table contains 16-bit relative offsets. More compact than pointer tables. Used e
 
 ```asm
 ; Level 1: byte lookup
-ld a, (xix + <byte_table>)  ; byte_table[index] → secondary index
+ld a, (xix + <byte_table>)  ; byte_table[index] -> secondary index
 extz wa
 sll wa, ...
 ; Level 2: offset table
@@ -70,9 +70,113 @@ jp_dri ...
 
 ---
 
-## Documented Dispatch Tables
+## Recently Documented (March 9, 2026)
 
-These tables have meaningful semantic labels and are reasonably well understood.
+The following 81 dispatch sites were labeled with semantic names during the dispatch table documentation sprint:
+
+### Batch 1: Core Dispatch Sites (7 sites)
+| Label | File | Type | Description |
+|-------|------|------|-------------|
+| `SeqRingBuf_WriteDispatch_Table` | kn5000_v10_program.s | call (xhl) | 8-entry sequencer ring buffer write, indexed by DRAM[1508] bits [7:5] |
+| `MidiPkt_EventType_Table` | naka_dispatch.s | call (xhl) | 192-entry MIDI packet event type dispatch |
+| `UIStateMachine_PrimaryDispatch` | style_data_init.s | jp (xhl) | 3-state UI state machine primary dispatch |
+| `Timer_ModeDispatch` | scoop_display.s | call (xhl) | 4-entry timer mode dispatch |
+| `E1DMA_TransferSetup` | style_data_init.s | call (xhl) | DMA transfer setup after SeqRingBuf dispatch |
+| `VoiceSynth_CommandDispatch` | kn5000_v10_program.s | cascaded | Voice synthesis command dispatcher (DRAM[4012]) |
+| `VoiceParam_CommandDispatch` | kn5000_v10_program.s | cascaded | Voice parameter command dispatcher (DRAM[4012]) |
+
+### Batch 2: File I/O & MIDI Stream (7 sites)
+| Label | File | Type | Description |
+|-------|------|------|-------------|
+| `RegBitManip_Dispatch` | file_io_engine.s | call (xhl) | 8-entry register bit manipulation dispatch |
+| `MidiStream_ProcessorDispatch` | file_io_engine.s | call (xhl) | 8-entry MIDI stream processor A |
+| `MidiStream_ProcessorDispatchB` | file_io_engine.s | call (xhl) | 8-entry MIDI stream processor B |
+| `MidiStream_ProcessorDispatchC` | file_io_engine.s | call (xhl) | 16-entry MIDI stream processor C |
+| `VoiceMode_ParamDispatch` | file_io_engine.s | call (xhl) | 8-entry voice mode parameter dispatch |
+| `VoiceSynth_AlgoTableDispatch` | kn5000_v10_program.s | call (xhl) | 16-entry algorithm table via VoiceSynth_Algorithm_Table |
+| `VoiceParam_ReadUpdateDispatch` | kn5000_v10_program.s | call (xhl) | 16-entry read-update table via VoiceParam_ReadUpdate_Table |
+
+### Batch 3: Mode Screens UI (22 sites)
+| Label | File | Description |
+|-------|------|-------------|
+| `TEST2FUNC_DispatchReturn` | mode_screens.s | 6-entry event dispatch (event 0x1C00013) |
+| `TEST3FUNC_DispatchReturn` | mode_screens.s | 6-entry event dispatch |
+| `TEST4FUNC_DispatchReturn` | mode_screens.s | 6-entry event dispatch |
+| `TEST6FUNC_DispatchReturn` | mode_screens.s | 6-entry event dispatch |
+| `MasterSetup_EventDispatch` | mode_screens.s | 7-entry UI event dispatch (table 0xED0D24) |
+| `MstStyleAlp_EventDispatch` | mode_screens.s | 7-entry (table 0xED0D58) |
+| `MstStyle_EventDispatch` | mode_screens.s | 7-entry (table 0xED0D66) |
+| `MstStyle1Grid_EventDispatch` | mode_screens.s | 7-entry (table 0xED0D8A) |
+| `MstStyle1_EventDispatch` | mode_screens.s | 7-entry (table 0xED0D9E) |
+| `MstStyle1Sub_EventDispatch` | mode_screens.s | 7-entry (table 0xED0DC2) |
+| `MstStyle1Page_EventDispatch` | mode_screens.s | 7-entry (table 0xED0E04) |
+| `MstStyle2_EventDispatch` | mode_screens.s | 7-entry (table 0xED0ED2) |
+| `TchSensGrid_EventDispatch` | mode_screens.s | 7-entry (table 0xED0F08) |
+| `TchSens_EventDispatch` | mode_screens.s | 7-entry (table 0xED0F16) |
+| `FSWAssGrid_EventDispatch` | mode_screens.s | 7-entry (table 0xED1226) |
+| `FswAsIni_EventDispatch` | mode_screens.s | 6-entry (table 0xED1234) |
+| `PmemPageCtl_EventDispatch` | mode_screens.s | 7-entry (table 0xED1420) |
+| `PmExpFilter_EventDispatch` | mode_screens.s | 7-entry (table 0xED149A) |
+| `PmExpFilter2_EventDispatch` | mode_screens.s | 7-entry (table 0xED14A8) |
+| `DispTimeSet_EventDispatch` | mode_screens.s | 7-entry (table 0xED1582) |
+| `MssName_EventDispatch` | mode_screens.s | 10-entry (table 0xED15AC) |
+| `PmBkName_EventDispatch` | mode_screens.s | 10-entry (table 0xED15EE) |
+
+### Batch 4: Sequencer UI (21 sites)
+| Label | File | Description |
+|-------|------|-------------|
+| `MuteChSel_Dispatch` | sequencer_ui.s | SmfMuteChSelFunc dispatch |
+| `SqTrAsPsSong_Dispatch` | sequencer_ui.s | Song track dispatch |
+| `MuteChSet_Dispatch` | sequencer_ui.s | Mute channel set dispatch |
+| `DemoMedDsp_Dispatch` | sequencer_ui.s | Demo medium display dispatch |
+| `DPPlayDsp_Dispatch` | sequencer_ui.s | Demo play display dispatch |
+| `DPPauseDsp_Dispatch` | sequencer_ui.s | Demo pause display dispatch |
+| `NoteEditBox_EventDispatch1` | sequencer_ui.s | Note edit box event dispatch 1 |
+| `NoteEditBox_EventDispatch2` | sequencer_ui.s | Note edit box event dispatch 2 |
+| `NoteEditBox_GridDispatch` | sequencer_ui.s | Note edit box grid dispatch |
+| `AcEntertainer_EventDispatch` | sequencer_ui.s | Accompaniment entertainer dispatch |
+| `SndParam_Dispatch` | sequencer_ui.s | Sound parameter dispatch |
+| `AccIll_Dispatch` | sequencer_ui.s | Accompaniment illustration dispatch |
+| `EffectBox_Dispatch` | sequencer_ui.s | Effect box dispatch |
+| `SeqAccomp_Dispatch` | sequencer_ui.s | Sequencer accompaniment dispatch |
+| `Sqedt_ParamDispatch` | sequencer_ui.s | Sequencer editor param dispatch |
+| `Sqedt_ValueDispatch` | sequencer_ui.s | Sequencer editor value dispatch |
+| `SeqFormat_DispatchA` | sequencer_ui.s | Sequencer format dispatch A |
+| `SeqFormat_DispatchB` | sequencer_ui.s | Sequencer format dispatch B |
+| `DspItem0_TypeDispatch` | sequencer_ui.s | DSP item 0 type dispatch |
+| `Equalizer_DispatchA` | sequencer_ui.s | Equalizer dispatch A |
+| `Equalizer_DispatchB` | sequencer_ui.s | Equalizer dispatch B |
+
+### Batch 5: Voice, MIDI & Sound (21 sites)
+| Label | File | Description |
+|-------|------|-------------|
+| `VoiceEvent_Dispatch` | note_voice_mapping.s | 14-entry voice event handler (table 0xEE8F06) |
+| `SeqPerformance_EventDispatch` | note_voice_mapping.s | 6-entry sequence performance dispatch |
+| `UIParam_CallbackReturn` | note_voice_mapping.s | UI parameter callback return |
+| `MidiSysMsg_Dispatch` | note_voice_mapping.s | 15-entry MIDI system message dispatch |
+| `SndParam_TypeDispatch` | note_voice_mapping.s | 6-entry sound parameter type dispatch |
+| `SndParam_OffsetDispatch` | note_voice_mapping.s | 6-entry sound parameter offset dispatch |
+| `HdaeRom_DataDispatch` | note_voice_mapping.s | 6-entry HDAE5000 data dispatch |
+| `HdaeRom_AltDispatch` | note_voice_mapping.s | 6-entry HDAE5000 alt dispatch |
+| `ToneGen_ParamWriteDispatch` | voice_midi_buf.s | ToneGen param write dispatch table |
+| `WallHomeEdit_EventDispatch` | voice_midi_buf.s | Wall home edit event dispatch |
+| `WallMenuEdit_EventDispatch` | voice_midi_buf.s | Wall menu edit event dispatch |
+| `WallOthEdit_EventDispatch` | voice_midi_buf.s | Wall other edit event dispatch |
+| `MainSysCtrl_DispatchTable` | voice_midi_buf.s | Main system control dispatch |
+| `CntIniFunc_EventDispatch` | voice_midi_buf.s | CntIniFunc event dispatch |
+| `DspConfig_EventDispatch` | dsp_config_sysex.s | DSP config event dispatch |
+| `WndEvt_EventCodeDispatch` | voice_synth.s | Window event code dispatch |
+| `MidiChan_ParamDispatch` | midi_voice_routing.s | MIDI channel parameter dispatch |
+| `SeqData_FieldDispatch` | midi_voice_routing.s | Sequence data field dispatch |
+| `SysEx_SendDispatch` | midi_voice_routing.s | SysEx send dispatch |
+| `TitleProc_EventDispatch` | ui_widget_defs.s | Title proc event dispatch |
+| `SeqEvent_Dispatch` ... (3 more) | sequencer_engine.s | Sequencer engine dispatches |
+
+---
+
+## Previously Documented Dispatch Tables
+
+These tables had meaningful semantic labels before the documentation sprint.
 
 ### Main CPU — Sequencer & Timing
 
@@ -139,80 +243,21 @@ These tables have meaningful semantic labels and are reasonably well understood.
 
 ---
 
-## Undocumented Dispatch Tables — By Priority
+## Remaining Undocumented — By File
 
-### High Priority (Core System Dispatch)
-
-These are major system-level dispatch tables that route to many handlers. Understanding them is key to firmware comprehension.
-
-| File | Line | Table Base | Index Source | Scale | Sites | Description Guess |
-|------|------|-----------|-------------|-------|-------|-------------------|
-| style_data_init.s | 529 | 0xEF0D64 | DRAM[1041] | x4 | 1 | UI state machine primary dispatch |
-| kn5000_v10_program.s | 26932 | 0xF24FA0 | reg a | x4 | 1 | Voice synthesis algorithm dispatch |
-| kn5000_v10_program.s | 27639 | 0xF256B9 | reg a | x4 | 1 | Voice parameter dispatch |
-| style_data_init.s | 5506 | 0xE00012 | c[7:5] | x4 | 1 | Top-level command router (3-bit index) |
-| midipkt_routines.s | 275 | 0xEE304C | event byte | x4 | 1 | MIDI packet event type dispatch |
-
-### Medium Priority (Subsystem Dispatch)
-
-| File | Line | Table Base | Index Source | Scale | Sites | Description Guess |
-|------|------|-----------|-------------|-------|-------|-------------------|
-| drawbar_panel_ui.s | 10199+ | 0xE9F11C | (xwa+2) | x4 | 14 | Drawbar widget method dispatch |
-| midipkt_routines.s | 307+ | 0xEE4F52 | (xbc+16) type | x4 | 9 | MIDI packet type handler |
-| single_load.s | 652+ | 0xEA0996 | DRAM[0x89F8] | x4 | 6 | File I/O state machine A |
-| single_load.s | 1306+ | 0xEA0A16 | DRAM[0x89F8] | x4 | 12 | File I/O state machine B |
-| single_load.s | 1645+ | 0xEA0A2A | DRAM[0x89F8] | x4 | 7 | File I/O state machine C |
-| single_load.s | 1832+ | 0xEA0A3E | DRAM[0x89F8] | x4 | 8 | File I/O state machine D |
-| file_io_engine.s | 3224 | 0xEDAA64 | DRAM[0x9127] | x4 | 1 | File engine state dispatch |
-| file_io_engine.s | 5704+ | 0xFCA4F9-0xFCB46F | various | x4 | 6 | File I/O sub-dispatchers |
-| dsp_config_sysex.s | 4963+ | 0xEE8C7E-0xEE8CF4 | DRAM/computed | x4 | 5 | DSP config command dispatch |
-| accompaniment_engine.s | 22526 | 0xF652BB | l & 0xF | x4 | 1 | Accompaniment sub-dispatch |
-| midi_voice_routing.s | 10488 | 0xEE2F8C | SeqData field | x4 | 1 | Sequencer data field dispatch |
-| note_voice_mapping.s | 13971 | 0xEEAE04 | DRAM[0xE9BE] | x4 | 1 | Voice mapping type dispatch |
-| cpanel_routines.s | 1207 | 0xFC4965 | I/O reg & 0x38 | x4 | 1 | CPanel RX packet type |
-| cpanel_routines.s | 1449 | 0xFC4B85 | I/O reg & 0x30 | x4 | 1 | CPanel LED TX packet type |
-
-### jp_dri Undocumented Tables — By File
-
-#### kn5000_v10_program.s (45 undocumented jp_dri sites)
-
-The main program file has the highest concentration of undocumented dispatch tables. These cover the core firmware logic — event handling, parameter routing, mode switching.
-
-#### sequencer_ui.s (32 undocumented jp_dri sites)
-
-Sequencer UI event routing — screen updates, note editing, pattern display.
-
-#### mode_screens.s (23 undocumented jp_dri sites)
-
-Mode selection and screen rendering dispatch — one of the most UI-visible subsystems.
-
-#### accompaniment_engine.s (23 undocumented jp_dri sites)
-
-Accompaniment style engine — chord processing, pattern playback, rhythm dispatch.
-
-#### hdae5000/hd-ae5000_v2_06i.s (54 undocumented jp_dri sites)
-
-HDAE5000 extension ROM — serial protocol command dispatch, IDE/ATA command routing, filesystem operations.
-
-#### sound_editor_ui.s (17 undocumented jp_dri sites)
-
-Sound editing UI — waveform selection, parameter adjustment, effect configuration.
-
-#### drawbar_panel_ui.s (15 undocumented jp_dri sites)
-
-Drawbar organ interface — slider mapping, tone control, registration dispatch.
-
-#### sequencer_engine.s (14 undocumented jp_dri sites)
-
-Core sequencer engine — playback state machine, track control, tempo management.
-
-#### subcpu/kn5000_subprogram_v142.s (19 undocumented jp_dri sites)
-
-Sub CPU payload — audio processing dispatch, voice management, DSP command routing.
-
-#### Other files (67 undocumented jp_dri sites across 19 files)
-
-Scattered dispatch tables in UI widgets, file I/O, voice MIDI buffer, sysex processing, FDC routines, bitmap output, and computer interface code.
+| File | Remaining Undocumented | Notes |
+|------|----------------------|-------|
+| kn5000_v10_program.s | ~41 jp_dri | Core firmware logic, event handling |
+| accompaniment_engine.s | ~23 jp_dri | Chord processing, rhythm dispatch |
+| hdae5000/hd-ae5000_v2_06i.s | ~54 jp_dri | Extension ROM command dispatch |
+| subcpu/kn5000_subprogram_v142.s | ~19 jp_dri | Sub CPU audio processing |
+| sound_editor_ui.s | ~17 jp_dri | Sound editing UI |
+| drawbar_panel_ui.s | ~15 jp_dri + ~14 call | Drawbar organ interface |
+| sequencer_ui.s | ~11 jp_dri | Sequencer UI (21 sites done) |
+| sequencer_engine.s | ~7 jp_dri | Core sequencer (7 sites done) |
+| mode_screens.s | ~1 jp_dri | Mode selection UI (22 sites done) |
+| Other files (19) | ~67 scattered | UI widgets, file I/O, sysex, FDC |
+| **Total remaining** | **~269** | |
 
 ---
 
@@ -220,19 +265,10 @@ Scattered dispatch tables in UI widgets, file I/O, voice MIDI buffer, sysex proc
 
 Each undocumented dispatch table needs:
 
-1. **Semantic label** for the dispatch site (e.g., `LABEL_F24F89` → `VoiceSynth_AlgorithmDispatch`)
+1. **Semantic label** for the dispatch site (e.g., `LABEL_F24F89` -> `VoiceSynth_AlgorithmDispatch`)
 2. **Table annotation** — comment each `.long` or offset entry with what handler it points to
 3. **Handler documentation** — brief comment on what each target function does
 4. **Index variable documentation** — what the index represents (state ID, command type, etc.)
-
-### Priority Order
-
-1. Core system dispatch (style_data_init.s UI state machine, command router)
-2. MIDI subsystem (midipkt_routines.s event dispatch, voice routing)
-3. File I/O state machines (single_load.s, file_io_engine.s)
-4. Sequencer engine (accompaniment_engine.s, sequencer_engine.s)
-5. UI subsystem (mode_screens.s, drawbar_panel_ui.s, sequencer_ui.s)
-6. Sub CPU and HDAE5000 (separate ROM regions)
 
 ### Conventions
 
@@ -242,4 +278,4 @@ Each undocumented dispatch table needs:
 
 ---
 
-*This inventory was generated by automated analysis of all `.s` files in the ROM disassembly. Some entries may be misclassified (e.g., callback calls vs table dispatch). Manual review is ongoing.*
+*This inventory was generated by automated analysis of all `.s` files in the ROM disassembly. Manual review and documentation is ongoing.*
