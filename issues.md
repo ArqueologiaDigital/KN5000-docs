@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 292 (7 open, 283 closed)
+**Total Issues:** 293 (6 open, 284 closed)
 
 **Quick Links:** 
-[Other](#other) (7)
+[Other](#other) (6)
 
 ---
 
@@ -147,52 +147,6 @@ User interaction and file I/O fully working in MAME.
 
 ---
 
-#### 🟠 Trace full code path: Feature Demo selection → FTBMP bitmap render, identify MAME driver gaps {#issue-kn5000-y7t5}
-
-**ID:** `kn5000-y7t5` | **Priority:** High | **Created:** 2026-03-01
-
-MOTIVATION: The Feature Presentation SSF was confirmed to trigger GroupBoxProc_StartSSFPresentation (9 times), but only the Technics logo was briefly visible and the SSF ran abnormally fast, completing all 9 items in ~5 frames. We need to understand whether all intermediate conditions along the full execution path are satisfied in MAME, or whether some HW emulation gaps prevent the presentation from running correctly (e.g., timing, events not reaching their targets, missing display ownership, etc.).
-
-GOAL: Trace the complete code path from:
-  ENTRY: DEMO button pressed in state 0xE4 (GroupBoxProc active)
-  → GroupBoxProc event handler for DEMO button
-  → GroupBoxProc_StartSSFPresentation (0xF9A273)
-  → Sends 0x1C0001C with workspace tag 0xB80A via FA9660 → AcPresentCtrl_CheckSSFStart (0xF84625)
-  → Check passes → sends 0x1C00006 → SSF XML parser starts
-  → XML parser reads hkst_55.ssf (at 0x88000E), processes each ACT element
-  → For each SHOW OBJ='ftdemoXX' → name table lookup → FTDEMO_SCREEN structure
-  → FTDEMO_SCREEN.filename_ptr → lookup in file entry index at 0x8CE01C
-  → ROM BMP data pointer retrieved
-  EXIT: VwUserBitmapByNameProc / DrawBitmapFile renders FTBMP pixel data to VRAM (0x1A0000-0x1DFFFF)
-
-ANALYSIS REQUIRED:
-1. Disassemble/trace the GroupBoxProc DEMO button handler (what event code does it use to call StartSSFPresentation?)
-2. Confirm how AcPresentCtrl_CheckSSFStart (0xF84625) verifies the workspace tag - is there any timing issue?
-3. Trace AcPresentationControlProc (0xF8450B) processing of 0x1C00006 → how does it start the XML parser?
-4. Trace the XML parser (AcPresentCtrlProc_ParseSSF or equivalent) - how does it loop through ACT items? What event/callback fires for each SHOW?
-5. Identify each FTBMP bitmap load call: VwUserBitmapByNameProc arguments, display ownership required?
-6. Check if there's a 'delay' or 'wait for display update' step between frames - does the SSF rely on a hardware vsync or timer that MAME may handle differently?
-7. Identify any conditions/guards along the path that might silently abort (e.g., checking GAME_ACTIVE, checking display mode, checking audio ready, etc.)
-
-For each code section that is still in .byte form along this path, create disassembly issues and cross-reference them here.
-
-KEY ADDRESSES ALREADY KNOWN:
-- GroupBoxProc: ~0xF998xx (partially decoded in file)
-- GroupBoxProc_StartSSFPresentation: 0xF9A273
-- AcPresentCtrl_CheckSSFStart: 0xF84625
-- AcPresentationControlProc: 0xF8450B (jump table at 0xE9F9B2)
-- FA9660: SendEvent (direct)
-- FA9945: EventDispatch_Direct (in .byte form - kn5000-84fw)
-- FA9D58: BroadcastEvent
-- hkst_55.ssf XML: 0x88000E (Table Data ROM)
-- File entry index: 0x8CE01C
-- FTBMP BMP data: 0x880418 (FTBMP01), 0x89344E (FTBMP02), etc.
-- VwUserBitmapByNameProc / DrawBitmapFile: address TBD (find via disasm)
-
-HARDWARE ACCURACY CONSTRAINT: No hacks or shortcuts. All identified gaps must be fixed via accurate hardware emulation in the MAME driver (kn5000.cpp). Document findings on feature-demo.md website page.
-
----
-
 #### 🟡 TMP94C241: Internal RAM range 0xC00-0xFFF missing from address map {#issue-kn5000-rqtw}
 
 **ID:** `kn5000-rqtw` | **Priority:** Medium | **Created:** 2026-03-09
@@ -253,6 +207,7 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-ko7x` | Document all dispatch/jump tables in ROM disassembly | 2026-03-09 |
 | `kn5000-3sar` | Fix cpanel HLE for Feature Demo navigation without breaki... | 2026-03-09 |
 | `kn5000-tgd6` | MAME: TMP94C241 timer output callbacks fire unconditional... | 2026-03-09 |
 | `kn5000-u6du` | MAME: Fresh NVRAM boot shows ERROR in CPU data transmission | 2026-03-09 |
@@ -272,9 +227,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-9m6` | Phase 3 Completion: Full documentation coverage | 2026-03-08 |
 | `kn5000-n1l2` | DSP1: Investigate algorithm select mechanism (effect name... | 2026-03-08 |
 | `kn5000-b0h` | Sub CPU: Complete emulation accuracy documentation | 2026-03-08 |
-| `kn5000-8ro` | Documentation: Complete all subsystem placeholder pages | 2026-03-08 |
 
-*...and 263 more closed issues*
+*...and 264 more closed issues*
 
 ---
 
@@ -285,7 +239,7 @@ Production-ready emulation and homebrew support.
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 3 |
+| High | 2 |
 | Medium | 1 |
 | Low | 2 |
 
@@ -293,8 +247,8 @@ Production-ready emulation and homebrew support.
 
 | Category | Count |
 |----------|-------|
-| Other | 7 |
+| Other | 6 |
 
 ---
 
-*Last updated: 2026-03-09 20:15*
+*Last updated: 2026-03-09 21:17*
