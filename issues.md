@@ -8,7 +8,7 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 291 (7 open, 280 closed)
+**Total Issues:** 292 (7 open, 283 closed)
 
 **Quick Links:** 
 [Other](#other) (7)
@@ -253,6 +253,9 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-3sar` | Fix cpanel HLE for Feature Demo navigation without breaki... | 2026-03-09 |
+| `kn5000-tgd6` | MAME: TMP94C241 timer output callbacks fire unconditional... | 2026-03-09 |
+| `kn5000-u6du` | MAME: Fresh NVRAM boot shows ERROR in CPU data transmission | 2026-03-09 |
 | `kn5000-asm6` | LLVM TLCS-900: LDA with displacement > d8 generates inval... | 2026-03-08 |
 | `kn5000-8gqi` | LLVM TLCS-900: Variable shift SLA Rx,Ry generates wrong e... | 2026-03-08 |
 | `kn5000-m7iu` | MAME: Implement TMP94C241 timer output callbacks and wire... | 2026-03-08 |
@@ -270,11 +273,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-n1l2` | DSP1: Investigate algorithm select mechanism (effect name... | 2026-03-08 |
 | `kn5000-b0h` | Sub CPU: Complete emulation accuracy documentation | 2026-03-08 |
 | `kn5000-8ro` | Documentation: Complete all subsystem placeholder pages | 2026-03-08 |
-| `kn5000-0o6` | MAME: Update HLE based on audio subsystem findings | 2026-03-08 |
-| `kn5000-1oy` | Audio: Analyze DSP effects processing algorithms | 2026-03-08 |
-| `kn5000-cox` | Sound: Extract and catalog all instrument patches | 2026-03-07 |
 
-*...and 260 more closed issues*
+*...and 263 more closed issues*
 
 ---
 
@@ -297,4 +297,4 @@ Production-ready emulation and homebrew support.
 
 ---
 
-*Last updated: 2026-03-09 12:04*
+*Last updated: 2026-03-09 14:46*
