@@ -499,16 +499,20 @@ Investigation used MAME Lua autoboot scripts to monitor `LABEL_F98697`, `FA9945`
 
 **False positive explained:** The "SSF START" tap at `0xF9A272-0xF9A273` fires from the instruction `call 0xfa9660` at `0xF9A26F` (a 4-byte instruction encoding `1D 60 96 FA`). Its 3rd word occupies `0xF9A272-0xF9A273`, triggering the tap on every call to `0xFA9660` (the direct SendEvent dispatcher), not from `GroupBoxProc_StartSSFPresentation` actually executing.
 
-**Confirmed solution results (ftdemo_v3.lua):**
+**ftdemo_v3.lua results (REVISED — originally misinterpreted):**
 | Monitor | Count | Observations |
 |---------|-------|-------------|
 | `LABEL_F98697` | 994 calls | Called but EF0797 pre-condition blocked all (internal RAM 0x0406 bit 7 not set in emulation context) |
-| `FA9945` for 0x1C00038 | 0 calls | Not used — DEMO button in state 0xE4 goes direct to GroupBoxProc via soft-button path |
-| `GroupBoxProc_StartSSFPresentation` tap | 9 hits | Each hit = `call 0xfa9660` at 0xF9A26F dispatching one SSF item (0x1C0001C with B80A workspace) |
-| FTBMP01.BMP in VRAM | Confirmed | "Technics" logo text visible in emulator snapshots 0124-0126 |
-| Final `8D38` state | 0x01 | Returned to normal after SSF completed |
+| `FA9945` for 0x1C00038 | 0 calls | Event `0x1C00038` was never dispatched |
+| `GroupBoxProc_StartSSFPresentation` tap | 9 hits | **FALSE POSITIVE** — tap at `0xF9A272-0xF9A273` fires from `call 0xFA9660` encoding, not from actual SSF execution |
 
-**Conclusion:** No MAME emulation bug. The Feature Demo works correctly when the correct navigation sequence is used. The DEMO button in the FEATURE PRESENTATION sub-menu (state 0xE4) triggers SSF directly through GroupBoxProc's own event handler — not via the F98697/FA9945 dispatch chain. F98697 is a post-boot state-dispatch router that handles events from the hardware key scanner, while GroupBoxProc handles soft-button events directly from the INTA system.
+**Correction (March 9):** The original conclusion that "the Feature Demo works correctly" was **wrong**. The 9 "SSF START" hits were false positives caused by the ROM read tap overlapping with the instruction encoding of `call 0xFA9660` at address `0xF9A26F`. The "FTBMP01.BMP in VRAM" observation was likely from boot initialization, not from the demo.
+
+**Current status:** Pressing DEMO in state `0xE4` transitions directly to `0x01` (normal mode), exiting the demo menu entirely. It does NOT trigger SSF. Pressing LEFT 2 starts the demo timer (song cycling) but does NOT trigger SSF visual presentation. The `demo_state` at `0x0251D8` remains `0x0000` throughout.
+
+**Two independent bugs remain:**
+1. **Song cycling stuck:** Sequencer parts (`DRAM[10420]=0xFFFF`) never complete without waveform ROMs, preventing the timer from resetting for the next song
+2. **SSF never triggers:** No button press in the current emulation triggers `GroupBoxProc_StartSSFPresentation`. The mechanism that sets `demo_state` at `0x0251D8` to a non-zero value has not been identified
 
 ---
 
