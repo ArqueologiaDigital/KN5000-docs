@@ -41,6 +41,8 @@ header_pages:
   - mame-pull-requests.md
   - help-wanted.md
   - issues.md
+  # Analysis
+  - dispatch-tables.md
   # Research Logs
   - feature-demo-investigation-2026-03-09.md
 
