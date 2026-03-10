@@ -33,6 +33,7 @@ header_pages:
   - hdae5000-filesystem.md
   # Homebrew
   - hdae5000-homebrew.md
+  - app-loader.md
   - event-codes.md
   - another-world-vm.md
   # Resources
