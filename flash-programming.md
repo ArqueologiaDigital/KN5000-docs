@@ -1,3 +1,9 @@
+---
+layout: page
+title: Flash Programming
+permalink: /flash-programming/
+---
+
 # Flash Programming Routines
 
 ## Overview

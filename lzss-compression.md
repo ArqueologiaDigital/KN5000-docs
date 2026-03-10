@@ -1,7 +1,7 @@
 ---
-layout: default
+layout: page
 title: LZSS Compression
-nav_order: 18
+permalink: /lzss-compression/
 ---
 
 # LZSS Compression

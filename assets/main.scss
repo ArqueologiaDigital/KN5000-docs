@@ -1,0 +1,253 @@
+---
+---
+
+@import "minima";
+
+/* ============================================================
+   Sidebar Navigation
+   ============================================================ */
+
+$sidebar-width: 260px;
+$sidebar-bg: #f8f9fa;
+$sidebar-border: #e1e4e8;
+$nav-active-bg: #0366d6;
+$nav-active-text: #fff;
+$nav-hover-bg: #e9ecef;
+$nav-text: #24292e;
+$nav-section-text: #586069;
+$mobile-break: 768px;
+
+/* Layout: sidebar + content side by side */
+.site-content-wrapper {
+  display: flex;
+  min-height: calc(100vh - 120px);
+}
+
+/* Sidebar container */
+.site-sidebar {
+  width: $sidebar-width;
+  min-width: $sidebar-width;
+  background: $sidebar-bg;
+  border-right: 1px solid $sidebar-border;
+  padding: 1rem 0;
+  overflow-y: auto;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  font-size: 0.875rem;
+
+  .sidebar-toggle {
+    display: none; /* hidden on desktop */
+  }
+}
+
+/* Content area takes remaining space */
+.site-sidebar + .page-content {
+  flex: 1;
+  min-width: 0; /* prevent flex overflow */
+}
+
+/* Section <details> elements */
+.nav-section {
+  margin-bottom: 0.25rem;
+
+  summary {
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    color: $nav-text;
+    list-style: none;
+    user-select: none;
+    border-left: 3px solid transparent;
+    transition: background 0.15s;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &::before {
+      content: "\25B6"; /* right triangle */
+      display: inline-block;
+      width: 1em;
+      font-size: 0.65em;
+      vertical-align: middle;
+      transition: transform 0.15s;
+      margin-right: 0.35rem;
+    }
+
+    &:hover {
+      background: $nav-hover-bg;
+    }
+  }
+
+  &[open] > summary::before {
+    transform: rotate(90deg);
+  }
+}
+
+/* Item lists */
+.nav-items {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0.25rem 0;
+}
+
+.nav-item {
+  margin: 0;
+
+  > a {
+    display: block;
+    padding: 0.3rem 1rem 0.3rem 2.2rem;
+    color: $nav-text;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: background 0.1s, border-color 0.1s;
+
+    &:hover {
+      background: $nav-hover-bg;
+      text-decoration: none;
+    }
+  }
+
+  &.active > a {
+    background: lighten($nav-active-bg, 40%);
+    border-left-color: $nav-active-bg;
+    color: $nav-active-bg;
+    font-weight: 600;
+  }
+}
+
+/* Sub-groups (e.g., Firmware Updates, MIDI) */
+.nav-group-label {
+  display: block;
+  padding: 0.3rem 1rem 0.15rem 2.2rem;
+  color: $nav-section-text;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.nav-subitems {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-subitem {
+  margin: 0;
+
+  > a {
+    display: block;
+    padding: 0.25rem 1rem 0.25rem 3rem;
+    color: $nav-text;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: background 0.1s, border-color 0.1s;
+
+    &:hover {
+      background: $nav-hover-bg;
+      text-decoration: none;
+    }
+  }
+
+  &.active > a {
+    background: lighten($nav-active-bg, 40%);
+    border-left-color: $nav-active-bg;
+    color: $nav-active-bg;
+    font-weight: 600;
+  }
+}
+
+/* ============================================================
+   Mobile: collapsible sidebar
+   ============================================================ */
+
+@media screen and (max-width: $mobile-break) {
+  .site-content-wrapper {
+    flex-direction: column;
+  }
+
+  .site-sidebar {
+    width: 100%;
+    min-width: 100%;
+    height: auto;
+    position: relative;
+    border-right: none;
+    border-bottom: 1px solid $sidebar-border;
+    padding: 0;
+
+    .sidebar-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: $sidebar-bg;
+      border: none;
+      border-bottom: 1px solid $sidebar-border;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: $nav-text;
+
+      svg {
+        fill: $nav-section-text;
+      }
+
+      &:hover {
+        background: $nav-hover-bg;
+      }
+    }
+
+    .sidebar-content {
+      display: none;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+
+    &.open .sidebar-content {
+      display: block;
+    }
+  }
+}
+
+/* ============================================================
+   Header adjustments
+   ============================================================ */
+
+.site-header {
+  .wrapper {
+    display: flex;
+    align-items: center;
+    min-height: 56px;
+  }
+}
+
+.site-title {
+  margin: 0;
+}
+
+/* ============================================================
+   Hero banner (unchanged)
+   ============================================================ */
+
+.hero-banner {
+  display: block;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto 1.5rem auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.home .hero-banner {
+  margin-top: 1rem;
+}
+
+@media screen and (max-width: 600px) {
+  .hero-banner {
+    border-radius: 4px;
+    margin-bottom: 1rem;
+  }
+}

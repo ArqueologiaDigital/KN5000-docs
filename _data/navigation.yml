@@ -1,0 +1,147 @@
+- title: Introduction
+  pages:
+    - title: Home
+      url: /
+    - title: System Overview
+      url: /system-overview/
+
+- title: Hardware
+  pages:
+    - title: Hardware Architecture
+      url: /hardware-architecture/
+    - title: CPU Subsystem
+      url: /cpu-subsystem/
+    - title: Memory Map
+      url: /memory-map/
+    - title: Display Subsystem
+      url: /display-subsystem/
+
+- title: Firmware
+  pages:
+    - title: Boot Sequence
+      url: /boot-sequence/
+    - title: SubCPU Payload Loading
+      url: /subcpu-payload-loading/
+    - title: ROM Reconstruction
+      url: /rom-reconstruction/
+    - title: Table Data ROM
+      url: /table-data-rom/
+    - title: Custom Data Flash
+      url: /custom-data-flash/
+    - title: Firmware Updates
+      children:
+        - title: Update Procedure
+          url: /firmware-update-procedure/
+        - title: Update Validation
+          url: /firmware-update-validation/
+        - title: Update Display
+          url: /firmware-update-display/
+        - title: System Update Discs
+          url: /system-update-discs/
+    - title: Test Modes
+      url: /test-modes/
+
+- title: Subsystems
+  pages:
+    - title: Audio Subsystem
+      url: /audio-subsystem/
+    - title: Tone Generator
+      url: /tone-generator/
+    - title: Sound Categories
+      url: /sound-categories/
+    - title: Keybed Scanning
+      url: /keybed-scanning/
+    - title: Storage Subsystem
+      url: /storage-subsystem/
+    - title: FDC Subsystem
+      url: /fdc-subsystem/
+    - title: MIDI
+      children:
+        - title: MIDI Subsystem
+          url: /midi-subsystem/
+        - title: MIDI Serial I/O
+          url: /midi-serial-io/
+        - title: SysEx Messages
+          url: /sysex-messages/
+    - title: UI Framework
+      url: /ui-framework/
+    - title: UI Widget Types
+      url: /ui-widget-types/
+    - title: Sequencer
+      url: /sequencer/
+    - title: Accompaniment Engine
+      url: /accompaniment-engine/
+
+- title: Protocols
+  pages:
+    - title: Control Panel Protocol
+      url: /control-panel-protocol/
+    - title: Inter-CPU Protocol
+      url: /inter-cpu-protocol/
+    - title: SubCPU Command Format
+      url: /subcpu-command-format/
+    - title: Sound Parameter Protocol
+      url: /sound-parameter-protocol/
+    - title: Serial Firmware Compat
+      url: /serial-firmware-compatibility/
+
+- title: HDAE5000
+  pages:
+    - title: HDAE5000 Overview
+      url: /hdae5000/
+    - title: Disk Interface
+      url: /hdae5000-disk-interface/
+    - title: Filesystem
+      url: /hdae5000-filesystem/
+
+- title: Homebrew
+  pages:
+    - title: Homebrew Development
+      url: /hdae5000-homebrew/
+    - title: App Loader
+      url: /app-loader/
+    - title: Event Codes
+      url: /event-codes/
+    - title: Another World VM
+      url: /another-world-vm/
+
+- title: Analysis
+  pages:
+    - title: Dispatch Tables
+      url: /dispatch-tables/
+    - title: Feature Demo
+      url: /feature-demo/
+    - title: Floppy Security Analysis
+      url: /floppy-security-analysis/
+    - title: LZSS Compression
+      url: /lzss-compression/
+    - title: TLCS-900 Instruction Encoding
+      url: /tlcs900-instruction-encoding/
+    - title: Flash Programming
+      url: /flash-programming/
+
+- title: Resources
+  pages:
+    - title: Image Gallery
+      url: /image-gallery/
+    - title: ROM Strings
+      url: /rom-strings/
+    - title: Reverse Engineering
+      url: /reverse-engineering/
+    - title: MAME Pull Requests
+      url: /mame-pull-requests/
+    - title: Help Wanted
+      url: /help-wanted/
+    - title: Open Questions
+      url: /questions/
+    - title: Issues
+      url: /issues/
+
+- title: Research Logs
+  pages:
+    - title: Feature Demo Investigation
+      url: /feature-demo-investigation-2026-03-09/
+    - title: Feature Demo Timer Bug
+      url: /feature-demo-timer-bug-2026-03-09/
+    - title: Serial Debugging Journey
+      url: /serial-debugging/

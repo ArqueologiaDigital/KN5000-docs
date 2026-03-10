@@ -7,45 +7,9 @@ url: "https://arqueologiadigital.github.io"
 markdown: kramdown
 theme: minima
 
-# Navigation - organized by learning progression
-header_pages:
-  # Introduction
-  - index.md
-  - system-overview.md
-  # Hardware Layer
-  - hardware-architecture.md
-  - cpu-subsystem.md
-  - memory-map.md
-  # Firmware Layer
-  - boot-sequence.md
-  - subcpu-payload-loading.md
-  - rom-reconstruction.md
-  - table-data-rom.md
-  - custom-data-flash.md
-  # Subsystems & Protocols
-  - audio-subsystem.md
-  - tone-generator.md
-  - keybed-scanning.md
-  - control-panel-protocol.md
-  - serial-firmware-compatibility.md
-  - hdae5000.md
-  - storage-subsystem.md
-  - hdae5000-filesystem.md
-  # Homebrew
-  - hdae5000-homebrew.md
-  - app-loader.md
-  - event-codes.md
-  - another-world-vm.md
-  # Resources
-  - image-gallery.md
-  - reverse-engineering.md
-  - mame-pull-requests.md
-  - help-wanted.md
-  - issues.md
-  # Analysis
-  - dispatch-tables.md
-  # Research Logs
-  - feature-demo-investigation-2026-03-09.md
+# Navigation is now driven by _data/navigation.yml (hierarchical sidebar menu)
+# Suppress the default flat header_pages list:
+header_pages: []
 
 # Collections for organized content
 collections:
