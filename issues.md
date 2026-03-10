@@ -8,7 +8,7 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 293 (6 open, 284 closed)
+**Total Issues:** 294 (6 open, 284 closed)
 
 **Quick Links:** 
 [Other](#other) (6)
@@ -89,35 +89,6 @@ Three parallel efforts to resolve blockers:
 
 ---
 
-#### 🟠 HDAE5000 Generic Program Loader: FAT filesystem, HD boot, multi-app support {#issue-kn5000-yhj}
-
-**ID:** `kn5000-yhj` | **Priority:** High | **Created:** 2026-02-21
-
-Modified HDAE5000 ROM that implements:
-1. FAT filesystem reading from IDE hard disk
-2. App Loader menu UI on the KN5000 display with app icons and names
-3. Generic program loader that can boot multiple applications
-4. Currently supported apps: Mines game, Another World game
-
-Architecture: Only the HDAE5000 ROM is modified. The KN5000 hardware is unmodified. Programs and assets are stored on the hard disk. The loader reads the FAT filesystem, scans for application manifest files, and presents a graphical App Loader menu showing each app's icon and name. Selecting an app loads it into DRAM for execution.
-
-App Manifest: Each application provides a manifest file containing:
-- App name (displayed in menu)
-- Icon bitmap (displayed in menu)
-- Entry point address
-- List of asset files to load and their target addresses
-
-This replaces the previous floppy code injection approach. The HD approach solves the 512KB ROM size limit (974KB of Another World resources couldn't fit) and provides a reusable platform for any future homebrew.
-
-Key components:
-- FAT16/FAT32 filesystem driver (read-only initially)
-- IDE/ATA disk I/O routines (already in HDAE5000 ROM, need adaptation)
-- App Loader menu with icon/name display from manifests
-- Program loading: read executable + assets from HD into DRAM
-- Application launcher: jump to loaded program entry point
-
----
-
 #### 🟠 Phase 2 Completion: Core functionality working {#issue-kn5000-dnl}
 
 **ID:** `kn5000-dnl` | **Priority:** High | **Created:** 2026-01-31
@@ -144,6 +115,14 @@ User interaction and file I/O fully working in MAME.
 - [ ] Custom styles can be loaded/saved
 - [ ] All P2 UI/input issues closed
 - [ ] All P2 storage issues closed
+
+---
+
+#### 🟠 Waveform ROM investigation: dump IC304-IC306 or create approximations {#issue-kn5000-u573}
+
+**ID:** `kn5000-u573` | **Priority:** High | **Created:** 2026-03-10
+
+THE single biggest blocker across the project. Waveform ROMs IC304-IC306 (1.2MB of 1.6MB total) are NO_DUMP. Only IC307 is dumped. Without waveforms: no actual sound synthesis, Feature Demo stuck (sequencer never completes), tone generator HLE is timing-only. Paths forward: (1) Attempt to dump from physical hardware (requires chip desoldering or in-circuit reading), (2) Analyze IC307 format to understand waveform structure, (3) Create synthetic approximations using IC307 as template, (4) Check if other Technics keyboards (KN6000, KN7000) share compatible waveform chips. This is prerequisite for any real audio progress.
 
 ---
 
@@ -251,4 +230,4 @@ Production-ready emulation and homebrew support.
 
 ---
 
-*Last updated: 2026-03-09 21:17*
+*Last updated: 2026-03-10 18:12*
