@@ -12,7 +12,7 @@ This page describes every source file in the [disassembly repository](https://gi
 
 | ROM | Size | Top-level Source | Include Files | Purpose |
 |-----|------|-----------------|---------------|---------|
-| [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 143 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
+| [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 153 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
 | [Sub CPU Payload](#sub-cpu-payload-192kb) | 192KB | `subcpu/kn5000_subprogram_v142.s` | 3 | Audio engine — tone generation, voice management, DSP |
 | [Sub CPU Boot](#sub-cpu-boot-128kb) | 128KB | `subcpu/boot/kn5000_subcpu_boot.s` | 0 | Sub CPU bootstrap and payload decompression |
 | [HDAE5000](#hdae5000-extension-512kb) | 512KB | `hdae5000/hd-ae5000_v2_06i.s` | 5 | Hard disk expansion — IDE/ATA driver, FAT16, file manager UI |
@@ -23,7 +23,7 @@ This page describes every source file in the [disassembly repository](https://gi
 
 ## Main CPU (2MB)
 
-The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **143 include files** organized into **15 subdirectories** by subsystem.
+The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **153 include files** organized into **15 subdirectories** by subsystem.
 
 ### Directory Structure
 
@@ -36,7 +36,7 @@ maincpu/
   boot/       (3 files)      # System startup, interrupt handlers, init
   ui/         (13 files)     # UI framework, widgets, drawing, panels
   display/    (3 files)      # VGA graphics, text rendering, scoop editor
-  audio/      (27 files)     # Audio control, sound editor, DSP config, sound data
+  audio/      (31 files)     # Audio control, sound editor, DSP config, sound data
   midi/       (9 files)      # MIDI serial, dispatch, SysEx, computer I/F
   sequencer/  (14 files)     # Sequencer, SMF, accompaniment, rhythm
   storage/    (2 files)      # Flash memory, floppy disk controller
@@ -116,12 +116,15 @@ maincpu/
 | `audio/tonegen_fileio_handlers.s` | 1,071 | Tone generator config initialization, DSP config entry setup, FileIO callback handlers |
 | `audio/sndparam_routines.s` | 2,042 | Sound parameter probe, match, and heap allocation |
 | `audio/note_voice_mapping.s` | 26,105 | Note-on processing, voice allocation/stealing, NoteMap (91 functions), sequence playback, MIDI output, sound parameters, utility routines |
+| `audio/sound_data.s` | 34 | Consolidated sound data index — labels and includes for all 17 instrument categories |
 | `audio/sound_data_piano.s` | 2,188 | Piano sound data: 128-byte header + 2048 tone mapping pairs |
 | `audio/sound_data_strings_vocal.s` | 2,188 | Strings/vocal sound data: 128-byte header + 2048 tone mapping pairs |
 | `audio/sound_data_mallet_orch_perc.s` | 461 | Mallet/orchestral percussion sound data |
 | `audio/sound_data_flute_extra.s` | 305 | Extended flute sound data |
 | `audio/sound_data_flute.s` | 162 | Flute sound data |
 | `audio/sound_data_guitar.s` | 95 | Guitar sound data |
+| `audio/sound_data_world_perc.s` | 395 | World percussion: 128-entry pointer table + 0xFF-terminated patch entries |
+| `audio/sound_data_brass.s` | 403 | Brass: 128-entry pointer table + 0xFF-terminated patch entries |
 | `audio/sound_data_sax_reed.s` | 95 | Saxophone/reed sound data |
 | `audio/tonegen_param_table.s` | 92 | Tone generator parameter lookup table |
 | `audio/sound_data_synth.s` | 20 | Synth sound data |
@@ -130,6 +133,7 @@ maincpu/
 | `audio/sound_data_accordion_reg.s` | 6 | Accordion/register sound data |
 | `audio/sound_data_bass.s` | 6 | Bass sound data |
 | `audio/sound_data_digital_drawbar.s` | 6 | Digital drawbar sound data |
+| `audio/sound_data_organ_accordion.s` | 33 | Organ/accordion: 128 sound mapping pairs (0xF0-0xFD sub-bank IDs) |
 | `audio/sound_data_gm_special.s` | 6 | GM special sound data |
 
 ### `midi/` — MIDI Processing & Computer Interface
