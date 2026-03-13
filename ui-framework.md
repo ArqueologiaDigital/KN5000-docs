@@ -355,9 +355,84 @@ See [Feature Demo & Presentation System]({{ site.baseurl }}/feature-demo/) for f
 - [Image Gallery]({{ site.baseurl }}/image-gallery/) - UI graphics
 - [Event Codes]({{ site.baseurl }}/event-codes/) - Complete event code reference
 
+## ScreenData Bytecode Format
+
+The UI framework uses a **bytecode format** to define screen layouts. Each screen has a `ScreenData` blob — a sequence of variable-length commands that describe the visual elements (lines, rectangles, widgets, strings, references) to render.
+
+### Command Format
+
+Each command starts with an opcode byte followed by a sub-type/length byte:
+
+```
+[opcode:1] [sub_or_len:1] [data:variable]
+```
+
+**Critical rule for op=0x02:** Byte 2 is a **sub-type**, NOT a length.
+- sub=0x0a → VLINE (10 bytes total)
+- any other sub → WIDGET (always 15 bytes total)
+
+For all other opcodes, byte 2 is the total command length.
+
+### Opcode Reference
+
+| Opcode | Name | Size | Description |
+|--------|------|------|-------------|
+| 0x01 | HLINE | 10 | Horizontal line: `op + 0x0a + x1(2) + y1(2) + x2(2) + y2(2)` |
+| 0x02/0x0a | VLINE | 10 | Vertical line: `op + 0x0a + x1(2) + y1(2) + x2(2) + y2(2)` |
+| 0x02/other | WIDGET | 15 | Widget ref: `op + sub + id(2) + flags(2) + handler(7) + x(1) + y(1)` |
+| 0x03 | SETUP | var | Setup block with coordinate arrays |
+| 0x04 | CONTROL | var | Control metadata |
+| 0x06 | REF | var | Reference (sometimes with text label) |
+| 0x07 | SHORTREF | var | Short reference |
+| 0x09 | RECT | 10 | Rectangle outline: same coord format as HLINE |
+| 0x0a | FILLED_RECT | 10 | Filled rectangle: same coord format as HLINE |
+| 0x0b | BLOCK | var | Block data |
+| 0x0e | CALLBACK | var | Callback reference |
+| 0x20 | STRING | var | Text: `op + len + x(1) + y(1) + text_bytes...` |
+
+### WIDGET Structure (15 bytes)
+
+```
+[02] [sub] [id_lo id_hi] [flags_lo flags_hi] [06 addr_lo addr_mid addr_hi 00 param 00] [x] [y]
+       │         │              │                            │                            │
+       │         │              │                   handler reference (7 bytes)           position
+       │         │              └─ widget flags (e.g., 0x00FF, 0x8560)
+       │         └─ widget ID (little-endian 16-bit)
+       └─ sub-type (0x0f=standard, 0x0d=variant, 0x14=extended)
+```
+
+### Coordinate Encoding
+
+All coordinates are **little-endian 16-bit** values. The LCD display is 320×240 pixels.
+
+### LCD Character Codes
+
+| Byte | Character |
+|------|-----------|
+| 0x20-0x7E | Standard ASCII |
+| 0x88 | ♯ (sharp) |
+| 0x8C | ♭ (flat) |
+| 0x8D | │ (vertical bar / up arrow) |
+| 0x8E | ~ (down arrow) |
+
+### Decoded Files
+
+| File | Bytes | Commands | Contents |
+|------|-------|----------|----------|
+| `style_ui_screendata_main.s` | 3531 | 375 | Style editor main grid: chord boxes, parameter widgets, chord name tables, bottom bar |
+| `style_ui_screendata_meascursor.s` | 184 | 18 | Measure cursor: MEAS/CURSOR/CTL labels, BAL/ERS refs, navigation arrows |
+| `style_ui_screendata_yesctl.s` | 228 | 29 | Yes/No confirmation + measure cursor + CTL value |
+| `style_ui_screendata_ctlonly.s` | 551 | 4+tables | CTL-only: 4 commands + LCD charset translation table + format strings |
+
+### Decoder Scripts
+
+- `scripts/decode_screendata.py` — Generic bytecode parser, outputs human-readable command descriptions
+- `scripts/annotate_screendata_main.py` — Section-aware annotation generator for the main screen
+
 ## Research Needed
 
 - [ ] Document widget property layout (offset table per widget type)
 - [ ] Map complete event dispatch chain (post → queue → dispatch → handler)
 - [ ] Document focus/navigation system (tab order, encoder routing)
 - [ ] Trace widget creation flow (alloc → init → register → display)
+- [ ] Decode ScreenData for other UI screens beyond StyleUI
