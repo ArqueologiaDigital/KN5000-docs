@@ -12,7 +12,7 @@ This page describes every source file in the [disassembly repository](https://gi
 
 | ROM | Size | Top-level Source | Include Files | Purpose |
 |-----|------|-----------------|---------------|---------|
-| [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 110 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
+| [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 143 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
 | [Sub CPU Payload](#sub-cpu-payload-192kb) | 192KB | `subcpu/kn5000_subprogram_v142.s` | 3 | Audio engine — tone generation, voice management, DSP |
 | [Sub CPU Boot](#sub-cpu-boot-128kb) | 128KB | `subcpu/boot/kn5000_subcpu_boot.s` | 0 | Sub CPU bootstrap and payload decompression |
 | [HDAE5000](#hdae5000-extension-512kb) | 512KB | `hdae5000/hd-ae5000_v2_06i.s` | 5 | Hard disk expansion — IDE/ATA driver, FAT16, file manager UI |
@@ -23,7 +23,7 @@ This page describes every source file in the [disassembly repository](https://gi
 
 ## Main CPU (2MB)
 
-The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **110 include files** organized into **14 subdirectories** by subsystem.
+The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **143 include files** organized into **15 subdirectories** by subsystem.
 
 ### Directory Structure
 
@@ -36,7 +36,7 @@ maincpu/
   boot/       (3 files)      # System startup, interrupt handlers, init
   ui/         (13 files)     # UI framework, widgets, drawing, panels
   display/    (3 files)      # VGA graphics, text rendering, scoop editor
-  audio/      (12 files)     # Audio control, sound editor, DSP config
+  audio/      (27 files)     # Audio control, sound editor, DSP config, sound data
   midi/       (9 files)      # MIDI serial, dispatch, SysEx, computer I/F
   sequencer/  (14 files)     # Sequencer, SMF, accompaniment, rhythm
   storage/    (2 files)      # Flash memory, floppy disk controller
@@ -44,6 +44,7 @@ maincpu/
   ui_widgets/    (27 files)  # UI screen layout descriptors (codename: NAKA)
   file_io/       (9 files)   # Disk file operations
   factory_test/  (4 files)   # Factory diagnostics (codename: HAMA)
+  includes/      (18 files)  # Style UI parameter blocks, screen data, GUI strings
   extensions/    (2 files)   # Extension device support (codename: TOSHI)
 ```
 
@@ -115,6 +116,21 @@ maincpu/
 | `audio/tonegen_fileio_handlers.s` | 1,071 | Tone generator config initialization, DSP config entry setup, FileIO callback handlers |
 | `audio/sndparam_routines.s` | 2,042 | Sound parameter probe, match, and heap allocation |
 | `audio/note_voice_mapping.s` | 26,105 | Note-on processing, voice allocation/stealing, NoteMap (91 functions), sequence playback, MIDI output, sound parameters, utility routines |
+| `audio/sound_data_piano.s` | 2,188 | Piano sound data: 128-byte header + 2048 tone mapping pairs |
+| `audio/sound_data_strings_vocal.s` | 2,188 | Strings/vocal sound data: 128-byte header + 2048 tone mapping pairs |
+| `audio/sound_data_mallet_orch_perc.s` | 461 | Mallet/orchestral percussion sound data |
+| `audio/sound_data_flute_extra.s` | 305 | Extended flute sound data |
+| `audio/sound_data_flute.s` | 162 | Flute sound data |
+| `audio/sound_data_guitar.s` | 95 | Guitar sound data |
+| `audio/sound_data_sax_reed.s` | 95 | Saxophone/reed sound data |
+| `audio/tonegen_param_table.s` | 92 | Tone generator parameter lookup table |
+| `audio/sound_data_synth.s` | 20 | Synth sound data |
+| `audio/sound_data_drum_kits.s` | 18 | Drum kit sound data |
+| `audio/sound_data_orchestral_pad.s` | 12 | Orchestral pad sound data |
+| `audio/sound_data_accordion_reg.s` | 6 | Accordion/register sound data |
+| `audio/sound_data_bass.s` | 6 | Bass sound data |
+| `audio/sound_data_digital_drawbar.s` | 6 | Digital drawbar sound data |
+| `audio/sound_data_gm_special.s` | 6 | GM special sound data |
 
 ### `midi/` — MIDI Processing & Computer Interface
 
@@ -212,6 +228,31 @@ The "NAKA" widget format defines UI screen layouts as hierarchical widget trees.
 | `ui_widgets/ed3cc0_ed665a.s` | 1,940 | Extension-region widget data |
 | `ui_widgets/ed803c_eda02c.s` | 2,727 | Extension-region widget data |
 | `ui_widgets/eee718_eef588.s` | 1,015 | Final widget block before boot code |
+
+### `includes/` — Style UI Parameter Blocks & Screen Data
+
+Data files for the style UI subsystem: parameter block definitions for different style editing modes, screen layout data, GUI display structures, and format strings.
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `includes/gui_display_struct_data.s` | 328 | GUI display structure data tables |
+| `includes/style_ui_screendata_main.s` | 226 | Main style UI screen layout data |
+| `includes/gui_format_strings.s` | 49 | GUI number/text format strings |
+| `includes/style_ui_screendata_ctlonly.s` | 40 | Control-only style screen data |
+| `includes/style_ui_paramblock_bal.s` | 20 | Style balance parameter block |
+| `includes/style_ui_screendata_yesctl.s` | 19 | Yes/control style screen data |
+| `includes/style_ui_screendata_meascursor.s` | 16 | Measure cursor screen data |
+| `includes/style_ui_paramblock_medium.s` | 16 | Medium-size parameter block |
+| `includes/style_ui_paramblock_extended.s` | 16 | Extended parameter block |
+| `includes/style_ui_paramblock_meas.s` | 14 | Measure parameter block |
+| `includes/style_ui_paramblock_common.s` | 14 | Common parameter block |
+| `includes/style_ui_paramblock_alte.s` | 12 | Alt-E parameter block variant |
+| `includes/style_ui_paramblock_altc.s` | 11 | Alt-C parameter block variant |
+| `includes/style_ui_paramblock_altd.s` | 9 | Alt-D parameter block variant |
+| `includes/style_ui_paramblock_alta.s` | 7 | Alt-A parameter block variant |
+| `includes/style_ui_paramblock_altb.s` | 7 | Alt-B parameter block variant |
+| `includes/style_ui_paramblock_short.s` | 7 | Short parameter block |
+| `includes/style_ui_paramblock_value.s` | 7 | Value parameter block |
 
 ### `extensions/` — Extension Device Support (codename: TOSHI)
 
