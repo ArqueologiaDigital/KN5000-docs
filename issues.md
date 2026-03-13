@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 294 (6 open, 284 closed)
+**Total Issues:** 302 (14 open, 284 closed)
 
 **Quick Links:** 
-[Other](#other) (6)
+[Other](#other) (14)
 
 ---
 
@@ -89,6 +89,22 @@ Three parallel efforts to resolve blockers:
 
 ---
 
+#### 🟠 MAME: Build and test TMP94C241 16-bit timer interrupt fix {#issue-kn5000-jyo7}
+
+**ID:** `kn5000-jyo7` | **Priority:** High | **Created:** 2026-03-10
+
+Issue kn5000-y7t5 session 2 found two bugs in tmp94c241.cpp timer_16bits lambda: (1) TREG_HIGH match sets 0x08 (INTTR4) instead of 0x80 (INTTR5), (2) T4FFCR flip-flop control gates entire match instead of just flip-flop. Fix was implemented but never built or tested. Research log published at feature-demo-timer-bug-2026-03-09. Need to: build MAME with fix, run Feature Demo sequence, verify timer behavior improves. May also fix other timing-dependent firmware behavior beyond Feature Demo.
+
+---
+
+#### 🟠 MAME: Complete FDC address mapping at 0x110000-0x12FFFF {#issue-kn5000-umft}
+
+**ID:** `kn5000-umft` | **Priority:** High | **Created:** 2026-03-10
+
+The UPD72067 FDC device is instantiated and interrupt routing (INT4/INT5) is wired, but the actual address mapping at 0x110000-0x11FFFF (FDC registers) and 0x120000-0x12FFFF (DMA ACK) is commented out with FIXME. Also PORT D bit 6 (FD.I/O input) is marked TODO. Uncommenting and completing this mapping should enable floppy disk read/write operations. This is the last gap preventing Phase 2 closure (kn5000-dnl). Test with kn5000_v10_disk.mfi image already available.
+
+---
+
 #### 🟠 Phase 2 Completion: Core functionality working {#issue-kn5000-dnl}
 
 **ID:** `kn5000-dnl` | **Priority:** High | **Created:** 2026-01-31
@@ -126,11 +142,59 @@ THE single biggest blocker across the project. Waveform ROMs IC304-IC306 (1.2MB 
 
 ---
 
+#### 🟡 Decode style_ui_screendata_main.s bytecode format {#issue-kn5000-hkeq}
+
+**ID:** `kn5000-hkeq` | **Priority:** Medium | **Created:** 2026-03-13
+
+Annotate the 3531-byte ScreenData bytecode blob for the Style UI main screen. Identify command boundaries, widget structures, chord name tables, and grid layout. Key discovery: op=0x02 uses sub-type byte (not length).
+
+---
+
+#### 🟡 MAME: Implement MIDI output (TX0) {#issue-kn5000-9qt3}
+
+**ID:** `kn5000-9qt3` | **Priority:** Medium | **Created:** 2026-03-10
+
+Currently only MIDI RX0 is connected in the MAME driver. TX0 (MIDI output) is marked TODO at line 834 of kn5000.cpp. The KN5000 can output MIDI from its sequencer, accompaniment engine, and keyboard. Implementing MIDI output would make the emulator useful as a virtual MIDI instrument. Need to: (1) wire TX0 serial output to a midi_port device, (2) configure baud rate (31250 standard MIDI), (3) test with a MIDI monitor to verify note output from keybed.
+
+---
+
+#### 🟡 MAME: Update PR #14558 with accumulated driver fixes {#issue-kn5000-f8gw}
+
+**ID:** `kn5000-f8gw` | **Priority:** Medium | **Created:** 2026-03-10
+
+The MAME upstream PR #14558 was opened with an earlier version of the driver. Since then, many significant fixes have been committed locally: INT0 level-triggered starvation fix, PORT Z MSTAT readback fix, tone generator hold timer, SNS NMI emulation, HDAE5000 IDE/ATA wiring, FDC device instantiation, control panel HLE improvements, DSP device stubs, and more. Need to: (1) rebase kn5000_pr branch onto current MAME master, (2) cherry-pick/squash all relevant fixes, (3) ensure MAME code style compliance (BIT() macros, logmacro.h, no AI attribution), (4) update PR description with current feature list, (5) address any reviewer feedback.
+
+---
+
 #### 🟡 TMP94C241: Internal RAM range 0xC00-0xFFF missing from address map {#issue-kn5000-rqtw}
 
 **ID:** `kn5000-rqtw` | **Priority:** Medium | **Created:** 2026-03-09
 
 The TMP94C241 datasheet says internal RAM is 2KB at 0x800-0xFFF. MAME currently maps 0x400-0xBFF as RAM, missing 0xC00-0xFFF. Extending to 0xFFF breaks KN5000 demo timer (0x0D2F) because the KN5000 driver maps external DRAM at 0x000000-0x0FFFFF overlapping internal RAM. Adding internal RAM at 0xC00-0xFFF shadows the DRAM, causing the timer to get stuck. Needs investigation: (1) Are other MAME drivers affected? (2) Should KN5000 driver start DRAM at 0x1000? (3) Do DMA transfers access internal RAM or external bus?
+
+---
+
+#### ⚪ Disassembly: Semantic analysis of NAKA obfuscated code blocks {#issue-kn5000-iueh}
+
+**ID:** `kn5000-iueh` | **Priority:** Low | **Created:** 2026-03-10
+
+18 NAKA files in maincpu/ contain ~41,000 lines with ~9,109 LABEL_XXXXXX placeholder names. These are deliberately obfuscated code blocks (likely style/rhythm/accompaniment-related proprietary algorithms). Semantic analysis would: (1) identify callers from dispatch tables, (2) trace register usage and memory access patterns, (3) cross-reference with known subsystems (sequencer, tone gen, accompaniment engine), (4) assign meaningful labels. This is the largest remaining chunk of unanalyzed code. Start with smaller NAKA files (86-683 lines) before tackling the large ones (5,000-8,000 lines).
+
+---
+
+#### ⚪ LLVM: Add R+d16 addressing mode for TLCS-900 backend {#issue-kn5000-psio}
+
+**ID:** `kn5000-psio` | **Priority:** Low | **Created:** 2026-03-10
+
+The LLVM TLCS-900 backend lacks support for register+16-bit-displacement addressing mode (R+d16, C3 prefix encoding). This prevents ~970 .byte instructions in HDAE5000 from being converted to native mnemonics. Also blocks ~470 16-bit direct addressing and ~210 8-bit direct addressing conversions. The load direction (ld A, (R+d16)) is known broken ('displacement too large' error) while the store direction (ld (R+d16), A) works via F3 prefix. Need to fix the C3 prefix load encoding and add the missing addressing mode patterns.
+
+---
+
+#### ⚪ MAME: Implement VRAM A18 banking (VGA display modes) {#issue-kn5000-0vuo}
+
+**ID:** `kn5000-0vuo` | **Priority:** Low | **Created:** 2026-03-10
+
+The VGA.A18 signal from the main CPU through a T7W139F decoder is not emulated (marked TODO at line 927 of kn5000.cpp). This controls VRAM bank selection, potentially affecting full-screen graphics, palette switching, and extended display modes. The display currently works for the main UI but some rendering modes (e.g., Feature Demo FTBMP bitmaps, full-screen splash screens) may depend on correct A18 banking. Need to: (1) trace the T7W139F decoder logic from the service manual schematic, (2) identify which firmware writes control the banking, (3) implement the bank switching in the VGA read/write handlers.
 
 ---
 
@@ -218,16 +282,16 @@ Production-ready emulation and homebrew support.
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 2 |
-| Medium | 1 |
-| Low | 2 |
+| High | 4 |
+| Medium | 4 |
+| Low | 5 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 6 |
+| Other | 14 |
 
 ---
 
-*Last updated: 2026-03-10 18:12*
+*Last updated: 2026-03-13 19:15*
