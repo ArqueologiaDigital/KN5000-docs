@@ -72,6 +72,7 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 | [SubCPU Payload Loading]({{ site.baseurl }}/subcpu-payload-loading/) | LZSS decompression, E1 bulk transfer, DMA investigation |
 | [Sub CPU Payload Transfer]({{ site.baseurl }}/boot-sequence/#subcpu_send_payload-details) | 192KB firmware loading mechanism |
 | [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) | Disassembly progress |
+| [Source Code Map]({{ site.baseurl }}/source-map/) | Guide to every source file in the disassembly |
 | [FDC Subsystem]({{ site.baseurl }}/fdc-subsystem/) | Floppy disk handlers |
 | [Feature Demo & Presentation System]({{ site.baseurl }}/feature-demo/) | SSF XML scripting, demo assets, planned-but-unshipped floppy loading |
 | [Floppy Security Analysis]({{ site.baseurl }}/floppy-security-analysis/) | Code injection vectors via crafted update discs |
