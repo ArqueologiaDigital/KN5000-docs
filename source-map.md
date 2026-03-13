@@ -12,7 +12,7 @@ This page describes every source file in the [disassembly repository](https://gi
 
 | ROM | Size | Top-level Source | Include Files | Purpose |
 |-----|------|-----------------|---------------|---------|
-| [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 94 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
+| [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 97 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
 | [Sub CPU Payload](#sub-cpu-payload-192kb) | 192KB | `subcpu/kn5000_subprogram_v142.s` | 3 | Audio engine — tone generation, voice management, DSP |
 | [Sub CPU Boot](#sub-cpu-boot-128kb) | 128KB | `subcpu/boot/kn5000_subcpu_boot.s` | 0 | Sub CPU bootstrap and payload decompression |
 | [HDAE5000](#hdae5000-extension-512kb) | 512KB | `hdae5000/hd-ae5000_v2_06i.s` | 5 | Hard disk expansion — IDE/ATA driver, FAT16, file manager UI |
@@ -23,7 +23,7 @@ This page describes every source file in the [disassembly repository](https://gi
 
 ## Main CPU (2MB)
 
-The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **94 include files** organized into **14 subdirectories** by subsystem.
+The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **97 include files** organized into **14 subdirectories** by subsystem.
 
 ### Directory Structure
 
@@ -34,11 +34,11 @@ maincpu/
   msp_factory_defaults.s     # MSP factory default data
   shared/     (9 files)      # Cross-ROM shared: macros, SFR, VGA, boot
   boot/       (3 files)      # System startup, interrupt handlers, init
-  ui/         (12 files)     # UI framework, widgets, drawing, panels
+  ui/         (13 files)     # UI framework, widgets, drawing, panels
   display/    (2 files)      # VGA graphics, text rendering
   audio/      (10 files)     # Audio control, sound editor, DSP config
   midi/       (7 files)      # MIDI serial, dispatch, SysEx, computer I/F
-  sequencer/  (11 files)     # Sequencer, SMF, accompaniment, rhythm
+  sequencer/  (13 files)     # Sequencer, SMF, accompaniment, rhythm
   storage/    (2 files)      # Flash memory, floppy disk controller
   demo/          (3 files)   # Feature demo mode
   ui_widgets/    (21 files)  # UI screen layout descriptors (codename: NAKA)
@@ -96,6 +96,7 @@ maincpu/
 | `ui/setwall_routines.s` | 1,940 | Wallpaper loading and wall display update routines |
 | `ui/cpanel_routines.s` | 1,559 | Control panel hardware: serial RX/TX processing, button polling, LED control |
 | `ui/password_slot_routines.s` | 38 | Password slot management stubs |
+| `ui/ui_playback_modes.s` | 3,042 | UI state event handling and playback mode control: voice parameter handlers, sequencer timer/tempo, part validation, play/song/medley mode dispatch |
 
 ### `audio/` — Sound & Audio Control
 
@@ -134,6 +135,8 @@ maincpu/
 | `sequencer/smf_event_processor.s` | 8,247 | SMF (Standard MIDI File) event processing, tone generation dispatch, voice channel management |
 | `sequencer/smf_config_routines.s` | 3,263 | SMF configuration and parameter setup |
 | `sequencer/smf_playback.s` | 708 | SMF playback control entry points |
+| `sequencer/smf_tonegen_core.s` | 5,194 | Sequencer-driven tone generation: floppy I/O integration, SMF track event parsing, voice channel management, tone generator block writes, voice synthesis dispatch |
+| `sequencer/seq_event_playback.s` | 4,220 | Sequencer event buffer processing, voice slot scanning, note/channel decoding, accompaniment playback loop, tempo event dispatch, MIDI sustain, ring buffer management |
 | `sequencer/accompaniment_engine.s` | 32,617 | Rhythm dispatch, accompaniment voice selection, timing, patches, drum configuration, style conversion |
 | `sequencer/accompseq_routines.s` | 1,961 | Accompaniment sequencer periodic processing |
 | `sequencer/rhythm_routines.s` | 1,580 | Rhythm pattern comparison, trigger, and transposition |
