@@ -12,7 +12,7 @@ This page describes every source file in the [disassembly repository](https://gi
 
 | ROM | Size | Top-level Source | Include Files | Purpose |
 |-----|------|-----------------|---------------|---------|
-| [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 106 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
+| [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 110 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
 | [Sub CPU Payload](#sub-cpu-payload-192kb) | 192KB | `subcpu/kn5000_subprogram_v142.s` | 3 | Audio engine — tone generation, voice management, DSP |
 | [Sub CPU Boot](#sub-cpu-boot-128kb) | 128KB | `subcpu/boot/kn5000_subcpu_boot.s` | 0 | Sub CPU bootstrap and payload decompression |
 | [HDAE5000](#hdae5000-extension-512kb) | 512KB | `hdae5000/hd-ae5000_v2_06i.s` | 5 | Hard disk expansion — IDE/ATA driver, FAT16, file manager UI |
@@ -23,7 +23,7 @@ This page describes every source file in the [disassembly repository](https://gi
 
 ## Main CPU (2MB)
 
-The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **106 include files** organized into **14 subdirectories** by subsystem.
+The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **110 include files** organized into **14 subdirectories** by subsystem.
 
 ### Directory Structure
 
@@ -35,13 +35,13 @@ maincpu/
   shared/     (9 files)      # Cross-ROM shared: macros, SFR, VGA, boot
   boot/       (3 files)      # System startup, interrupt handlers, init
   ui/         (13 files)     # UI framework, widgets, drawing, panels
-  display/    (2 files)      # VGA graphics, text rendering
+  display/    (3 files)      # VGA graphics, text rendering, scoop editor
   audio/      (12 files)     # Audio control, sound editor, DSP config
   midi/       (9 files)      # MIDI serial, dispatch, SysEx, computer I/F
   sequencer/  (14 files)     # Sequencer, SMF, accompaniment, rhythm
   storage/    (2 files)      # Flash memory, floppy disk controller
-  demo/          (3 files)   # Feature demo mode
-  ui_widgets/    (25 files)  # UI screen layout descriptors (codename: NAKA)
+  demo/          (4 files)   # Feature demo mode
+  ui_widgets/    (27 files)  # UI screen layout descriptors (codename: NAKA)
   file_io/       (9 files)   # Disk file operations
   factory_test/  (4 files)   # Factory diagnostics (codename: HAMA)
   extensions/    (2 files)   # Extension device support (codename: TOSHI)
@@ -79,6 +79,7 @@ maincpu/
 |------|-------|-------------|
 | `display/scoop_display.s` | 10,370 | Display dirty-region tracking, performance mode parameter handlers, scoop (oscilloscope) editor UI |
 | `display/graphics_text_vga.s` | 4,211 | VGA palette initialization, text rendering, string layout, VRAM operations |
+| `display/scoop_editor_data.s` | 1,177 | Sound editor display data, performance mode parameter bytecode, scoop config tables |
 
 ### `ui/` — UI Framework & Widgets
 
@@ -162,6 +163,7 @@ maincpu/
 | `demo/demo_routines.s` | 294 | Demo mode entry and control |
 | `demo/fdemotext_routines.s` | 2,334 | Feature demo text processing: voice probing, flag processing, output formatting |
 | `demo/file_demo_proc.s` | 8,359 | File demo procedures and title handlers |
+| `demo/demo_seq_bridge.s` | 1,060 | MiddleFuncCall dispatcher, SqTrSel (sequencer track select), demo-sequencer bridge |
 
 ### `file_io/` — Disk File Operations
 
@@ -189,6 +191,8 @@ The "NAKA" widget format defines UI screen layouts as hierarchical widget trees.
 | `ui_widgets/technichord_string_data.s` | 3,658 | TechniChord style dispatch tables, style names, dialog text, multilingual UI strings |
 | `ui_widgets/disk_warning_strings.s` | 2,344 | Multilingual disk format/delete/operation warning messages (EN/ES/DE/FR/ID/IT) |
 | `ui_widgets/widget_names_charmap.s` | 2,396 | Widget type name strings, character encoding/mapping tables, NAKA presentation state |
+| `ui_widgets/naka_widget_tables_1.s` | 1,909 | Widget pointer tables: SmfDp, DocDp, PdDp, KssDp, DrumDp screen groups |
+| `ui_widgets/naka_widget_tables_2.s` | 1,668 | Widget data tables: CtlMsgGridBox, MidiControlMessage, additional NAKA types |
 | `ui_widgets/style_bitmaps.s` | 5,910 | Style selection bitmap resources |
 | `ui_widgets/e0e974_e15b20.s` | 6,116 | Feature Demo screens, style category menus, accompaniment UI |
 | `ui_widgets/e176e4_e1a704.s` | 2,745 | Style presentation and performance UI |
