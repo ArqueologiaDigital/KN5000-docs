@@ -40,11 +40,11 @@ maincpu/
   midi/       (7 files)      # MIDI serial, dispatch, SysEx, computer I/F
   sequencer/  (11 files)     # Sequencer, SMF, accompaniment, rhythm
   storage/    (2 files)      # Flash memory, floppy disk controller
-  demo/       (3 files)      # Feature demo mode
-  naka/       (21 files)     # UI screen layout descriptors (NAKA format)
-  file_io/    (9 files)      # Disk file operations
-  hama/       (4 files)      # Developer factory test code
-  toshi/      (2 files)      # Extension device support
+  demo/          (3 files)   # Feature demo mode
+  ui_widgets/    (21 files)  # UI screen layout descriptors (codename: NAKA)
+  file_io/       (9 files)   # Disk file operations
+  factory_test/  (4 files)   # Factory diagnostics (codename: HAMA)
+  extensions/    (2 files)   # Extension device support (codename: TOSHI)
 ```
 
 ### Constants & Macros
@@ -169,49 +169,53 @@ maincpu/
 | `file_io/misc_ui.s` | 969 | Miscellaneous file I/O UI (jump insert, file priority, setup) |
 | `file_io/title_handlers.s` | 349 | File title display handlers |
 
-### `naka/` — UI Screen Layout Descriptors
+### `ui_widgets/` — UI Screen Layout Descriptors (codename: NAKA)
 
-The NAKA format defines UI screen layouts as hierarchical widget trees. These files contain the screen definitions for nearly every UI mode.
-
-| File | Lines | Description |
-|------|-------|-------------|
-| `naka/naka_descriptors.s` | 9,325 | UI element type definitions and descriptor tables |
-| `naka/naka_dispatch.s` | 9,751 | NAKA event dispatch: string pointer tables, screen routing |
-| `naka/naka_style_bitmap.s` | 5,910 | Style selection bitmap resources |
-| `naka/naka_e0e974_e15b20.s` | 6,116 | Feature Demo screens, style category menus, accompaniment UI |
-| `naka/naka_e176e4_e1a704.s` | 2,745 | Style presentation and performance UI |
-| `naka/naka_e1ab58_e1b7d2.s` | 683 | Mixed NAKA data and strings |
-| `naka/naka_e2107c_e24034.s` | 2,694 | Rhythm variation selection, song/sequencer parameter screens |
-| `naka/naka_e27408_e27556.s` | 151 | Equalizer and effect parameter UI |
-| `naka/naka_e27fa4_e30932.s` | 8,274 | Accompaniment memory/PCG output grids, MIDI controller UI |
-| `naka/naka_e55e38_e5a38e.s` | 2,910 | MIDI controller messages, accompaniment input grid |
-| `naka/naka_e812e8_e818e6.s` | 286 | Menu item pagination UI |
-| `naka/naka_e81cce_e85f46.s` | 3,708 | Tech Chord dispatch, chord/transpose UI |
-| `naka/naka_ea13cc_ea8c9e.s` | 5,503 | Disk format dialogs (multi-language), Tech Chord configuration |
-| `naka/naka_block_012.s` | 552 | User bitmap viewer, track chord UI, language text, integration setup |
-| `naka/naka_eb2afe_eb71be.s` | 1,247 | Style bitmap and dispatch table wrapper |
-| `naka/naka_block_007.s` | 86 | Additional NAKA block |
-| `naka/naka_ed2a9c_ed2b96.s` | 189 | Toshi-region NAKA descriptor |
-| `naka/naka_ed333c_ed35e4.s` | 182 | Toshi-region NAKA descriptor |
-| `naka/naka_ed3cc0_ed665a.s` | 1,940 | Toshi-region NAKA data |
-| `naka/naka_ed803c_eda02c.s` | 2,727 | Toshi-region NAKA data |
-| `naka/naka_eee718_eef588.s` | 1,015 | Final NAKA block before boot code |
-
-### `toshi/` — Extension Device Support
+The "NAKA" widget format defines UI screen layouts as hierarchical widget trees. These files contain the screen definitions for nearly every UI mode. "NAKA" is a Matsushita/Technics developer codename; all original symbol names (`InitializeNaka`, `NAKA_TYPE_*`, etc.) are preserved in the code.
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `toshi/toshi_code.s` | 107 | Extension slot driver framework: device registration and initialization |
-| `toshi/toshi_data.s` | 6,708 | Extension device data tables and NAKA descriptors |
+| `ui_widgets/widget_descriptors.s` | 9,325 | Widget type definitions and descriptor tables |
+| `ui_widgets/widget_dispatch.s` | 9,751 | Widget event dispatch: string pointer tables, screen routing |
+| `ui_widgets/style_bitmaps.s` | 5,910 | Style selection bitmap resources |
+| `ui_widgets/e0e974_e15b20.s` | 6,116 | Feature Demo screens, style category menus, accompaniment UI |
+| `ui_widgets/e176e4_e1a704.s` | 2,745 | Style presentation and performance UI |
+| `ui_widgets/e1ab58_e1b7d2.s` | 683 | Mixed widget data and strings |
+| `ui_widgets/e2107c_e24034.s` | 2,694 | Rhythm variation selection, song/sequencer parameter screens |
+| `ui_widgets/e27408_e27556.s` | 151 | Equalizer and effect parameter UI |
+| `ui_widgets/e27fa4_e30932.s` | 8,274 | Accompaniment memory/PCG output grids, MIDI controller UI |
+| `ui_widgets/e55e38_e5a38e.s` | 2,910 | MIDI controller messages, accompaniment input grid |
+| `ui_widgets/e812e8_e818e6.s` | 286 | Menu item pagination UI |
+| `ui_widgets/e81cce_e85f46.s` | 3,708 | Tech Chord dispatch, chord/transpose UI |
+| `ui_widgets/ea13cc_ea8c9e.s` | 5,503 | Disk format dialogs (multi-language), Tech Chord configuration |
+| `ui_widgets/block_012.s` | 552 | User bitmap viewer, track chord UI, language text, integration setup |
+| `ui_widgets/eb2afe_eb71be.s` | 1,247 | Style bitmap and dispatch table wrapper |
+| `ui_widgets/block_007.s` | 86 | Additional widget block |
+| `ui_widgets/ed2a9c_ed2b96.s` | 189 | Extension-region widget descriptor |
+| `ui_widgets/ed333c_ed35e4.s` | 182 | Extension-region widget descriptor |
+| `ui_widgets/ed3cc0_ed665a.s` | 1,940 | Extension-region widget data |
+| `ui_widgets/ed803c_eda02c.s` | 2,727 | Extension-region widget data |
+| `ui_widgets/eee718_eef588.s` | 1,015 | Final widget block before boot code |
 
-### `hama/` — Developer Factory Test Code
+### `extensions/` — Extension Device Support (codename: TOSHI)
+
+Registers expansion slot devices (such as the HD-AE5000 hard disk board) with the main firmware. "TOSHI" is a Matsushita/Technics developer codename; original symbols (`InitializeToshi`, etc.) are preserved.
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `hama/hama_code.s` | 503 | Hama developer test code (includes floppy disk test) |
-| `hama/hama_data.s` | 252 | Hama test configuration data |
-| `hama/fd_test_code.s` | 372 | Floppy disk test execution routines |
-| `hama/fd_test_data.s` | 418 | Floppy disk test parameters |
+| `extensions/extension_init.s` | 107 | Extension slot driver framework: device registration and initialization |
+| `extensions/extension_data.s` | 6,708 | Extension device data tables and widget descriptors |
+
+### `factory_test/` — Factory Diagnostic Tests (codename: HAMA)
+
+Factory diagnostic test modes for hardware validation during manufacturing, including floppy disk and hard disk extension tests. "HAMA" is a Matsushita/Technics developer codename; original symbols (`InitializeHama`, `RegObjTableHama`, etc.) are preserved.
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `factory_test/test_init.s` | 503 | Test mode registration and macro definitions |
+| `factory_test/test_data.s` | 252 | Test UI configuration data |
+| `factory_test/fd_test_code.s` | 372 | Floppy disk test execution routines |
+| `factory_test/fd_test_data.s` | 418 | Floppy disk test parameters and dialog data |
 
 ### Factory Defaults
 
