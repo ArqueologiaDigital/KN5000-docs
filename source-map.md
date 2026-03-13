@@ -23,7 +23,29 @@ This page describes every source file in the [disassembly repository](https://gi
 
 ## Main CPU (2MB)
 
-The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **94 include files** organized by subsystem.
+The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **94 include files** organized into **14 subdirectories** by subsystem.
+
+### Directory Structure
+
+```
+maincpu/
+  kn5000_v10_program.s       # Top-level file (ROM layout & inline data)
+  *_constants.s (4 files)    # Subsystem constant definitions
+  msp_factory_defaults.s     # MSP factory default data
+  shared/     (9 files)      # Cross-ROM shared: macros, SFR, VGA, boot
+  boot/       (3 files)      # System startup, interrupt handlers, init
+  ui/         (12 files)     # UI framework, widgets, drawing, panels
+  display/    (2 files)      # VGA graphics, text rendering
+  audio/      (10 files)     # Audio control, sound editor, DSP config
+  midi/       (7 files)      # MIDI serial, dispatch, SysEx, computer I/F
+  sequencer/  (11 files)     # Sequencer, SMF, accompaniment, rhythm
+  storage/    (2 files)      # Flash memory, floppy disk controller
+  demo/       (3 files)      # Feature demo mode
+  naka/       (21 files)     # UI screen layout descriptors (NAKA format)
+  file_io/    (9 files)      # Disk file operations
+  hama/       (4 files)      # Developer factory test code
+  toshi/      (2 files)      # Extension device support
+```
 
 ### Constants & Macros
 
@@ -38,89 +60,105 @@ The main CPU ROM contains the entire user-facing firmware: the UI framework, dis
 | `cpanel_constants.s` | 197 | Control panel button/LED segment constants |
 | `midi_encoder_constants.s` | 91 | MIDI encoding format constants |
 
-### Boot & System Initialization
+### `boot/` — System Startup & Core Handlers
 
 | File | Lines | Description |
 |------|-------|-------------|
 | `shared/boot_hw_init.s` | 139 | Hardware register initialization (shared with Table Data ROM) |
 | `shared/boot_routines.s` | 87 | Region detection and boot helper routines |
 | `shared/boot_call_init_handlers.s` | 85 | Walk initialization handler table at boot |
-| `system_handlers.s` | 8,251 | Interrupt handlers (NMI, timers), UI state machine, task scheduler, flash memory update, LZSS decompression |
+| `boot/system_handlers.s` | 8,251 | Interrupt handlers (NMI, timers), UI state machine, task scheduler, flash memory update, LZSS decompression |
+| `boot/main_title_ctrl_panel.s` | 611 | System initialization (graphics, events, timers, LCD), main title UI event loop |
+| `boot/screen_group_dispatch.s` | 264 | Boot screen group dispatcher (startup screens, error dialogs) |
 | `shared/vga_init.s` | 434 | VGA controller initialization sequence |
 | `shared/vga_io.s` | 51 | VGA register read/write primitives |
 
-### Display & Graphics
+### `display/` — VGA Graphics & Text Rendering
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `scoop_display.s` | 10,370 | Display dirty-region tracking, performance mode parameter handlers, scoop (oscilloscope) editor UI |
-| `graphics_text_vga.s` | 4,211 | VGA palette initialization, text rendering, string layout, VRAM operations |
-| `bitmap_out_routines.s` | 4,347 | Bitmap blitting and palette loading for VGA display |
-| `drawing_primitives.s` | 4,567 | Line drawing (Bresenham), rectangle fill, reverse string rendering |
-| `screen_group_dispatch.s` | 264 | Boot screen group dispatcher (startup screens, error dialogs) |
+| `display/scoop_display.s` | 10,370 | Display dirty-region tracking, performance mode parameter handlers, scoop (oscilloscope) editor UI |
+| `display/graphics_text_vga.s` | 4,211 | VGA palette initialization, text rendering, string layout, VRAM operations |
 
-### UI Framework
+### `ui/` — UI Framework & Widgets
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `ui_widget_defs.s` | 19,640 | Grid box, exit window, title/resource widgets, event dispatch loops, object enumeration |
-| `ui_window_procs.s` | 8,046 | Window procedure handlers: ModeEdit, TitleEdit, StringBox, Label, Bitmap, Icon, Line, Frame, EditSw, TextBox, VwBox, ListBox, RadioBox, TempoBox, GridBox |
-| `ui_control_panel.s` | 4,086 | Control panel key dispatch, UI task control, slider/scrollbar handlers, GroupBoxProc container widget |
-| `ui_mode_handlers.s` | 12,927 | UI mode handlers for Pmem (parametric), bank editor, filter grid, RVari (variable screen), effect modes |
-| `main_title_ctrl_panel.s` | 611 | System initialization (graphics, events, timers, LCD), main title UI event loop |
-| `psgridbox_routines.s` | 1,138 | PS Grid Box widget initialization and event handling |
-| `rvari_routines.s` | 2,752 | RVari (variable selection) screen renderer and interaction handlers |
-| `setwall_routines.s` | 1,940 | Wallpaper loading and wall display update routines |
+| `ui/ui_widget_defs.s` | 19,640 | Grid box, exit window, title/resource widgets, event dispatch loops, object enumeration |
+| `ui/ui_window_procs.s` | 8,046 | Window procedure handlers: ModeEdit, TitleEdit, StringBox, Label, Bitmap, Icon, Line, Frame, EditSw, TextBox, VwBox, ListBox, RadioBox, TempoBox, GridBox |
+| `ui/ui_control_panel.s` | 4,086 | Control panel key dispatch, UI task control, slider/scrollbar handlers, GroupBoxProc container widget |
+| `ui/ui_mode_handlers.s` | 12,927 | UI mode handlers for Pmem (parametric), bank editor, filter grid, RVari (variable screen), effect modes |
+| `ui/drawbar_panel_ui.s` | 15,581 | Drawbar organ slider UI, DSP effect controls, presentation system, demo menu |
+| `ui/bitmap_out_routines.s` | 4,347 | Bitmap blitting and palette loading for VGA display |
+| `ui/drawing_primitives.s` | 4,567 | Line drawing (Bresenham), rectangle fill, reverse string rendering |
+| `ui/psgridbox_routines.s` | 1,138 | PS Grid Box widget initialization and event handling |
+| `ui/rvari_routines.s` | 2,752 | RVari (variable selection) screen renderer and interaction handlers |
+| `ui/setwall_routines.s` | 1,940 | Wallpaper loading and wall display update routines |
+| `ui/cpanel_routines.s` | 1,559 | Control panel hardware: serial RX/TX processing, button polling, LED control |
+| `ui/password_slot_routines.s` | 38 | Password slot management stubs |
 
-### Sound & Audio Control
-
-| File | Lines | Description |
-|------|-------|-------------|
-| `sound_navigation.s` | 495 | Sound bank browsing: MainGetSoundName, Sound_Navigate_*, MainGetRhythmName, MainGetPmemName |
-| `sound_editor_ui.s` | 11,946 | Sound editor UI: patch/bank selection, parameter editing, drum kit editor |
-| `sound_editor_routines.s` | 629 | Sound editor helper routines |
-| `semenu_routines.s` | 3,431 | Sound editor menu (SeMenu) event handling and navigation |
-| `sndparam_routines.s` | 2,042 | Sound parameter probe, match, and heap allocation |
-| `audio_control_engine.s` | 8,377 | MIDI stream processing, control panel LED management, voice/tone control, sound preset dispatch |
-| `audio_cmd_encoder.s` | 3,100 | Audio command encoder — printf-like formatter for SubCPU commands |
-| `audioinit_routines.s` | 2,505 | Audio subsystem initialization, stereo voice configuration |
-| `dsp_config_sysex.s` | 5,626 | DSP effect parameter handlers (reverb, chorus, EQ, compressor), SysEx command processing |
-
-### Sequencer & Accompaniment
+### `audio/` — Sound & Audio Control
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `sequencer_engine.s` | 32,094 | Core sequencer: note editor UI, playback control, voice allocation, application event framework, part/voice data management |
-| `sequencer_ui.s` | 14,372 | Sequencer editing UI, track display, bitmap drum editor |
-| `seq_step_routines.s` | 3,103 | Step recording, note event dispatch, step playback |
-| `smf_event_processor.s` | 8,247 | SMF (Standard MIDI File) event processing, tone generation dispatch, voice channel management |
-| `smf_config_routines.s` | 3,263 | SMF configuration and parameter setup |
-| `smf_playback.s` | 708 | SMF playback control entry points |
-| `accompaniment_engine.s` | 32,617 | Rhythm dispatch, accompaniment voice selection, timing, patches, drum configuration, style conversion |
-| `accompseq_routines.s` | 1,961 | Accompaniment sequencer periodic processing |
-| `rhythm_routines.s` | 1,580 | Rhythm pattern comparison, trigger, and transposition |
-| `msp_factory_defaults.s` | 709 | MSP (Music Style Preset) factory default data |
-| `ssf_gate_states.s` | 1,492 | SSF (Style Synthesis Format) gate state arrays for accompaniment patterns |
+| `audio/audio_control_engine.s` | 8,377 | MIDI stream processing, control panel LED management, voice/tone control, sound preset dispatch |
+| `audio/audio_cmd_encoder.s` | 3,100 | Audio command encoder — printf-like formatter for SubCPU commands |
+| `audio/audioinit_routines.s` | 2,505 | Audio subsystem initialization, stereo voice configuration |
+| `audio/dsp_config_sysex.s` | 5,626 | DSP effect parameter handlers (reverb, chorus, EQ, compressor), SysEx command processing |
+| `audio/sound_editor_ui.s` | 11,946 | Sound editor UI: patch/bank selection, parameter editing, drum kit editor |
+| `audio/sound_editor_routines.s` | 629 | Sound editor helper routines |
+| `audio/semenu_routines.s` | 3,431 | Sound editor menu (SeMenu) event handling and navigation |
+| `audio/sound_navigation.s` | 495 | Sound bank browsing: MainGetSoundName, Sound_Navigate_*, MainGetRhythmName, MainGetPmemName |
+| `audio/sndparam_routines.s` | 2,042 | Sound parameter probe, match, and heap allocation |
+| `audio/note_voice_mapping.s` | 26,105 | Note-on processing, voice allocation/stealing, NoteMap (91 functions), sequence playback, MIDI output, sound parameters, utility routines |
 
-### MIDI Processing
-
-| File | Lines | Description |
-|------|-------|-------------|
-| `midi_dispatch_handlers.s` | 11,505 | MIDI CC handlers (22 types), serial input parsing, file data validation, sound mode handlers, arpeggiator queue |
-| `midi_serial_routines.s` | 995 | MIDI serial communication (SC0): TX/RX handlers, initialization |
-| `midi_encoder_routines.s` | 275 | MIDI encoder timing and output dispatch |
-| `midipkt_routines.s` | 1,178 | MIDI packet extraction, packing, and queue management |
-| `note_voice_mapping.s` | 26,105 | Note-on processing, voice allocation/stealing, NoteMap (91 functions), sequence playback, MIDI output, sound parameters, utility routines |
-| `sysex_routines.s` | 239 | System Exclusive message handling |
-
-### File I/O & Storage
+### `midi/` — MIDI Processing & Computer Interface
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `fdc_routines.s` | 1,503 | Floppy disk controller: register access, sector read/write, disk change detection |
-| `flash_floppy_handlers.s` | 4,695 | Flash memory sector write, floppy disk note event loading, FDC format UI |
-| `file_demo_proc.s` | 8,359 | File demo procedures and title handlers |
-| `password_slot_routines.s` | 38 | Password slot management stubs |
+| `midi/midi_dispatch_handlers.s` | 11,505 | MIDI CC handlers (22 types), serial input parsing, file data validation, sound mode handlers, arpeggiator queue |
+| `midi/midi_serial_routines.s` | 995 | MIDI serial communication (SC0): TX/RX handlers, initialization |
+| `midi/midi_encoder_routines.s` | 275 | MIDI encoder timing and output dispatch |
+| `midi/midipkt_routines.s` | 1,178 | MIDI packet extraction, packing, and queue management |
+| `midi/sysex_routines.s` | 239 | System Exclusive message handling |
+| `midi/computer_interface_config.s` | 310 | MIDI computer interface configuration |
+| `midi/computer_interface_pcg.s` | 704 | Computer interface program change (PCG) handlers |
+
+### `sequencer/` — Sequencer & Accompaniment
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `sequencer/sequencer_engine.s` | 32,094 | Core sequencer: note editor UI, playback control, voice allocation, application event framework, part/voice data management |
+| `sequencer/sequencer_ui.s` | 14,372 | Sequencer editing UI, track display, bitmap drum editor |
+| `sequencer/seq_step_routines.s` | 3,103 | Step recording, note event dispatch, step playback |
+| `sequencer/smf_event_processor.s` | 8,247 | SMF (Standard MIDI File) event processing, tone generation dispatch, voice channel management |
+| `sequencer/smf_config_routines.s` | 3,263 | SMF configuration and parameter setup |
+| `sequencer/smf_playback.s` | 708 | SMF playback control entry points |
+| `sequencer/accompaniment_engine.s` | 32,617 | Rhythm dispatch, accompaniment voice selection, timing, patches, drum configuration, style conversion |
+| `sequencer/accompseq_routines.s` | 1,961 | Accompaniment sequencer periodic processing |
+| `sequencer/rhythm_routines.s` | 1,580 | Rhythm pattern comparison, trigger, and transposition |
+| `sequencer/ssf_gate_states.s` | 1,492 | SSF (Style Synthesis Format) gate state arrays for accompaniment patterns |
+| `sequencer/bmdredit_routines.s` | 4,434 | Bitmap drum editor: stream positioning, sequence display, voice allocation UI |
+
+### `storage/` — Flash & Floppy
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `storage/flash_floppy_handlers.s` | 4,695 | Flash memory sector write, floppy disk note event loading, FDC format UI |
+| `storage/fdc_routines.s` | 1,503 | Floppy disk controller: register access, sector read/write, disk change detection |
+
+### `demo/` — Feature Demo Mode
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `demo/demo_routines.s` | 294 | Demo mode entry and control |
+| `demo/fdemotext_routines.s` | 2,334 | Feature demo text processing: voice probing, flag processing, output formatting |
+| `demo/file_demo_proc.s` | 8,359 | File demo procedures and title handlers |
+
+### `file_io/` — Disk File Operations
+
+| File | Lines | Description |
+|------|-------|-------------|
 | `file_io/disk_operations.s` | 1,297 | Disk file copy, rename, format, disk info |
 | `file_io/filename_password.s` | 807 | Filename and password entry UI |
 | `file_io/composer_filters.s` | 968 | Composer load and filter operations |
@@ -131,37 +169,15 @@ The main CPU ROM contains the entire user-facing firmware: the UI framework, dis
 | `file_io/misc_ui.s` | 969 | Miscellaneous file I/O UI (jump insert, file priority, setup) |
 | `file_io/title_handlers.s` | 349 | File title display handlers |
 
-### Control Panel & Computer Interface
-
-| File | Lines | Description |
-|------|-------|-------------|
-| `cpanel_routines.s` | 1,559 | Control panel hardware: serial RX/TX processing, button polling, LED control |
-| `computer_interface_config.s` | 310 | MIDI computer interface configuration |
-| `computer_interface_pcg.s` | 704 | Computer interface program change (PCG) handlers |
-
-### Drawbar & Demo
-
-| File | Lines | Description |
-|------|-------|-------------|
-| `drawbar_panel_ui.s` | 15,581 | Drawbar organ slider UI, DSP effect controls, presentation system, demo menu |
-| `fdemotext_routines.s` | 2,334 | Feature demo text processing: voice probing, flag processing, output formatting |
-| `demo_routines.s` | 294 | Demo mode entry and control |
-
-### Bitmap Drum Editor
-
-| File | Lines | Description |
-|------|-------|-------------|
-| `bmdredit_routines.s` | 4,434 | Bitmap drum editor: stream positioning, sequence display, voice allocation UI |
-
-### NAKA UI Descriptors
+### `naka/` — UI Screen Layout Descriptors
 
 The NAKA format defines UI screen layouts as hierarchical widget trees. These files contain the screen definitions for nearly every UI mode.
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `naka_descriptors.s` | 9,325 | UI element type definitions and descriptor tables |
-| `naka_dispatch.s` | 9,751 | NAKA event dispatch: string pointer tables, screen routing |
-| `naka_style_bitmap.s` | 5,910 | Style selection bitmap resources |
+| `naka/naka_descriptors.s` | 9,325 | UI element type definitions and descriptor tables |
+| `naka/naka_dispatch.s` | 9,751 | NAKA event dispatch: string pointer tables, screen routing |
+| `naka/naka_style_bitmap.s` | 5,910 | Style selection bitmap resources |
 | `naka/naka_e0e974_e15b20.s` | 6,116 | Feature Demo screens, style category menus, accompaniment UI |
 | `naka/naka_e176e4_e1a704.s` | 2,745 | Style presentation and performance UI |
 | `naka/naka_e1ab58_e1b7d2.s` | 683 | Mixed NAKA data and strings |
@@ -181,14 +197,14 @@ The NAKA format defines UI screen layouts as hierarchical widget trees. These fi
 | `naka/naka_ed803c_eda02c.s` | 2,727 | Toshi-region NAKA data |
 | `naka/naka_eee718_eef588.s` | 1,015 | Final NAKA block before boot code |
 
-### Extension Device Support (TOSHI)
+### `toshi/` — Extension Device Support
 
 | File | Lines | Description |
 |------|-------|-------------|
 | `toshi/toshi_code.s` | 107 | Extension slot driver framework: device registration and initialization |
 | `toshi/toshi_data.s` | 6,708 | Extension device data tables and NAKA descriptors |
 
-### Developer Test Code (HAMA)
+### `hama/` — Developer Factory Test Code
 
 | File | Lines | Description |
 |------|-------|-------------|
@@ -196,6 +212,12 @@ The NAKA format defines UI screen layouts as hierarchical widget trees. These fi
 | `hama/hama_data.s` | 252 | Hama test configuration data |
 | `hama/fd_test_code.s` | 372 | Floppy disk test execution routines |
 | `hama/fd_test_data.s` | 418 | Floppy disk test parameters |
+
+### Factory Defaults
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `msp_factory_defaults.s` | 709 | MSP (Music Style Preset) factory default data |
 
 ---
 
