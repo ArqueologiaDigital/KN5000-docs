@@ -12,7 +12,7 @@ This page describes every source file in the [disassembly repository](https://gi
 
 | ROM | Size | Top-level Source | Include Files | Purpose |
 |-----|------|-----------------|---------------|---------|
-| [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 97 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
+| [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 101 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
 | [Sub CPU Payload](#sub-cpu-payload-192kb) | 192KB | `subcpu/kn5000_subprogram_v142.s` | 3 | Audio engine — tone generation, voice management, DSP |
 | [Sub CPU Boot](#sub-cpu-boot-128kb) | 128KB | `subcpu/boot/kn5000_subcpu_boot.s` | 0 | Sub CPU bootstrap and payload decompression |
 | [HDAE5000](#hdae5000-extension-512kb) | 512KB | `hdae5000/hd-ae5000_v2_06i.s` | 5 | Hard disk expansion — IDE/ATA driver, FAT16, file manager UI |
@@ -23,7 +23,7 @@ This page describes every source file in the [disassembly repository](https://gi
 
 ## Main CPU (2MB)
 
-The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **97 include files** organized into **14 subdirectories** by subsystem.
+The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **101 include files** organized into **14 subdirectories** by subsystem.
 
 ### Directory Structure
 
@@ -36,8 +36,8 @@ maincpu/
   boot/       (3 files)      # System startup, interrupt handlers, init
   ui/         (13 files)     # UI framework, widgets, drawing, panels
   display/    (2 files)      # VGA graphics, text rendering
-  audio/      (10 files)     # Audio control, sound editor, DSP config
-  midi/       (7 files)      # MIDI serial, dispatch, SysEx, computer I/F
+  audio/      (12 files)     # Audio control, sound editor, DSP config
+  midi/       (9 files)      # MIDI serial, dispatch, SysEx, computer I/F
   sequencer/  (13 files)     # Sequencer, SMF, accompaniment, rhythm
   storage/    (2 files)      # Flash memory, floppy disk controller
   demo/          (3 files)   # Feature demo mode
@@ -110,6 +110,8 @@ maincpu/
 | `audio/sound_editor_routines.s` | 629 | Sound editor helper routines |
 | `audio/semenu_routines.s` | 3,431 | Sound editor menu (SeMenu) event handling and navigation |
 | `audio/sound_navigation.s` | 495 | Sound bank browsing: MainGetSoundName, Sound_Navigate_*, MainGetRhythmName, MainGetPmemName |
+| `audio/presentation_sound_nav.s` | 1,762 | SSF presentation workspace building, sound navigation, voice control, presentation control proc |
+| `audio/tonegen_fileio_handlers.s` | 1,071 | Tone generator config initialization, DSP config entry setup, FileIO callback handlers |
 | `audio/sndparam_routines.s` | 2,042 | Sound parameter probe, match, and heap allocation |
 | `audio/note_voice_mapping.s` | 26,105 | Note-on processing, voice allocation/stealing, NoteMap (91 functions), sequence playback, MIDI output, sound parameters, utility routines |
 
@@ -122,6 +124,8 @@ maincpu/
 | `midi/midi_encoder_routines.s` | 275 | MIDI encoder timing and output dispatch |
 | `midi/midipkt_routines.s` | 1,178 | MIDI packet extraction, packing, and queue management |
 | `midi/sysex_routines.s` | 239 | System Exclusive message handling |
+| `midi/ac_listener_handlers.s` | 1,884 | AcLswFuncBoxProc event dispatch, parameter processing, mixer controls, TtMd exclusion routines |
+| `midi/param_load_routines.s` | 658 | ParaLoadOpt parameter loading options, audio flag processing, event posting |
 | `midi/computer_interface_config.s` | 310 | MIDI computer interface configuration |
 | `midi/computer_interface_pcg.s` | 704 | Computer interface program change (PCG) handlers |
 
