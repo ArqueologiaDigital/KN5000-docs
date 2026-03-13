@@ -12,7 +12,7 @@ This page describes every source file in the [disassembly repository](https://gi
 
 | ROM | Size | Top-level Source | Include Files | Purpose |
 |-----|------|-----------------|---------------|---------|
-| [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 153 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
+| [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 154 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
 | [Sub CPU Payload](#sub-cpu-payload-192kb) | 192KB | `subcpu/kn5000_subprogram_v142.s` | 3 | Audio engine — tone generation, voice management, DSP |
 | [Sub CPU Boot](#sub-cpu-boot-128kb) | 128KB | `subcpu/boot/kn5000_subcpu_boot.s` | 0 | Sub CPU bootstrap and payload decompression |
 | [HDAE5000](#hdae5000-extension-512kb) | 512KB | `hdae5000/hd-ae5000_v2_06i.s` | 5 | Hard disk expansion — IDE/ATA driver, FAT16, file manager UI |
@@ -23,7 +23,7 @@ This page describes every source file in the [disassembly repository](https://gi
 
 ## Main CPU (2MB)
 
-The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **153 include files** organized into **15 subdirectories** by subsystem.
+The main CPU ROM contains the entire user-facing firmware: the UI framework, display rendering, audio parameter control, sequencer, accompaniment engine, MIDI processing, file I/O, floppy disk controller, and control panel handling. It is split across **154 include files** organized into **15 subdirectories** by subsystem.
 
 ### Directory Structure
 
@@ -38,7 +38,7 @@ maincpu/
   display/    (3 files)      # VGA graphics, text rendering, scoop editor
   audio/      (31 files)     # Audio control, sound editor, DSP config, sound data
   midi/       (9 files)      # MIDI serial, dispatch, SysEx, computer I/F
-  sequencer/  (14 files)     # Sequencer, SMF, accompaniment, rhythm
+  sequencer/  (15 files)     # Sequencer, SMF, accompaniment, rhythm, MSP
   storage/    (2 files)      # Flash memory, floppy disk controller
   demo/          (4 files)   # Feature demo mode
   ui_widgets/    (27 files)  # UI screen layout descriptors (codename: NAKA)
@@ -168,6 +168,7 @@ maincpu/
 | `sequencer/rhythm_routines.s` | 1,580 | Rhythm pattern comparison, trigger, and transposition |
 | `sequencer/ssf_gate_states.s` | 1,492 | SSF (Style Synthesis Format) gate state arrays for accompaniment patterns |
 | `sequencer/bmdredit_routines.s` | 4,434 | Bitmap drum editor: stream positioning, sequence display, voice allocation UI |
+| `sequencer/composer_msp_defaults.s` | 279 | MSP/Composer defaults: "HK"-signatured preset data, Composer UI callbacks, debug name strings |
 
 ### `storage/` — Flash & Floppy
 
