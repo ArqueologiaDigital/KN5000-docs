@@ -24,6 +24,8 @@
       url: /subcpu-payload-loading/
     - title: ROM Reconstruction
       url: /rom-reconstruction/
+    - title: Source Code Map
+      url: /source-map/
     - title: Table Data ROM
       url: /table-data-rom/
     - title: Custom Data Flash
