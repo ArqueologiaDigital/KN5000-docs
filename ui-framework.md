@@ -410,8 +410,8 @@ All coordinates are **little-endian 16-bit** values. The LCD display is 320×240
 | Byte | Character |
 |------|-----------|
 | 0x20-0x7E | Standard ASCII |
-| 0x88 | ♯ (sharp) |
-| 0x8C | ♭ (flat) |
+| 0x88 | ♭ (flat) |
+| 0x8C | ♯ (sharp) |
 | 0x8D | │ (vertical bar / up arrow) |
 | 0x8E | ~ (down arrow) |
 
