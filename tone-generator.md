@@ -435,7 +435,7 @@ After note-on, the ongoing voice processing (called from `Voice_Init_Type4`) run
 - [x] ~~Determine exact register semantics~~ — Partially: voice control, volume, aux sends documented from write sequence
 - [x] ~~Decode voice parameter template at ROM 0xF8D5~~ — 34-word (68-byte) template at `0x012115`, copied to `0x3B1C` per voice setup
 - [ ] Map remaining per-voice register semantics (groups 4/5 = filter? pitch? modulation?)
-- [ ] Analyze waveform ROM format and sample addressing
+- [x] ~~Analyze waveform ROM format and sample addressing~~ -- Complete: IC307 format documented. See [Waveform ROM Format]({{ site.baseurl }}/waveform-rom-format/)
 - [ ] Document DSP1/DSP2 command sets and processing algorithms
 - [ ] Trace the PCM audio serial bus (BCK/SDOR/SDOF) connections
 - [x] ~~Identify the exact device connected to Serial Port 1~~ — Computer Interface (TO HOST connector), sends 0xFE Active Sensing

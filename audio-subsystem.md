@@ -2000,7 +2000,7 @@ The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. 
 
 ## Research Needed
 
-- [ ] Document waveform ROM format and sample layout
+- [x] ~~Document waveform ROM format and sample layout~~ -- Complete: IC307 analyzed. 198-entry index table, 186 unique signed 16-bit PCM waveforms, x16 byte offset addressing, key zone parameter records. See [Waveform ROM Format]({{ site.baseurl }}/waveform-rom-format/)
 - [x] ~~Decode per-algorithm parameter mapping tables at `0x1F22C`/`0x1F09C`~~ — Complete: both are 12-entry pointer tables (indexed by algo type 0-11) pointing to variable-length bytecode programs with opcodes 0x21/0x24/0x40/0x61-0x78, terminated by 0x7A/0xF0
 - [x] ~~Map MainCPU parameter indices to EFF block word positions~~ — Partial: 84 named parameters extracted from MainCPU 0xE324C4. DSP2 master list at 0xE4475C maps 14 SubCPU param indices to UI names. Final register-to-parameter mapping requires runtime bytecode tracing
 - [x] ~~Decode DSP register semantics per channel~~ — Partial: DSP2 112-register map from boot-time analysis (stride-0x10 channel regs at offset 0x_8, control regs 0x00/0x40/0x80, coefficient regs 0xE6/0xE7). DSP1 channel regs 0x10-0x17 still need semantic mapping.
