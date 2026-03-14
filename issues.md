@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 327 (7 open, 320 closed)
+**Total Issues:** 329 (5 open, 323 closed)
 
 **Quick Links:** 
-[Other](#other) (7)
+[Other](#other) (5)
 
 ---
 
@@ -78,14 +78,6 @@ Create a new MAME upstream PR (PR5) for accumulated driver fixes on kn5000_pr5_d
 
 ---
 
-#### 🟡 Rename all LABEL_ in scoop_display.s to semantic names {#issue-kn5000-zi7j}
-
-**ID:** `kn5000-zi7j` | **Priority:** Medium | **Created:** 2026-03-14
-
-Rename all 317 LABEL_XXXXXX definitions in maincpu/display/scoop_display.s to meaningful semantic names. Work in 3 batches with build verification after each.
-
----
-
 #### ⚪ MAME: Decode voice parameter template (ROM 0x12115, 34 bytes) {#issue-kn5000-v0uv}
 
 **ID:** `kn5000-v0uv` | **Priority:** Low | **Created:** 2026-03-14
@@ -142,18 +134,13 @@ Production-ready emulation and homebrew support.
 
 ---
 
-#### ⚪ Phase 4: Continue LABEL_XXXXXX semantic renaming {#issue-kn5000-j8pz}
-
-**ID:** `kn5000-j8pz` | **Priority:** Low | **Created:** 2026-03-14
-
-Continue renaming generic LABEL_XXXXXX hex address labels to semantic names across all maincpu .s files. Session progress: ~40K → ~32.5K (7,500 renamed). Top remaining files: note_voice_mapping.s (~2400), accompaniment_engine.s (~2000), performance_style_screens.s (~1800), ui_widget_defs.s (~1800), drawbar_panel_ui.s (~1300), ui_mode_handlers.s (~1200). Use Python scripts with binary I/O for Latin-1 safety. Each batch must pass make all with 100% byte match.
-
----
-
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-2wj1` | Rename all LABEL_ in extension_data.s to semantic names | 2026-03-14 |
+| `kn5000-3j4z` | Rename LABEL_ in performance_style_screens.s | 2026-03-14 |
+| `kn5000-zi7j` | Rename all LABEL_ in scoop_display.s to semantic names | 2026-03-14 |
 | `kn5000-u8fl` | MAME: DSP device stubs for IC310 (MN19413) and IC311 (DS3... | 2026-03-14 |
 | `kn5000-wmfd` | MAME: Tone generator device (IC303) — refine waveform pla... | 2026-03-14 |
 | `kn5000-02h7` | Rename LABEL_ placeholders in note_voice_mapping.s | 2026-03-14 |
@@ -171,11 +158,8 @@ Continue renaming generic LABEL_XXXXXX hex address labels to semantic names acro
 | `kn5000-46mu` | Generate synthetic waveform ROMs (IC304, IC305, IC306) fo... | 2026-03-14 |
 | `kn5000-cpn5` | Convert 357 R+d16 .byte instructions to native mnemonics | 2026-03-14 |
 | `kn5000-iueh` | Disassembly: Semantic analysis of NAKA obfuscated code bl... | 2026-03-14 |
-| `kn5000-2w05` | Rename NAKA ui_widgets files to semantic names | 2026-03-14 |
-| `kn5000-9qt3` | MAME: Implement MIDI output (TX0) | 2026-03-14 |
-| `kn5000-psio` | LLVM: Add R+d16 addressing mode for TLCS-900 backend | 2026-03-14 |
 
-*...and 300 more closed issues*
+*...and 303 more closed issues*
 
 ---
 
@@ -186,15 +170,15 @@ Continue renaming generic LABEL_XXXXXX hex address labels to semantic names acro
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| Medium | 2 |
-| Low | 4 |
+| Medium | 1 |
+| Low | 3 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 7 |
+| Other | 5 |
 
 ---
 
-*Last updated: 2026-03-14 17:38*
+*Last updated: 2026-03-14 20:41*
