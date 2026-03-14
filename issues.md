@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 302 (14 open, 284 closed)
+**Total Issues:** 304 (13 open, 287 closed)
 
 **Quick Links:** 
-[Other](#other) (14)
+[Other](#other) (13)
 
 ---
 
@@ -89,14 +89,6 @@ Three parallel efforts to resolve blockers:
 
 ---
 
-#### 🟠 MAME: Build and test TMP94C241 16-bit timer interrupt fix {#issue-kn5000-jyo7}
-
-**ID:** `kn5000-jyo7` | **Priority:** High | **Created:** 2026-03-10
-
-Issue kn5000-y7t5 session 2 found two bugs in tmp94c241.cpp timer_16bits lambda: (1) TREG_HIGH match sets 0x08 (INTTR4) instead of 0x80 (INTTR5), (2) T4FFCR flip-flop control gates entire match instead of just flip-flop. Fix was implemented but never built or tested. Research log published at feature-demo-timer-bug-2026-03-09. Need to: build MAME with fix, run Feature Demo sequence, verify timer behavior improves. May also fix other timing-dependent firmware behavior beyond Feature Demo.
-
----
-
 #### 🟠 MAME: Complete FDC address mapping at 0x110000-0x12FFFF {#issue-kn5000-umft}
 
 **ID:** `kn5000-umft` | **Priority:** High | **Created:** 2026-03-10
@@ -142,11 +134,11 @@ THE single biggest blocker across the project. Waveform ROMs IC304-IC306 (1.2MB 
 
 ---
 
-#### 🟡 Decode style_ui_screendata_main.s bytecode format {#issue-kn5000-hkeq}
+#### 🟡 Decode all style_ui_paramblock_*.s files {#issue-kn5000-5uor}
 
-**ID:** `kn5000-hkeq` | **Priority:** Medium | **Created:** 2026-03-13
+**ID:** `kn5000-5uor` | **Priority:** Medium | **Created:** 2026-03-13
 
-Annotate the 3531-byte ScreenData bytecode blob for the Style UI main screen. Identify command boundaries, widget structures, chord name tables, and grid layout. Key discovery: op=0x02 uses sub-type byte (not length).
+Annotate all 12 paramblock .s files with decoded ScreenData bytecode commands (172 total commands)
 
 ---
 
@@ -250,6 +242,9 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-jyo7` | MAME: Build and test TMP94C241 16-bit timer interrupt fix | 2026-03-13 |
+| `kn5000-xpkj` | Annotate all StyleUI screendata bytecode files | 2026-03-13 |
+| `kn5000-hkeq` | Decode style_ui_screendata_main.s bytecode format | 2026-03-13 |
 | `kn5000-ko7x` | Document all dispatch/jump tables in ROM disassembly | 2026-03-09 |
 | `kn5000-3sar` | Fix cpanel HLE for Feature Demo navigation without breaki... | 2026-03-09 |
 | `kn5000-tgd6` | MAME: TMP94C241 timer output callbacks fire unconditional... | 2026-03-09 |
@@ -267,11 +262,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-gkpv` | DSP2 (MN19413): Map register functions from boot-time writes | 2026-03-08 |
 | `kn5000-1vz` | MAME: Input/Control subsystem emulation milestone | 2026-03-08 |
 | `kn5000-0eo` | MAME: Spurious button events during boot (voice dialog, t... | 2026-03-08 |
-| `kn5000-9m6` | Phase 3 Completion: Full documentation coverage | 2026-03-08 |
-| `kn5000-n1l2` | DSP1: Investigate algorithm select mechanism (effect name... | 2026-03-08 |
-| `kn5000-b0h` | Sub CPU: Complete emulation accuracy documentation | 2026-03-08 |
 
-*...and 264 more closed issues*
+*...and 267 more closed issues*
 
 ---
 
@@ -282,7 +274,7 @@ Production-ready emulation and homebrew support.
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 4 |
+| High | 3 |
 | Medium | 4 |
 | Low | 5 |
 
@@ -290,8 +282,8 @@ Production-ready emulation and homebrew support.
 
 | Category | Count |
 |----------|-------|
-| Other | 14 |
+| Other | 13 |
 
 ---
 
-*Last updated: 2026-03-13 19:30*
+*Last updated: 2026-03-14 00:23*
