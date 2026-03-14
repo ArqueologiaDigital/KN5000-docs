@@ -82,12 +82,12 @@ Each of the 64 voices has registers organized into groups. The register address 
 | Offset | Group | Banks | Struct Offset | Description |
 |--------|-------|-------|---------------|-------------|
 | +0x0000 | 0x00 | 0 | +0x00 | **Voice Control** -- key on/off/mode state machine |
-| +0x0040 | 0x00 | 1 | +0x02 | Voice parameter 0, bank 1 |
-| +0x0080 | 0x00 | 2 | +0x04 | Voice parameter 0, bank 2 (bit 15 = key-on flag) |
-| +0x00C0 | 0x00 | 3 | +0x06 | Voice parameter 0, bank 3 |
-| +0x0100 | 0x01 | 0 | +0x08 | Voice parameter 1, bank 0 |
-| +0x0140 | 0x01 | 1 | +0x0A | Voice parameter 1, bank 1 |
-| +0x0180 | 0x01 | 2 | +0x0C | Voice parameter 1, bank 2 |
+| +0x0040 | 0x00 | 1 | +0x02 | **Pitch increment** (semitone table lookup from ROM 0x01217D) |
+| +0x0080 | 0x00 | 2 | +0x04 | **Voice mode/velocity** (bit 15 = latch strobe; velocity OR'd in) |
+| +0x00C0 | 0x00 | 3 | +0x06 | **Waveform control** (cleared on note-off) |
+| +0x0100 | 0x01 | 0 | +0x08 | Envelope parameter 0 |
+| +0x0140 | 0x01 | 1 | +0x0A | Envelope parameter 1 |
+| +0x0180 | 0x01 | 2 | +0x0C | Envelope parameter 2 |
 | +0x01C0 | 0x01 | 3 | +0x38 | Voice parameter 1, bank 3 |
 | +0x0400 | 0x04 | 0 | +0x0E | Voice parameter 4, bank 0 |
 | +0x0440 | 0x04 | 1 | +0x10 | Voice parameter 4, bank 1 |
@@ -412,13 +412,13 @@ This routine writes 22 voice parameters from a 44-byte struct, in this exact ord
 
 | Step | Register Offset | Struct Offset | Group | Bank | Notes |
 |------|----------------|---------------|-------|------|-------|
-| 1 | +0x0040 | +2 | 0 | 1 | Waveform pointer low |
-| 2 | +0x0080 | +4 | 0 | 2 | Waveform pointer high (**bit 15 SET** = latch strobe) |
-| 3 | +0x00C0 | +6 | 0 | 3 | Waveform control |
+| 1 | +0x0040 | +2 | 0 | 1 | **Pitch increment** (semitone table lookup) |
+| 2 | +0x0080 | +4 | 0 | 2 | **Voice mode/velocity** (**bit 15 SET** = latch strobe) |
+| 3 | +0x00C0 | +6 | 0 | 3 | **Waveform control** (cleared on note-off) |
 | 4 | +0x0100 | +8 | 1 | 0 | Envelope param 0 |
 | 5 | +0x0140 | +10 | 1 | 1 | Envelope param 1 |
 | 6 | +0x0180 | +12 | 1 | 2 | Envelope param 2 |
-| 7 | +0x0400 | +14 | 4 | 0 | Filter/pitch param 0 |
+| 7 | +0x0400 | +14 | 4 | 0 | **Note key info** (note value << 8, bit 15=active) |
 | 8 | +0x0440 | +16 | 4 | 1 | Filter/pitch param 1 |
 | 9 | +0x0480 | +18 | 4 | 2 | Filter/pitch param 2 |
 | 10 | +0x04C0 | +20 | 4 | 3 | Filter/pitch param 3 |
