@@ -352,17 +352,22 @@ Waveform ROMs (IC304-307) ──> Tone Generator LSI (IC303)
 | DSP Config (0x130000) | Write-only | **Stub (`noprw`)** — writes harmlessly discarded |
 | Serial1 (SA interface) | UART | **No receiver** — TX sends into void |
 | Waveform RAM (0x1E0000) | Read/Write | **Stub (`noprw`)** — no sample storage |
-| Sound output | Stereo 48kHz | **Basic PCM playback** — reads waveform ROMs, looping playback |
+| Sound output | Stereo 48kHz | **PCM playback** — pitch control, linear interpolation, release envelope |
 
 The `kn5000_tonegen_device` (in `kn5000_tonegen.cpp`) implements:
 - Register-indirect interface matching the hardware protocol (address latch at 0x100000, data at 0x100002)
-- 64 voice states with 28 registers each (7 groups × 4 banks)
+- 64 voice states with 32 registers each (8 groups × 4 banks, including group 0xA)
 - 13 global configuration registers
 - Voice control state machine (key on/off via group 0 bank 0)
 - Waveform ROM reading from the `waveform` region (IC304-IC307, 16MB total)
-- Basic stereo output via MAME sound stream (48kHz)
+- Stereo output via MAME sound stream (48kHz) with linear interpolation
+- Pitch control from group 1 registers (16-bit pitch increment scaling)
+- Volume and pan from group 8 / group 4 registers
+- Release envelope (50ms fade-out on key-off)
+- 2-second hold timer for voice status readback (firmware compatibility)
+- Waveform latch strobe protocol (group 0, bank 2, bit 15 SET/CLEAR)
 
-**Limitations:** Waveform ROMs IC304-IC306 are NO_DUMP (synthetic approximations available: sine, sawtooth, square/triangle). Volume and pan interpretation is approximate. No pitch control, envelope, or DSP effects yet. Waveform index selection from voice parameters needs refinement.
+**Limitations:** Waveform ROMs IC304-IC306 are NO_DUMP (synthetic approximations available: sine, sawtooth, square/triangle). Pitch register encoding is approximate — the exact firmware-to-hardware pitch mapping is not fully decoded. No DSP effects (reverb, chorus, EQ). Envelope is a simple linear fade, not the hardware's multi-stage envelope. Loop points from parameter records not yet implemented.
 
 The keybed scanner generates note-on/note-off events from MAME input ports (PC keyboard mapped to a 2-octave piano layout). Events are queued in the tone gen device and read by `ToneGen_Read_Voice_Data` at 0x110000/0x110002. The full bidirectional note flow works: keybed → subcpu → maincpu (for display/MIDI) → subcpu → tone gen registers.
 
