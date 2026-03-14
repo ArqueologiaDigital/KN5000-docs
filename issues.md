@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 317 (8 open, 305 closed)
+**Total Issues:** 318 (9 open, 305 closed)
 
 **Quick Links:** 
-[Other](#other) (8)
+[Other](#other) (9)
 
 ---
 
@@ -126,6 +126,12 @@ THE single biggest blocker across the project. Waveform ROMs IC304-IC306 (1.2MB 
 
 ---
 
+#### 🟡 Generate synthetic waveform ROMs (IC304, IC305, IC306) for tone generator testing {#issue-kn5000-46mu}
+
+**ID:** `kn5000-46mu` | **Priority:** Medium | **Created:** 2026-03-14
+
+---
+
 #### 🟡 MAME: Update PR #14558 with accumulated driver fixes {#issue-kn5000-f8gw}
 
 **ID:** `kn5000-f8gw` | **Priority:** Medium | **Created:** 2026-03-10
@@ -235,7 +241,7 @@ With NAKA files identified as UI widget descriptors, the ~9,015 LABEL_XXXXXX pla
 |----------|-------|
 | Critical | 1 |
 | High | 2 |
-| Medium | 1 |
+| Medium | 2 |
 | Low | 3 |
 | P4 | 1 |
 
@@ -243,8 +249,8 @@ With NAKA files identified as UI widget descriptors, the ~9,015 LABEL_XXXXXX pla
 
 | Category | Count |
 |----------|-------|
-| Other | 8 |
+| Other | 9 |
 
 ---
 
-*Last updated: 2026-03-14 12:00*
+*Last updated: 2026-03-14 12:09*
