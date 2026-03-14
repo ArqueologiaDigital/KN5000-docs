@@ -13,41 +13,41 @@ The KN5000 uses a 320x240 color LCD driven by an MN89304 VGA-compatible controll
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        MAIN CPU                              │
-│                                                              │
-│  Graphics routines in Main ROM                              │
-│  UI framework manages pages and widgets                     │
-│  Display updates in main event loop (not VBI)               │
-└─────────────────────────────────────────────────────────────┘
-                              │
++-------------------------------------------------------------+
+|                        MAIN CPU                              |
+|                                                              |
+|  Graphics routines in Main ROM                              |
+|  UI framework manages pages and widgets                     |
+|  Display updates in main event loop (not VBI)               |
++-------------------------------------------------------------+
+                              |
                               v
-┌─────────────────────────────────────────────────────────────┐
-│                    MN89304 VGA CONTROLLER                    │
-│                                                              │
-│  Memory-mapped I/O: 0x1703B0-0x1703DF                       │
-│  Resolution: 320 x 240 pixels                                │
-│  Color depth: 8-bit indexed (256 colors)                    │
-│  RAMDAC: 4-bit per channel (12-bit RGB)                     │
-│  Row offset: svga_device::offset() << 3 (8x multiplier)    │
-└─────────────────────────────────────────────────────────────┘
-                              │
++-------------------------------------------------------------+
+|                    MN89304 VGA CONTROLLER                    |
+|                                                              |
+|  Memory-mapped I/O: 0x1703B0-0x1703DF                       |
+|  Resolution: 320 x 240 pixels                                |
+|  Color depth: 8-bit indexed (256 colors)                    |
+|  RAMDAC: 4-bit per channel (12-bit RGB)                     |
+|  Row offset: svga_device::offset() << 3 (8x multiplier)    |
++-------------------------------------------------------------+
+                              |
                               v
-┌─────────────────────────────────────────────────────────────┐
-│                 VIDEO RAM (0x1A0000-0x1DFFFF)               │
-│                                                              │
-│  256KB linear framebuffer                                    │
-│  Active area: 76,800 bytes (320 x 240 x 1 byte/pixel)      │
-│  Row stride: 320 bytes                                       │
-└─────────────────────────────────────────────────────────────┘
-                              │
++-------------------------------------------------------------+
+|                 VIDEO RAM (0x1A0000-0x1DFFFF)               |
+|                                                              |
+|  256KB linear framebuffer                                    |
+|  Active area: 76,800 bytes (320 x 240 x 1 byte/pixel)      |
+|  Row stride: 320 bytes                                       |
++-------------------------------------------------------------+
+                              |
                               v
-┌─────────────────────────────────────────────────────────────┐
-│                      LCD PANEL                               │
-│                                                              │
-│  320 x 240 color TFT LCD                                    │
-│  Backlit display                                             │
-└─────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------+
+|                      LCD PANEL                               |
+|                                                              |
+|  320 x 240 color TFT LCD                                    |
+|  Backlit display                                             |
++-------------------------------------------------------------+
 ```
 
 ## MN89304 VGA Controller
@@ -273,17 +273,17 @@ All drawing functions follow a **deferred command queue** pattern:
 
 ```
 Caller invokes DrawLine/DrawBox/DrawString/etc.
-     │
-     ├── IS_XSP_INSIDE_4K_REGION_AT_1C032 (0xFAA532)
-     │   checks if caller is running in the draw task context
-     │   (stack pointer in range 0x1C032 - 0x1D032)
-     │
-     ├── YES (draw task context):
-     │   Execute DrawXxx_Impl directly
-     │   Write pixels to OFFSCREEN_BUFFER_1 (0x43C00)
-     │   Call SetChangeRect() to expand dirty bounding box
-     │
-     └── NO (other task context):
+     |
+     +-- IS_XSP_INSIDE_4K_REGION_AT_1C032 (0xFAA532)
+     |   checks if caller is running in the draw task context
+     |   (stack pointer in range 0x1C032 - 0x1D032)
+     |
+     +-- YES (draw task context):
+     |   Execute DrawXxx_Impl directly
+     |   Write pixels to OFFSCREEN_BUFFER_1 (0x43C00)
+     |   Call SetChangeRect() to expand dirty bounding box
+     |
+     +-- NO (other task context):
          Serialize parameters into DrawQueue (circular buffer)
          Call DisplayCmd_DequeueAndExecute
          → TaskSched_WaitForEvent(3) until draw task picks up command

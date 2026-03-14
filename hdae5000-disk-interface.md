@@ -15,16 +15,16 @@ The HD-AE5000 uses an **IDE/ATA compatible hard disk drive** with **direct memor
 A separate **Intel 8255 PPI** at 0x160000 provides a parallel port interface for communication with a PC running the HD-TechManager5000 software.
 
 ```
-┌──────────────────┐                           ┌──────────────────┐
-│   TMP94C241F     │  Direct Memory Access     │   IDE Hard Disk  │
-│   Main CPU       │<─────────────────────────>│   @ 0x130010     │
-│                  │                           │   (ATA Registers)│
-│                  │                           └──────────────────┘
-│                  │
-│                  │     ┌─────────────────┐
-│                  │<───>│   Intel 8255    │<───> PC Parallel Port
-└──────────────────┘     │   PPI @ 0x160000│
-                         └─────────────────┘
++------------------+                           +------------------+
+|   TMP94C241F     |  Direct Memory Access     |   IDE Hard Disk  |
+|   Main CPU       |<------------------------->|   @ 0x130010     |
+|                  |                           |   (ATA Registers)|
+|                  |                           +------------------+
+|                  |
+|                  |     +-----------------+
+|                  |<--->|   Intel 8255    |<---> PC Parallel Port
++------------------+     |   PPI @ 0x160000|
+                         +-----------------+
 ```
 
 ## IDE/ATA Background

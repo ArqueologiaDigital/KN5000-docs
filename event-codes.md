@@ -16,8 +16,8 @@ Event codes are 32-bit values with a structured layout:
 
 ```
   0x01E0009C
-  ├── 0x01E0  = Event port/category prefix
-  └── 0x009C  = Event number within that category
+  +-- 0x01E0  = Event port/category prefix
+  +-- 0x009C  = Event number within that category
 ```
 
 The prefix determines which dispatch layer handles the event:
@@ -32,38 +32,38 @@ The prefix determines which dispatch layer handles the event:
 
 ```
 Event arrives (via SendEvent or PostEvent queue)
-    │
-    ▼
+    |
+    v
 SendEvent (0xFA9660)
-    │  Saves global state, looks up handler from object table
-    │  Calls handler function (typically ClassProc)
-    │
-    ▼
-ClassProc (0xFA44E2) ─── Layer 1: Simple Getters & Specials
-    │  Handles: 0x01E00000-0x01E00007 (getters via jump table)
-    │           0x01E0000D (keypress), 0x01E0000E (input)
-    │           0x01E0000F (return immediately)
-    │           0x01E00015 (return config pointer)
-    │
-    │  Everything else falls through to:
-    ▼
-ObjectProc (0xFA3D85) ─── Layer 2: Lifecycle Events
-    │  Handles: 0x01E00010-0x01E00023 (20 lifecycle cases)
-    │           via jump table at 0xEAA8A4
-    │
-    │  Everything else falls through to:
-    ▼
-InheritedProc (0xFA4409) ─── Layer 3: Handler Chain
-    │  Follows "next handler" chain in data record (+0x04)
-    │  Calls chained handler's implementation function
-    │
-    ▼
-Record Function (implementation) ─── Layer 4: Handler-Specific
-    │  Called by SendEvent (step 9) for ALL events
-    │  Receives: XWA=object_id, XBC=event_code, XDE=param
-    │  This is where extension ROM handlers intercept events
-    │
-    ▼
+    |  Saves global state, looks up handler from object table
+    |  Calls handler function (typically ClassProc)
+    |
+    v
+ClassProc (0xFA44E2) --- Layer 1: Simple Getters & Specials
+    |  Handles: 0x01E00000-0x01E00007 (getters via jump table)
+    |           0x01E0000D (keypress), 0x01E0000E (input)
+    |           0x01E0000F (return immediately)
+    |           0x01E00015 (return config pointer)
+    |
+    |  Everything else falls through to:
+    v
+ObjectProc (0xFA3D85) --- Layer 2: Lifecycle Events
+    |  Handles: 0x01E00010-0x01E00023 (20 lifecycle cases)
+    |           via jump table at 0xEAA8A4
+    |
+    |  Everything else falls through to:
+    v
+InheritedProc (0xFA4409) --- Layer 3: Handler Chain
+    |  Follows "next handler" chain in data record (+0x04)
+    |  Calls chained handler's implementation function
+    |
+    v
+Record Function (implementation) --- Layer 4: Handler-Specific
+    |  Called by SendEvent (step 9) for ALL events
+    |  Receives: XWA=object_id, XBC=event_code, XDE=param
+    |  This is where extension ROM handlers intercept events
+    |
+    v
 Default Handler (workspace[0x0E0A][0x00DC])
     Handles remaining lifecycle management if delegated
 ```

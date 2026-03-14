@@ -11,23 +11,23 @@ The KN5000 has multiple storage options for factory data, user data, and removab
 ## Overview
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                           STORAGE ARCHITECTURE                                │
-└──────────────────────────────────────────────────────────────────────────────┘
++------------------------------------------------------------------------------+
+|                           STORAGE ARCHITECTURE                                |
++------------------------------------------------------------------------------+
 
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐
-│  TABLE DATA ROM │  │ CUSTOM DATA     │  │ FLOPPY DISK     │  │  HDAE5000    │
-│                 │  │ FLASH           │  │                 │  │  (Optional)  │
-│  2MB Read-Only  │  │ 1MB Read/Write  │  │ 1.44MB          │  │  1.08GB      │
-│  @ 0x800000     │  │ @ 0x300000      │  │ Removable       │  │  @ 0x130010  │
-│                 │  │                 │  │ @ 0x110000      │  │              │
-│  Factory:       │  │  User:          │  │                 │  │  Expansion:  │
-│  ├─ Styles      │  │  ├─ Settings    │  │  ├─ Songs       │  │  ├─ Songs    │
-│  ├─ Sounds      │  │  ├─ Custom      │  │  ├─ Styles      │  │  ├─ Styles   │
-│  ├─ Demos       │  │  │   Sounds     │  │  ├─ Patches     │  │  ├─ Backups  │
-│  └─ Presets     │  │  └─ Sequences   │  │  └─ Sequences   │  │  └─ Quick    │
-│                 │  │                 │  │                 │  │     Load     │
-└─────────────────┘  └─────────────────┘  └─────────────────┘  └──────────────┘
++-----------------+  +-----------------+  +-----------------+  +--------------+
+|  TABLE DATA ROM |  | CUSTOM DATA     |  | FLOPPY DISK     |  |  HDAE5000    |
+|                 |  | FLASH           |  |                 |  |  (Optional)  |
+|  2MB Read-Only  |  | 1MB Read/Write  |  | 1.44MB          |  |  1.08GB      |
+|  @ 0x800000     |  | @ 0x300000      |  | Removable       |  |  @ 0x130010  |
+|                 |  |                 |  | @ 0x110000      |  |              |
+|  Factory:       |  |  User:          |  |                 |  |  Expansion:  |
+|  +- Styles      |  |  +- Settings    |  |  +- Songs       |  |  +- Songs    |
+|  +- Sounds      |  |  +- Custom      |  |  +- Styles      |  |  +- Styles   |
+|  +- Demos       |  |  |   Sounds     |  |  +- Patches     |  |  +- Backups  |
+|  +- Presets     |  |  +- Sequences   |  |  +- Sequences   |  |  +- Quick    |
+|                 |  |                 |  |                 |  |     Load     |
++-----------------+  +-----------------+  +-----------------+  +--------------+
 ```
 
 ## Table Data ROM

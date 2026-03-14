@@ -535,29 +535,29 @@ Handles DMA transfer completion by advancing the state machine.
 
 ```
                      Command Received
-                           │
-              ┌────────────┴────────────┐
-              │                         │
+                           |
+              +------------+------------+
+              |                         |
          E1/E2 cmd               Other cmd (00-1F)
-              │                         │
+              |                         |
               v                         v
   CMD_PROCESSING_STATE = 2/3    CMD_PROCESSING_STATE = 1
-              │                         │
-              │    ┌────────────────────┘
-              │    │
+              |                         |
+              |    +--------------------+
+              |    |
               v    v
        CMD_Dispatch_Handler processes
-              │
-    ┌─────────┼─────────┬─────────┐
-    │         │         │         │
+              |
+    +---------+---------+---------+
+    |         |         |         |
  State 1   State 2   State 3   State 4
-    │         │         │         │
+    |         |         |         |
     v         v         v         v
 Call handler  DMA    Set flags  Clear ready
 from table  transfer           flag
-    │         │         │         │
-    └─────────┴─────────┴─────────┘
-                    │
+    |         |         |         |
+    +---------+---------+---------+
+                    |
                     v
        CMD_PROCESSING_STATE = 0 (Idle)
 ```
@@ -1286,9 +1286,9 @@ MIDI files are embedded for demo music playback.
 **Output directory:**
 ```
 maincpu/midi/
-├── demo_song_1.mid
-├── demo_song_2.mid
-└── ...
++-- demo_song_1.mid
++-- demo_song_2.mid
++-- ...
 ```
 
 ### Source Code Refactoring
@@ -1323,20 +1323,20 @@ The KN5000 has a sophisticated sound generation system with dedicated processors
 
 ```
 Main CPU (TMP94C241F)
-    │
-    │ Commands via 0x120000 latches
+    |
+    | Commands via 0x120000 latches
     v
-Sub CPU (IC27) ──────> Waveform ROM (IC306-307)
-    │                      │
-    │ Audio data           │ Samples
+Sub CPU (IC27) ------> Waveform ROM (IC306-307)
+    |                      |
+    | Audio data           | Samples
     v                      v
-DSP (IC311) <──────────────┘
-    │
-    │ Processed audio
+DSP (IC311) <--------------+
+    |
+    | Processed audio
     v
 DAC (IC310)
-    │
-    │ Analog audio
+    |
+    | Analog audio
     v
 Output Jacks (Line, Headphones, Speakers)
 ```
@@ -1992,9 +1992,9 @@ The main UI uses a two-level state machine:
 
 ```
 Level 1 (0xEF0D64): 3 main states
-  ├── State 0: LABEL_EF0D70
-  ├── State 1: LABEL_EF0D73
-  └── State 2: LABEL_EF0D8F → Level 2
+  +-- State 0: LABEL_EF0D70
+  +-- State 1: LABEL_EF0D73
+  +-- State 2: LABEL_EF0D8F → Level 2
 
 Level 2 (0xEF0DA5): 16 sub-states for detailed UI handling
 ```

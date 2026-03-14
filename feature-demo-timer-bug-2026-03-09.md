@@ -31,12 +31,12 @@ The KN5000 firmware uses the TMP94C241's Timer 4/5 pair for sequencer timing. Th
 
 ```
 Timer 4 (16-bit up counter UC4)
-  ├── TREG4 (low compare register)  → INTTR4 interrupt on match
-  └── TREG5 (high compare register) → INTTR5 interrupt on match + counter reset
+  +-- TREG4 (low compare register)  → INTTR4 interrupt on match
+  +-- TREG5 (high compare register) → INTTR5 interrupt on match + counter reset
 
 T4FFCR (flip-flop control register)
-  ├── Bit 2: Invert flip-flop on TREG4 match
-  └── Bit 3: Invert flip-flop on TREG5 match
+  +-- Bit 2: Invert flip-flop on TREG4 match
+  +-- Bit 3: Invert flip-flop on TREG5 match
 ```
 
 The firmware configures:

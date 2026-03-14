@@ -12,42 +12,42 @@ The KN5000 organizes its sounds into 16 categories (plus 2 user memory slots), m
 
 ```
 SOUND_DATA_SECTION_PTRS (0xE023B0)
-├─ [0]  → SOUND_DATA_PIANO          (0xE02510)  Binary block, 8320 bytes
-├─ [1]  → SOUND_DATA_GUITAR         (0xE04590)  Binary block, 1440 bytes
-├─ [2]  → SOUND_DATA_STRINGS_VOCAL  (0xE04B30)  Binary block, 8320 bytes
-├─ [3]  → SOUND_DATA_BRASS_PTRS     (0xE06BB0)  Pointer table → 3-byte patch entries
-├─ [4]  → SOUND_DATA_FLUTE          (0xE06F30)  Binary block, 2498 bytes
-├─ [5]  → SOUND_DATA_SAX_REED       (0xE08BB0)  Binary block, 1440 bytes
-├─ [6]  → SOUND_DATA_MALLET_ORCH_PERC (0xE09150) Binary block, 7296 bytes
-├─ [7]  → SOUND_DATA_WORLD_PERC     (0xE0ADCD)  Pointer table → 3-byte patch entries
-├─ [8]  → SOUND_DATA_ORGAN_ACCORDION (0xE0B190) Inline 2-byte pairs, 128 entries
-├─ [9]  → SOUND_DATA_ORCHESTRAL_PAD (0xE0B250)  Binary block, 128 bytes
-├─ [10] → SOUND_DATA_SYNTH          (0xE0B2D0)  Binary block, 256 bytes
-├─ [11] → SOUND_DATA_BASS           (0xE0B3D0)  Binary block, 18 bytes
-├─ [12] → SOUND_DATA_DIGITAL_DRAWBAR (0xE0B3E2) Binary block, 18 bytes
-├─ [13] → SOUND_DATA_ACCORDION_REG  (0xE0B3F4)  Binary block, 18 bytes
-├─ [14] → SOUND_DATA_GM_SPECIAL     (0xE0B406)  Binary block, 18 bytes
-└─ [15] → SOUND_DATA_DRUM_KITS      (0xE0B418)  Binary block, 213 bytes
++- [0]  → SOUND_DATA_PIANO          (0xE02510)  Binary block, 8320 bytes
++- [1]  → SOUND_DATA_GUITAR         (0xE04590)  Binary block, 1440 bytes
++- [2]  → SOUND_DATA_STRINGS_VOCAL  (0xE04B30)  Binary block, 8320 bytes
++- [3]  → SOUND_DATA_BRASS_PTRS     (0xE06BB0)  Pointer table → 3-byte patch entries
++- [4]  → SOUND_DATA_FLUTE          (0xE06F30)  Binary block, 2498 bytes
++- [5]  → SOUND_DATA_SAX_REED       (0xE08BB0)  Binary block, 1440 bytes
++- [6]  → SOUND_DATA_MALLET_ORCH_PERC (0xE09150) Binary block, 7296 bytes
++- [7]  → SOUND_DATA_WORLD_PERC     (0xE0ADCD)  Pointer table → 3-byte patch entries
++- [8]  → SOUND_DATA_ORGAN_ACCORDION (0xE0B190) Inline 2-byte pairs, 128 entries
++- [9]  → SOUND_DATA_ORCHESTRAL_PAD (0xE0B250)  Binary block, 128 bytes
++- [10] → SOUND_DATA_SYNTH          (0xE0B2D0)  Binary block, 256 bytes
++- [11] → SOUND_DATA_BASS           (0xE0B3D0)  Binary block, 18 bytes
++- [12] → SOUND_DATA_DIGITAL_DRAWBAR (0xE0B3E2) Binary block, 18 bytes
++- [13] → SOUND_DATA_ACCORDION_REG  (0xE0B3F4)  Binary block, 18 bytes
++- [14] → SOUND_DATA_GM_SPECIAL     (0xE0B406)  Binary block, 18 bytes
++- [15] → SOUND_DATA_DRUM_KITS      (0xE0B418)  Binary block, 213 bytes
 
 SOUND_CATEGORY_NAMES (0xE023F0)
-├─ [0]  "PIANO"
-├─ [1]  "GUITAR"
-├─ [2]  "STRINGS & VOCAL"
-├─ [3]  "BRASS"
-├─ [4]  "FLUTE"
-├─ [5]  "SAX & REED"
-├─ [6]  "MALLET&ORCH PERC"
-├─ [7]  "WORLD PERC"
-├─ [8]  "ORGAN&ACCORDION"
-├─ [9]  "ORCHESTRAL PAD"
-├─ [10] "SYNTH"
-├─ [11] "BASS"
-├─ [12] "DIGITAL DRAWBAR"
-├─ [13] "ACCORDION REG."
-├─ [14] "GM SPECIAL"
-├─ [15] "DRUM KITS"
-├─ [16] "MEMORY A"         (user-stored, in DRAM)
-└─ [17] "MEMORY B"         (user-stored, in DRAM)
++- [0]  "PIANO"
++- [1]  "GUITAR"
++- [2]  "STRINGS & VOCAL"
++- [3]  "BRASS"
++- [4]  "FLUTE"
++- [5]  "SAX & REED"
++- [6]  "MALLET&ORCH PERC"
++- [7]  "WORLD PERC"
++- [8]  "ORGAN&ACCORDION"
++- [9]  "ORCHESTRAL PAD"
++- [10] "SYNTH"
++- [11] "BASS"
++- [12] "DIGITAL DRAWBAR"
++- [13] "ACCORDION REG."
++- [14] "GM SPECIAL"
++- [15] "DRUM KITS"
++- [16] "MEMORY A"         (user-stored, in DRAM)
++- [17] "MEMORY B"         (user-stored, in DRAM)
 ```
 
 ## Pointer Table (0xE023B0)

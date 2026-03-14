@@ -11,44 +11,44 @@ The KN5000 audio subsystem handles all sound generation, processing, and output.
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      MAIN CPU (TMP94C241F)                          │
-│                                                                     │
-│  Audio_Lock_Acquire ──> Audio_DMA_Transfer ──> Audio_Lock_Release   │
-│                                 │                                   │
-│              Latch @ 0x120000 (Inter-CPU Communication)             │
-└─────────────────────────────────┬───────────────────────────────────┘
-                                  │
++---------------------------------------------------------------------+
+|                      MAIN CPU (TMP94C241F)                          |
+|                                                                     |
+|  Audio_Lock_Acquire --> Audio_DMA_Transfer --> Audio_Lock_Release   |
+|                                 |                                   |
+|              Latch @ 0x120000 (Inter-CPU Communication)             |
++---------------------------------+-----------------------------------+
+                                  |
                                   v
-┌───────────────────────────────────────────────────────────────────────┐
-│                       SUB CPU (TMP94C241F)                            │
-│                                                                       │
-│  Boot ROM: 128KB @ 0xFE0000      Payload: 192KB (from Main CPU)       │
-│                                                                       │
-│  ┌────────────────────────────────────────────────────────────────┐   │
-│  │                  AUDIO PROCESSING LOOP                         │   │
-│  │                                                                │   │
-│  │  ToneGen_Process_Notes ──> MIDI_Dispatch ──> Audio_Process_DSP │   │
-│  │         │                       │                    │         │   │
-│  │         v                       v                    v         │   │
-│  │   [Keyboard Input]        [Ring Buffer]         [DSP State]    │   │
-│  │      @ 0x110000             @ 0x2B0D             @ 0x3B60      │   │
-│  └────────────────────────────────────────────────────────────────┘   │
-└──────────┬─────────────────────┬─────────────────────┬────────────────┘
-           │                     │                     │
++-----------------------------------------------------------------------+
+|                       SUB CPU (TMP94C241F)                            |
+|                                                                       |
+|  Boot ROM: 128KB @ 0xFE0000      Payload: 192KB (from Main CPU)       |
+|                                                                       |
+|  +----------------------------------------------------------------+   |
+|  |                  AUDIO PROCESSING LOOP                         |   |
+|  |                                                                |   |
+|  |  ToneGen_Process_Notes --> MIDI_Dispatch --> Audio_Process_DSP |   |
+|  |         |                       |                    |         |   |
+|  |         v                       v                    v         |   |
+|  |   [Keyboard Input]        [Ring Buffer]         [DSP State]    |   |
+|  |      @ 0x110000             @ 0x2B0D             @ 0x3B60      |   |
+|  +----------------------------------------------------------------+   |
++----------+---------------------+---------------------+----------------+
+           |                     |                     |
       [0x100000]             [Serial1]            [0x130000]
        Register                UART                   DSP
         Config                Control               Config
-           │                     │                     │
+           |                     |                     |
            v                     v                     v
-  ┌─────────────────┐   ┌─────────────────┐   ┌──────────────────┐
-  │  TONE GENERATOR │   │   DAC (IC313)   │   │   DUAL DSP       │
-  │  IC303          │   │   PCM69AU       │   │   IC310 + IC311  │
-  │                 │   │                 │   │                  │
-  │  64 voices      │   │  18-bit stereo  │   │  4 channels      │
-  │  28 params each │   │  (via serial)   │   │  0x20 bytes/ch   │
-  └────────┬────────┘   └────────┬────────┘   └──────────────────┘
-           │                     │
+  +-----------------+   +-----------------+   +------------------+
+  |  TONE GENERATOR |   |   DAC (IC313)   |   |   DUAL DSP       |
+  |  IC303          |   |   PCM69AU       |   |   IC310 + IC311  |
+  |                 |   |                 |   |                  |
+  |  64 voices      |   |  18-bit stereo  |   |  4 channels      |
+  |  28 params each |   |  (via serial)   |   |  0x20 bytes/ch   |
+  +--------+--------+   +--------+--------+   +------------------+
+           |                     |
        [0x110000]          [BCK/SDOR/SDOF]
      Keyboard Input        Serial Audio Bus
 ```
@@ -1029,26 +1029,26 @@ When a MIDI Note On arrives at `Voice_NoteOn` (0x02CF97):
 
 ```
 MIDI Note On (channel, note, velocity)
-  │
-  ├─ velocity = 0? ──yes──> Voice_NoteOff (release voice)
-  │
-  ├─ Voice_Allocate (0x02C9DF)
-  │     └─ Pool-based allocation from 64 hardware voices
-  │     └─ Voice stealing if pool exhausted
-  │
-  ├─ Voice_SetVelocity
-  │     └─ Scale velocity via lookup table at 0x011D16
-  │     └─ Write to amplitude parameter
-  │
-  ├─ Voice_SetPitch / ToneGen_Calc_Pitch (0x03D11F)
-  │     └─ note + 0x24 (transpose by +36 semitones)
-  │     └─ Semitone-specific adjustments (A#, G#, F#, E#)
-  │     └─ Mode-dependent pitch offset (tone gen mode at 0x4A48)
-  │     └─ Clamp to 0-255 range
-  │
-  └─ ToneGen_WriteVoiceParams
-        └─ Write 21 register pairs to 0x100000/0x100002
-        └─ Set key-on flag (bit 15 at register offset 0x0080)
+  |
+  +- velocity = 0? --yes--> Voice_NoteOff (release voice)
+  |
+  +- Voice_Allocate (0x02C9DF)
+  |     +- Pool-based allocation from 64 hardware voices
+  |     +- Voice stealing if pool exhausted
+  |
+  +- Voice_SetVelocity
+  |     +- Scale velocity via lookup table at 0x011D16
+  |     +- Write to amplitude parameter
+  |
+  +- Voice_SetPitch / ToneGen_Calc_Pitch (0x03D11F)
+  |     +- note + 0x24 (transpose by +36 semitones)
+  |     +- Semitone-specific adjustments (A#, G#, F#, E#)
+  |     +- Mode-dependent pitch offset (tone gen mode at 0x4A48)
+  |     +- Clamp to 0-255 range
+  |
+  +- ToneGen_WriteVoiceParams
+        +- Write 21 register pairs to 0x100000/0x100002
+        +- Set key-on flag (bit 15 at register offset 0x0080)
 ```
 
 ### Pitch Calculation
@@ -1187,23 +1187,23 @@ The Feature Demo plays pre-recorded MIDI sequences to demonstrate the keyboard's
 
 ```
 DemoModeFunc (entry point)
-  ├─ First call → DemoMode_Initialize
-  │     ├─ Demo_PreSetup (general preparation)
-  │     ├─ Audio_WaitForReady (poll bit 2 of 0x0420)
-  │     ├─ Voice_SavePreset (save current voice state)
-  │     ├─ SeqInit_PostEventSequence (post events 0xE1, 0xE2, 0xE3)
-  │     └─ Seq_StartMainControlAlt (enter main control with event 0x01E1000D)
-  └─ Subsequent calls → DemoMode_Main_Operation
-        ├─ Voice_InitializeAll (allocates 0x1F0 bytes, inits 16 voices × 26 params)
-        ├─ Audio_ConfigureDSP (DSP and hardware setup)
-        ├─ Voice_LoadVoiceTable (load 16 voice presets)
-        ├─ Demo_PreSetup
-        ├─ Voice_CopyPreset (restore voice data)
-        ├─ Timer7_DisableInterrupt
-        ├─ Audio_CheckSubsystemReady
-        ├─ SeqInit_PostEventSequence
-        ├─ SeqInit_FinalEvent (post event 0x1B with 0xFFFFFFFF)
-        └─ Seq_StartMainControl (enter main control with event 0x01E1000C)
+  +- First call → DemoMode_Initialize
+  |     +- Demo_PreSetup (general preparation)
+  |     +- Audio_WaitForReady (poll bit 2 of 0x0420)
+  |     +- Voice_SavePreset (save current voice state)
+  |     +- SeqInit_PostEventSequence (post events 0xE1, 0xE2, 0xE3)
+  |     +- Seq_StartMainControlAlt (enter main control with event 0x01E1000D)
+  +- Subsequent calls → DemoMode_Main_Operation
+        +- Voice_InitializeAll (allocates 0x1F0 bytes, inits 16 voices × 26 params)
+        +- Audio_ConfigureDSP (DSP and hardware setup)
+        +- Voice_LoadVoiceTable (load 16 voice presets)
+        +- Demo_PreSetup
+        +- Voice_CopyPreset (restore voice data)
+        +- Timer7_DisableInterrupt
+        +- Audio_CheckSubsystemReady
+        +- SeqInit_PostEventSequence
+        +- SeqInit_FinalEvent (post event 0x1B with 0xFFFFFFFF)
+        +- Seq_StartMainControl (enter main control with event 0x01E1000C)
 ```
 
 ### Sequencer Event Processing
@@ -1283,7 +1283,7 @@ All observed states (0x00, 0x01, 0xE0, 0xE4) are outside the 0x10-0x16 skip rang
 The pipeline breaks between "rhythm data loaded from ROM" and "MIDI events generated into ring buffer":
 
 ```
-Rhythm ROM (4MB) ──read──> Pattern Data in RAM ──???──> Ring Buffer (0x01F37B)
+Rhythm ROM (4MB) --read--> Pattern Data in RAM --???--> Ring Buffer (0x01F37B)
      ✓ working              ✓ executing                  ✗ NEVER written
 ```
 
