@@ -1,18 +1,24 @@
 ---
 layout: page
-title: "ScreenData C Conversion Plan"
+title: "ScreenData C Conversion"
 permalink: /screendata-c-conversion/
 ---
 
 ## Overview
 
-The KN5000 Style UI and other subsystems use a bytecode format (ScreenData) to describe screen layouts. We are converting all raw `.byte` assembly data to typed C struct source files for readability and maintainability.
+The KN5000 uses a bytecode format (ScreenData) to describe screen layouts. We have converted all identified ScreenData blocks to typed C struct source files for readability and maintainability.
 
 ## What is ScreenData?
 
-Packed binary commands with opcodes: 0x01 HLINE, 0x02 WIDGET/VLINE, 0x06 LABELED_REF, 0x09 RECT, 0x0A FILLED_RECT, 0x20 STRING. Rendered by GraphicsRender_Start / GraphicsRender_TwoTable. SETUP/CTRL blocks define cursor navigation and value display tables.
+Packed binary commands with opcodes: 0x01 HLINE, 0x02 WIDGET/VLINE, 0x05 SELECT_RECT, 0x06 LABELED_REF, 0x07 SHORT_REF, 0x08 MESSAGE, 0x09 RECT, 0x0A FILLED_RECT, 0x17 PARAM_LABEL, 0x1B BOUNDARY, 0x1C FIELD_LABEL, 0x20 STRING. Rendered by `GraphicsRender_Start` / `GraphicsRender_TwoTable`. SETUP/CTRL blocks define cursor navigation and value display tables.
 
-## Already Converted (Style UI)
+## Coverage — Complete Inventory
+
+Three subsystems use ScreenData bytecodes. All blocks have been identified and converted.
+
+### Subsystem 1: Style UI (16 files, authoritative)
+
+Already integrated into the build as `.incbin` directives in `style_ui_params.s`. C source is compiled to binary and included in the ROM.
 
 | File | Size | Description |
 |------|------|-------------|
@@ -20,11 +26,13 @@ Packed binary commands with opcodes: 0x01 HLINE, 0x02 WIDGET/VLINE, 0x06 LABELED
 | style_ui/meascursor.c | 184 bytes | Measure cursor overlay |
 | style_ui/yesctl.c | 228 bytes | Yes/No confirmation dialog |
 | style_ui/ctlonly.c | 551 bytes | Control-only variant |
-| style_ui/paramblock/*.c (12 files) | 39-250 bytes each | Parameter display blocks |
+| style_ui/paramblock/*.c (12 files) | 39–250 bytes each | Parameter display blocks |
 
-## Converted (Sound Editor + Accompaniment)
+The scoop display subsystem (`scoop_display.s`) loads XIY/XIX pointers into these blocks at various sub-offsets (~40 distinct entry points). It does not have its own ScreenData — it reuses Style UI data.
 
-22 sound editor screen data files and 1 accompaniment engine file, totaling 3,515 bytes across 23 C source files. All verified 100% byte-match against the original ROM.
+### Subsystem 2: Sound Editor (22 files, documentation)
+
+Located in `maincpu/audio/sound_editor_screens/`. The original data remains as inline `.byte` in `sound_editor_ui.s`.
 
 | File | Size | Commands | Description |
 |------|------|----------|-------------|
@@ -46,47 +54,52 @@ Packed binary commands with opcodes: 0x01 HLINE, 0x02 WIDGET/VLINE, 0x06 LABELED
 | se_setup_env.c | 107 bytes | 13 | Envelope setup |
 | se_setup_labels.c | 47 bytes | 5 | Label definitions |
 | se_setup_sel_rects.c | 30 bytes | 3 | Selection rectangles |
-| se_setup_sel{1-4}.c | 10-30 bytes | 1-2 | Selection rect entries |
-| accomp_display.c | 277 bytes | 13 | Accompaniment editor display |
+| se_setup_sel{1-4}.c | 10–30 bytes | 1–2 | Selection rect entries |
 
-### Remaining: Build Integration
+### Subsystem 3: Accompaniment Engine (3 files, documentation)
 
-These C files currently serve as typed documentation. The original data remains as inline `.byte` directives in `sound_editor_ui.s` and `accompaniment_engine.s`. Replacing the inline data with `.incbin` references (making C the authoritative source) requires handling label dependencies within the data blocks — labels referenced by surrounding code point into the middle of these data regions.
+Located in `maincpu/sequencer/accomp_screens/`. The original data remains as inline `.byte` in `accompaniment_engine.s`.
+
+| File | Size | Commands | Description |
+|------|------|----------|-------------|
+| accomp_section_widget.c | 15 bytes | 1 | Section selector widget |
+| accomp_part_widget.c | 15 bytes | 1 | Part selector widget |
+| accomp_display_full.c | 287 bytes | 14 | Full accompaniment display |
+
+### Totals
+
+| Subsystem | Files | Bytes | Status |
+|-----------|-------|-------|--------|
+| Style UI | 16 | ~6,193 | Build-integrated (authoritative) |
+| Sound Editor | 22 | 3,238 | Typed documentation |
+| Accompaniment | 3 | 317 | Typed documentation |
+| **Total** | **41** | **~9,748** | 25 files verified 100% byte-match |
 
 ### NOT in scope: NAKA Widget Tables
 
-~74 screen definitions using a completely different format (hierarchical .long pointer chains). Separate rendering pipeline — future project.
+~74 screen definitions using a completely different format (hierarchical `.long` pointer chains). Separate rendering pipeline — future project.
 
-## Conversion Pipeline
+## Tooling
+
+- `screendata_parser.py` — Generic ScreenData bytecode parser + C code generator library. Supports 16 opcodes with automatic SD_PTR detection for self-referential WIDGET handlers.
+- `generate_all_screendata.py` — Batch generator for all non-Style-UI blocks (25 files). Includes compilation and ROM byte-match verification.
+- `generate_screendata_main_c.py` — Style UI main block generator with typed setup/control fields.
+
+### Conversion Pipeline
 
 1. `screendata_parser.py` reads ROM binary and parses ScreenData bytecodes
-2. `generate_all_screendata.py` generates typed C struct source files for all known blocks
+2. Generator scripts produce typed C struct source files
 3. Self-referential handler addresses use `SD_PTR(field)` macro
-4. `clang -target tlcs900` compiles C to object, `llvm-objcopy` extracts `.text` section
-5. For Style UI: assembly `.incbin` includes the compiled binary (authoritative)
-6. For sound editor/accompaniment: C files verified against ROM but not yet integrated into build
-7. All verified by `compare_roms.py` (100% byte match required)
+4. `clang -target tlcs900 -ffreestanding -c -O2` compiles C to object
+5. `llvm-objcopy -O binary -j .text` extracts raw binary
+6. Verified by byte comparison against original ROM (100% match required)
 
-## Phase Plan
+## Build Integration Status
 
-| Phase | Scope | Status |
-|-------|-------|--------|
-| 1 | Accompaniment engine (1 pair, 277 bytes) | **Done** |
-| 2 | Sound editor inventory & tooling generalization | **Done** |
-| 3 | Sound editor extraction & conversion (22 files, 3,238 bytes) | **Done** |
-| 4 | Symbolic SD_PTR cross-references | **Done** |
-| 5 | Build integration (replace inline .byte with .incbin) | Deferred |
+**Style UI:** Fully integrated. C files are compiled and included via `.incbin` in `style_ui_params.s`.
 
-## Phase 4 Details: SD_PTR Cross-References
+**Sound Editor:** Deferred. The data region in `sound_editor_ui.s` contains 17 internal labels referenced by dispatch tables (e.g., drum kit variant pointers, parameter grid sub-blocks). Replacing with `.incbin` requires splitting at each label boundary.
 
-The `screendata_parser.py` generator now automatically detects self-referential WIDGET handler addresses and emits `SD_PTR(field)` expressions. Analysis of all 23 blocks found only `accomp_display.c` has self-referential handlers (4 WIDGETs pointing to string data within the same block). All sound editor blocks reference external handler addresses.
+**Accompaniment:** Deferred. The 317-byte screen data sits within a larger 2,096-byte data block (`LABEL_F6A9D7`–`LABEL_F6B207`) that mixes ScreenData with non-ScreenData formats.
 
-## Phase 5 Details: Build Integration Blockers
-
-Making C the authoritative source requires replacing inline `.byte` in assembly with `.incbin` of compiled C output. Two obstacles:
-
-**Sound editor (`sound_editor_ui.s`):** The screen data region contains 17 internal labels referenced by dispatch tables and code (e.g., `LABEL_F12C6F`, `LABEL_F12C83` for drum kit variant selection; `LABEL_F1440B`-`LABEL_F144D3` for parameter grid sub-blocks). Splitting the data at each label boundary and stitching `.incbin` segments between label definitions is possible but fragile.
-
-**Accompaniment (`accompaniment_engine.s`):** The 277-byte `accomp_display` data sits at offset 0x360 within a larger 2,096-byte data block (`LABEL_F6A9D7`–`LABEL_F6B207`) that has no internal labels. The block could be split at the accomp_display boundaries, but the surrounding data would also need to be extracted as separate binary segments.
-
-Both cases load data by raw immediate address (`ld xiy, 0xF6AD37`), not by label — so the binary position must remain exact, which byte-matching guarantees.
+Both subsystems load data by raw immediate address (`ld xiy, 0xF6AD37`), not by label — binary position must remain exact, which byte-matching guarantees.
