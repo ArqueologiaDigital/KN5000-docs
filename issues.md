@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 313 (13 open, 296 closed)
+**Total Issues:** 314 (9 open, 301 closed)
 
 **Quick Links:** 
-[Other](#other) (13)
+[Other](#other) (9)
 
 ---
 
@@ -89,14 +89,6 @@ Three parallel efforts to resolve blockers:
 
 ---
 
-#### 🟠 MAME: Complete FDC address mapping at 0x110000-0x12FFFF {#issue-kn5000-umft}
-
-**ID:** `kn5000-umft` | **Priority:** High | **Created:** 2026-03-10
-
-The UPD72067 FDC device is instantiated and interrupt routing (INT4/INT5) is wired, but the actual address mapping at 0x110000-0x11FFFF (FDC registers) and 0x120000-0x12FFFF (DMA ACK) is commented out with FIXME. Also PORT D bit 6 (FD.I/O input) is marked TODO. Uncommenting and completing this mapping should enable floppy disk read/write operations. This is the last gap preventing Phase 2 closure (kn5000-dnl). Test with kn5000_v10_disk.mfi image already available.
-
----
-
 #### 🟠 Phase 2 Completion: Core functionality working {#issue-kn5000-dnl}
 
 **ID:** `kn5000-dnl` | **Priority:** High | **Created:** 2026-01-31
@@ -150,35 +142,11 @@ The MAME upstream PR #14558 was opened with an earlier version of the driver. Si
 
 ---
 
-#### 🟡 TMP94C241: Internal RAM range 0xC00-0xFFF missing from address map {#issue-kn5000-rqtw}
-
-**ID:** `kn5000-rqtw` | **Priority:** Medium | **Created:** 2026-03-09
-
-The TMP94C241 datasheet says internal RAM is 2KB at 0x800-0xFFF. MAME currently maps 0x400-0xBFF as RAM, missing 0xC00-0xFFF. Extending to 0xFFF breaks KN5000 demo timer (0x0D2F) because the KN5000 driver maps external DRAM at 0x000000-0x0FFFFF overlapping internal RAM. Adding internal RAM at 0xC00-0xFFF shadows the DRAM, causing the timer to get stuck. Needs investigation: (1) Are other MAME drivers affected? (2) Should KN5000 driver start DRAM at 0x1000? (3) Do DMA transfers access internal RAM or external bus?
-
----
-
-#### 🟡 Use symbolic handler references in all C screen data files {#issue-kn5000-n1lw}
-
-**ID:** `kn5000-n1lw` | **Priority:** Medium | **Created:** 2026-03-14
-
-Replace all raw hex addresses in .handler fields across all C screen data files with named symbols resolved by linker scripts. Created shared linker scripts (se_screens_link.ld, accomp_screens_link.ld) defining 52 symbols across categories: ROM string tables, cursor coordinate tables, DRAM parameter addresses, flagged addresses, table data ROM references. All 11 C files updated.
-
----
-
 #### ⚪ Disassembly: Semantic analysis of NAKA obfuscated code blocks {#issue-kn5000-iueh}
 
 **ID:** `kn5000-iueh` | **Priority:** Low | **Created:** 2026-03-10
 
 18 NAKA files in maincpu/ contain ~41,000 lines with ~9,109 LABEL_XXXXXX placeholder names. These are deliberately obfuscated code blocks (likely style/rhythm/accompaniment-related proprietary algorithms). Semantic analysis would: (1) identify callers from dispatch tables, (2) trace register usage and memory access patterns, (3) cross-reference with known subsystems (sequencer, tone gen, accompaniment engine), (4) assign meaningful labels. This is the largest remaining chunk of unanalyzed code. Start with smaller NAKA files (86-683 lines) before tackling the large ones (5,000-8,000 lines).
-
----
-
-#### ⚪ LLVM: Add R+d16 addressing mode for TLCS-900 backend {#issue-kn5000-psio}
-
-**ID:** `kn5000-psio` | **Priority:** Low | **Created:** 2026-03-10
-
-The LLVM TLCS-900 backend lacks support for register+16-bit-displacement addressing mode (R+d16, C3 prefix encoding). This prevents ~970 .byte instructions in HDAE5000 from being converted to native mnemonics. Also blocks ~470 16-bit direct addressing and ~210 8-bit direct addressing conversions. The load direction (ld A, (R+d16)) is known broken ('displacement too large' error) while the store direction (ld (R+d16), A) works via F3 prefix. Need to fix the C3 prefix load encoding and add the missing addressing mode patterns.
 
 ---
 
@@ -242,6 +210,11 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-psio` | LLVM: Add R+d16 addressing mode for TLCS-900 backend | 2026-03-14 |
+| `kn5000-rqtw` | TMP94C241: Internal RAM range 0xC00-0xFFF missing from ad... | 2026-03-14 |
+| `kn5000-umft` | MAME: Complete FDC address mapping at 0x110000-0x12FFFF | 2026-03-14 |
+| `kn5000-f8d2` | Fix Unicode box-drawing diagrams in docs website | 2026-03-14 |
+| `kn5000-n1lw` | Use symbolic handler references in all C screen data files | 2026-03-14 |
 | `kn5000-6rjd` | Phase 5: Build integration for Rhythm/DrumSound dispatch ... | 2026-03-14 |
 | `kn5000-rfqe` | Phase 5: Build integration for DrumKit dispatch table (Op... | 2026-03-14 |
 | `kn5000-h9ag` | Phase 5: Build integration for accompaniment screen data ... | 2026-03-14 |
@@ -257,13 +230,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-ko7x` | Document all dispatch/jump tables in ROM disassembly | 2026-03-09 |
 | `kn5000-3sar` | Fix cpanel HLE for Feature Demo navigation without breaki... | 2026-03-09 |
 | `kn5000-tgd6` | MAME: TMP94C241 timer output callbacks fire unconditional... | 2026-03-09 |
-| `kn5000-u6du` | MAME: Fresh NVRAM boot shows ERROR in CPU data transmission | 2026-03-09 |
-| `kn5000-asm6` | LLVM TLCS-900: LDA with displacement > d8 generates inval... | 2026-03-08 |
-| `kn5000-8gqi` | LLVM TLCS-900: Variable shift SLA Rx,Ry generates wrong e... | 2026-03-08 |
-| `kn5000-m7iu` | MAME: Implement TMP94C241 timer output callbacks and wire... | 2026-03-08 |
-| `kn5000-492z` | MAME: Wire HDAE5000 IDE/ATA interface using MAME ata_inte... | 2026-03-08 |
 
-*...and 276 more closed issues*
+*...and 281 more closed issues*
 
 ---
 
@@ -274,16 +242,16 @@ Production-ready emulation and homebrew support.
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 3 |
-| Medium | 4 |
-| Low | 5 |
+| High | 2 |
+| Medium | 2 |
+| Low | 4 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 13 |
+| Other | 9 |
 
 ---
 
-*Last updated: 2026-03-14 11:15*
+*Last updated: 2026-03-14 11:18*
