@@ -15,23 +15,23 @@ The KN5000's 61-key velocity-sensitive keyboard connects directly to the tone ge
 The note flow is bidirectional — keybed events travel through the Sub CPU to the Main CPU (for display and MIDI output), then note-on commands travel back from the Main CPU through the Sub CPU to IC303 (for sound generation):
 
 ```
-+------------------------------------------------------------------+
-|                        NOTE EVENT FLOW                           |
-|                                                                  |
-|  +---------+    +----------+    +----------+    +----------+     |
-|  | KEYBED  |--->|  IC303   |--->| SUB CPU  |--->| MAIN CPU |     |
-|  | (keys)  |    | ToneGen  |    | firmware |    | firmware |     |
-|  +---------+    +----------+    +----------+    +----------+     |
-|                   0x110000        DMA latch       Display,       |
-|                  (HW scan)       @ 0x120000       MIDI out       |
-|                                                                  |
-|                 +----------+    +----------+    +----------+     |
-|                 |  IC303   |<---| SUB CPU  |<---| MAIN CPU |     |
-|                 | ToneGen  |    | firmware |    | firmware |     |
-|                 +----------+    +----------+    +----------+     |
-|                   0x100000        DMA latch     Sound select,    |
-|                  (voice cfg)     @ 0x120000     note routing     |
-+------------------------------------------------------------------+
+┌──────────────────────────────────────────────────────────────────┐
+│                        NOTE EVENT FLOW                           │
+│                                                                  │
+│  ┌─────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐     │
+│  │ KEYBED  │───>│  IC303   │───>│ SUB CPU  │───>│ MAIN CPU │     │
+│  │ (keys)  │    │ ToneGen  │    │ firmware │    │ firmware │     │
+│  └─────────┘    └──────────┘    └──────────┘    └──────────┘     │
+│                   0x110000        DMA latch       Display,       │
+│                  (HW scan)       @ 0x120000       MIDI out       │
+│                                                                  │
+│                 ┌──────────┐    ┌──────────┐    ┌──────────┐     │
+│                 │  IC303   │<───│ SUB CPU  │<───│ MAIN CPU │     │
+│                 │ ToneGen  │    │ firmware │    │ firmware │     │
+│                 └──────────┘    └──────────┘    └──────────┘     │
+│                   0x100000        DMA latch     Sound select,    │
+│                  (voice cfg)     @ 0x120000     note routing     │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 **Forward path** (keybed to display):

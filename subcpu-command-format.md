@@ -14,10 +14,10 @@ The command byte uses a split format:
 
 ```
   7   6   5   4   3   2   1   0
-+---+---+---+---+---+---+---+---+
-| Handler ID    | Payload Length    |
-|  (bits 7-5)   |  (bits 4-0)       |
-+---+---+---+---+---+---+---+---+
+┌───┬───┬───┬───┬───┬───┬───┬───┐
+│ Handler ID    │ Payload Length    │
+│  (bits 7-5)   │  (bits 4-0)       │
+└───┴───┴───┴───┴───┴───┴───┴───┘
 ```
 
 - **Bits 7-5:** Handler selector (0-7), indexes into `CMD_DISPATCH_TABLE`
@@ -209,21 +209,21 @@ MicroDMA Ch0 interrupt fires
     v
 CMD_PROCESSING_STATE check
     |
-    +-- State 0: Store byte, set state=1, setup next DMA
-    +-- State 1: Decode command byte
-    |       |
-    |       v
-    |   bits 7-5 → CMD_DISPATCH_TABLE[index]
-    |       |
-    |       v
-    |   Handler processes payload
-    |       |
-    |       v
-    |   State → 0, ACK to Main CPU
-    |
-    +-- State 2: E1 phase 2 (start DMA)
-    +-- State 3: E2 complete (set flag, ACK)
-    +-- State 4: E1 complete (clear flag, ACK)
+    ├── State 0: Store byte, set state=1, setup next DMA
+    ├── State 1: Decode command byte
+    │       |
+    │       v
+    │   bits 7-5 → CMD_DISPATCH_TABLE[index]
+    │       |
+    │       v
+    │   Handler processes payload
+    │       |
+    │       v
+    │   State → 0, ACK to Main CPU
+    │
+    ├── State 2: E1 phase 2 (start DMA)
+    ├── State 3: E2 complete (set flag, ACK)
+    └── State 4: E1 complete (clear flag, ACK)
 ```
 
 ## Code References

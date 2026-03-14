@@ -11,32 +11,32 @@ This page documents the protocol used by the KN5000 Main CPU to send sound param
 ## Architecture (3 layers)
 
 ```
-+---------------------------------------------------------+
-|  LAYER 1: UI (Main CPU — NAKA Widget System)            |
-|                                                         |
-|  Widget event (e.g. slider changed)                     |
-|    → Lsw* handler function (e.g. LswReverb at F7CFA5)  |
-|    → AssswbWr (ring buffer write at FDB1F3)             |
-+----------------------+----------------------------------+
-                       | 4-byte command packets
-                       | via ring buffer at RAM 0xBD3C
-                       v
-+---------------------------------------------------------+
-|  LAYER 2: Inter-CPU Transport                           |
-|                                                         |
-|  sendCOMM (EF32F4) → DMA latch at 0x140000             |
-|  Command byte: bits 7-5 = handler, bits 4-0 = count    |
-+----------------------+----------------------------------+
-                       |
-                       v
-+---------------------------------------------------------+
-|  LAYER 3: Sub CPU (Sound Processing)                    |
-|                                                         |
-|  INT0 ISR → ring buffer 0x2B0D                          |
-|  CC dispatch → Voice_CC_91 (reverb depth, at 0x02A46C) |
-|    → LABEL_028A44: store at voice[ch × 0x11F + 0x7F]   |
-|  Voice param structure: 287 bytes/voice at 0x041300     |
-+---------------------------------------------------------+
+┌─────────────────────────────────────────────────────────┐
+│  LAYER 1: UI (Main CPU — NAKA Widget System)            │
+│                                                         │
+│  Widget event (e.g. slider changed)                     │
+│    → Lsw* handler function (e.g. LswReverb at F7CFA5)  │
+│    → AssswbWr (ring buffer write at FDB1F3)             │
+└──────────────────────┬──────────────────────────────────┘
+                       │ 4-byte command packets
+                       │ via ring buffer at RAM 0xBD3C
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│  LAYER 2: Inter-CPU Transport                           │
+│                                                         │
+│  sendCOMM (EF32F4) → DMA latch at 0x140000             │
+│  Command byte: bits 7-5 = handler, bits 4-0 = count    │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│  LAYER 3: Sub CPU (Sound Processing)                    │
+│                                                         │
+│  INT0 ISR → ring buffer 0x2B0D                          │
+│  CC dispatch → Voice_CC_91 (reverb depth, at 0x02A46C) │
+│    → LABEL_028A44: store at voice[ch × 0x11F + 0x7F]   │
+│  Voice param structure: 287 bytes/voice at 0x041300     │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Concrete trace: Reverb Depth (CC#91)
@@ -267,18 +267,18 @@ Each Lsw function handles a specific widget TYPE (slider, on/off toggle, etc.):
 ```
 NAKA Widget Config Data
   (contains: CC number, value range, channel)
-    |
-    v
+    │
+    ▼
 Lsw* Function (generic handler for widget type)
   handles event 0x1E00042 (value changed)
-    |
-    +- bit 13 set? → LABEL_FF0A72 (send command to Sub CPU)
-    |                  |
-    |                  +- st32_24 0x03c21c, widget_data  (buffer the widget config)
-    |                  +- LABEL_FF1048 (command encoder, reads template at 0x0AD8)
-    |                  +- AssswbWr → ring buffer → sendCOMM → DMA → Sub CPU
-    |
-    +- bit 13 clear? → Strcpy (format display string only, no sound command)
+    │
+    ├─ bit 13 set? → LABEL_FF0A72 (send command to Sub CPU)
+    │                  │
+    │                  ├─ st32_24 0x03c21c, widget_data  (buffer the widget config)
+    │                  ├─ LABEL_FF1048 (command encoder, reads template at 0x0AD8)
+    │                  └─ AssswbWr → ring buffer → sendCOMM → DMA → Sub CPU
+    │
+    └─ bit 13 clear? → Strcpy (format display string only, no sound command)
 ```
 
 The per-channel configuration table at **0xE952AA** contains 4-byte flag words. The bit tested by each Lsw function determines whether the parameter is "active" for that channel:
@@ -538,16 +538,16 @@ The combined preset loader (`LABEL_FCA04E`) reads the first 24 bytes as a reverb
 
 ```
 DSP Ring Buffer Message Format (8 bytes):
-+---------------------------------------------------------+
-| [framing] Framing byte: 0x2B/0x2C/0x2D   → DRAM 17256 |
-| [hdr 0]  Voice group (0x30-0x3F, low nibble = voice#)  |
-| [hdr 1]  Sub-qualifier (0x7F for main path)             |
-| [hdr 2]  Sub-command type (see dispatch table below)    |
-| [hdr 3]  Parameter data MSB                             |
-| [hdr 4]  Payload size MSB                               |
-| [hdr 5]  Payload size LSB / additional byte count       |
-| [hdr 6]  End marker / modifier                          |
-+---------------------------------------------------------+
+┌─────────────────────────────────────────────────────────┐
+│ [framing] Framing byte: 0x2B/0x2C/0x2D   → DRAM 17256 │
+│ [hdr 0]  Voice group (0x30-0x3F, low nibble = voice#)  │
+│ [hdr 1]  Sub-qualifier (0x7F for main path)             │
+│ [hdr 2]  Sub-command type (see dispatch table below)    │
+│ [hdr 3]  Parameter data MSB                             │
+│ [hdr 4]  Payload size MSB                               │
+│ [hdr 5]  Payload size LSB / additional byte count       │
+│ [hdr 6]  End marker / modifier                          │
+└─────────────────────────────────────────────────────────┘
 
 Framing byte dispatch:
   0x2B → Voice DSP parameter update (per-voice params)

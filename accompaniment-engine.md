@@ -13,55 +13,55 @@ The KN5000's accompaniment (auto-accompaniment) system automatically generates m
 ## Architecture
 
 ```
-+------------------------------------------------------+
-|                   LOWER KEYBOARD                      |
-|        (Left half of keybed, split point)             |
-+------------------------------------------------------+
-                          |
+┌──────────────────────────────────────────────────────┐
+│                   LOWER KEYBOARD                      │
+│        (Left half of keybed, split point)             │
+└──────────────────────────────────────────────────────┘
+                          │
                           v
-+------------------------------------------------------+
-|              CHORD DETECTION (AccChord)               |
-|  Scans held keys, matches chord type + root note     |
-|  Sets dirty flags when chord changes                 |
-+------------------------------------------------------+
-                          |
+┌──────────────────────────────────────────────────────┐
+│              CHORD DETECTION (AccChord)               │
+│  Scans held keys, matches chord type + root note     │
+│  Sets dirty flags when chord changes                 │
+└──────────────────────────────────────────────────────┘
+                          │
                           v
-+------------------------------------------------------+
-|           ACCOMPANIMENT SEQUENCER (AccompSeq)         |
-|  Two independent channels (0 and 1)                  |
-|  Each has: position, beat counter, pattern pointer   |
-|  Processes events: notes (0x90/0x91), CC (0xD1-D7),  |
-|  program change (0xC0), timing (0x84), beat (0x81)   |
-+------------------------------------------------------+
-              |                    |
+┌──────────────────────────────────────────────────────┐
+│           ACCOMPANIMENT SEQUENCER (AccompSeq)         │
+│  Two independent channels (0 and 1)                  │
+│  Each has: position, beat counter, pattern pointer   │
+│  Processes events: notes (0x90/0x91), CC (0xD1-D7),  │
+│  program change (0xC0), timing (0x84), beat (0x81)   │
+└──────────────────────────────────────────────────────┘
+              │                    │
               v                    v
-+--------------------+  +---------------------+
-|  BASS GENERATION   |  |  CHORD GENERATION   |
-|  (AccBass)         |  |  (AccChord voices)  |
-|  Single-note bass  |  |  Multi-note chords  |
-|  lines from style  |  |  transposed to root |
-+--------------------+  +---------------------+
-              |                    |
+┌────────────────────┐  ┌─────────────────────┐
+│  BASS GENERATION   │  │  CHORD GENERATION   │
+│  (AccBass)         │  │  (AccChord voices)  │
+│  Single-note bass  │  │  Multi-note chords  │
+│  lines from style  │  │  transposed to root │
+└────────────────────┘  └─────────────────────┘
+              │                    │
               v                    v
-+------------------------------------------------------+
-|              RHYTHM GENERATION (AccRhythm)            |
-|  Drum patterns, percussion mapping                   |
-|  DrumChannel_MapToIndex for note routing             |
-+------------------------------------------------------+
-              |
+┌──────────────────────────────────────────────────────┐
+│              RHYTHM GENERATION (AccRhythm)            │
+│  Drum patterns, percussion mapping                   │
+│  DrumChannel_MapToIndex for note routing             │
+└──────────────────────────────────────────────────────┘
+              │
               v
-+------------------------------------------------------+
-|          VOICE ASSIGNMENT (AccVoice/AccPart)          |
-|  Maps accompaniment parts to tone generator voices   |
-|  Handles program changes, tuning, velocity           |
-+------------------------------------------------------+
-              |
+┌──────────────────────────────────────────────────────┐
+│          VOICE ASSIGNMENT (AccVoice/AccPart)          │
+│  Maps accompaniment parts to tone generator voices   │
+│  Handles program changes, tuning, velocity           │
+└──────────────────────────────────────────────────────┘
+              │
               v
-+------------------------------------------------------+
-|          TONE GENERATOR / MIDI OUTPUT                 |
-|  SubCPU receives note events for sound generation    |
-|  MIDI OUT sends accompaniment to external devices    |
-+------------------------------------------------------+
+┌──────────────────────────────────────────────────────┐
+│          TONE GENERATOR / MIDI OUTPUT                 │
+│  SubCPU receives note events for sound generation    │
+│  MIDI OUT sends accompaniment to external devices    │
+└──────────────────────────────────────────────────────┘
 ```
 
 ## Main Loop Integration

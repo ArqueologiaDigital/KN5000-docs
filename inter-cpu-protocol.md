@@ -11,51 +11,51 @@ The KN5000 uses two TMP94C241F CPUs that communicate via a memory-mapped latch a
 ## Architecture
 
 ```
-+----------------------------------------------------------------------+
-|                        MAIN CPU (TMP94C241F)                          |
-|                                                                       |
-|  +-----------------+    +-----------------+    +-----------------+   |
-|  | Audio_Lock_     |    | Audio_DMA_      |    | Audio_Lock_     |   |
-|  | Acquire         |--->| Transfer        |--->| Release         |   |
-|  | (0xEF1FEE)      |    | (0xEF341B)      |    | (0xEF1F0F)      |   |
-|  +-----------------+    +--------+--------+    +-----------------+   |
-|                                  |                                    |
-|         Lock counter at (0x0532 + lock_index)                         |
-|         Linked list of waiting requests at 0x0487                     |
-+----------------------------------+-----------------------------------+
-                                   |
+┌──────────────────────────────────────────────────────────────────────┐
+│                        MAIN CPU (TMP94C241F)                          │
+│                                                                       │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐   │
+│  │ Audio_Lock_     │    │ Audio_DMA_      │    │ Audio_Lock_     │   │
+│  │ Acquire         │───>│ Transfer        │───>│ Release         │   │
+│  │ (0xEF1FEE)      │    │ (0xEF341B)      │    │ (0xEF1F0F)      │   │
+│  └─────────────────┘    └────────┬────────┘    └─────────────────┘   │
+│                                  │                                    │
+│         Lock counter at (0x0532 + lock_index)                         │
+│         Linked list of waiting requests at 0x0487                     │
+└──────────────────────────────────┬───────────────────────────────────┘
+                                   │
                                    v
-                    +--------------------------+
-                    |         LATCH            |
-                    |       @ 0x120000         |
-                    |                          |
-                    |  Bidirectional Data      |
-                    |  DMA-capable transfer    |
-                    +--------------------------+
-                                   |
+                    ┌──────────────────────────┐
+                    │         LATCH            │
+                    │       @ 0x120000         │
+                    │                          │
+                    │  Bidirectional Data      │
+                    │  DMA-capable transfer    │
+                    └──────────────────────────┘
+                                   │
                                    v
-+----------------------------------------------------------------------+
-|                        SUB CPU (TMP94C241F)                           |
-|                                                                       |
-|  +------------------+    +------------------+    +----------------+  |
-|  | InterCPU_Latch_  |    | MicroDMA CH0/2   |    | CMD_DISPATCH_  |  |
-|  | Setup (0x020C15) |--->| Handlers         |--->| TABLE          |  |
-|  +------------------+    +------------------+    +----------------+  |
-|                                                          |            |
-|                          +-------------------------------+            |
-|                          v                                            |
-|  +----------------------------------------------------------------+  |
-|  |                    COMMAND HANDLERS                             |  |
-|  |                                                                |  |
-|  |  0x00-0x1F: Audio_CmdHandler_00_1F (MIDI/notes → 0x2B0D)      |  |
-|  |  0x20-0x3F: Audio_CmdHandler_20_3F (Stub)                     |  |
-|  |  0x40-0x5F: Audio_CmdHandler_40_5F (...)                       |  |
-|  |  0x60-0x7F: Audio_CmdHandler_60_7F (Audio/DSP → 0x3B60)      |  |
-|  |  0x80-0x9F: Serial port setup (38400 baud)                    |  |
-|  |  0xA0-0xBF: Audio_CmdHandler_A0_BF (System audio)             |  |
-|  |  0xC0-0xFF: Audio_CmdHandler_C0_FF (Extended system)          |  |
-|  +----------------------------------------------------------------+  |
-+----------------------------------------------------------------------+
+┌──────────────────────────────────────────────────────────────────────┐
+│                        SUB CPU (TMP94C241F)                           │
+│                                                                       │
+│  ┌──────────────────┐    ┌──────────────────┐    ┌────────────────┐  │
+│  │ InterCPU_Latch_  │    │ MicroDMA CH0/2   │    │ CMD_DISPATCH_  │  │
+│  │ Setup (0x020C15) │───>│ Handlers         │───>│ TABLE          │  │
+│  └──────────────────┘    └──────────────────┘    └────────────────┘  │
+│                                                          │            │
+│                          ┌───────────────────────────────┘            │
+│                          v                                            │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │                    COMMAND HANDLERS                             │  │
+│  │                                                                │  │
+│  │  0x00-0x1F: Audio_CmdHandler_00_1F (MIDI/notes → 0x2B0D)      │  │
+│  │  0x20-0x3F: Audio_CmdHandler_20_3F (Stub)                     │  │
+│  │  0x40-0x5F: Audio_CmdHandler_40_5F (...)                       │  │
+│  │  0x60-0x7F: Audio_CmdHandler_60_7F (Audio/DSP → 0x3B60)      │  │
+│  │  0x80-0x9F: Serial port setup (38400 baud)                    │  │
+│  │  0xA0-0xBF: Audio_CmdHandler_A0_BF (System audio)             │  │
+│  │  0xC0-0xFF: Audio_CmdHandler_C0_FF (Extended system)          │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Main CPU: Sending Commands
@@ -129,59 +129,59 @@ The complete flow for receiving a command from the Main CPU involves three inter
 
 ```
 Main CPU writes command byte to latch (0x120000)
-    |
+    │
     v
 generic_latch data_pending → set_input_line(INT0, ASSERT)
-    |
+    │
     v
-+--------------------------------------------------+
-|  INT0 ISR (INT0_HANDLER at 0x020C47)             |
-|                                                   |
-|  1. Read command byte from latch (0x120000)       |
-|     → This clears data_pending → deasserts INT0   |
-|                                                   |
-|  2. Decode command type:                          |
-|     - E1: DMAD0=0x10E0, DMAC0=6                  |
-|     - E2: DMAD0=0x111C, DMAC0=10                 |
-|     - E3: Set PAYLOAD_LOADED_FLAG, return         |
-|     - Standard (0x00-0xDF):                       |
-|       DMAD0=0x10F0, DMAC0=(byte & 0x1F)+1        |
-|                                                   |
-|  3. Write DMA0V = 0x0A (INT0 vector)              |
-|     → Configures HDMA ch0 to steal future INT0    |
-|       triggers for automatic byte-by-byte xfer    |
-|                                                   |
-|  4. Return from interrupt                         |
-+--------------------------------------------------+
-    |
+┌──────────────────────────────────────────────────┐
+│  INT0 ISR (INT0_HANDLER at 0x020C47)             │
+│                                                   │
+│  1. Read command byte from latch (0x120000)       │
+│     → This clears data_pending → deasserts INT0   │
+│                                                   │
+│  2. Decode command type:                          │
+│     - E1: DMAD0=0x10E0, DMAC0=6                  │
+│     - E2: DMAD0=0x111C, DMAC0=10                 │
+│     - E3: Set PAYLOAD_LOADED_FLAG, return         │
+│     - Standard (0x00-0xDF):                       │
+│       DMAD0=0x10F0, DMAC0=(byte & 0x1F)+1        │
+│                                                   │
+│  3. Write DMA0V = 0x0A (INT0 vector)              │
+│     → Configures HDMA ch0 to steal future INT0    │
+│       triggers for automatic byte-by-byte xfer    │
+│                                                   │
+│  4. Return from interrupt                         │
+└──────────────────────────────────────────────────┘
+    │
     v
 Main CPU writes data bytes to latch (one at a time)
-    |
+    │
     v
 Each data_pending → INT0 flag set → HDMA ch0 steals it
     (HDMA has priority over ISR dispatch)
-    |
+    │
     v
 HDMA ch0 transfers: latch (DMAS0) → DMAD0++
     DMAC0 decremented each transfer
-    |
+    │
     v
 When DMAC0 reaches 0:
-    |
+    │
     v
-+--------------------------------------------------+
-|  INTTC0 ISR (MICRODMA_CH0_HANDLER at 0x020F1F)  |
-|                                                   |
-|  1. DMA0V cleared automatically (HDMA disabled)   |
-|                                                   |
-|  2. Dispatch based on CMD_PROCESSING_STATE:       |
-|     - State 0: Standard command → dispatch via    |
-|       CMD_DISPATCH_TABLE (upper 3 bits)           |
-|     - State 2: E1 phase 1 → set up phase 2       |
-|     - State 3: E2 processing → handle ext. cmd    |
-|                                                   |
-|  3. Process command data from receive buffer      |
-+--------------------------------------------------+
+┌──────────────────────────────────────────────────┐
+│  INTTC0 ISR (MICRODMA_CH0_HANDLER at 0x020F1F)  │
+│                                                   │
+│  1. DMA0V cleared automatically (HDMA disabled)   │
+│                                                   │
+│  2. Dispatch based on CMD_PROCESSING_STATE:       │
+│     - State 0: Standard command → dispatch via    │
+│       CMD_DISPATCH_TABLE (upper 3 bits)           │
+│     - State 2: E1 phase 1 → set up phase 2       │
+│     - State 3: E2 processing → handle ext. cmd    │
+│                                                   │
+│  3. Process command data from receive buffer      │
+└──────────────────────────────────────────────────┘
 ```
 
 **Key design insight:** The INT0 ISR only fires for the **first byte** (the command header). After that, HDMA ch0 takes over and silently transfers remaining bytes without CPU intervention. The ISR configures `DMA0V = 0x0A` (INT0's DMA start vector) so that subsequent INT0 flag assertions trigger HDMA instead of the ISR.
@@ -661,7 +661,7 @@ This table maps Main CPU sending routines to the Sub CPU handlers that process t
 
 ```
 Main CPU                          Sub CPU
---------                          -------
+────────                          ───────
 Audio_SendCommand
   → Audio_CommandEncoder
     → AssswbWr (ring buffer)

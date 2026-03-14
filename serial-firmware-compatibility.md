@@ -33,26 +33,26 @@ The firmware uses an interrupt-driven state machine triggered by INTTX1 (serial 
 
 ```
 CPanel_SendCommand          SM_StartTX            SM_SendByte1
------------------          ----------            ------------
+─────────────────          ──────────            ────────────
 BR1CR = 0x28 (31 kHz)     BR1CR = 0x24 (63 kHz) BR1CR = 0x14 (250 kHz)
 PFFC off (SCLK disabled)  PFFC still off         PFFC ON (SCLK enabled)
 IOC = 0 (master mode)     Write SC1BUF           Write REAL byte 1
 Write SC1BUF (phantom)    (phantom)              from LED_TX_BUFFER
-        |                       |                       |
-        +-- INTTX1 -------------+-- INTTX1 -------------+-- INTTX1 -->
+        │                       │                       │
+        └── INTTX1 ─────────────┘── INTTX1 ─────────────┘── INTTX1 ──>
 
     SM_TXDelay1           SM_SendByteN           SM_TXDelay2
-    -----------           ------------           -----------
+    ───────────           ────────────           ───────────
     DELAY_10 (~6 µs)      BR1CR = 0x14 (250 kHz) DELAY_10 (~6 µs)
     PFFC OFF               PFFC ON                PFFC OFF
     BR1CR = 0x24 (63 kHz) Write REAL byte 2       BR1CR = 0x24 (63 kHz)
     Write SC1BUF           from LED_TX_BUFFER      Write SC1BUF
-    (phantom)                     |                (phantom)
-         |                        |                     |
-<--------+-- INTTX1 --------------+-- INTTX1 -----------+-- INTTX1 -->
+    (phantom)                     │                (phantom)
+         │                        │                     │
+<────────┘── INTTX1 ──────────────┘── INTTX1 ───────────┘── INTTX1 ──>
 
     SM_TXComplete
-    -------------
+    ─────────────
     More data? → restart SM_StartTX
     No data?   → go IDLE, disable SCLK
 ```
@@ -65,7 +65,7 @@ After the firmware finishes transmitting, it waits for the panel to assert INTA:
 
 ```
   CPU (firmware)                    Control Panel (HLE)
-  --------------                    -------------------
+  ──────────────                    ───────────────────
   TX state machine completes
   SM_TXComplete → IDLE
   SCLK stops
@@ -73,14 +73,14 @@ After the firmware finishes transmitting, it waits for the panel to assert INTA:
                                     Queues response (2 bytes)
                                     Detects SCLK idle (250 µs)
                                     Asserts INTA on PE.5
-  +---------------------------------------------+
-  | INTA_HANDLER:                               |
-  |   IOC = 1 (slave mode)                      |
-  |   RXE = 1 (receive enable)                  |
-  |   State → SM_RXByte1                        |
-  +---------------------------------------------+
+  ┌─────────────────────────────────────────────┐
+  │ INTA_HANDLER:                               │
+  │   IOC = 1 (slave mode)                      │
+  │   RXE = 1 (receive enable)                  │
+  │   State → SM_RXByte1                        │
+  └─────────────────────────────────────────────┘
                                     Self-clocks response at 250 kHz
-                                    -- SCLK edges -->
+                                    ── SCLK edges ──>
   SM_RXByte1: reads SC1BUF
   SM_RXByteN: reads SC1BUF
   Response complete → IDLE
@@ -92,19 +92,19 @@ After the firmware finishes transmitting, it waits for the panel to assert INTA:
 Before each command, the firmware calls `CPanel_WaitTXReady` which polls four conditions:
 
 ```
-+---------------------------------------------------------+
-|  CPanel_WaitTXReady (200 retries × ~1 ms each)          |
-|                                                         |
-|  1. PF.6 == HIGH?    (SCLK pin at idle pull-up)         |
-|  2. PE.5 == LOW?     (INTA not asserted)                |
-|  3. TX flag == 0?    (no transmission in progress)      |
-|  4. RX flag == 0?    (no reception in progress)         |
-|  5. LED buffer empty? (no queued LED commands)          |
-|                                                         |
-|  ALL must pass → proceed to send command                |
-|  ANY fails → DELAY_1500_LOOPS (~1 ms), retry            |
-|  200 failures → set PROTOCOL_FLAGS.7 → ERROR dialog     |
-+---------------------------------------------------------+
+┌─────────────────────────────────────────────────────────┐
+│  CPanel_WaitTXReady (200 retries × ~1 ms each)          │
+│                                                         │
+│  1. PF.6 == HIGH?    (SCLK pin at idle pull-up)         │
+│  2. PE.5 == LOW?     (INTA not asserted)                │
+│  3. TX flag == 0?    (no transmission in progress)      │
+│  4. RX flag == 0?    (no reception in progress)         │
+│  5. LED buffer empty? (no queued LED commands)          │
+│                                                         │
+│  ALL must pass → proceed to send command                │
+│  ANY fails → DELAY_1500_LOOPS (~1 ms), retry            │
+│  200 failures → set PROTOCOL_FLAGS.7 → ERROR dialog     │
+└─────────────────────────────────────────────────────────┘
 ```
 
 The ERROR dialog appears when this 200-retry (~200 ms) timeout is exhausted.
@@ -113,84 +113,84 @@ The ERROR dialog appears when this 200-retry (~200 ms) timeout is exhausted.
 
 ```
 Time    CPU Firmware                  MAME Serial Device    Control Panel HLE
------   ----------------------------  -------------------   ------------------
+─────   ────────────────────────────  ───────────────────   ──────────────────
 0 ms    Hardware init (watchdog,
         memory controller, DRAM)
-        |
+        │
 ~5 ms   Timer setup (T0/T1 cascade)
         Prescaler start (T16RUN)
-        |
+        │
 ~8 ms   CPanel_InitHardware:
-        | SC1MOD = 0x00 (TO2 trigger)
-        | BR1CR  = 0x14 (250 kHz)     Timer starts at 250 kHz
-        | SC1CR  = 0x01 (IOC=1)
-        | INTA interrupt enabled
-        |
+        │ SC1MOD = 0x00 (TO2 trigger)
+        │ BR1CR  = 0x14 (250 kHz)     Timer starts at 250 kHz
+        │ SC1CR  = 0x01 (IOC=1)
+        │ INTA interrupt enabled
+        │
 ~8.5    DELAY_6_TICKS (480 µs)
-        |
+        │
 ~9 ms   SendCommand(0x1F, 0xDA):
-        | BR1CR = 0x28 (31 kHz)       Timer adjusts to 31 kHz
-        | PFFC off, IOC = 0 (master)
-        | SC1BUF = phantom                                  tx_start(0), reject
-        |   +-INTTX1->
-        | SM_StartTX: phantom SC1BUF                        tx_start(0), reject
-        |   +-INTTX1->
-        | SM_SendByte1: REAL 0x1F      250 kHz              tx_start(1), accept
-        |   +-INTTX1->                                      cmd_buf[0] = 0x1F
-        | SM_TXDelay1: phantom SC1BUF  62.5 kHz             tx_start(0), reject
-        |   +-INTTX1->
-        | SM_SendByteN: REAL 0xDA      250 kHz              tx_start(1), accept
-        |   +-INTTX1->                                      cmd_buf[1] = 0xDA
-        |                                                   process_command()
-        |                                                    → queue sync
-        |                                                       response
-        |                                                    → start idle_detect
-        |                                                        (250 µs timer)
-        | SM_TXDelay2: phantom SC1BUF  62.5 kHz             tx_start(0), reject
-        |   +-INTTX1->                                      *** MUST NOT cancel
-        | SM_TXComplete → IDLE                                 idle_detect! ***
-        |
+        │ BR1CR = 0x28 (31 kHz)       Timer adjusts to 31 kHz
+        │ PFFC off, IOC = 0 (master)
+        │ SC1BUF = phantom                                  tx_start(0), reject
+        │   └─INTTX1─>
+        │ SM_StartTX: phantom SC1BUF                        tx_start(0), reject
+        │   └─INTTX1─>
+        │ SM_SendByte1: REAL 0x1F      250 kHz              tx_start(1), accept
+        │   └─INTTX1─>                                      cmd_buf[0] = 0x1F
+        │ SM_TXDelay1: phantom SC1BUF  62.5 kHz             tx_start(0), reject
+        │   └─INTTX1─>
+        │ SM_SendByteN: REAL 0xDA      250 kHz              tx_start(1), accept
+        │   └─INTTX1─>                                      cmd_buf[1] = 0xDA
+        │                                                   process_command()
+        │                                                    → queue sync
+        │                                                       response
+        │                                                    → start idle_detect
+        │                                                        (250 µs timer)
+        │ SM_TXDelay2: phantom SC1BUF  62.5 kHz             tx_start(0), reject
+        │   └─INTTX1─>                                      *** MUST NOT cancel
+        │ SM_TXComplete → IDLE                                 idle_detect! ***
+        │
 ~11 ms  DELAY_3000_LOOPS (~2 ms)                            idle_detect fires
-        |                                                    → assert INTA
-        |                                                    → self-clock
-        |                                                       response
-        |
-        | [INTA fires]
-        | INTA_HANDLER: IOC=1, RXE=1                      self-clock: 0x18, 0x00
-        | SM_RXByte1: read 0x18
-        | SM_RXByteN: read 0x00
-        | Response received OK
-        |
+        │                                                    → assert INTA
+        │                                                    → self-clock
+        │                                                       response
+        │
+        │ [INTA fires]
+        │ INTA_HANDLER: IOC=1, RXE=1                      self-clock: 0x18, 0x00
+        │ SM_RXByte1: read 0x18
+        │ SM_RXByteN: read 0x00
+        │ Response received OK
+        │
 ~13 ms  Reset LED ptr
         DELAY_3000_LOOPS (~2 ms)
-        |
+        │
 ~15 ms  CPanel_SendInitSequence:
-        | SendCommand(0x1F, 0x1A)
-        | DELAY_3000 + reset + DELAY_3000
-        | SendCommand(0x1D, 0x00)
-        | DELAY_3000 + reset + 2×DELAY_3000
-        | SendCommand(0xDD, 0x03)
-        | DELAY_3000 + reset + 2×DELAY_3000
-        | SendCommand(0x1E, 0x80)
-        | 3×DELAY_3000
-        | Enable interrupts
-        |
+        │ SendCommand(0x1F, 0x1A)
+        │ DELAY_3000 + reset + DELAY_3000
+        │ SendCommand(0x1D, 0x00)
+        │ DELAY_3000 + reset + 2×DELAY_3000
+        │ SendCommand(0xDD, 0x03)
+        │ DELAY_3000 + reset + 2×DELAY_3000
+        │ SendCommand(0x1E, 0x80)
+        │ 3×DELAY_3000
+        │ Enable interrupts
+        │
 ~40 ms  CPanel_PollStartup:
-        | CPanel_WaitTXReady              <-- Must pass all 4 checks
-        | SendCommand(0x20, 0x0B)
-        | DELAY_6_TICKS
-        | Process response
-        | ... (repeat until encoder stable)
-        |
+        │ CPanel_WaitTXReady              <── Must pass all 4 checks
+        │ SendCommand(0x20, 0x0B)
+        │ DELAY_6_TICKS
+        │ Process response
+        │ ... (repeat until encoder stable)
+        │
 ~55 ms  CPanel_InitButtonState:
-        | WaitTXReady + Send(0x2B, 0x00)  <-- Query all left segments
-        |                                       (22 bytes response)
-        | WaitTXReady + Send(0xEB, 0x00)  <-- Query all right segments
-        |                                       (22 bytes response)
-        | WaitTXReady + Send(0x20, 0x10)
-        |
-        | WaitTXReady + Send(0xE3, 0x10)
-        |
+        │ WaitTXReady + Send(0x2B, 0x00)  <── Query all left segments
+        │                                       (22 bytes response)
+        │ WaitTXReady + Send(0xEB, 0x00)  <── Query all right segments
+        │                                       (22 bytes response)
+        │ WaitTXReady + Send(0x20, 0x10)
+        │
+        │ WaitTXReady + Send(0xE3, 0x10)
+        │
 ~70 ms  Init complete, enter main loop
 ```
 

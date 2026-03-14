@@ -725,15 +725,15 @@ The main CPU firmware symbol table reveals the real names for these functions:
 ```
 Object Table (0x027ED2)                  Data Record Table
  14-byte entries, max 1120               24-byte records per sub-object
-+------------------------------+       +--------------------------------+
-| +0x00: Port address (4)      |       | +0x00: Impl function ptr (4)   |
-| +0x04: Handler function (4)  |       | +0x04: Next handler ID (4)     |
-| +0x08: Data size (2)         |       | +0x08: Size/count (2)          |
-| +0x0A: Data pointer (4) -----+------>| +0x0A: Flags (2)               |
-+------------------------------+       | +0x0C: ROM data ptr (4)        |
-                                       | +0x10: ROM data ptr 2 (4)      |
-Global State (saved/restored           | +0x14: RAM workspace ptr (4)   |
- per dispatch call):                   +--------------------------------+
+┌──────────────────────────────┐       ┌────────────────────────────────┐
+│ +0x00: Port address (4)      │       │ +0x00: Impl function ptr (4)   │
+│ +0x04: Handler function (4)  │       │ +0x04: Next handler ID (4)     │
+│ +0x08: Data size (2)         │       │ +0x08: Size/count (2)          │
+│ +0x0A: Data pointer (4) ─────┼──────>│ +0x0A: Flags (2)               │
+└──────────────────────────────┘       │ +0x0C: ROM data ptr (4)        │
+                                       │ +0x10: ROM data ptr 2 (4)      │
+Global State (saved/restored           │ +0x14: RAM workspace ptr (4)   │
+ per dispatch call):                   └────────────────────────────────┘
   0x02BC14: Current object identity (SetCurrentTarget/GetCurrentTarget)
   0x02BC18-20: Root object/event/param (SetRootObject/GetRootObject etc.)
   0x02BC24-2C: Focus object/event/param (GetFocusObject/GetFocusEvent etc.)
@@ -745,8 +745,8 @@ Object IDs combine an object table index with a sub-object index:
 
 ```
   0x016A0005
-  +-- 0x016A  = Object table index (handler ID registered via RegisterObjectTable)
-  +-- 0x0005  = Sub-object index (record number in data table)
+  ├── 0x016A  = Object table index (handler ID registered via RegisterObjectTable)
+  └── 0x0005  = Sub-object index (record number in data table)
 ```
 
 The `slot+0x00` field in the DISK MENU slot stores this combined identifier, linking the menu entry to a specific sub-object (record) in the handler's data table.
@@ -807,43 +807,43 @@ The event queue is a ring buffer with 1,024 entries (indices 0x0000-0x03FF), eac
 
 ```
 ClassProc (0xFA44E2): UI event handler
-  +-- 0x01E00000-0x01E00007: Jump table via 0xEAA8F8
-  |   +-- Case 0 (0x01E00000): Return XWA (identity)
-  |   +-- Case 1 (0x01E00001): Return *(XHL)
-  |   +-- Case 2 (0x01E00002): Return *(XIZ)
-  |   +-- Case 3 (0x01E00003): Return *(XHL+0x0C)
-  |   +-- Case 4-7: (complex linked object operations)
-  |   Via helper functions:
-  |     ClassProc_Event_LoadFromWA   (0xFA4598)
-  |     ClassProc_Event_LoadFromHL   (0xFA459D)
-  |     ClassProc_Event_LoadFromIZ   (0xFA45A2)
-  |     ClassProc_Event_LoadFromOffset (0xFA45A7)
-  +-- 0x01E0000D: Special case (keypress handling)
-  +-- 0x01E0000E: Special case (other input)
-  +-- 0x01E0000F: Return immediately
-  +-- 0x01E00015: Return *(XHL+0x0C)
-  +-- Default (including 0x01E0009C): → ObjectProc
-                                         |
+  ├── 0x01E00000-0x01E00007: Jump table via 0xEAA8F8
+  │   ├── Case 0 (0x01E00000): Return XWA (identity)
+  │   ├── Case 1 (0x01E00001): Return *(XHL)
+  │   ├── Case 2 (0x01E00002): Return *(XIZ)
+  │   ├── Case 3 (0x01E00003): Return *(XHL+0x0C)
+  │   ├── Case 4-7: (complex linked object operations)
+  │   Via helper functions:
+  │     ClassProc_Event_LoadFromWA   (0xFA4598)
+  │     ClassProc_Event_LoadFromHL   (0xFA459D)
+  │     ClassProc_Event_LoadFromIZ   (0xFA45A2)
+  │     ClassProc_Event_LoadFromOffset (0xFA45A7)
+  ├── 0x01E0000D: Special case (keypress handling)
+  ├── 0x01E0000E: Special case (other input)
+  ├── 0x01E0000F: Return immediately
+  ├── 0x01E00015: Return *(XHL+0x0C)
+  └── Default (including 0x01E0009C): → ObjectProc
+                                         │
 ObjectProc (0xFA3D85): Lifecycle events
-  +-- Allocates 0x90 bytes stack frame
-  +-- Extracts handler index, looks up data records
-  +-- Calls handler identity query first
-  +-- 0x01E00010-0x01E00023: 20 cases via jump table at 0xEAA8A4
-  |   (setters, init/teardown, string operations)
-  +-- Out of range (including 0x01E0009C): → InheritedProc
-                                               |
+  ├── Allocates 0x90 bytes stack frame
+  ├── Extracts handler index, looks up data records
+  ├── Calls handler identity query first
+  ├── 0x01E00010-0x01E00023: 20 cases via jump table at 0xEAA8A4
+  │   (setters, init/teardown, string operations)
+  └── Out of range (including 0x01E0009C): → InheritedProc
+                                               │
 InheritedProc (0xFA4409): Handler chain traversal
-  +-- Read current target identity from 0x02BC14
-  +-- Extract handler_index and sub_index
-  +-- Look up data record table for current handler
-  +-- Read "next" handler ID from record[sub_index * 24 + 0x04]
-  +-- If next ≠ 0xFFFFFFFF:
-  |     Set 0x02BC14 = next handler ID
-  |     Look up next handler's record table
-  |     Call next handler's implementation function
-  |     Restore 0x02BC14 to original value
-  |     Return result
-  +-- If next = 0xFFFFFFFF: return 0
+  ├── Read current target identity from 0x02BC14
+  ├── Extract handler_index and sub_index
+  ├── Look up data record table for current handler
+  ├── Read "next" handler ID from record[sub_index * 24 + 0x04]
+  ├── If next ≠ 0xFFFFFFFF:
+  │     Set 0x02BC14 = next handler ID
+  │     Look up next handler's record table
+  │     Call next handler's implementation function
+  │     Restore 0x02BC14 to original value
+  │     Return result
+  └── If next = 0xFFFFFFFF: return 0
 ```
 
 ### HDAE5000 Handler Behavior (Record 5: "HDTitleMenu")

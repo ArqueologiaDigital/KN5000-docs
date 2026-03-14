@@ -14,40 +14,40 @@ This page documents the complete boot sequence of the Technics KN5000, from powe
 
 ```
 Power On
-    |
+    │
     v
-+-----------------+     +-----------------+
-|   Main CPU      |     |    Sub CPU      |
-|  TMP94C241F     |     |   TMP94C241F    |
-|  (IC10)         |     |   (IC27)        |
-+--------+--------+     +--------+--------+
-         |                       |
-         |  1. Table Data ROM    |  1. Boot ROM
-         |     First-stage boot  |     0xFF8290
-         |                       |
+┌─────────────────┐     ┌─────────────────┐
+│   Main CPU      │     │    Sub CPU      │
+│  TMP94C241F     │     │   TMP94C241F    │
+│  (IC10)         │     │   (IC27)        │
+└────────┬────────┘     └────────┬────────┘
+         │                       │
+         │  1. Table Data ROM    │  1. Boot ROM
+         │     First-stage boot  │     0xFF8290
+         │                       │
          v                       v
     Memory Remap            Init Hardware
     Program ROM → 0xE00000  Wait for payload
-         |                       |
-         |  2. Program ROM       |
-         |     RESET_HANDLER     |
-         |                       |
+         │                       │
+         │  2. Program ROM       │
+         │     RESET_HANDLER     │
+         │                       │
          v                       v
     Init Hardware           Receive payload
     Load Sub CPU            at 0x0400
-    Payload (192KB)              |
-         |                       |
-         |   <--- DMA --->       |
-         |   (0x120000 latch)    |
-         |                       |
+    Payload (192KB)              │
+         │                       │
+         │   <─── DMA ───>       │
+         │   (0x120000 latch)    │
+         │                       │
          v                       v
     Start Subsystems        Execute Payload
     (UI, MIDI, FDC...)      (Audio Engine)
-         |                       |
+         │                       │
          v                       v
-    +-----------------------------+
-    |     System Ready            |
-    +-----------------------------+
+    ┌─────────────────────────────┐
+    │     System Ready            │
+    └─────────────────────────────┘
 ```
 
 ## Main CPU Boot Sequence
@@ -284,18 +284,18 @@ After hardware initialization, the main CPU loads a 192KB firmware payload to th
 **Main CPU Boot Sequence:**
 ```
 RESET_HANDLER (0xEF03C6)
-    |
-    +-- LD (PA), 0xFE         ; Hold Sub CPU in reset (bit 0 = 0)
-    |
-    +-- ... hardware init ...
-    |
-    +-- SET 0, (PA)           ; Release Sub CPU from reset (0xEF05F3)
-    |
-    +-- CALL SubCPU_Init_DMA_Channels  ; Set up DMA at 0xEF329E
-    |
-    +-- EI 0                  ; Enable interrupts
-    |
-    +-- CALR SubCPU_Send_Payload       ; Send 192KB payload at 0xEF068A
+    │
+    ├── LD (PA), 0xFE         ; Hold Sub CPU in reset (bit 0 = 0)
+    │
+    ├── ... hardware init ...
+    │
+    ├── SET 0, (PA)           ; Release Sub CPU from reset (0xEF05F3)
+    │
+    ├── CALL SubCPU_Init_DMA_Channels  ; Set up DMA at 0xEF329E
+    │
+    ├── EI 0                  ; Enable interrupts
+    │
+    └── CALR SubCPU_Send_Payload       ; Send 192KB payload at 0xEF068A
 ```
 
 **E1 Transfer Protocol Summary:**
@@ -341,23 +341,23 @@ The scanned combo code is stored in internal RAM at address 0x402 (byte at offse
 
 ```
 CREATE event (0x1C00001):
-    |
-    +- Get region code from Port H (0x408)
-    |  Region 2 → animation data at 0xE9DF4E
-    |  Other    → animation data at 0xE9E806
-    |
-    +- Read boot button combo from RAM 0x402
-    |  |
-    |  +- Combo == 2 → "ALL INITIAL SETTING!" screen
-    |  |               (posts event 0x1C10009 → "AllInitial" widget)
-    |  |
-    |  +- Combo != 2 → Check Sub CPU payload status
-    |     |
-    |     +- Payload error → "CPU data transmission" error dialog
-    |     |                  (posts event 0x1C10004)
-    |     |
-    |     +- Payload OK → Normal splash animation
-    |                     (posts event 0x1E000B3)
+    │
+    ├─ Get region code from Port H (0x408)
+    │  Region 2 → animation data at 0xE9DF4E
+    │  Other    → animation data at 0xE9E806
+    │
+    ├─ Read boot button combo from RAM 0x402
+    │  │
+    │  ├─ Combo == 2 → "ALL INITIAL SETTING!" screen
+    │  │               (posts event 0x1C10009 → "AllInitial" widget)
+    │  │
+    │  └─ Combo != 2 → Check Sub CPU payload status
+    │     │
+    │     ├─ Payload error → "CPU data transmission" error dialog
+    │     │                  (posts event 0x1C10004)
+    │     │
+    │     └─ Payload OK → Normal splash animation
+    │                     (posts event 0x1E000B3)
 ```
 
 **Normal splash animation**: On a successful boot with no special buttons held, the firmware displays a splash screen with the Technics/KN5000 logo and animated palette effects (palette cycling, spotlight-like illumination). The animation uses region-specific data tables — Region 2 uses different graphics than other regions. The animation is rendered via `ScreenGroup_Dispatch` (0xFDDB46) which manages UI widget groups. The visual assets (Technics logo, world globe, "KN5000 IN COLOR" rendered text) are stored as pre-rendered bitmaps on the bootup floppy disk (files `FTBMP01`–`FTBMP06`), not in the ROM; the ROM contains only the animation control code.
@@ -412,43 +412,43 @@ The main CPU enters its event loop, handling:
 ### Complete Boot Flow Diagram
 
 ```
-+----------------------------------------------------------------------+
-|                         POWER ON / RESET                             |
-|                                                                      |
-|  Initial Memory Map:                                                 |
-|    0xE00000-0xFFFFFF = Table Data ROM (contains first-stage boot)    |
-|    Program ROM not yet visible                                       |
-+----------------------------------------------------------------------+
-                                   |
+┌──────────────────────────────────────────────────────────────────────┐
+│                         POWER ON / RESET                             │
+│                                                                      │
+│  Initial Memory Map:                                                 │
+│    0xE00000-0xFFFFFF = Table Data ROM (contains first-stage boot)    │
+│    Program ROM not yet visible                                       │
+└──────────────────────────────────────────────────────────────────────┘
+                                   │
                                    v
-+----------------------------------------------------------------------+
-|                   STAGE 1: TABLE DATA BOOTLOADER                     |
-|                                                                      |
-|  1. CPU fetches reset vector from 0xFFFF00 (table_data @ 0x1FFF00)   |
-|  2. Vector points to 0xFFFEE0 → JP 0xFFB4E8                          |
-|  3. Boot code configures MSAR0-5, MAMR0-5, DRAM controller           |
-|  4. Memory remap: Table Data → 0x800000, Program ROM → 0xE00000      |
-|  5. Jump to Program ROM entry point (0xEF03C6)                       |
-+----------------------------------------------------------------------+
-                                   |
+┌──────────────────────────────────────────────────────────────────────┐
+│                   STAGE 1: TABLE DATA BOOTLOADER                     │
+│                                                                      │
+│  1. CPU fetches reset vector from 0xFFFF00 (table_data @ 0x1FFF00)   │
+│  2. Vector points to 0xFFFEE0 → JP 0xFFB4E8                          │
+│  3. Boot code configures MSAR0-5, MAMR0-5, DRAM controller           │
+│  4. Memory remap: Table Data → 0x800000, Program ROM → 0xE00000      │
+│  5. Jump to Program ROM entry point (0xEF03C6)                       │
+└──────────────────────────────────────────────────────────────────────┘
+                                   │
                                    v
-+----------------------------------------------------------------------+
-|                    STAGE 2: PROGRAM ROM BOOT                         |
-|                                                                      |
-|  Final Memory Map:                                                   |
-|    0x000000-0x0FFFFF = DRAM (1MB)                                    |
-|    0x100000-0x1FFFFF = I/O (FDC, latches, VGA, SRAM)                 |
-|    0x300000-0x3FFFFF = Custom Data Flash                             |
-|    0x400000-0x7FFFFF = Rhythm Data ROM                               |
-|    0x800000-0x9FFFFF = Table Data ROM (remapped)                     |
-|    0xE00000-0xFFFFFF = Program ROM (now visible)                     |
-|                                                                      |
-|  1. RESET_HANDLER at 0xEF03C6                                        |
-|  2. Hardware initialization (redundant memory controller setup)      |
-|  3. Release Sub CPU from reset                                       |
-|  4. Send 192KB payload to Sub CPU                                    |
-|  5. Initialize subsystems and enter main loop                        |
-+----------------------------------------------------------------------+
+┌──────────────────────────────────────────────────────────────────────┐
+│                    STAGE 2: PROGRAM ROM BOOT                         │
+│                                                                      │
+│  Final Memory Map:                                                   │
+│    0x000000-0x0FFFFF = DRAM (1MB)                                    │
+│    0x100000-0x1FFFFF = I/O (FDC, latches, VGA, SRAM)                 │
+│    0x300000-0x3FFFFF = Custom Data Flash                             │
+│    0x400000-0x7FFFFF = Rhythm Data ROM                               │
+│    0x800000-0x9FFFFF = Table Data ROM (remapped)                     │
+│    0xE00000-0xFFFFFF = Program ROM (now visible)                     │
+│                                                                      │
+│  1. RESET_HANDLER at 0xEF03C6                                        │
+│  2. Hardware initialization (redundant memory controller setup)      │
+│  3. Release Sub CPU from reset                                       │
+│  4. Send 192KB payload to Sub CPU                                    │
+│  5. Initialize subsystems and enter main loop                        │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Implications for MAME Emulation
@@ -827,21 +827,21 @@ Bits 4-0: Data length - 1 (so 0x00 = 1 byte, 0x1F = 32 bytes)
 
 ```
 Main CPU                          Sub CPU
-   |                                 |
-   |  1. Write command to latch      |
-   |  -----------------------------> |
-   |                                 |  2. InterCPU_RX_Handler
-   |                                 |     triggered
-   |                                 |
-   |  3. Wait for sub ready          |  4. Set up DMA
-   |  <----------------------------- |     destination
-   |                                 |
-   |  5. Send data bytes             |
-   |  -----------------------------> |  6. DMA receives data
-   |                                 |
-   |  7. Check completion            |  8. DMA_Complete_Handler
-   |  <----------------------------- |     clears state
-   |                                 |
+   │                                 │
+   │  1. Write command to latch      │
+   │  ─────────────────────────────> │
+   │                                 │  2. InterCPU_RX_Handler
+   │                                 │     triggered
+   │                                 │
+   │  3. Wait for sub ready          │  4. Set up DMA
+   │  <───────────────────────────── │     destination
+   │                                 │
+   │  5. Send data bytes             │
+   │  ─────────────────────────────> │  6. DMA receives data
+   │                                 │
+   │  7. Check completion            │  8. DMA_Complete_Handler
+   │  <───────────────────────────── │     clears state
+   │                                 │
 ```
 
 ---
@@ -996,15 +996,15 @@ If the HD-AE5000 hard disk expansion is detected (PE port bit 0 = 0), the main C
 
 ```
 Main CPU checks PE.0
-    |
-    +-> PE.0 = 1: No HD-AE5000, skip
-    |
-    +-> PE.0 = 0: HD-AE5000 present
-            |
+    │
+    ├─> PE.0 = 1: No HD-AE5000, skip
+    │
+    └─> PE.0 = 0: HD-AE5000 present
+            │
             v
         Validate ROM header at 0x280000
         Check for "XAPR" magic string
-            |
+            │
             v
         CALL 0x280008 (Boot Init entry)
 ```
@@ -1106,34 +1106,34 @@ After boot completes, subsystems initialize in this order:
 
 ```
 Sub CPU Payload Loaded (E3 command)
-    |
+    │
     v
-+---------------------------------------------+
-|         Main CPU Subsystem Init             |
-+---------------------------------------------+
-|  1. Display System (VGA controller)         |
-|     - Configure MN89304 at 0x170000         |
-|     - Set 320×240 resolution                |
-|     - Load default palette                  |
-|                                             |
-|  2. Control Panel (Serial Channel 1)        |
-|     - 250kHz clock, 8-bit mode              |
-|     - Initialize button/encoder states      |
-|     - Start polling loop                    |
-|                                             |
-|  3. Floppy Disk Controller (0x110000)       |
-|     - Detect drive presence                 |
-|     - Initialize FDC state machine          |
-|                                             |
-|  4. HDAE5000 (if present)                   |
-|     - Call 0x280008 for initialization      |
-|     - Register frame handler                |
-|                                             |
-|  5. MIDI I/O                                |
-|     - Configure serial channels             |
-|     - Initialize message buffers            |
-+---------------------------------------------+
-    |
+┌─────────────────────────────────────────────┐
+│         Main CPU Subsystem Init             │
+├─────────────────────────────────────────────┤
+│  1. Display System (VGA controller)         │
+│     - Configure MN89304 at 0x170000         │
+│     - Set 320×240 resolution                │
+│     - Load default palette                  │
+│                                             │
+│  2. Control Panel (Serial Channel 1)        │
+│     - 250kHz clock, 8-bit mode              │
+│     - Initialize button/encoder states      │
+│     - Start polling loop                    │
+│                                             │
+│  3. Floppy Disk Controller (0x110000)       │
+│     - Detect drive presence                 │
+│     - Initialize FDC state machine          │
+│                                             │
+│  4. HDAE5000 (if present)                   │
+│     - Call 0x280008 for initialization      │
+│     - Register frame handler                │
+│                                             │
+│  5. MIDI I/O                                │
+│     - Configure serial channels             │
+│     - Initialize message buffers            │
+└─────────────────────────────────────────────┘
+    │
     v
     Main Event Loop
 ```
@@ -1147,26 +1147,26 @@ Sub CPU Payload Loaded (E3 command)
 After all initialization completes, the main CPU enters its event loop:
 
 ```
-+---------------------------------------------------------+
-|                    MAIN EVENT LOOP                      |
-+---------------------------------------------------------+
-|                                                         |
-|  +-------------+    +-------------+    +-------------+  |
-|  |   Control   |    |   Display   |    |    MIDI     |  |
-|  |   Panel     |--->|   Update    |--->|  Processing |  |
-|  |   Poll      |    |             |    |             |  |
-|  +-------------+    +-------------+    +-------------+  |
-|         |                  |                  |         |
-|         v                  v                  v         |
-|  +-------------+    +-------------+    +-------------+  |
-|  |    FDC      |    |  HDAE5000   |    |   Audio     |  |
-|  |   Handler   |--->|   Frame     |--->|   Sync      |  |
-|  |             |    |   Handler   |    |             |  |
-|  +-------------+    +-------------+    +-------------+  |
-|                           |                             |
-|                           v                             |
-|                    Loop continues                       |
-+---------------------------------------------------------+
+┌─────────────────────────────────────────────────────────┐
+│                    MAIN EVENT LOOP                      │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
+│  │   Control   │    │   Display   │    │    MIDI     │  │
+│  │   Panel     │───>│   Update    │───>│  Processing │  │
+│  │   Poll      │    │             │    │             │  │
+│  └─────────────┘    └─────────────┘    └─────────────┘  │
+│         │                  │                  │         │
+│         v                  v                  v         │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
+│  │    FDC      │    │  HDAE5000   │    │   Audio     │  │
+│  │   Handler   │───>│   Frame     │───>│   Sync      │  │
+│  │             │    │   Handler   │    │             │  │
+│  └─────────────┘    └─────────────┘    └─────────────┘  │
+│                           │                             │
+│                           v                             │
+│                    Loop continues                       │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ### Control Panel Communication
@@ -1212,40 +1212,40 @@ Available PPORT commands include file transfers, HD formatting, and PC communica
 
 ```
 Time    Event
------   -------------------------------------------------
+─────   ─────────────────────────────────────────────────
 0ms     Power On
-        +-- Main CPU reset vector → hardware init
-        +-- Sub CPU reset vector → hardware init
+        ├── Main CPU reset vector → hardware init
+        └── Sub CPU reset vector → hardware init
 
 1ms     Hardware configured
-        +-- Main CPU: Ports, memory controller, timers
-        +-- Sub CPU: Serial, DMA, tone generator
+        ├── Main CPU: Ports, memory controller, timers
+        └── Sub CPU: Serial, DMA, tone generator
 
 10ms    Memory tests complete
-        +-- Sub CPU: RAM pattern test, ROM checksum
+        └── Sub CPU: RAM pattern test, ROM checksum
 
 15ms    Sub CPU waiting for payload
-        +-- Main CPU: Begin payload transfer
+        └── Main CPU: Begin payload transfer
 
 115ms   Payload loaded (192KB via DMA)
-        +-- E3 command signals completion
+        └── E3 command signals completion
 
 120ms   Sub CPU executing payload
-        +-- Audio engine active
-        +-- Command dispatch ready
+        ├── Audio engine active
+        └── Command dispatch ready
 
 150ms   Main CPU subsystem init
-        +-- Display initialized
-        +-- Control panel connected
-        +-- FDC ready
+        ├── Display initialized
+        ├── Control panel connected
+        └── FDC ready
 
 200ms   HDAE5000 init (if present)
-        +-- 32KB RAM test
-        +-- HD detection
-        +-- Frame handler registered
+        ├── 32KB RAM test
+        ├── HD detection
+        └── Frame handler registered
 
 250ms   System Ready
-        +-- Main event loop running
+        └── Main event loop running
 ```
 
 ---

@@ -262,32 +262,32 @@ From the service manual schematics (Tone Generator Sections A and B):
 ## Audio Signal Chain
 
 ```
-Waveform ROMs (IC304-307) --> Tone Generator LSI (IC303)
-                                      |
+Waveform ROMs (IC304-307) ──> Tone Generator LSI (IC303)
+                                      │
                                 [Memory bus]
-                                      |
+                                      │
                                 Sub CPU (IC27, TMP94C241F)
-                                      |
-                        +-------------+-------------+
-                        |             |             |
+                                      │
+                        ┌─────────────┼─────────────┐
+                        │             │             │
                    [0x100000]     [Serial1]    [0x130000]
                     Register        UART           DSP
                      Config        Control       Config
-                        |             |             |
+                        │             │             │
                         v             v             v
                     Tone Gen       DAC/DSP      DSP1/DSP2
                      (IC303)       (IC313?)    (IC310/311)
-                                      |
+                                      │
                             [Serial Audio: BCK, SDOR/SDOF]
-                                      |
+                                      │
                                       v
                                 DAC (IC313, PCM69AU)
-                                      |
+                                      │
                                 Op-amps (IC312, IC314)
-                                      |
+                                      │
                                 FAJ board (mixing, LPF)
-                                      |
-                                Power amp --> Speakers
+                                      │
+                                Power amp ──> Speakers
 ```
 
 ## MAME Emulation Status

@@ -394,11 +394,11 @@ For all other opcodes, byte 2 is the total command length.
 
 ```
 [02] [sub] [id_lo id_hi] [flags_lo flags_hi] [06 addr_lo addr_mid addr_hi 00 param 00] [x] [y]
-       |         |              |                            |                            |
-       |         |              |                   handler reference (7 bytes)           position
-       |         |              +- widget flags (e.g., 0x00FF, 0x8560)
-       |         +- widget ID (little-endian 16-bit)
-       +- sub-type (0x0f=standard, 0x0d=variant, 0x14=extended)
+       │         │              │                            │                            │
+       │         │              │                   handler reference (7 bytes)           position
+       │         │              └─ widget flags (e.g., 0x00FF, 0x8560)
+       │         └─ widget ID (little-endian 16-bit)
+       └─ sub-type (0x0f=standard, 0x0d=variant, 0x14=extended)
 ```
 
 ### Coordinate Encoding

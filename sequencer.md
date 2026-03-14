@@ -13,74 +13,74 @@ The KN5000 includes a full-featured 16-track MIDI sequencer with real-time and s
 The sequencer engine runs on the **Main CPU** and generates MIDI events that are sent to the Sub CPU via the inter-CPU latch for sound generation. The architecture has three main stages: a tick-driven dispatcher, a ring buffer pipeline, and MIDI event processing.
 
 ```
-+-------------------------------------------------------------------------+
-|                     MAIN CPU SEQUENCER ENGINE                           |
-|                                                                         |
-|  MainLoop (0xEF1245) --- continuous loop ----------------------+        |
-|       |                                                        |        |
-|       +- Seq_TickWrapper (0xEF1388) -----------------+         |        |
-|       |       |                                      |         |        |
-|       |       +- Seq_DispatcherEntry (0xF532E1)      |         |        |
-|       |               |                              |         |        |
-|       |               +- Seq_DispatcherTick           |         |        |
-|       |                       |                      |         |        |
-|       |              +--------+---------+            |         |        |
-|       |              | State Check      |            |         |        |
-|       |              | (8D36h)          |            |         |        |
-|       |              | skip if 0x10-0x16|            |         |        |
-|       |              +--------+---------+            |         |        |
-|       |                       |                      |         |        |
-|       |              Seq_DispatcherTick_Process       |         |        |
-|       |                       |                      |         |        |
-|       |              +--------+---------+            |         |        |
-|       |              | RhythmROM_       |            |         |        |
-|       |              | CheckValid       |            |         |        |
-|       |              | (3277h check)    |            |         |        |
-|       |              +--------+---------+            |         |        |
-|       |                       |                      |         |        |
-|       |              Seq_RhythmProcessor (0xF5EC75)   |         |        |
-|       |              RhythmROM_PatternDispatcher       |         |        |
-|       |                       |                      |         |        |
-|       |               +-------+--------+             |         |        |
-|       |               |  Song Engine   |             |         |        |
-|       |               |  writes MIDI   |---------+   |         |        |
-|       |               |  to ring buf   |         |   |         |        |
-|       |               +----------------+         |   |         |        |
-|       |                                          v   |         |        |
-|       |                              +------------------+      |        |
-|       |                              |  RING BUFFER     |      |        |
-|       |                              |  Base: 0x01F37B  |      |        |
-|       |                              |  WrPos: 0x01F377 |      |        |
-|       |                              |  RdPos: 0x01F373 |      |        |
-|       |                              +--------+---------+      |        |
-|       |                                       |                |        |
-|       +- Seq_EventProcessingTick (0xEF14A3) --+                |        |
-|       |       |                                                |        |
-|       |       +- Seq_ProcessEventLoop (0xEF14CA)               |        |
-|       |               |                                        |        |
-|       |       +-------+----------+                             |        |
-|       |       | Seq_CheckSongEnd |                             |        |
-|       |       | WrPos == RdPos?  |                             |        |
-|       |       +-------+----------+                             |        |
-|       |               | (if data available)                    |        |
-|       |               v                                        |        |
-|       |       Seq_ProcessMidiEvent (0xEF13CD)                  |        |
-|       |               |                                        |        |
-|       |       +-------+--------------------------+             |        |
-|       |       | Parse MIDI status byte:           |             |        |
-|       |       |  0x90 = Note On                   |             |        |
-|       |       |  0x80 = Note Off                  |             |        |
-|       |       |  0xB0 = Control Change            |             |        |
-|       |       |  0xC0 = Program Change            |             |        |
-|       |       |  0xE0 = Pitch Bend                |             |        |
-|       |       +----------------------------------+             |        |
-|       |                       |                                |        |
-|       |                       v                                |        |
-|       |               sendCOMM (0xEF32F4)                      |        |
-|       |               Inter-CPU Latch → Sub CPU                |        |
-|       |                                                        |        |
-|       +--------------------------------------------------------+        |
-+-------------------------------------------------------------------------+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     MAIN CPU SEQUENCER ENGINE                           │
+│                                                                         │
+│  MainLoop (0xEF1245) ─── continuous loop ──────────────────────┐        │
+│       │                                                        │        │
+│       ├─ Seq_TickWrapper (0xEF1388) ─────────────────┐         │        │
+│       │       │                                      │         │        │
+│       │       └─ Seq_DispatcherEntry (0xF532E1)      │         │        │
+│       │               │                              │         │        │
+│       │               └─ Seq_DispatcherTick           │         │        │
+│       │                       │                      │         │        │
+│       │              ┌────────┴─────────┐            │         │        │
+│       │              │ State Check      │            │         │        │
+│       │              │ (8D36h)          │            │         │        │
+│       │              │ skip if 0x10-0x16│            │         │        │
+│       │              └────────┬─────────┘            │         │        │
+│       │                       │                      │         │        │
+│       │              Seq_DispatcherTick_Process       │         │        │
+│       │                       │                      │         │        │
+│       │              ┌────────┴─────────┐            │         │        │
+│       │              │ RhythmROM_       │            │         │        │
+│       │              │ CheckValid       │            │         │        │
+│       │              │ (3277h check)    │            │         │        │
+│       │              └────────┬─────────┘            │         │        │
+│       │                       │                      │         │        │
+│       │              Seq_RhythmProcessor (0xF5EC75)   │         │        │
+│       │              RhythmROM_PatternDispatcher       │         │        │
+│       │                       │                      │         │        │
+│       │               ┌───────┴────────┐             │         │        │
+│       │               │  Song Engine   │             │         │        │
+│       │               │  writes MIDI   │─────────┐   │         │        │
+│       │               │  to ring buf   │         │   │         │        │
+│       │               └────────────────┘         │   │         │        │
+│       │                                          v   │         │        │
+│       │                              ┌──────────────────┐      │        │
+│       │                              │  RING BUFFER     │      │        │
+│       │                              │  Base: 0x01F37B  │      │        │
+│       │                              │  WrPos: 0x01F377 │      │        │
+│       │                              │  RdPos: 0x01F373 │      │        │
+│       │                              └────────┬─────────┘      │        │
+│       │                                       │                │        │
+│       ├─ Seq_EventProcessingTick (0xEF14A3) ──┘                │        │
+│       │       │                                                │        │
+│       │       └─ Seq_ProcessEventLoop (0xEF14CA)               │        │
+│       │               │                                        │        │
+│       │       ┌───────┴──────────┐                             │        │
+│       │       │ Seq_CheckSongEnd │                             │        │
+│       │       │ WrPos == RdPos?  │                             │        │
+│       │       └───────┬──────────┘                             │        │
+│       │               │ (if data available)                    │        │
+│       │               v                                        │        │
+│       │       Seq_ProcessMidiEvent (0xEF13CD)                  │        │
+│       │               │                                        │        │
+│       │       ┌───────┴──────────────────────────┐             │        │
+│       │       │ Parse MIDI status byte:           │             │        │
+│       │       │  0x90 = Note On                   │             │        │
+│       │       │  0x80 = Note Off                  │             │        │
+│       │       │  0xB0 = Control Change            │             │        │
+│       │       │  0xC0 = Program Change            │             │        │
+│       │       │  0xE0 = Pitch Bend                │             │        │
+│       │       └──────────────────────────────────┘             │        │
+│       │                       │                                │        │
+│       │                       v                                │        │
+│       │               sendCOMM (0xEF32F4)                      │        │
+│       │               Inter-CPU Latch → Sub CPU                │        │
+│       │                                                        │        │
+│       └────────────────────────────────────────────────────────┘        │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Main Loop

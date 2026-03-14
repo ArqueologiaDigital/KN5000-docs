@@ -17,9 +17,9 @@ This page describes the planned series of pull requests to upstream MAME that im
 The PRs form a dependency chain. PR 1 and PR 2 are independent and can be reviewed simultaneously. Each subsequent PR builds on the previous.
 
 ```
-PR 1 (LDC CR mapping) --+
-                         +-- PR 3 (DMA + port fix) -- PR 4 (serial) -- PR 5 (KN5000 driver)
-PR 2 (EI/RETI shadow) --+
+PR 1 (LDC CR mapping) ──┐
+                         ├── PR 3 (DMA + port fix) ── PR 4 (serial) ── PR 5 (KN5000 driver)
+PR 2 (EI/RETI shadow) ──┘
 ```
 
 ## Overview of Changes

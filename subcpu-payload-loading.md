@@ -27,14 +27,14 @@ The complete calling sequence during boot:
 
 ```
 User_didnt_request_flash_mem_update (0xEF05E8)
-  |
-  +-- SET 0, (PA)              → Release Sub CPU from reset
-  +-- SubCPU_Init_DMA_Channels → Initialize DMA for inter-CPU comm
-  +-- EI 000h                  → Enable interrupts
-  +-- SubCPU_Send_Payload      → Transfer 192KB firmware payload
-  +-- SubCPU_Payload_Verify    → Verify checksums
-  +-- ScreenGroup_Dispatch(0)  → Display initial boot screen
-  +-- ... (continues boot)
+  │
+  ├── SET 0, (PA)              → Release Sub CPU from reset
+  ├── SubCPU_Init_DMA_Channels → Initialize DMA for inter-CPU comm
+  ├── EI 000h                  → Enable interrupts
+  ├── SubCPU_Send_Payload      → Transfer 192KB firmware payload
+  ├── SubCPU_Payload_Verify    → Verify checksums
+  ├── ScreenGroup_Dispatch(0)  → Display initial boot screen
+  └── ... (continues boot)
 ```
 
 ### SubCPU_Send_Payload Detail (0xEF068A)

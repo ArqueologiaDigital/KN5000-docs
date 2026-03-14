@@ -102,37 +102,37 @@ FLASH_MEM_UPDATE        Normal boot
 FLASH_MEM_UPDATE
     |
     v
-Check floppy present --no--> Return (no update)
+Check floppy present ──no──> Return (no update)
     |yes
     v
 FDC_InitRecalibrate
     |
     v
-Detect_Disk_Type --> type stored in register pointer 0xFB
+Detect_Disk_Type ──> type stored in register pointer 0xFB
     |
     v
 Validate flash hardware (0xEF3D0E)
     |
     v
-Is type == 6 (HDAE5000)? --yes--> Skip to HDAE5000 path
+Is type == 6 (HDAE5000)? ──yes──> Skip to HDAE5000 path
     |no
     v
-+----------------------------------+
-|  "Flash Memory Update"          |
-|  (at Y=80, BG=2)                |
-+----------------------------------+
+╔══════════════════════════════════╗
+║  "Flash Memory Update"          ║
+║  (at Y=80, BG=2)                ║
+╚══════════════════════════════════╝
     |
     v
 Erase_and_Burn____when_disk_is_valid(type)
     |
     v
-+----------------------------------+
-|  "Completed!"                   |
-|  (at Y=160, BG=1)               |
-+----------------------------------+
-|  "Turn On AGAIN !!"             |
-|  (at Y=200, BG=1)               |
-+----------------------------------+
+╔══════════════════════════════════╗
+║  "Completed!"                   ║
+║  (at Y=160, BG=1)               ║
+╠══════════════════════════════════╣
+║  "Turn On AGAIN !!"             ║
+║  (at Y=200, BG=1)               ║
+╚══════════════════════════════════╝
     |
     v
 [Check for HDAE5000 update too]
@@ -158,10 +158,10 @@ The HDAE5000 path uses `Flash_WaitUntilReady` before programming and writes unco
 Erase_and_Burn
     |
     v
-+----------------------------------+
-|  "Now Erasing!!"                |
-|  (at Y=160, BG=2)               |
-+----------------------------------+
+╔══════════════════════════════════╗
+║  "Now Erasing!!"                ║
+║  (at Y=160, BG=2)               ║
+╚══════════════════════════════════╝
     |
     v
 Validate type (1-8 range)
@@ -229,7 +229,7 @@ Flash_BurnWithProgress (with progress bar)
 FDC_WriteSectors (first half to 0x800000)
     |
     v
-"Change FD (2/2)"  ←-- wait for disc swap
+"Change FD (2/2)"  ←── wait for disc swap
     |
     v
 [User removes disc 1, inserts disc 2]
@@ -324,20 +324,20 @@ If `Flash_IdentifyAndValidateChip` returns `0xFFFF` for the HDAE5000 path, the u
 The update messages are positioned vertically on the 320x240 LCD:
 
 ```
-Y=0   +----------------------------------------+
-      |                                        |
-Y=80  |  "Flash Memory Update"  (or "Please    |
-      |   Wait !!" during initial boot)        |
-      |                                        |
-Y=160 |  "Now Erasing!!" → "FD -> Flash"       |
-      |  → "Completed!" (messages replace      |
-      |  each other at the same Y position)    |
-      |                                        |
-Y=180 |  ████████████████  (progress bar)      |
-      |                                        |
-Y=200 |  "Turn On AGAIN !!"                    |
-      |                                        |
-Y=240 +----------------------------------------+
+Y=0   ┌────────────────────────────────────────┐
+      │                                        │
+Y=80  │  "Flash Memory Update"  (or "Please    │
+      │   Wait !!" during initial boot)        │
+      │                                        │
+Y=160 │  "Now Erasing!!" → "FD -> Flash"       │
+      │  → "Completed!" (messages replace      │
+      │  each other at the same Y position)    │
+      │                                        │
+Y=180 │  ████████████████  (progress bar)      │
+      │                                        │
+Y=200 │  "Turn On AGAIN !!"                    │
+      │                                        │
+Y=240 └────────────────────────────────────────┘
 ```
 
 Messages at Y=160 are displayed sequentially (each new message overwrites the previous one at the same screen position). The title at Y=80 remains visible throughout.

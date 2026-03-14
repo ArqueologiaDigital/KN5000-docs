@@ -274,7 +274,7 @@ The control panel MCUs use a bidirectional serial protocol. The CPU is master fo
 
 ```
   CPU (firmware)                    Control Panel MCU
-  --------------                    ------------------
+  ──────────────                    ──────────────────
   TX state machine sends command
   (4 phantom + 2 real SC1BUF writes)
   SCLK stops
@@ -282,14 +282,14 @@ The control panel MCUs use a bidirectional serial protocol. The CPU is master fo
                                     Queues response (2 bytes)
                                     Detects SCLK idle (~250 µs)
                                     Asserts INTA on PE.5
-  +--------------------------------------------------+
-  | INTA_HANDLER:                                    |
-  |   IOC = 1 (slave mode — CPU receives only)       |
-  |   RXE = 1 (receive enable)                       |
-  |   State → SM_RXByte1                             |
-  +--------------------------------------------------+
+  ┌──────────────────────────────────────────────────┐
+  │ INTA_HANDLER:                                    │
+  │   IOC = 1 (slave mode — CPU receives only)       │
+  │   RXE = 1 (receive enable)                       │
+  │   State → SM_RXByte1                             │
+  └──────────────────────────────────────────────────┘
                                     Self-clocks response at 250 kHz
-                                    -- SCLK edges -->
+                                    ── SCLK edges ──>
   SM_RXByte1: reads SC1BUF (header byte)
   SM_RXByteN: reads SC1BUF (data byte)
   Response complete → IDLE
@@ -339,49 +339,49 @@ The main CPU uses a state machine indexed by `CPANEL_STATE_MACHINE_INDEX` (addre
 ```
 State Transition Diagram:
 
-    +-----------------------------------------------------------------+
-    |                                                                 |
-    |  IDLE (0)                                                       |
-    |    |                                                            |
-    |    | CPanel_SendCommand called                                  |
-    |    v                                                            |
-    |  ROUTINE_1 (1) --> Start TX, check SCLK1                        |
-    |    |                |                                           |
-    |    | SCLK1=1        | SCLK1=0 (panel talking)                   |
-    |    v                v                                           |
-    |  ROUTINE_2 (2)    Back to IDLE (0)                              |
-    |    |                                                            |
-    |    | TX byte, update LED index                                  |
-    |    v                                                            |
-    |  ROUTINE_3 (3) --> Disable serial pins                          |
-    |    |                                                            |
-    |    v                                                            |
-    |  ROUTINE_4 (4) --> Continue TX, count down STATE_0_TO_17        |
-    |    |                |                                           |
-    |    | count > 1      | count <= 1                                |
-    |    v                v                                           |
-    |  ROUTINE_3 (loop)  ROUTINE_5 (5)                                |
-    |                      |                                          |
-    |                      v                                          |
-    |                    ROUTINE_6 (6) --> Check if more LED data     |
-    |                      |       |                                  |
-    |                      | more  | done                             |
-    |                      v       v                                  |
-    |                    ROUTINE_1  IDLE (0)                          |
-    |                                                                 |
-    |  -----------------------------------------------------------    |
-    |                                                                 |
-    |  ROUTINE_7 (8) --> RX phase 1, first byte from panel            |
-    |    |                                                            |
-    |    | Byte received, calculate STATE_0_TO_17                     |
-    |    v                                                            |
-    |  ROUTINE_8 (9) --> RX phase 2, additional bytes                 |
-    |    |                |                                           |
-    |    | count > 1      | count <= 1                                |
-    |    v                v                                           |
-    |  ROUTINE_8 (loop)  IDLE (0)                                     |
-    |                                                                 |
-    +-----------------------------------------------------------------+
+    ┌─────────────────────────────────────────────────────────────────┐
+    │                                                                 │
+    │  IDLE (0)                                                       │
+    │    │                                                            │
+    │    │ CPanel_SendCommand called                                  │
+    │    v                                                            │
+    │  ROUTINE_1 (1) ──> Start TX, check SCLK1                        │
+    │    │                │                                           │
+    │    │ SCLK1=1        │ SCLK1=0 (panel talking)                   │
+    │    v                v                                           │
+    │  ROUTINE_2 (2)    Back to IDLE (0)                              │
+    │    │                                                            │
+    │    │ TX byte, update LED index                                  │
+    │    v                                                            │
+    │  ROUTINE_3 (3) ──> Disable serial pins                          │
+    │    │                                                            │
+    │    v                                                            │
+    │  ROUTINE_4 (4) ──> Continue TX, count down STATE_0_TO_17        │
+    │    │                │                                           │
+    │    │ count > 1      │ count <= 1                                │
+    │    v                v                                           │
+    │  ROUTINE_3 (loop)  ROUTINE_5 (5)                                │
+    │                      │                                          │
+    │                      v                                          │
+    │                    ROUTINE_6 (6) ──> Check if more LED data     │
+    │                      │       │                                  │
+    │                      │ more  │ done                             │
+    │                      v       v                                  │
+    │                    ROUTINE_1  IDLE (0)                          │
+    │                                                                 │
+    │  ═══════════════════════════════════════════════════════════    │
+    │                                                                 │
+    │  ROUTINE_7 (8) ──> RX phase 1, first byte from panel            │
+    │    │                                                            │
+    │    │ Byte received, calculate STATE_0_TO_17                     │
+    │    v                                                            │
+    │  ROUTINE_8 (9) ──> RX phase 2, additional bytes                 │
+    │    │                │                                           │
+    │    │ count > 1      │ count <= 1                                │
+    │    v                v                                           │
+    │  ROUTINE_8 (loop)  IDLE (0)                                     │
+    │                                                                 │
+    └─────────────────────────────────────────────────────────────────┘
 ```
 
 ### STATE_0_TO_17 Meaning
@@ -1256,24 +1256,24 @@ CPanel_RX_Process
 CPanel_RX_ParseNext (line 401556)
     ↓
 CPanel_RX_ButtonPacket (0xFC4985)
-    +- Read packet byte 1 (segment)
-    +- Read packet byte 2 (button state)
-    +- XOR with previous state → changed bits
-    +- Queue event to CPANEL_RX_EVENT_QUEUE
+    ├─ Read packet byte 1 (segment)
+    ├─ Read packet byte 2 (button state)
+    ├─ XOR with previous state → changed bits
+    └─ Queue event to CPANEL_RX_EVENT_QUEUE
     ↓
 ApDeliveryEvent (0xFA9E09) - Called from main loop
-    +- Extract event code (0x01c00013) from queue entry
-    +- Decode handler type (0x13 = 19)
-    +- Call LABEL_F44147
+    ├─ Extract event code (0x01c00013) from queue entry
+    ├─ Decode handler type (0x13 = 19)
+    └─ Call LABEL_F44147
     ↓
 LABEL_F44147 (0xF44147)
-    +- Index APP_EVENT_HANDLER_TABLE with handler ID
-    +- Compute offset from handler offset lookup table
-    +- Jump to handler function
+    ├─ Index APP_EVENT_HANDLER_TABLE with handler ID
+    ├─ Compute offset from handler offset lookup table
+    └─ Jump to handler function
     ↓
 DemoModeFunc (0xF222DD)
-    +- CP XBC, 01c00013h  ← Verify this is DEMO event
-    +- Execute action based on XDE (button state)
+    ├─ CP XBC, 01c00013h  ← Verify this is DEMO event
+    └─ Execute action based on XDE (button state)
 ```
 
 ## References

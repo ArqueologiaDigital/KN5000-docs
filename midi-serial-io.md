@@ -83,16 +83,16 @@ The dispatcher classifies each incoming byte:
 Received byte
     |
     v
-Bit 7 set? --no--> MIDI_CHANNEL_MESSAGE_DISPATCHER (data byte)
+Bit 7 set? ──no──> MIDI_CHANNEL_MESSAGE_DISPATCHER (data byte)
     |yes
     v
-Is it <= 0xF7? --no--> MIDI_SYSTEM_MESSAGE_HANDLER (real-time)
+Is it <= 0xF7? ──no──> MIDI_SYSTEM_MESSAGE_HANDLER (real-time)
     |yes
     v
 Store as running status (DRAM 1059)
     |
     v
-SysEx in progress? --yes--> Handle SysEx end (0xF7) or error
+SysEx in progress? ──yes──> Handle SysEx end (0xF7) or error
     |no
     v
 Return (wait for data bytes)
