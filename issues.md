@@ -8,7 +8,7 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 304 (13 open, 287 closed)
+**Total Issues:** 313 (13 open, 296 closed)
 
 **Quick Links:** 
 [Other](#other) (13)
@@ -134,14 +134,6 @@ THE single biggest blocker across the project. Waveform ROMs IC304-IC306 (1.2MB 
 
 ---
 
-#### 🟡 Decode all style_ui_paramblock_*.s files {#issue-kn5000-5uor}
-
-**ID:** `kn5000-5uor` | **Priority:** Medium | **Created:** 2026-03-13
-
-Annotate all 12 paramblock .s files with decoded ScreenData bytecode commands (172 total commands)
-
----
-
 #### 🟡 MAME: Implement MIDI output (TX0) {#issue-kn5000-9qt3}
 
 **ID:** `kn5000-9qt3` | **Priority:** Medium | **Created:** 2026-03-10
@@ -163,6 +155,14 @@ The MAME upstream PR #14558 was opened with an earlier version of the driver. Si
 **ID:** `kn5000-rqtw` | **Priority:** Medium | **Created:** 2026-03-09
 
 The TMP94C241 datasheet says internal RAM is 2KB at 0x800-0xFFF. MAME currently maps 0x400-0xBFF as RAM, missing 0xC00-0xFFF. Extending to 0xFFF breaks KN5000 demo timer (0x0D2F) because the KN5000 driver maps external DRAM at 0x000000-0x0FFFFF overlapping internal RAM. Adding internal RAM at 0xC00-0xFFF shadows the DRAM, causing the timer to get stuck. Needs investigation: (1) Are other MAME drivers affected? (2) Should KN5000 driver start DRAM at 0x1000? (3) Do DMA transfers access internal RAM or external bus?
+
+---
+
+#### 🟡 Use symbolic handler references in all C screen data files {#issue-kn5000-n1lw}
+
+**ID:** `kn5000-n1lw` | **Priority:** Medium | **Created:** 2026-03-14
+
+Replace all raw hex addresses in .handler fields across all C screen data files with named symbols resolved by linker scripts. Created shared linker scripts (se_screens_link.ld, accomp_screens_link.ld) defining 52 symbols across categories: ROM string tables, cursor coordinate tables, DRAM parameter addresses, flagged addresses, table data ROM references. All 11 C files updated.
 
 ---
 
@@ -242,6 +242,15 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-6rjd` | Phase 5: Build integration for Rhythm/DrumSound dispatch ... | 2026-03-14 |
+| `kn5000-rfqe` | Phase 5: Build integration for DrumKit dispatch table (Op... | 2026-03-14 |
+| `kn5000-h9ag` | Phase 5: Build integration for accompaniment screen data ... | 2026-03-14 |
+| `kn5000-ytw6` | ScreenData C conversion: verification and cleanup | 2026-03-14 |
+| `kn5000-3pop` | Sound editor screendata: symbolic SD_PTR cross-references | 2026-03-14 |
+| `kn5000-y213` | Sound editor screendata: extract and convert to C | 2026-03-14 |
+| `kn5000-620x` | Sound editor screendata: inventory and tooling | 2026-03-14 |
+| `kn5000-p9c6` | Convert accompaniment engine screendata to C structs | 2026-03-14 |
+| `kn5000-5uor` | Decode all style_ui_paramblock_*.s files | 2026-03-13 |
 | `kn5000-jyo7` | MAME: Build and test TMP94C241 16-bit timer interrupt fix | 2026-03-13 |
 | `kn5000-xpkj` | Annotate all StyleUI screendata bytecode files | 2026-03-13 |
 | `kn5000-hkeq` | Decode style_ui_screendata_main.s bytecode format | 2026-03-13 |
@@ -253,17 +262,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-8gqi` | LLVM TLCS-900: Variable shift SLA Rx,Ry generates wrong e... | 2026-03-08 |
 | `kn5000-m7iu` | MAME: Implement TMP94C241 timer output callbacks and wire... | 2026-03-08 |
 | `kn5000-492z` | MAME: Wire HDAE5000 IDE/ATA interface using MAME ata_inte... | 2026-03-08 |
-| `kn5000-qnf` | HDAE5000: Analyze HD-TechManager5000 software | 2026-03-08 |
-| `kn5000-0bx2` | HDAE5000: Document hard disk control protocol (low-level ... | 2026-03-08 |
-| `kn5000-4qqo` | HDAE5000: Full ROM disassembly with semantic labels and d... | 2026-03-08 |
-| `kn5000-5jy` | Homebrew: Development toolkit and SDK planning | 2026-03-08 |
-| `kn5000-9zb` | Homebrew: Create SDK documentation and examples | 2026-03-08 |
-| `kn5000-a8s` | Testing: Establish emulation validation procedures | 2026-03-08 |
-| `kn5000-gkpv` | DSP2 (MN19413): Map register functions from boot-time writes | 2026-03-08 |
-| `kn5000-1vz` | MAME: Input/Control subsystem emulation milestone | 2026-03-08 |
-| `kn5000-0eo` | MAME: Spurious button events during boot (voice dialog, t... | 2026-03-08 |
 
-*...and 267 more closed issues*
+*...and 276 more closed issues*
 
 ---
 
@@ -286,4 +286,4 @@ Production-ready emulation and homebrew support.
 
 ---
 
-*Last updated: 2026-03-14 01:19*
+*Last updated: 2026-03-14 10:19*
