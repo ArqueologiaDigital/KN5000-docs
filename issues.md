@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 318 (9 open, 305 closed)
+**Total Issues:** 318 (8 open, 306 closed)
 
 **Quick Links:** 
-[Other](#other) (9)
+[Other](#other) (8)
 
 ---
 
@@ -126,12 +126,6 @@ THE single biggest blocker across the project. Waveform ROMs IC304-IC306 (1.2MB 
 
 ---
 
-#### 🟡 Generate synthetic waveform ROMs (IC304, IC305, IC306) for tone generator testing {#issue-kn5000-46mu}
-
-**ID:** `kn5000-46mu` | **Priority:** Medium | **Created:** 2026-03-14
-
----
-
 #### 🟡 MAME: Update PR #14558 with accumulated driver fixes {#issue-kn5000-f8gw}
 
 **ID:** `kn5000-f8gw` | **Priority:** Medium | **Created:** 2026-03-10
@@ -208,6 +202,7 @@ With NAKA files identified as UI widget descriptors, the ~9,015 LABEL_XXXXXX pla
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-46mu` | Generate synthetic waveform ROMs (IC304, IC305, IC306) fo... | 2026-03-14 |
 | `kn5000-cpn5` | Convert 357 R+d16 .byte instructions to native mnemonics | 2026-03-14 |
 | `kn5000-iueh` | Disassembly: Semantic analysis of NAKA obfuscated code bl... | 2026-03-14 |
 | `kn5000-2w05` | Rename NAKA ui_widgets files to semantic names | 2026-03-14 |
@@ -227,9 +222,8 @@ With NAKA files identified as UI widget descriptors, the ~9,015 LABEL_XXXXXX pla
 | `kn5000-p9c6` | Convert accompaniment engine screendata to C structs | 2026-03-14 |
 | `kn5000-5uor` | Decode all style_ui_paramblock_*.s files | 2026-03-13 |
 | `kn5000-jyo7` | MAME: Build and test TMP94C241 16-bit timer interrupt fix | 2026-03-13 |
-| `kn5000-xpkj` | Annotate all StyleUI screendata bytecode files | 2026-03-13 |
 
-*...and 285 more closed issues*
+*...and 286 more closed issues*
 
 ---
 
@@ -241,7 +235,7 @@ With NAKA files identified as UI widget descriptors, the ~9,015 LABEL_XXXXXX pla
 |----------|-------|
 | Critical | 1 |
 | High | 2 |
-| Medium | 2 |
+| Medium | 1 |
 | Low | 3 |
 | P4 | 1 |
 
@@ -249,8 +243,8 @@ With NAKA files identified as UI widget descriptors, the ~9,015 LABEL_XXXXXX pla
 
 | Category | Count |
 |----------|-------|
-| Other | 9 |
+| Other | 8 |
 
 ---
 
-*Last updated: 2026-03-14 12:09*
+*Last updated: 2026-03-14 12:41*
