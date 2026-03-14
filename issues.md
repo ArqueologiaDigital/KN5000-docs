@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 319 (9 open, 309 closed)
+**Total Issues:** 319 (6 open, 313 closed)
 
 **Quick Links:** 
-[Other](#other) (9)
+[Other](#other) (6)
 
 ---
 
@@ -99,14 +99,6 @@ User interaction and file I/O fully working in MAME.
 
 ---
 
-#### 🟠 Waveform ROM investigation: dump IC304-IC306 or create approximations {#issue-kn5000-u573}
-
-**ID:** `kn5000-u573` | **Priority:** High | **Created:** 2026-03-10
-
-THE single biggest blocker across the project. Waveform ROMs IC304-IC306 (1.2MB of 1.6MB total) are NO_DUMP. Only IC307 is dumped. Without waveforms: no actual sound synthesis, Feature Demo stuck (sequencer never completes), tone generator HLE is timing-only. Paths forward: (1) Attempt to dump from physical hardware (requires chip desoldering or in-circuit reading), (2) Analyze IC307 format to understand waveform structure, (3) Create synthetic approximations using IC307 as template, (4) Check if other Technics keyboards (KN6000, KN7000) share compatible waveform chips. This is prerequisite for any real audio progress.
-
----
-
 #### 🟡 MAME: Tone generator device (IC303) — refine waveform playback {#issue-kn5000-wmfd}
 
 **ID:** `kn5000-wmfd` | **Priority:** Medium | **Created:** 2026-03-14
@@ -122,14 +114,6 @@ The kn5000_tonegen_device was created with basic PCM playback. Needs refinement:
 **ID:** `kn5000-f8gw` | **Priority:** Medium | **Created:** 2026-03-10
 
 The MAME upstream PR #14558 was opened with an earlier version of the driver. Since then, many significant fixes have been committed locally: INT0 level-triggered starvation fix, PORT Z MSTAT readback fix, tone generator hold timer, SNS NMI emulation, HDAE5000 IDE/ATA wiring, FDC device instantiation, control panel HLE improvements, DSP device stubs, and more. Need to: (1) rebase kn5000_pr branch onto current MAME master, (2) cherry-pick/squash all relevant fixes, (3) ensure MAME code style compliance (BIT() macros, logmacro.h, no AI attribution), (4) update PR description with current feature list, (5) address any reviewer feedback.
-
----
-
-#### ⚪ MAME: Implement VRAM A18 banking (VGA display modes) {#issue-kn5000-0vuo}
-
-**ID:** `kn5000-0vuo` | **Priority:** Low | **Created:** 2026-03-10
-
-The VGA.A18 signal from the main CPU through a T7W139F decoder is not emulated (marked TODO at line 927 of kn5000.cpp). This controls VRAM bank selection, potentially affecting full-screen graphics, palette switching, and extended display modes. The display currently works for the main UI but some rendering modes (e.g., Feature Demo FTBMP bitmaps, full-screen splash screens) may depend on correct A18 banking. Need to: (1) trace the T7W139F decoder logic from the service manual schematic, (2) identify which firmware writes control the banking, (3) implement the bank switching in the VGA read/write handlers.
 
 ---
 
@@ -181,18 +165,14 @@ Production-ready emulation and homebrew support.
 
 ---
 
-#### ⚪ Rename LABEL_XXXXXX placeholders in NAKA ui_widgets files to semantic names {#issue-kn5000-42jw}
-
-**ID:** `kn5000-42jw` | **Priority:** P4 | **Created:** 2026-03-14
-
-With NAKA files identified as UI widget descriptors, the ~9,015 LABEL_XXXXXX placeholders can be renamed to semantic names based on widget type, screen context, and handler function. Start with smaller files. Cross-reference RegisterObjectTable() entries and Proc handler names (Ac*, Iv*, Ps*, Vw* prefixes). Follow-up to kn5000-iueh research.
-
----
-
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-a0k` | MAME: Storage subsystem emulation milestone | 2026-03-14 |
+| `kn5000-42jw` | Rename LABEL_XXXXXX placeholders in NAKA ui_widgets files... | 2026-03-14 |
+| `kn5000-0vuo` | MAME: Implement VRAM A18 banking (VGA display modes) | 2026-03-14 |
+| `kn5000-u573` | Waveform ROM investigation: dump IC304-IC306 or create ap... | 2026-03-14 |
 | `kn5000-yhj` | HDAE5000 Generic Program Loader: FAT filesystem, HD boot,... | 2026-03-14 |
 | `kn5000-y7t5` | Trace full code path: Feature Demo selection → FTBMP bitm... | 2026-03-14 |
 | `kn5000-ht11` | DSP2: Trace bytecode programs to map registers to effect ... | 2026-03-14 |
@@ -209,12 +189,8 @@ With NAKA files identified as UI widget descriptors, the ~9,015 LABEL_XXXXXX pla
 | `kn5000-6rjd` | Phase 5: Build integration for Rhythm/DrumSound dispatch ... | 2026-03-14 |
 | `kn5000-rfqe` | Phase 5: Build integration for DrumKit dispatch table (Op... | 2026-03-14 |
 | `kn5000-h9ag` | Phase 5: Build integration for accompaniment screen data ... | 2026-03-14 |
-| `kn5000-ytw6` | ScreenData C conversion: verification and cleanup | 2026-03-14 |
-| `kn5000-3pop` | Sound editor screendata: symbolic SD_PTR cross-references | 2026-03-14 |
-| `kn5000-y213` | Sound editor screendata: extract and convert to C | 2026-03-14 |
-| `kn5000-620x` | Sound editor screendata: inventory and tooling | 2026-03-14 |
 
-*...and 289 more closed issues*
+*...and 293 more closed issues*
 
 ---
 
@@ -225,17 +201,16 @@ With NAKA files identified as UI widget descriptors, the ~9,015 LABEL_XXXXXX pla
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 2 |
+| High | 1 |
 | Medium | 2 |
-| Low | 3 |
-| P4 | 1 |
+| Low | 2 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 9 |
+| Other | 6 |
 
 ---
 
-*Last updated: 2026-03-14 13:02*
+*Last updated: 2026-03-14 13:03*
