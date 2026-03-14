@@ -506,6 +506,17 @@ python compare_roms.py # Verify against originals
 
 ## Recent Improvements
 
+### March 2026: Complete LABEL_XXXXXX Elimination
+
+**All address-based labels replaced with semantic names across the entire ROM set.** Every `LABEL_XXXXXX` placeholder (labels named after their hex address, e.g., `LABEL_F873ED`) has been analyzed and renamed to a meaningful, descriptive name reflecting its purpose (e.g., `FileIO_ValidateWithExtHeader`, `SeqByteBlock_DispatchJumpTable`). This represents the completion of a major project goal:
+
+- **~10,000 labels renamed** across 94+ source files in maincpu alone
+- **0 LABEL_XXXXXX remaining** in any ROM directory (maincpu, subcpu, hdae5000, table_data, custom_data)
+- All renames verified with full `make clean && make all` + `compare_roms.py` (100% byte match maintained)
+- Cross-file references updated atomically to prevent broken symbol errors
+
+This milestone significantly improves codebase navigability and makes the disassembly a true semantic representation of the firmware, not just a mechanical address-to-instruction translation.
+
 ### March 2026: R+d16 Addressing, Semantic Naming, Symbolic Handlers, Waveform ROM
 
 **357 R+d16 .byte instructions converted to native mnemonics** — With new LLVM backend support for R+d16 source memory addressing (C3/D3/E3 SRI prefix), 357 `.byte` fallbacks across maincpu and subcpu ROMs were converted to native assembly. Largest contributors: midi_dispatch_handlers (173), subprogram (26), sequencer_ui (25), scoop_display (23), graphics_text_vga (22). All 6 ROMs maintain 100% byte match.
