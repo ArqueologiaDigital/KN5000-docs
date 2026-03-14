@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 323 (4 open, 318 closed)
+**Total Issues:** 327 (7 open, 320 closed)
 
 **Quick Links:** 
-[Other](#other) (4)
+[Other](#other) (7)
 
 ---
 
@@ -74,7 +74,23 @@ All subsystem pages documented, no placeholders remain.
 
 **ID:** `kn5000-f8gw` | **Priority:** Medium | **Created:** 2026-03-10
 
-The MAME upstream PR #14558 was opened with an earlier version of the driver. Since then, many significant fixes have been committed locally: INT0 level-triggered starvation fix, PORT Z MSTAT readback fix, tone generator hold timer, SNS NMI emulation, HDAE5000 IDE/ATA wiring, FDC device instantiation, control panel HLE improvements, DSP device stubs, and more. Need to: (1) rebase kn5000_pr branch onto current MAME master, (2) cherry-pick/squash all relevant fixes, (3) ensure MAME code style compliance (BIT() macros, logmacro.h, no AI attribution), (4) update PR description with current feature list, (5) address any reviewer feedback.
+Create a new MAME upstream PR (PR5) for accumulated driver fixes on kn5000_pr5_driver branch. This includes: tone generator device (IC303 with PCM playback, pitch, pan, volume), FDC wiring and dskchg polarity fix, HDAE5000 IDE/ATA, control panel HLE improvements, DSP device stubs. Must: (1) rebase onto current MAME master, (2) squash into logical commits, (3) ensure MAME code style (BIT macros, logmacro.h), (4) NO AI attribution on PR commits, (5) create PR with feature list.
+
+---
+
+#### 🟡 Rename all LABEL_ in scoop_display.s to semantic names {#issue-kn5000-zi7j}
+
+**ID:** `kn5000-zi7j` | **Priority:** Medium | **Created:** 2026-03-14
+
+Rename all 317 LABEL_XXXXXX definitions in maincpu/display/scoop_display.s to meaningful semantic names. Work in 3 batches with build verification after each.
+
+---
+
+#### ⚪ MAME: Decode voice parameter template (ROM 0x12115, 34 bytes) {#issue-kn5000-v0uv}
+
+**ID:** `kn5000-v0uv` | **Priority:** Low | **Created:** 2026-03-14
+
+The 34-byte voice parameter template at SubCPU ROM 0x12115 contains default register values for all tone gen registers. Decoding this would improve waveform selection accuracy — currently the mapping from register values to waveform ROM addresses is unknown. Tasks: (1) Extract the template bytes from the SubCPU ROM. (2) Map each byte pair to the corresponding tone gen register. (3) Understand what default waveform, pitch, and volume values are set.
 
 ---
 
@@ -126,10 +142,20 @@ Production-ready emulation and homebrew support.
 
 ---
 
+#### ⚪ Phase 4: Continue LABEL_XXXXXX semantic renaming {#issue-kn5000-j8pz}
+
+**ID:** `kn5000-j8pz` | **Priority:** Low | **Created:** 2026-03-14
+
+Continue renaming generic LABEL_XXXXXX hex address labels to semantic names across all maincpu .s files. Session progress: ~40K → ~32.5K (7,500 renamed). Top remaining files: note_voice_mapping.s (~2400), accompaniment_engine.s (~2000), performance_style_screens.s (~1800), ui_widget_defs.s (~1800), drawbar_panel_ui.s (~1300), ui_mode_handlers.s (~1200). Use Python scripts with binary I/O for Latin-1 safety. Each batch must pass make all with 100% byte match.
+
+---
+
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-u8fl` | MAME: DSP device stubs for IC310 (MN19413) and IC311 (DS3... | 2026-03-14 |
+| `kn5000-wmfd` | MAME: Tone generator device (IC303) — refine waveform pla... | 2026-03-14 |
 | `kn5000-02h7` | Rename LABEL_ placeholders in note_voice_mapping.s | 2026-03-14 |
 | `kn5000-h1d0` | Rename LABEL_XXXXXX to semantic names in audio_control_en... | 2026-03-14 |
 | `kn5000-xm8x` | MAME: Fix FDC disk detection (dskchg polarity) | 2026-03-14 |
@@ -148,10 +174,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-2w05` | Rename NAKA ui_widgets files to semantic names | 2026-03-14 |
 | `kn5000-9qt3` | MAME: Implement MIDI output (TX0) | 2026-03-14 |
 | `kn5000-psio` | LLVM: Add R+d16 addressing mode for TLCS-900 backend | 2026-03-14 |
-| `kn5000-rqtw` | TMP94C241: Internal RAM range 0xC00-0xFFF missing from ad... | 2026-03-14 |
-| `kn5000-umft` | MAME: Complete FDC address mapping at 0x110000-0x12FFFF | 2026-03-14 |
 
-*...and 298 more closed issues*
+*...and 300 more closed issues*
 
 ---
 
@@ -162,15 +186,15 @@ Production-ready emulation and homebrew support.
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| Medium | 1 |
-| Low | 2 |
+| Medium | 2 |
+| Low | 4 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 4 |
+| Other | 7 |
 
 ---
 
-*Last updated: 2026-03-14 17:06*
+*Last updated: 2026-03-14 17:38*
