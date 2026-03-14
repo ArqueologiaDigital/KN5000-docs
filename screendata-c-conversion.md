@@ -98,8 +98,12 @@ Located in `maincpu/sequencer/accomp_screens/`. The original data remains as inl
 
 **Style UI:** Fully integrated. C files are compiled and included via `.incbin` in `style_ui_params.s`.
 
-**Sound Editor:** Deferred. The data region in `sound_editor_ui.s` contains 17 internal labels referenced by dispatch tables (e.g., drum kit variant pointers, parameter grid sub-blocks). Replacing with `.incbin` requires splitting at each label boundary.
+**Sound Editor:** Partially integrated. Two blocks with dispatch tables have been absorbed into C:
+- `se_drumkit_display.c` (329 bytes) — includes DrumKit_VariantSelect_Table (9 entries)
+- `se_rhythm_transport_tables.c` (220 bytes) — includes RhythmTransport_Control_Table (6 entries) and DrumSound_ParamEdit_Table (10 entries), both with self-referencing entries
 
-**Accompaniment:** Deferred. The 317-byte screen data sits within a larger 2,096-byte data block (`LABEL_F6A9D7`–`LABEL_F6B207`) that mixes ScreenData with non-ScreenData formats.
+The remaining 20 Sound Editor files are documentation-only (no dispatch tables to absorb).
 
-Both subsystems load data by raw immediate address (`ld xiy, 0xF6AD37`), not by label — binary position must remain exact, which byte-matching guarantees.
+**Accompaniment:** Fully integrated. The 2,096-byte data block in `accompaniment_engine.s` has been split into 7 segments with 3 `.incbin` directives for the ScreenData blocks (`accomp_section_widget.c`, `accomp_part_widget.c`, `accomp_display_full.c`).
+
+All integrated blocks load data by raw immediate address (`ld xiy, 0xF6AD37`), not by label — binary position must remain exact, which byte-matching guarantees.
