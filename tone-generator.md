@@ -110,6 +110,58 @@ Each of the 64 voices has registers organized into groups. The register address 
 | +0x0A00 | 0x0A | 0 | +0x28 | Aux parameter, bank 0 |
 | +0x0A40 | 0x0A | 1 | +0x2A | Aux parameter, bank 1 |
 
+### ToneGen_WriteVoiceParams Sequence
+
+The firmware's `ToneGen_WriteVoiceParams` function (at subcpu 0x02D0FD) writes 23 register/data pairs per voice from a 44-byte parameter struct. The write order is:
+
+| Step | Register | Struct Offset | Notes |
+|------|----------|--------------|-------|
+| 1 | +0x040 | +2 | Group 0, bank 1 |
+| 2 | +0x080 | +4 | Group 0, bank 2 (bit 15 SET = strobe) |
+| 3 | +0x0C0 | +6 | Group 0, bank 3 |
+| 4 | +0x100 | +8 | Group 1, bank 0 |
+| 5 | +0x140 | +10 | Group 1, bank 1 |
+| 6 | +0x180 | +12 | Group 1, bank 2 |
+| 7 | +0x400 | +14 | Group 4, bank 0 (pan) |
+| 8 | +0x440 | +16 | Group 4, bank 1 |
+| 9 | +0x480 | +18 | Group 4, bank 2 |
+| 10 | +0x4C0 | +20 | Group 4, bank 3 |
+| 11 | +0x500 | +22 | Group 5, bank 0 |
+| 12 | +0x000 | — | Voice control = 0x8100 (KEY ON) |
+| 13 | +0x840 | +26 | Volume, bank 1 |
+| 14 | +0x880 | +28 | Volume, bank 2 |
+| 15 | +0x8C0 | +30 | Volume, bank 3 |
+| 16 | +0x900 | +32 | Aux level, bank 0 |
+| 17 | +0x940 | +34 | Aux level, bank 1 |
+| 18 | +0x980 | +36 | Aux level, bank 2 |
+| 19 | +0x9C0 | +38 | Aux level, bank 3 |
+| 20 | +0xA00 | +40 | Aux param, bank 0 |
+| 21 | +0xA40 | +42 | Aux param, bank 1 |
+| 22 | +0x080 | +4 | Group 0, bank 2 (bit 15 CLEAR = complete strobe) |
+
+Note: Step 12 writes the constant 0x8100 (key-on) to the voice control register, NOT from the struct. Steps 2 and 22 form a SET/CLEAR strobe pair on register +0x080 bit 15.
+
+### Voice Initialization Chain (Voice_Init_Type4)
+
+When a voice is triggered, the firmware runs a 15-function initialization chain before writing registers:
+1. `Voice_Pitch_InterpDispatch` — pitch interpolation
+2. `Voice_Pitch_WriteOutputReg_Portamento` — portamento output
+3. `Voice_Pitch_WriteOutputReg_Legato` — legato output
+4. `Voice_Level_ComputeTriplet` — level computation
+5. `Voice_PitchPack_Dispatch` — pitch packing
+6. `Voice_PanReg_WriteDispatch` — pan register
+7. `Voice_StereoLevel_Compute` — stereo balance
+8. `Voice_PortaLevel_Compute` — portamento level
+9. `Voice_Chan_ComputeParams` — channel parameters
+10. `Voice_SubVoice_ComputeAndTrigger` — sub-voice trigger
+11. `Voice2_UpdatePitch` — secondary pitch update
+12. `Voice_ComputeExprPitchBend` — expression + pitch bend
+13. `Voice_SetPitchWord_Muted` — initial pitch (muted)
+14. `Voice_ComputeAndWritePan` — final pan
+15. `Voice_ComputePitch` — final pitch computation
+
+This chain runs at voice allocation time (from `Voice_Allocate_Typed`), computing all parameters from MIDI data, instrument definitions, and performance state before calling `ToneGen_WriteVoiceParams`.
+
 ### Voice Control State Machine
 
 The voice control register at offset +0x0000 (group 0x00, bank 0) cycles through these states:
