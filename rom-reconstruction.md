@@ -79,7 +79,7 @@ Reference disassembly files (`.unidasm`) are generated with MAME's `unidasm` too
 
 ## Assembler
 
-The project uses a **custom LLVM backend** (`llvm-mc -triple=tlcs900`) for assembly. All 279,441 instructions are encoded natively — no workaround macros needed.
+The project uses a **custom LLVM backend** (`llvm-mc -triple=tlcs900`) for assembly. All 279,798 instructions are encoded natively — no workaround macros needed.
 
 **Build Process:**
 1. `llvm-mc` assembles `.s` files to ELF object files
@@ -91,10 +91,10 @@ The project uses a **custom LLVM backend** (`llvm-mc -triple=tlcs900`) for assem
 
 ## Milestone: 100% Byte-Matching ROMs
 
-As of February 2026, **all six ROMs** rebuild with 100% byte accuracy using LLVM assembly (279,441 native instructions, 0 workaround macros):
+As of March 2026, **all six ROMs** rebuild with 100% byte accuracy using LLVM assembly (279,798 native instructions, 0 workaround macros):
 
-- **Main CPU** (2MB) - Complete disassembly with symbolic labels (239,683 instructions)
-- **Sub CPU Payload** (192KB) - Full protocol implementation (35,721 instructions)
+- **Main CPU** (2MB) - Complete disassembly with symbolic labels (240,014 instructions)
+- **Sub CPU Payload** (192KB) - Full protocol implementation (35,747 instructions)
 - **Sub CPU Boot** (128KB) - Boot ROM with VGA initialization (1,357 instructions)
 - **Table Data** (2MB) - Feature demo, wallpapers, icons, bootloader (1,678 instructions)
 - **HDAE5000** (512KB) - Hard disk expansion firmware (502 instructions)
@@ -108,7 +108,7 @@ The Main CPU disassembly is organized into modular source files for maintainabil
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `maincpu/kn5000_v10_program.s` | ~43,000 | Main source file (includes 94 other files) |
+| `maincpu/kn5000_v10_program.s` | ~43,000 | Main source file (includes 94+ other files) |
 | `maincpu/gui_constants.s` | 57 | Display state variables, offscreen buffers |
 | `maincpu/fdc_constants.s` | 75 | FDC I/O addresses, commands, status bits |
 | `maincpu/fdc_routines.s` | 1,403 | FDC read/write/seek routines |
@@ -505,6 +505,16 @@ python compare_roms.py # Verify against originals
 ```
 
 ## Recent Improvements
+
+### March 2026: R+d16 Addressing, Semantic Naming, Symbolic Handlers, Waveform ROM
+
+**357 R+d16 .byte instructions converted to native mnemonics** — With new LLVM backend support for R+d16 source memory addressing (C3/D3/E3 SRI prefix), 357 `.byte` fallbacks across maincpu and subcpu ROMs were converted to native assembly. Largest contributors: midi_dispatch_handlers (173), subprogram (26), sequencer_ui (25), scoop_display (23), graphics_text_vga (22). All 6 ROMs maintain 100% byte match.
+
+**16 NAKA UI widget files renamed to semantic names** — Previously opaque address-based filenames (e.g., `ui_widgets_EBxxxx.s`) renamed to descriptive names based on reverse engineering research (e.g., `technichord_string_data.s`, `sound_editor_widgets.s`), improving codebase navigability.
+
+**All C screen data `.handler` fields now use symbolic references** — 52 handler symbols across 2 linker scripts (`maincpu.ld`, `ctlonly.ld`) replace raw numeric addresses in the C-compiled screen data structures, enabling cross-reference navigation and maintaining the link between C UI definitions and assembly handler routines.
+
+**IC307 waveform ROM format fully decoded** — The waveform ROM (IC307, 4MB) format has been fully reverse-engineered: 16-bit signed PCM samples at 32kHz, organized as a sample table (512 entries with start/end/loop addresses) followed by raw sample data. See [Waveform ROM Format](/waveform-rom-format/) for full documentation.
 
 ### Binary Include Splitting
 
