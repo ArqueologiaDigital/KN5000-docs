@@ -552,8 +552,13 @@ All handlers end by jumping to LABEL_F97DE1 which sets the status flag and retur
 | Floppy connector | **Working** | 3.5" HD (1.44MB), MFI format supported |
 | TC signal | **Working** | Timer 0 output (TO0) wired to FDC TC via TMP94C241 timer callbacks |
 | Disk images | **Available** | v5-v10 firmware update disks from [archive.org](https://archive.org/details/technics-kn5000-system-update-disks) |
+| Disk change detect | **Fixed** | Port D bit 6 — dskchg_r() inverted for active-low hardware signal |
 
 **Test command:** `mame kn5000 -flop <disk_image.mfi>`
+
+### Disk Change Signal (Port D Bit 6)
+
+The firmware's `Check_for_Floppy_Disk_Change` (at 0xEF4F5E) reads Port D bit 6 before issuing any FDC commands. This signal is active-low on the hardware (low = disk change detected). MAME's `floppy_image_device::dskchg_r()` returns active-high (1 = change detected), so the signal must be inverted: `(!floppy->dskchg_r()) << 6`. Without this inversion, the firmware always shows "ERROR 02! There is no disk in the disk drive."
 
 The TC (Terminal Count) signal terminates multi-sector FDC transfers. It is wired from the Main CPU Timer 0 output (TO0) to the FDC TC input via TMP94C241 timer output callbacks added to the MAME CPU core.
 
