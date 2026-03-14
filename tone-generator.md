@@ -99,10 +99,10 @@ Each of the 64 voices has registers organized into groups. The register address 
 | +0x05C0 | 0x05 | 3 | +0x3E | Voice parameter 5, bank 3 (bit 15 = latch strobe) |
 | +0x0600 | 0x06 | 0 | +0x40 | Voice parameter 6, bank 0 |
 | +0x0640 | 0x06 | 1 | +0x42 | Voice parameter 6, bank 1 |
-| +0x0800 | 0x08 | 0 | +0x18 | **Volume/Level**, bank 0 |
-| +0x0840 | 0x08 | 1 | +0x1A | **Volume/Level**, bank 1 |
-| +0x0880 | 0x08 | 2 | +0x1C | **Volume/Level**, bank 2 |
-| +0x08C0 | 0x08 | 3 | +0x1E | **Volume/Level**, bank 3 |
+| +0x0800 | 0x08 | 0 | +0x18 | **Main Volume** (0xFF80=mute, lower=louder) |
+| +0x0840 | 0x08 | 1 | +0x1A | **Pan Left** (0x00=silent, 0x3C=center, 0x78=full) |
+| +0x0880 | 0x08 | 2 | +0x1C | **Pan Right** (0x00=silent, 0x3C=center, 0x78=full) |
+| +0x08C0 | 0x08 | 3 | +0x1E | **DSP/Effects Send Level** |
 | +0x0900 | 0x09 | 0 | +0x20 | Aux level, bank 0 |
 | +0x0940 | 0x09 | 1 | +0x22 | Aux level, bank 1 |
 | +0x0980 | 0x09 | 2 | +0x24 | Aux level, bank 2 |
@@ -122,15 +122,15 @@ The firmware's `ToneGen_WriteVoiceParams` function (at subcpu 0x02D0FD) writes 2
 | 4 | +0x100 | +8 | Group 1, bank 0 |
 | 5 | +0x140 | +10 | Group 1, bank 1 |
 | 6 | +0x180 | +12 | Group 1, bank 2 |
-| 7 | +0x400 | +14 | Group 4, bank 0 (pan) |
+| 7 | +0x400 | +14 | Group 4, bank 0 (note key info: note<<8, bit 15=active) |
 | 8 | +0x440 | +16 | Group 4, bank 1 |
 | 9 | +0x480 | +18 | Group 4, bank 2 |
 | 10 | +0x4C0 | +20 | Group 4, bank 3 |
 | 11 | +0x500 | +22 | Group 5, bank 0 |
 | 12 | +0x000 | — | Voice control = 0x8100 (KEY ON) |
-| 13 | +0x840 | +26 | Volume, bank 1 |
-| 14 | +0x880 | +28 | Volume, bank 2 |
-| 15 | +0x8C0 | +30 | Volume, bank 3 |
+| 13 | +0x840 | +26 | Pan left (0-0x78, center=0x3C) |
+| 14 | +0x880 | +28 | Pan right (0-0x78, center=0x3C) |
+| 15 | +0x8C0 | +30 | DSP/effects send level |
 | 16 | +0x900 | +32 | Aux level, bank 0 |
 | 17 | +0x940 | +34 | Aux level, bank 1 |
 | 18 | +0x980 | +36 | Aux level, bank 2 |
