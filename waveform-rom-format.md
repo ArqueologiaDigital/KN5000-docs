@@ -152,7 +152,7 @@ The waveform ROMs are separate from:
 - What is the exact base sample rate of the waveform data?
 - How does the tone generator's address bus map to the 4-chip ROM layout? (Direct linear mapping via chip select, or interleaved?)
 - What waveforms are in IC304-IC306? (The KN5000 has hundreds of sound presets; IC307 alone has 186 waveforms.)
-- Do the parameter records encode loop start/end points for sustain loops?
+- Do the parameter records encode loop start/end points for sustain loops? (Firmware analysis shows the SubCPU does NOT write loop registers — the tone generator chip likely handles looping autonomously, reading loop boundaries from ROM parameter records directly. The 0x40 flag in parameter records may indicate loop point markers.)
 - What is the relationship between the 198 index entries and the ~700 sound presets in the KN5000?
 - Are waveform ROMs shared across Technics keyboard models (KN6000, KN7000)?
 
