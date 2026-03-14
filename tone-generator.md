@@ -417,19 +417,19 @@ This routine writes 22 voice parameters from a 44-byte struct, in this exact ord
 | 1 | +0x0040 | +2 | 0 | 1 | **Pitch increment** (semitone table lookup) |
 | 2 | +0x0080 | +4 | 0 | 2 | **Voice mode/velocity** (**bit 15 SET** = latch strobe) |
 | 3 | +0x00C0 | +6 | 0 | 3 | **Waveform control** (cleared on note-off) |
-| 4 | +0x0100 | +8 | 1 | 0 | Envelope param 0 |
-| 5 | +0x0140 | +10 | 1 | 1 | Envelope param 1 |
-| 6 | +0x0180 | +12 | 1 | 2 | Envelope param 2 |
+| 4 | +0x0100 | +8 | 1 | 0 | **Interpolated pitch** (portamento/legato) |
+| 5 | +0x0140 | +10 | 1 | 1 | **Secondary pitch offset** (detune) |
+| 6 | +0x0180 | +12 | 1 | 2 | **Velocity/expression coefficient** |
 | 7 | +0x0400 | +14 | 4 | 0 | **Note key info** (note value << 8, bit 15=active) |
 | 8 | +0x0440 | +16 | 4 | 1 | Filter/pitch param 1 |
 | 9 | +0x0480 | +18 | 4 | 2 | Filter/pitch param 2 |
 | 10 | +0x04C0 | +20 | 4 | 3 | Filter/pitch param 3 |
 | 11 | +0x0500 | +22 | 5 | 0 | Modulation param 0 |
-| 12 | +0x0800 | +24 | 8 | 0 | **Volume level** (main) |
+| 12 | +0x0800 | +24 | 8 | 0 | **Main volume** (0xFF80=mute, lower=louder) |
 | **KEY-ON** | +0x0000 | — | 0 | 0 | **0x8100** (active flag set) |
-| 13 | +0x0840 | +26 | 8 | 1 | Volume/pan param 1 |
-| 14 | +0x0880 | +28 | 8 | 2 | Volume/pan param 2 |
-| 15 | +0x08C0 | +30 | 8 | 3 | Volume/pan param 3 |
+| 13 | +0x0840 | +26 | 8 | 1 | **Pan left** (0-0x78, center=0x3C) |
+| 14 | +0x0880 | +28 | 8 | 2 | **Pan right** (0-0x78, center=0x3C) |
+| 15 | +0x08C0 | +30 | 8 | 3 | **DSP/effects send level** |
 | 16 | +0x0900 | +32 | 9 | 0 | Aux/send level 0 |
 | 17 | +0x0940 | +34 | 9 | 1 | Aux/send level 1 |
 | 18 | +0x0980 | +36 | 9 | 2 | Aux/send level 2 |
