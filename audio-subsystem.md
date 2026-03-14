@@ -1944,38 +1944,37 @@ See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) for the complete note
 
 ## MAME Emulation Status
 
-The MAME driver (`kn5000.cpp`) includes device stubs for all three audio chips. These provide logging of firmware-driven register writes, enabling reverse engineering of the audio pipeline. No audio output is produced yet — the DSP internal ROMs have not been dumped.
+The MAME driver (`kn5000.cpp`) includes device classes for the audio chips. The tone generator produces basic audio output (waveform playback from ROM). The DSP devices are register stubs that accept firmware writes without crashing. No DSP audio processing is emulated — the DSP internal ROMs have not been dumped.
 
 ### Audio Chip Device Classes
 
 | Device | Chip | IC | Interface | MAME Class | Status |
 |--------|------|----|-----------|------------|--------|
-| Tone Generator | TC183C230002 | IC303 | Memory-mapped (0x100000) | `tc183c230002_device` | 64-voice sine wave HLE with envelope, keybed input, voice status readback |
-| DSP1 | DS3613GF-3BA | IC311 | Memory-mapped (0x130000) | `ds3613gf3ba_device` | Stub with per-channel register logging, effect type/parameter name tables |
-| DSP2 | MN19413 | IC310 | Serial (GPIO bit-bang) | `mn19413_device` | Protocol-aware decoder: CMD 0x30 reg writes parsed, 256-entry register file, idle-timeout framing |
+| Tone Generator | TC183C230002 | IC303 | Memory-mapped (0x100000) | `kn5000_tonegen_device` | 64-voice PCM with pitch/pan/volume, keybed input, voice status readback |
+| DSP1 | DS3613GF-3BA | IC311 | Memory-mapped (0x130000) | `kn5000_dsp1_device` | Register stub: 4 channels × 0x20 registers, accepts writes |
+| DSP2 | MN19413 | IC310 | Serial (GPIO bit-bang) | (port callbacks) | Not yet a separate device; serial protocol handled by SubCPU GPIO |
 
-**Tone Generator (TC183C230002):**
+**Tone Generator (`kn5000_tonegen_device`):**
 - Register-indirect config interface (address port + data port)
-- 64-voice sine wave synthesis at 48kHz with release envelope (~125ms decay)
-- KEY ON (0x8100) / KEY OFF (0x7E00) voice management with per-voice hold timer
-- Voice status readback: reports KEY ON while hold timer active (2s after key-on)
-- Keyboard input interface with `inject_key_event()` for MAME input port integration
-- Logs all register writes with voice/register/data breakdown
+- 64-voice PCM wavetable playback at 48kHz from waveform ROMs (IC304-IC307)
+- Pitch scaling: semitone ratio (reg[1]) with octave shift (reg[8])
+- Stereo pan: left/right from group 8 regs (reg[21]/reg[22]), range 0-0x78
+- Waveform selection from reg[3] (waveform control register)
+- KEY ON (0x8100) / KEY OFF (0x7E00) voice management with per-voice hold timer (2s)
+- Voice status readback: reports KEY ON while hold timer active
+- Keyboard input interface with `push_keybed_event()` for MAME input port integration
 
-**DSP1 (DS3613GF-3BA):**
-- 4 channels × 32 registers (0x80 bytes total address space)
-- Logs register writes with channel, register offset, and semantic descriptions
-- Contains effect type name table (100 entries) and parameter name table (84 entries)
-- Tracks DSP program module assignments per channel (0xC8=reverb, 0x54=chorus, 0x3C=init)
-- Falls back to program module type for effect category labeling in coefficient logs
+**DSP1 (`kn5000_dsp1_device`):**
+- 4 channels × 0x20-byte register space (channel base = N × 0x20 + 0x10)
+- Register-indirect interface: address latch at 0x130000, data at 0x130002
+- Accepts firmware register writes; no audio processing (internal ROM not dumped)
 
-**DSP2 (MN19413):**
-- Serial interface via SubCPU GPIO (Port PF bit 0 = SDA, bit 2 = SCLK)
-- MSB-first serial data sampling on SCLK rising edge
-- Protocol-aware stream decoder: CMD 0x30 register writes auto-parsed as 4-byte groups
-- 256-entry register file tracking all written values
-- Idle timeout (50ms) for transaction boundary detection on non-register commands
-- Full register write logging with address and value decode
+**DSP2 (MN19413 — not yet a MAME device):**
+- Serial interface via SubCPU GPIO (Port PF bit 0 = SDA, bit 2 = SCLK, PE.6 = CS)
+- 9-bit serial transactions (MSB-first), bit-bang protocol
+- CMD 0x30 register writes: 4-byte groups [0x00, addr, val_hi, val_lo]
+- Boot writes: REG[0xD0]=0, REG[0xD3]=0, REG[0x3C]=0x4000
+- Future work: create separate device class for serial protocol decoding
 
 ### Key Emulation Challenges
 
