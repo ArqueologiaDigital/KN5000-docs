@@ -346,6 +346,8 @@ Pipe Organ, Accordion, Jazz Guitar, Solid Guitar, Modern E.P., E.Piano (variant)
 ## Related Pages
 
 - [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) - Sound generation overview
+- [Tone Generator]({{ site.baseurl }}/tone-generator/) - Voice register map and parameter write sequence
+- [Waveform ROM Format]({{ site.baseurl }}/waveform-rom-format/) - PCM waveform data layout in IC304-IC307
 - [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) - Command transfer details
 - [SysEx Messages]({{ site.baseurl }}/sysex-messages/) - Sound parameter SysEx
 - [Storage Subsystem]({{ site.baseurl }}/storage-subsystem/) - Table Data ROM (waveform storage)
