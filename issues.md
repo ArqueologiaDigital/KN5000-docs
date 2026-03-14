@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 319 (6 open, 313 closed)
+**Total Issues:** 319 (4 open, 314 closed)
 
 **Quick Links:** 
-[Other](#other) (6)
+[Other](#other) (4)
 
 ---
 
@@ -67,45 +67,6 @@ All subsystem pages documented, no placeholders remain.
 - **R+d16 LLVM addressing** — SRI prefix encoding fixed, 357 .byte→native conversions in roms-disasm.
 - **App Loader (HDAE5000)** — Working end-to-end: FAT16 filesystem, menu UI, APP.BIN loading, Mines game launches from disk.
 - **ROM reconstruction** — 279,798 native instructions, 0 .byte fallbacks, 100% byte match on all 6 ROMs.
-
----
-
-#### 🟠 Phase 2 Completion: Core functionality working {#issue-kn5000-dnl}
-
-**ID:** `kn5000-dnl` | **Priority:** High | **Created:** 2026-01-31
-
-**Notes:** Meta-issue tracking Phase 2 completion (Core Functionality).
-
-## Phase 2 Goals
-User interaction and file I/O fully working in MAME.
-
-## Component Milestones
-- kn5000-1vz: Input/Control subsystem emulation
-- kn5000-a0k: Storage subsystem emulation
-
-## Key Deliverables
-1. **UI/Input** - Font system, widget rendering, control panel HLE
-2. **Storage** - FDC working, HDAE5000 detected, custom data accessible
-
-## Depends On
-- Phase 1 completion (kn5000-dbi)
-
-## Success Criteria
-- [ ] UI navigation works via keyboard/mouse
-- [ ] Floppy disk loading functional
-- [ ] Custom styles can be loaded/saved
-- [ ] All P2 UI/input issues closed
-- [ ] All P2 storage issues closed
-
----
-
-#### 🟡 MAME: Tone generator device (IC303) — refine waveform playback {#issue-kn5000-wmfd}
-
-**ID:** `kn5000-wmfd` | **Priority:** Medium | **Created:** 2026-03-14
-
-The kn5000_tonegen_device was created with basic PCM playback. Needs refinement: (1) Pitch control from voice registers — map MIDI note to playback rate, (2) Volume/pan mapping — decode firmware's register encoding more accurately, (3) Waveform index selection — understand how firmware chooses which ROM chip and waveform entry, (4) Envelope support — key-off should have release phase, (5) Loop points — proper loop start/end from parameter records, (6) Voice status readback — return correct 0x8100/0x1200/0x7E00 states matching real hardware timing.
-
-**Depends on:** [`kn5000-u573`](#issue-kn5000-u573)
 
 ---
 
@@ -169,6 +130,7 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-dnl` | Phase 2 Completion: Core functionality working | 2026-03-14 |
 | `kn5000-a0k` | MAME: Storage subsystem emulation milestone | 2026-03-14 |
 | `kn5000-42jw` | Rename LABEL_XXXXXX placeholders in NAKA ui_widgets files... | 2026-03-14 |
 | `kn5000-0vuo` | MAME: Implement VRAM A18 banking (VGA display modes) | 2026-03-14 |
@@ -188,9 +150,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-n1lw` | Use symbolic handler references in all C screen data files | 2026-03-14 |
 | `kn5000-6rjd` | Phase 5: Build integration for Rhythm/DrumSound dispatch ... | 2026-03-14 |
 | `kn5000-rfqe` | Phase 5: Build integration for DrumKit dispatch table (Op... | 2026-03-14 |
-| `kn5000-h9ag` | Phase 5: Build integration for accompaniment screen data ... | 2026-03-14 |
 
-*...and 293 more closed issues*
+*...and 294 more closed issues*
 
 ---
 
@@ -201,16 +162,15 @@ Production-ready emulation and homebrew support.
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| High | 1 |
-| Medium | 2 |
+| Medium | 1 |
 | Low | 2 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 6 |
+| Other | 4 |
 
 ---
 
-*Last updated: 2026-03-14 13:03*
+*Last updated: 2026-03-14 13:25*
