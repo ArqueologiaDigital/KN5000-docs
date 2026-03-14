@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 318 (8 open, 306 closed)
+**Total Issues:** 319 (9 open, 306 closed)
 
 **Quick Links:** 
-[Other](#other) (8)
+[Other](#other) (9)
 
 ---
 
@@ -26,10 +26,10 @@ This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) 
 **Notes:** Master roadmap for KN5000 reverse engineering project.
 
 ## Project Goals
-1. **100% ROM Reconstruction** - Byte-accurate rebuilds of all firmware
-2. **MAME Emulation** - Full system emulation for preservation
-3. **Homebrew Development** - Enable custom software creation
-4. **Documentation** - Complete technical reference
+1. **100% ROM Reconstruction** - Byte-accurate rebuilds of all firmware ✅ COMPLETE
+2. **MAME Emulation** - Full system emulation for preservation (IN PROGRESS)
+3. **Homebrew Development** - Enable custom software creation (App Loader WORKING)
+4. **Documentation** - Complete technical reference ✅ COMPLETE
 
 ## Phase Structure with Tracking Issues
 
@@ -44,10 +44,11 @@ All Phase 1 sub-issues complete. MAME boots with display and audio subsystem tra
 - All sub-issues complete. UI navigation verified working in MAME.
 
 **Storage (kn5000-a0k): IN PROGRESS**
-- FDC documentation complete. Floppy image creation in progress.
-- HDAE5000 ROM: complete. IDE/ATA wiring in progress (kn5000-492z).
-- Custom Data Flash: mapped, NVRAM-backed.
-- Table Data ROM: working (sequencer reads rhythm data).
+- FDC fully wired (UPD72067, MSR at 0x110008, FIFO at 0x11000A, DMA at 0x120000)
+- HDAE5000 IDE/ATA working — App Loader reads FAT16 from hard disk
+- Custom Data Flash: mapped, NVRAM-backed
+- Table Data ROM: working (sequencer reads rhythm data)
+- Remaining: floppy disk read test (floppy images ready, FDC wired)
 
 ### Phase 3: Complete Documentation - kn5000-9m6 ✅ CLOSED
 *Goal: All subsystems fully documented*
@@ -57,35 +58,15 @@ All subsystem pages documented, no placeholders remain.
 *Goal: Production-ready emulation and homebrew support*
 - Validation test suite: created (boot/menu/display tests)
 - SDK documentation: comprehensive (1442 lines, Quick Start guide, Makefile template)
-- Homebrew toolkit: documented (kn5000-5jy closed)
 
-## Active Unblocking Work (Mar 8)
-Three parallel efforts to resolve blockers:
-1. **Tone generator timing fix** — Add voice hold time in tc183c230002.cpp to fix Feature Demo speed (kn5000-y7t5)
-2. **Floppy disk images** — Create test FAT12 images for MAME FDC testing (kn5000-a0k)
-3. **HDAE5000 IDE wiring** — Connect ata_interface_device in hdae5000.cpp (kn5000-492z)
-
-## Current Status (Mar 2026)
-- **ROM reconstruction: ALL 6 ROMs 100% byte-perfect match**
-  - Total: 279,441 native instructions, zero .byte fallbacks
-- **Build system:** LLVM with custom TLCS-900 backend (authoritative)
-- **Issue tracker:** 284 issues (276 closed, 8 open)
-- **DSP research:** 16 effect types traced, 10 distinct algorithms, chip mapping documented
-- **Homebrew SDK:** Complete docs with Quick Start, API reference, Makefile templates
-- **MAME:** Boots with display, audio/DSP logging. Phase 2 storage testing in progress.
-- **Proactive unblocking policy:** Added as strict policy (Mar 8)
-
-## Success Criteria
-- [x] All ROMs 100% byte-matching
-- [ ] MAME driver merged upstream
-- [x] All subsystems documented (Phase 3 closed)
-- [x] Homebrew SDK available (kn5000-9zb, kn5000-5jy closed)
-
-## Phase Tracking Issues
-- Phase 1: kn5000-dbi (P0 - ✅ CLOSED)
-- Phase 2: kn5000-dnl (P1 - Storage in progress, Input done)
-- Phase 3: kn5000-9m6 (P2 - ✅ CLOSED)
-- Phase 4: kn5000-nca (P3 - Open)
+## Recent Milestones (Mar 2026)
+- **Tone Generator device (IC303)** — kn5000_tonegen_device added to MAME. 64-voice PCM wavetable with register-indirect interface, waveform ROM reading, stereo 48kHz output. First step toward actual sound.
+- **UART mode** — 8-bit UART TX/RX implemented in TMP94C241 serial. Enables MIDI output at 31250 baud.
+- **MIDI output** — TX0 wired to midi_port device. MAME emits MIDI.
+- **FDC address mapping** — UPD72067 registers properly mapped with PC AT layout + 16-bit bus doubling.
+- **R+d16 LLVM addressing** — SRI prefix encoding fixed, 357 .byte→native conversions in roms-disasm.
+- **App Loader (HDAE5000)** — Working end-to-end: FAT16 filesystem, menu UI, APP.BIN loading, Mines game launches from disk.
+- **ROM reconstruction** — 279,798 native instructions, 0 .byte fallbacks, 100% byte match on all 6 ROMs.
 
 ---
 
@@ -123,6 +104,16 @@ User interaction and file I/O fully working in MAME.
 **ID:** `kn5000-u573` | **Priority:** High | **Created:** 2026-03-10
 
 THE single biggest blocker across the project. Waveform ROMs IC304-IC306 (1.2MB of 1.6MB total) are NO_DUMP. Only IC307 is dumped. Without waveforms: no actual sound synthesis, Feature Demo stuck (sequencer never completes), tone generator HLE is timing-only. Paths forward: (1) Attempt to dump from physical hardware (requires chip desoldering or in-circuit reading), (2) Analyze IC307 format to understand waveform structure, (3) Create synthetic approximations using IC307 as template, (4) Check if other Technics keyboards (KN6000, KN7000) share compatible waveform chips. This is prerequisite for any real audio progress.
+
+---
+
+#### 🟡 MAME: Tone generator device (IC303) — refine waveform playback {#issue-kn5000-wmfd}
+
+**ID:** `kn5000-wmfd` | **Priority:** Medium | **Created:** 2026-03-14
+
+The kn5000_tonegen_device was created with basic PCM playback. Needs refinement: (1) Pitch control from voice registers — map MIDI note to playback rate, (2) Volume/pan mapping — decode firmware's register encoding more accurately, (3) Waveform index selection — understand how firmware chooses which ROM chip and waveform entry, (4) Envelope support — key-off should have release phase, (5) Loop points — proper loop start/end from parameter records, (6) Voice status readback — return correct 0x8100/0x1200/0x7E00 states matching real hardware timing.
+
+**Depends on:** [`kn5000-u573`](#issue-kn5000-u573)
 
 ---
 
@@ -235,7 +226,7 @@ With NAKA files identified as UI widget descriptors, the ~9,015 LABEL_XXXXXX pla
 |----------|-------|
 | Critical | 1 |
 | High | 2 |
-| Medium | 1 |
+| Medium | 2 |
 | Low | 3 |
 | P4 | 1 |
 
@@ -243,8 +234,8 @@ With NAKA files identified as UI widget descriptors, the ~9,015 LABEL_XXXXXX pla
 
 | Category | Count |
 |----------|-------|
-| Other | 8 |
+| Other | 9 |
 
 ---
 
-*Last updated: 2026-03-14 12:45*
+*Last updated: 2026-03-14 13:00*
