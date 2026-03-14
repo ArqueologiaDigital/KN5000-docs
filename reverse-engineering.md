@@ -1412,12 +1412,12 @@ Communication via latches at `0x120000`.
 
 ### Synthesis Architecture
 
-**Questions to answer:**
-- Polyphony count (simultaneous voices)
-- Synthesis method (sample playback, wavetable, FM hybrid?)
-- Envelope generators (ADSR parameters)
-- LFO capabilities
-- Filter types and parameters
+**Questions to answer (ANSWERED — see [Tone Generator]({{ site.baseurl }}/tone-generator/)):**
+- Polyphony count: **64 voices**, register-indirect at 0x100000/0x100002
+- Synthesis method: **PCM sample playback** from 16MB waveform ROM (4 chips)
+- Envelope generators: **Hardware-internal ADSR** — firmware sends pitch/volume/pan, chip handles envelopes
+- LFO capabilities: Firmware computes LFO modulation (Voice_PanReg_WriteDispatch, 6+ modes)
+- Filter types: Unknown — group 4/5/6 registers may control filtering
 
 **Tasks:**
 1. Analyze sub CPU firmware for synthesis routines
