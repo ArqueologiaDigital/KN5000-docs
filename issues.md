@@ -8,7 +8,7 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 319 (4 open, 314 closed)
+**Total Issues:** 321 (4 open, 316 closed)
 
 **Quick Links:** 
 [Other](#other) (4)
@@ -130,6 +130,8 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-xm8x` | MAME: Fix FDC disk detection (dskchg polarity) | 2026-03-14 |
+| `kn5000-qkdr` | Rename LABEL_XXXXXX to semantic names in accompaniment_en... | 2026-03-14 |
 | `kn5000-dnl` | Phase 2 Completion: Core functionality working | 2026-03-14 |
 | `kn5000-a0k` | MAME: Storage subsystem emulation milestone | 2026-03-14 |
 | `kn5000-42jw` | Rename LABEL_XXXXXX placeholders in NAKA ui_widgets files... | 2026-03-14 |
@@ -148,10 +150,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-umft` | MAME: Complete FDC address mapping at 0x110000-0x12FFFF | 2026-03-14 |
 | `kn5000-f8d2` | Fix Unicode box-drawing diagrams in docs website | 2026-03-14 |
 | `kn5000-n1lw` | Use symbolic handler references in all C screen data files | 2026-03-14 |
-| `kn5000-6rjd` | Phase 5: Build integration for Rhythm/DrumSound dispatch ... | 2026-03-14 |
-| `kn5000-rfqe` | Phase 5: Build integration for DrumKit dispatch table (Op... | 2026-03-14 |
 
-*...and 294 more closed issues*
+*...and 296 more closed issues*
 
 ---
 
@@ -173,4 +173,4 @@ Production-ready emulation and homebrew support.
 
 ---
 
-*Last updated: 2026-03-14 13:25*
+*Last updated: 2026-03-14 13:57*
