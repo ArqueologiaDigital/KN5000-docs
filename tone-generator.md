@@ -349,7 +349,7 @@ Waveform ROMs (IC304-307) ──> Tone Generator LSI (IC303)
 | Register Config (0x100000) | Write-only | **Tone gen device** — accepts register writes, tracks 64-voice state |
 | Register Data (0x100002) | Read/Write | **Tone gen device** — data port, voice status readback |
 | Keyboard Input (0x110000) | Read-only | **Tone gen device** — keybed event queue |
-| DSP Config (0x130000) | Write-only | **Stub (`noprw`)** — writes harmlessly discarded |
+| DSP Config (0x130000) | Read/Write | **DSP1 device** — `kn5000_dsp1_device`, 4 channels × 0x20 registers |
 | Serial1 (SA interface) | UART | **No receiver** — TX sends into void |
 | Waveform RAM (0x1E0000) | Read/Write | **Stub (`noprw`)** — no sample storage |
 | Sound output | Stereo 48kHz | **PCM playback** — pitch, pan, volume, interpolation, release envelope |
