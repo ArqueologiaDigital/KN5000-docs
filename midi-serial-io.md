@@ -71,7 +71,7 @@ When a byte arrives on SC0, the hardware triggers the RX interrupt:
 
 3. **Read byte:** Read SC0BUF (0xD0) — the received byte.
 
-4. **Dispatch:** Call `LABEL_FDB7DC` with the received byte as parameter. This routes to `MIDI_RX_BYTE_DISPATCHER`.
+4. **Dispatch:** Call `MidiSeq_ReceiveAndForward` with the received byte as parameter. This routes to `MIDI_RX_BYTE_DISPATCHER`.
 
 5. **Context restore and return from interrupt.**
 

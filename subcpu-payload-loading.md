@@ -52,7 +52,7 @@ Phase 1: Transfer 5 x 64KB from Table Data ROM
 Phase 2: LZSS Decompression
   Source: 0x3E0000 (Custom Data Flash)
   Dest:   0x050000 (Main CPU RAM, temporary)
-  Calls LABEL_EF41E3 (LZSS decompressor)
+  Calls SLIDE_Parse_Header (LZSS decompressor)
   If decompression fails (HL=0xFFFF): falls back to Table Data ROM base
 
 Phase 3: Transfer decompressed data to SubCPU
@@ -444,7 +444,7 @@ Detailed analysis of the SubCPU payload init sequence revealed that **initializa
 | `ToneGen_Poll_Delay` | 0x03D227 | Nothing (pure delay) | Yes (10,000 iter) | Runs 160,000 iterations total, completes |
 | `ToneGen_Poll_Read` | 0x03D239 | 0x110002 / 0x110000 | Single read | Returns 0, processes 16 fake note-off events |
 
-After init, the SubCPU enters the main event loop (`LABEL_01FAE6`), which runs continuously. The main loop does NOT hang because:
+After init, the SubCPU enters the main event loop (`Audio_Main_Loop`), which runs continuously. The main loop does NOT hang because:
 - `ToneGen_Process_Notes` reads 0 from unmapped 0x110002 (no notes available)
 - Ring buffers are empty (no serial data, no queued commands)
 - No DMA transfers are triggered on the first iterations
@@ -599,7 +599,7 @@ The names had DMAC and DMAM swapped. Fixed in commit b4ed825 -- all macros now c
 | `maincpu/kn5000_v10_program.asm:134123` | `SubCPU_Send_Payload` |
 | `maincpu/kn5000_v10_program.asm:139166` | `InterCPU_E1_Bulk_Transfer` |
 | `maincpu/kn5000_v10_program.asm:139115` | `Audio_DMA_Transfer` |
-| `maincpu/kn5000_v10_program.asm:140484` | LZSS decompressor (`LABEL_EF41E3`) |
+| `maincpu/kn5000_v10_program.asm:140484` | LZSS decompressor (`SLIDE_Parse_Header`) |
 | `subcpu/kn5000_subprogram_v142.asm:10964` | `InterCPU_Latch_Setup` (payload DMA config) |
 | `subcpu/kn5000_subprogram_v142.asm:11247` | Payload INT0 handler |
 | `subcpu/boot/kn5000_subcpu_boot.asm:1159` | `InterCPU_RX_Handler` (boot ROM INT0 handler) |

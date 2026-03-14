@@ -34,7 +34,7 @@ This page documents the protocol used by the KN5000 Main CPU to send sound param
 │                                                         │
 │  INT0 ISR → ring buffer 0x2B0D                          │
 │  CC dispatch → Voice_CC_91 (reverb depth, at 0x02A46C) │
-│    → LABEL_028A44: store at voice[ch × 0x11F + 0x7F]   │
+│    → Voice_CC_SetReverbDepth: store at voice[ch × 0x11F + 0x7F]   │
 │  Voice param structure: 287 bytes/voice at 0x041300     │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -43,22 +43,22 @@ This page documents the protocol used by the KN5000 Main CPU to send sound param
 
 **Sub CPU side (already decoded):**
 - `Voice_CC_91` loads channel from `(xiz+1)`, value from `(xiz+3)`
-- Calls `LABEL_028A44`: computes `wa × 0x11F`, points to `0x04137F` (= base 0x041300 + offset 0x7F)
+- Calls `Voice_CC_SetReverbDepth`: computes `wa × 0x11F`, points to `0x04137F` (= base 0x041300 + offset 0x7F)
 - Stores reverb depth in the per-voice parameter structure
 
 **For comparison, other CC handlers at nearby offsets:**
 
 | CC | Handler | Sub CPU function | Voice offset | Meaning |
 |----|---------|-----------------|-------------|---------|
-| 0x91 | Voice_CC_91 | LABEL_028A44 | +0x7F | Reverb depth |
-| 0x95 | Voice_CC_95 | LABEL_028A55 | +0x72 | Chorus depth |
-| (sustain) | Voice_CC_Sostenuto | LABEL_028A04 | +0x7E | Sostenuto |
+| 0x91 | Voice_CC_91 | Voice_CC_SetReverbDepth | +0x7F | Reverb depth |
+| 0x95 | Voice_CC_95 | Voice_CC_SetChorusEnable | +0x72 | Chorus depth |
+| (sustain) | Voice_CC_Sostenuto | Voice_CC_SetPortamentoTime | +0x7E | Sostenuto |
 
 ## Reverb preset loading path
 
 When a reverb preset is selected on the REVERB & EQ PRESETS screen:
 1. `MainRevEqPresetLoad` (at F746F4) dispatches on preset type (reverb-only / EQ-only / combined)
-2. Calls `LABEL_FC9F81` which loads preset data from ROM at **0xEDB36C**
+2. Calls `SoundPreset_Dispatch` which loads preset data from ROM at **0xEDB36C**
 3. A loop sends **24 commands** (code 0x63) via `AssswbWr`, one per MIDI channel
 4. Each command carries a parameter value from the preset data table
 
@@ -76,13 +76,13 @@ When a reverb preset is selected on the REVERB & EQ PRESETS screen:
 - LswPercDecay, LswPercLevel, LswDrawAttack, LswDrawRelease
 - LswScalingType/Shift/Shift2/Mode/KeyX
 
-All reference the same parameter table at **0xE952AA** (per-channel config) and **0xE953CE** (value lookup). They all follow the same pattern — they share the exit code at LABEL_F7D0A6.
+All reference the same parameter table at **0xE952AA** (per-channel config) and **0xE953CE** (value lookup). They all follow the same pattern — they share the exit code at AudioCtrl_PopIzRet1.
 
 ## Investigation plan
 
 ### Phase 1: Proof of concept — Reverb Depth end-to-end trace
 
-Fully trace LswReverb end-to-end — from the event `0x1E00042` through `LABEL_FF0A72` → `LABEL_FF1048` → `AssswbWr` → `sendCOMM` → Sub CPU `Voice_CC_91` → voice param offset 0x7F. Verify the command byte encoding.
+Fully trace LswReverb end-to-end — from the event `0x1E00042` through `Audio_SendCommand` → `Audio_CommandEncoder` → `AssswbWr` → `sendCOMM` → Sub CPU `Voice_CC_91` → voice param offset 0x7F. Verify the command byte encoding.
 
 **Status:** Complete
 
@@ -136,20 +136,20 @@ Each voice has a **287-byte (0x11F)** parameter block, with 26 voices starting a
 | MIDI CC | Name | Handler | Voice Offset | Size | Operation | Default |
 |---------|------|---------|-------------|------|-----------|---------|
 | 0x01 | Mod Wheel | Voice_ModWheel_Apply | (complex) | - | Multi-register update | - |
-| 0x07 | Volume | LABEL_028839 | +0x74 | 2 | Lookup table at 0x011D16 | 0xFE00 |
-| 0x0A | Pan | LABEL_0288C5 | +0x76 | 2 | Store direct | - |
-| 0x0B | Expression | LABEL_0288D6 | +0x78 | 2 | Lookup table at 0x011D16 | 0xFE00 |
-| 0x40 | Sustain | LABEL_028962 | +0x72 | bit 0 | Set/clear bit 0 | 0 |
-| 0x5B | Sostenuto | LABEL_02898C | +0x77 | 2 | Store direct | - |
-| 0x5D | Soft Pedal | LABEL_02899D | +0x7A | 2 | Store direct | - |
-| 0x5E | Portamento | LABEL_02A0E9 | (complex) | - | Multi-function chain | - |
+| 0x07 | Volume | Voice_CC_SetVolume | +0x74 | 2 | Lookup table at 0x011D16 | 0xFE00 |
+| 0x0A | Pan | Voice_CC_SetPan | +0x76 | 2 | Store direct | - |
+| 0x0B | Expression | Voice_CC_SetExpression | +0x78 | 2 | Lookup table at 0x011D16 | 0xFE00 |
+| 0x40 | Sustain | Voice_CC_SetSustain | +0x72 | bit 0 | Set/clear bit 0 | 0 |
+| 0x5B | Sostenuto | Voice_CC_SetSostenuto | +0x77 | 2 | Store direct | - |
+| 0x5D | Soft Pedal | Voice_CC_SetSoftPedal | +0x7A | 2 | Store direct | - |
+| 0x5E | Portamento | Voice_Portamento_OnHandler | (complex) | - | Multi-function chain | - |
 | 0x78-0x82 | (Extended) | Jump table at 0x00F739 | various | - | See extended table | - |
-| 0x91 | **Reverb Depth** | **LABEL_028A44** | **+0x7F** | **2** | **Store direct** | **0x00** |
-| 0x95 | Chorus Enable | LABEL_028A55 | +0x72 | bit 2 | Set/clear bit 2 | 0 |
-| 0x97 | Unknown | LABEL_028A7F | +0x80 | 2 | Store direct | 0x06 |
-| 0x9B | Unknown | LABEL_028A90 | +0x8D | 2 | Store direct | 0x01 |
-| 0x9C | Pedal Control | LABEL_028AA1 | +0x6A | bit 8 | Set/clear bit 8 | 0x00 |
-| 0x9D | Unknown | LABEL_028ACB | +0x8E | 2 | Store direct | 0x00 |
+| 0x91 | **Reverb Depth** | **Voice_CC_SetReverbDepth** | **+0x7F** | **2** | **Store direct** | **0x00** |
+| 0x95 | Chorus Enable | Voice_CC_SetChorusEnable | +0x72 | bit 2 | Set/clear bit 2 | 0 |
+| 0x97 | Unknown | Voice_CC_SetChorusDepth | +0x80 | 2 | Store direct | 0x06 |
+| 0x9B | Unknown | Voice_CC_SetDelayDepth | +0x8D | 2 | Store direct | 0x01 |
+| 0x9C | Pedal Control | Voice_CC_SetDelayEnable | +0x6A | bit 8 | Set/clear bit 8 | 0x00 |
+| 0x9D | Unknown | Voice_CC_SetDelayFeedback | +0x8E | 2 | Store direct | 0x00 |
 
 ### Extended CC Table (0x78-0x82)
 
@@ -157,9 +157,9 @@ CCs 0x78-0x82 are dispatched via a jump table at Sub CPU ROM 0x00F739 (11 word e
 
 | CC | Target | Voice Offset | Purpose |
 |----|--------|-------------|---------|
-| 0x7B | LABEL_0289D8 | +0x7B | Portamento amount |
-| 0x7C | LABEL_0289E9 | +0x7C | Pitch bend (stores `(value - 0x80) × 2`) |
-| 0x7D | LABEL_028A04 | +0x7E | Sostenuto depth (stores `value - 0x40`) |
+| 0x7B | Voice_CC_SetPortamentoRate | +0x7B | Portamento amount |
+| 0x7C | Voice_CC_SetPortamentoDepth | +0x7C | Pitch bend (stores `(value - 0x80) × 2`) |
+| 0x7D | Voice_CC_SetPortamentoTime | +0x7E | Sostenuto depth (stores `value - 0x40`) |
 
 ### Flags Word at Offset +0x72
 
@@ -182,8 +182,8 @@ When CC value is 0, a special "mute" value 0xFE00 is stored instead.
 ```
 Main CPU UI:
   LswReverb (F7CFA5) handles event 0x1E00042 (value changed)
-    → LABEL_FF0A72: acquires audio lock #7, formats command
-      → LABEL_FF1048: command encoding engine (parses format string)
+    → Audio_SendCommand: acquires audio lock #7, formats command
+      → Audio_CommandEncoder: command encoding engine (parses format string)
         → AssswbWr (FDB1F3): writes 4-byte packet to ring buffer at 0xBD3C
           Ring buffer: max 127 entries (508 bytes), 4 bytes each
 
@@ -201,7 +201,7 @@ Sub CPU:
       channel = (xiz+1) = 0x00-0x19
       cc# = (xiz+2) = 0x91
       value = (xiz+3) = 0x00-0x7F
-    → LABEL_028A44:
+    → Voice_CC_SetReverbDepth:
       extz wa                      ; wa = channel
       muls wa, 0x11F               ; wa = channel × 287
       lda_24 xde, 0x04137f         ; de = base + 0x7F
@@ -218,10 +218,10 @@ When the user selects a reverb preset on the REVERB & EQ PRESETS screen:
 Main CPU:
   NAKA widget generates event 0x1E3000A/B/C (preset type: reverb/EQ/combined)
     → MainRevEqPresetLoad (F746F4): dispatches on event
-      → LABEL_FC9F81: selects preset handler by type
+      → SoundPreset_Dispatch: selects preset handler by type
         type 0 (reverb): preset data from ROM 0xEDB36C
         type 1 (EQ):     preset data from ROM 0xEDB394
-        type 2 (combined): calls LABEL_FCA04E
+        type 2 (combined): calls CombinedPreset_Load
 
   For type 0 (reverb preset):
     → 0xFF0D99: unpacks preset data (24 bytes) from ROM table
@@ -229,7 +229,7 @@ Main CPU:
         pushw 0xFF          ; target specifier
         ldw wa, 0x63        ; command code 0x63
         call AssswbWr       ; write to ring buffer
-    → LABEL_FCD201: refresh UI display (event 0x4002, widget 0x7F)
+    → SoundParam_NotifyChange: refresh UI display (event 0x4002, widget 0x7F)
 ```
 
 ### Key Addresses Summary
@@ -272,10 +272,10 @@ NAKA Widget Config Data
 Lsw* Function (generic handler for widget type)
   handles event 0x1E00042 (value changed)
     │
-    ├─ bit 13 set? → LABEL_FF0A72 (send command to Sub CPU)
+    ├─ bit 13 set? → Audio_SendCommand (send command to Sub CPU)
     │                  │
     │                  ├─ st32_24 0x03c21c, widget_data  (buffer the widget config)
-    │                  ├─ LABEL_FF1048 (command encoder, reads template at 0x0AD8)
+    │                  ├─ Audio_CommandEncoder (command encoder, reads template at 0x0AD8)
     │                  └─ AssswbWr → ring buffer → sendCOMM → DMA → Sub CPU
     │
     └─ bit 13 clear? → Strcpy (format display string only, no sound command)
@@ -309,7 +309,7 @@ The per-channel configuration table at **0xE952AA** contains 4-byte flag words. 
 
 ### Functions That Send Sub CPU Commands
 
-18 of the 32 Lsw functions call `LABEL_FF0A72` to send commands to the Sub CPU. The remaining 14 only update display strings via `Strcpy` — these handle parameters that are processed locally by the Main CPU (sustain toggle, digital effect on/off, sound name display, etc.).
+18 of the 32 Lsw functions call `Audio_SendCommand` to send commands to the Sub CPU. The remaining 14 only update display strings via `Strcpy` — these handle parameters that are processed locally by the Main CPU (sustain toggle, digital effect on/off, sound name display, etc.).
 
 ### Remaining Work
 
@@ -530,7 +530,7 @@ The four 16-bit values form a monotonically increasing sequence within each pres
 
 9 combined presets at 0xEDA8B4 (**48 bytes each** = 24 bytes reverb + 24 bytes EQ). The pointer table at 0xEDB3B8 indexes into this region.
 
-The combined preset loader (`LABEL_FCA04E`) reads the first 24 bytes as a reverb preset (sent with command 0x63) and computes `lda xwa, (xwa + 24)` to get the EQ portion's address (sent with command 0x64). Note: `lda` in TLCS-900 is an address calculation, not a memory dereference.
+The combined preset loader (`CombinedPreset_Load`) reads the first 24 bytes as a reverb preset (sent with command 0x63) and computes `lda xwa, (xwa + 24)` to get the EQ portion's address (sent with command 0x64). Note: `lda` in TLCS-900 is an address calculation, not a memory dereference.
 
 ### Sub CPU DSP Command Processing
 
@@ -555,27 +555,27 @@ Framing byte dispatch:
   0x2D → DSP effect configuration (preset loads, algorithm changes)
 
 Sub-command types (header byte 2, for framing 0x2B):
-  0x00 → Select DSP algorithm (→ LABEL_030960)
+  0x00 → Select DSP algorithm (→ DSP_AlgoSelect)
          Stores algo ID in voice structure at offset +0x68
          Multiplies voice# × 0x11F to index into voice table at 0x041368
-  0x03 → Effect state control (→ LABEL_030618)
-  0x10 → Set DSP parameter 0 (→ LABEL_030F7D, bc=0)
-  0x11 → Set DSP parameter 1 (→ LABEL_030F7D, bc=1)
-  0x12 → Set DSP parameter 2 (→ LABEL_030F7D, bc=2)
+  0x03 → Effect state control (→ DSP_EffectStateQuery)
+  0x10 → Set DSP parameter 0 (→ DSP_VoiceParamReadWrite, bc=0)
+  0x11 → Set DSP parameter 1 (→ DSP_VoiceParamReadWrite, bc=1)
+  0x12 → Set DSP parameter 2 (→ DSP_VoiceParamReadWrite, bc=2)
   ...
-  0x17 → Set DSP parameter 7 (→ LABEL_030F7D, bc=7)
-  0x20 → DSP mix/send routing (→ LABEL_0309EA)
-  0x22 → Additional config (→ LABEL_03106F)
-  0x24 → Additional config (→ LABEL_03111A)
-  0x27 → Additional config (→ LABEL_031F06)
+  0x17 → Set DSP parameter 7 (→ DSP_VoiceParamReadWrite, bc=7)
+  0x20 → DSP mix/send routing (→ DSP_MixSendConfig)
+  0x22 → Additional config (→ DSP_ReadVoiceParam5D)
+  0x24 → Additional config (→ DSP_SetVoiceCoefficients)
+  0x27 → Additional config (→ DSP_ReadVoiceParam11)
   0x30 → No-op (returns 0)
 ```
 
 The 0x10-0x17 commands are dispatched via a **jump table at Sub CPU ROM 0x0121DB** (8 word entries).
 
-**LABEL_030F7D** (parameter setter): Takes voice number (wa), parameter index (bc), and data pointer (xde). Computes voice structure address as `0x041368 + voice × 0x11F`, reads/stores the parameter value at offset `0x1D8 + param_index` within the global parameter table at 0x44FCE.
+**DSP_VoiceParamReadWrite** (parameter setter): Takes voice number (wa), parameter index (bc), and data pointer (xde). Computes voice structure address as `0x041368 + voice × 0x11F`, reads/stores the parameter value at offset `0x1D8 + param_index` within the global parameter table at 0x44FCE.
 
-**LABEL_030960** (algorithm selector): Takes algorithm type ID, validates `< 0x28` (40), allocates/configures the voice slot in the 287-byte voice structure array. Sets bit 0 of the voice flags to mark as allocated.
+**DSP_AlgoSelect** (algorithm selector): Takes algorithm type ID, validates `< 0x28` (40), allocates/configures the voice slot in the 287-byte voice structure array. Sets bit 0 of the voice flags to mark as allocated.
 
 ### DSP Ring Buffer Control Structure (Sub CPU 0x3B60)
 
@@ -642,7 +642,7 @@ The pointer table at 0xE32A7A actually contains **80 entries** (not just 40), co
 
 ### Remaining Questions
 
-1. **Main CPU dispatch formatting:** The function `LABEL_FEAA80` (still in .byte form) reformats the 4-byte AssswbWr entries into DMA payloads. Decoding this would reveal exactly how preset bytes map to DSP ring buffer message fields.
+1. **Main CPU dispatch formatting:** The function `HdaeRom_ProcessBlock` (still in .byte form) reformats the 4-byte AssswbWr entries into DMA payloads. Decoding this would reveal exactly how preset bytes map to DSP ring buffer message fields.
 2. **DSP hardware registers:** The exact register protocol for writing to the DSP chip at 0x130000/0x130002 requires tracing the Sub CPU's DSP parameter output functions (Phase 4).
 3. **WAVE REVERB extra parameters:** Preset 9 (WAVE REVERB 2) has non-zero B7-B8 values (18, 84). These likely control waveform modulation parameters unique to the WAVE REVERB algorithm.
 4. **EQ crossover frequencies:** The 4 big-endian 16-bit values in EQ presets need verification as frequency values (Hz). The monotonic ordering suggests crossover points for a 4-band parametric EQ.

@@ -148,7 +148,7 @@ However, this is used for HDAE5000 ROM initialization at boot, not during the fl
 
 **Behavior:**
 1. Display "Illegal Disk!" bitmap at Y=160
-2. Enter infinite loop: `jr LABEL_EF4841` at address `0xEF4841`
+2. Enter infinite loop: `jr IllegalDisk_HaltLoop` at address `0xEF4841`
 3. **No recovery** — only power cycling the keyboard exits this state.
 
 ### Fatal: Flash Hardware Missing (Silent Skip)
@@ -165,9 +165,9 @@ For the main ROM path: if `0xEF3D0E` returns `0xFFFFFFFF`, the non-HDAE5000 eras
 
 **Behavior:** `Flash_ProgramWord` spins in a tight polling loop:
 ```asm
-LABEL_EF3825:
+Flash_ProgramWord_WaitReady:
     bit_dd8 5, 0x1C    ; Check P3 bit 5 (flash ready)
-    jr z, LABEL_EF3825  ; Spin until ready
+    jr z, Flash_ProgramWord_WaitReady  ; Spin until ready
 ```
 
 There is no timeout. If the flash chip fails to become ready, the firmware hangs indefinitely.

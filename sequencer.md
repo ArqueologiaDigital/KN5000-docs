@@ -277,10 +277,10 @@ Each slot is 2048 bytes (0x800) and stores one user-recorded sequence.
 
 | Routine | Address | Purpose |
 |---------|---------|---------|
-| `LABEL_F2065A` | 0xF2065A | Check if slot has valid data |
-| `LABEL_F20BCE` | 0xF20BCE | Load and play a song from slot |
-| `LABEL_F20BFA` | 0xF20BFA | Copy slot to playback buffer (LDIR) |
-| `LABEL_F2076D` | 0xF2076D | Get current playback state |
+| `SongBank_ScanActiveVoices` | 0xF2065A | Check if slot has valid data |
+| `SongBank_SwitchAndUpdateTempo` | 0xF20BCE | Load and play a song from slot |
+| `SongBank_LoadToWorkArea` | 0xF20BFA | Copy slot to playback buffer (LDIR) |
+| `Medley_GetPlaybackStatus` | 0xF2076D | Get current playback state |
 
 ### Medley State Variables
 

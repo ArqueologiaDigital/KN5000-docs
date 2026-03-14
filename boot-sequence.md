@@ -559,7 +559,7 @@ JR NZ, skip_decompress               ; Skip if flag != 0xFF
 ; Attempt LZSS decompression from Custom Data Flash
 LD XIZ, 0x050000                     ; Output buffer (DRAM)
 LD XWA, 0x3E0000                     ; Source: Custom Data Flash!
-CALL LABEL_EF41E3                    ; Decompress
+CALL SLIDE_Parse_Header                    ; Decompress
 CP HL, 0xFFFF                        ; Check for failure
 JR NZ, skip_decompress               ; Success: use decompressed data
 LD XIZ, TABLE_DATA_ROM__BASE_ADDR    ; Failure: fall back to ROM
@@ -593,10 +593,10 @@ The File Type 007 handler (`HANDLE_UPDATE_FILE_TYPE_ID_007h` at 0xEF47FA) writes
 HANDLE_UPDATE_FILE_TYPE_ID_007h:
     LD WA, 1                    ; Select Custom Data Flash
     LD XBC, 003e0000h           ; Destination: 0x3E0000
-    CALL LABEL_EF3929           ; Flash write routine
+    CALL Flash_EraseSectorWithBankSelect           ; Flash write routine
     LD WA, 1
     LD XBC, 003f0000h           ; Destination: 0x3F0000
-    CALL LABEL_EF3929           ; Flash write routine
+    CALL Flash_EraseSectorWithBankSelect           ; Flash write routine
 ```
 
 This explains the design:
@@ -632,7 +632,7 @@ Assembly: `maincpu/kn5000_v10_program.asm:134212-134295`
 SubCPU_Send_Payload:                ; 0xEF068A
     PUSH XIZ
     CP (0xFFFEEF), 0xFF              ; Check if transfer should proceed
-    JRL NZ, LABEL_EF078B             ; Skip if not 0xFF
+    JRL NZ, SubCPU_Payload_Done             ; Skip if not 0xFF
     ; ... 5 x 64KB transfers via InterCPU_E1_Bulk_Transfer ...
     ; ... LZSS decompression handling ...
     ; ... Final data blocks to Sub CPU ...
@@ -1013,7 +1013,7 @@ Main CPU checks PE.0
 
 The firmware passes workspace pointer **`0x027ED2`** in XWA. This is the base of the firmware's object table -- a structure with 14-byte entries spanning to `0x02BC12` (~1,118 entries) in main DRAM.
 
-The XAPR validation routine at `LABEL_F1E9E0` handles detection and initialization:
+The XAPR validation routine at `LoadAndRunXapr_Entry` handles detection and initialization:
 
 ```asm
 ; Validate XAPR signature at 0x280000
@@ -1054,7 +1054,7 @@ The boot initialization performs these steps:
 
 ### Frame Handler Dispatch
 
-The frame handler dispatcher at `LABEL_F1E9D0` runs every main loop iteration:
+The frame handler dispatcher at `CallExtIfActive_Entry` runs every main loop iteration:
 
 ```asm
 CP    (03DD04h), 000h           ; Check XAPR detection flag

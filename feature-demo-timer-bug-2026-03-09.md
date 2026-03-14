@@ -189,7 +189,7 @@ This was the wrong handler. The firmware uses INTTR5 (vector 0x64, handler at `0
 ### Attempt 2: Enable Chain Tracing
 
 Traced the sequencer enable chain:
-1. Demo delayed start (`LABEL_F43CA9`) sets DRAM 1057=1, 1056=1
+1. Demo delayed start (`SeqTimer_CheckPlaybackCountdown`) sets DRAM 1057=1, 1056=1
 2. INTT1 internal clock handler promotes these to 1056=6 when DRAM 1050 > 1
 3. `AccPlayMode_Dispatch` rewrites to 1057=12, 1056=12
 

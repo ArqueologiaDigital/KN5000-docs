@@ -39,8 +39,8 @@ Both systems were partially broken in MAME. The SSF presentation issue was previ
 ```
 Demo_SelectEntry_PlaySong (0xF86E06)
   → cpdi8 36148, 19              ; check DRAM[0x8D34] == 0x13
-  → calr LABEL_F86F6D            ; read song pointer from table
-  → call LABEL_FC534C            ; configure song data
+  → calr Demo_GetPresetBaseForPartAlt            ; read song pointer from table
+  → call ToneGen_FileIO_SaveAndSync            ; configure song data
   → call SwbtWr_ReinitBothBanks  ; ← BLOCKS HERE
   → call Seq_DispatcherEntry     ; ← NEVER REACHED
   → stdi8 36686, 6               ; ← NEVER REACHED (0x8F4E stays 0x04)
@@ -116,7 +116,7 @@ The ~16 second SwbtWr processing delay may or may not be correct. On real hardwa
 ### 2. SSF Visual Presentation Event Routing
 
 While the timer blocking was traced, the SSF event routing remains separately broken:
-- Event `0x1C00038` requires `LABEL_F98697` to be called with the correct UI state
+- Event `0x1C00038` requires `UIState_KeyScan_Dispatch` to be called with the correct UI state
 - LEFT 2 button generates param upper16 = `0xAA0A`, which doesn't match any of the 5 registered filters (`0x1000`–`0x1400`)
 - `demo_state` at `0x0251D8` stays `0x0000` throughout
 
@@ -236,7 +236,7 @@ Failed approaches are valuable — they narrow the search space for the next ses
 
 ### 9. Check Assumptions Early
 
-The assumption that LEFT 2 sends event `0x1C00038` via `LABEL_F98697` was wrong — it goes through a different path. Testing assumptions with traces before building on them saves hours.
+The assumption that LEFT 2 sends event `0x1C00038` via `UIState_KeyScan_Dispatch` was wrong — it goes through a different path. Testing assumptions with traces before building on them saves hours.
 
 ### 10. Keep a Running Log
 

@@ -498,7 +498,7 @@ SubCPU_Send_Payload:           ; 0xEF068A
     ; Optional LZSS decompression from 0x3E0000
     CP   (0xFFFEED), 0xFF      ; Check decompression flag
     JR   Z, .skip_decompress
-    CALL LABEL_EF41E3          ; Decompress SLIDE4K data
+    CALL SLIDE_Parse_Header          ; Decompress SLIDE4K data
     ; ... copy decompressed data to Sub CPU ...
 
 .skip_transfer:

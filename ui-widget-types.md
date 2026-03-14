@@ -70,22 +70,22 @@ Widget dispatch uses a two-level architecture:
 
 | Event ID | Handler |
 |----------|---------|
-| `0x1E00052` | LABEL_FA5D5D |
-| `0x1E0004F` | LABEL_FA5CFF |
-| `0x1E000B5` | LABEL_FA5CAA |
-| `0x1E00024` | LABEL_FA5C58 |
-| `0x1E0009C` | LABEL_FA5C4D |
-| `0x1E00039` | LABEL_FA5C45 |
-| `0x1E00038` | LABEL_FA5C3D |
-| `0x1E00037` | LABEL_FA5C35 |
-| `0x1E00036` | LABEL_FA5C2D |
-| `0x1E0000F` | LABEL_FA5C25 |
+| `0x1E00052` | Viewable_GetBoundsY |
+| `0x1E0004F` | Viewable_GetBoundsX |
+| `0x1E000B5` | Viewable_MatchClass |
+| `0x1E00024` | Viewable_Dispatch |
+| `0x1E0009C` | Viewable_SetVisible |
+| `0x1E00039` | Viewable_GetClass |
+| `0x1E00038` | Viewable_GetChild |
+| `0x1E00037` | Viewable_GetOwner |
+| `0x1E00036` | Viewable_GetParent |
+| `0x1E0000F` | Viewable_GetInstance |
 
 These event IDs correspond to widget lifecycle events (creation, property changes, visibility, rendering) rather than widget type identifiers.
 
-### Level 2: Type Byte Classifier (LABEL_F06898)
+### Level 2: Type Byte Classifier (SeMenu_SetObjectFlags)
 
-`LABEL_F06898` classifies the 8-bit type byte into rendering priority groups using a cascading comparison:
+`SeMenu_SetObjectFlags` classifies the 8-bit type byte into rendering priority groups using a cascading comparison:
 
 | Type Byte Range | Group | Priority |
 |-----------------|-------|----------|
@@ -126,7 +126,7 @@ The `ViewableProc` handler (`0xFA5995`) is associated with type ID `0x1600010` a
 | NAKA_UIObjectTable | `maincpu/kn5000_v10_program.s`, label at `0xE1344E` |
 | InitializeNaka | `maincpu/kn5000_v10_program.s`, label at `0xF221AC` |
 | ViewableProc | `maincpu/kn5000_v10_program.s`, label at `0xFA5995` |
-| Type classifier | `maincpu/kn5000_v10_program.s`, `LABEL_F06898` |
+| Type classifier | `maincpu/kn5000_v10_program.s`, `SeMenu_SetObjectFlags` |
 | Type constants | `maincpu/shared/macros.s` |
 
 ## Assembly Macros

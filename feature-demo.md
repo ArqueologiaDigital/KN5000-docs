@@ -242,7 +242,7 @@ Despite the sophisticated XML presentation infrastructure, **the current firmwar
 
 When `AcPresentationControlProc` processes a `<SHOW OBJ="ftdemo01">` action, the firmware:
 
-1. **Looks up the object name** (`ftdemo01`) in the UI object table (`LABEL_E1344E`, ~141 entries). The corresponding entry is a `FTDEMO_SCREEN*` structure.
+1. **Looks up the object name** (`ftdemo01`) in the UI object table (`NAKA_UIObjectTable`, ~141 entries). The corresponding entry is a `FTDEMO_SCREEN*` structure.
 
 2. **Extracts the filename** from the structure — the last field is a `.long` pointer to a null-terminated string like `"FTBMP01"` (stored as `FTDEMO_BMP01_TECHNICS_GLOBE`).
 
@@ -374,7 +374,7 @@ Before describing the root cause, it helps to understand what "allocating a work
 
 The KN5000 event system (centered on `SendEvent` at `0xFA9660` and `PostEventWithParam` at `0xFA9D58`) passes three registers as event parameters: XWA (target), XBC (event code), and XDE (data/parameter). For events that need to carry more than a single 32-bit value, the firmware uses a **workspace** pattern:
 
-1. A small block of memory (typically 12 bytes) is allocated from the firmware heap by calling `LABEL_FF0E80` (the workspace allocator). The returned pointer is stored in DRAM (usually somewhere in `0x000000–0x0FFFFF`).
+1. A small block of memory (typically 12 bytes) is allocated from the firmware heap by calling `Malloc` (the workspace allocator). The returned pointer is stored in DRAM (usually somewhere in `0x000000–0x0FFFFF`).
 2. The workspace fields are populated: the first 4 bytes act as a **type-tag** (a magic 32-bit value identifying the kind of data the workspace carries), followed by payload fields.
 3. The workspace **pointer** is passed as XDE when calling `SendEvent` or `PostEventWithParam`.
 4. The receiving handler reads the workspace via the pointer, checks the type-tag, and processes the payload.
@@ -454,17 +454,17 @@ Expected (but missing in MAME):
 
 **Confirmed root cause** (March 2026, MAME Lua trace investigation):
 
-`LABEL_F98697` IS called during boot initialization — approximately 900+ times — but all calls occur when DRAM `0x8D38 = 0x00`. This maps to ROM table entry[0] at `0xE014CE`, which contains the sentinel array `{0xFFFF}` (immediately terminating). Every boot-time call returns immediately with no event sent.
+`UIState_KeyScan_Dispatch` IS called during boot initialization — approximately 900+ times — but all calls occur when DRAM `0x8D38 = 0x00`. This maps to ROM table entry[0] at `0xE014CE`, which contains the sentinel array `{0xFFFF}` (immediately terminating). Every boot-time call returns immediately with no event sent.
 
 The dispatcher mechanism consists of:
 - **FDB3D1** (event buffer writer): fills a circular buffer at DRAM `0xBD3C` with 4-byte entries encoding chain index (`C080`) and param (`C07D`)
 - **FDB328/FDB32E** (main dispatcher loop): reads entries from `0xBD3C`, selects handler chains from table `EE7CA7`, calls ALL functions in the selected chain
 
-During boot initialization, FDB3D1 sweeps all chain indices `0x00`→`0x9A` with 24 C07D params each (~4,608 total events). `LABEL_F98697` is invoked for every event whose chain (at `EE7CA7[C080*4]`) includes it. At boot time, `8D38=0x00` → `table[0]={0xFFFF}` → returns early every time.
+During boot initialization, FDB3D1 sweeps all chain indices `0x00`→`0x9A` with 24 C07D params each (~4,608 total events). `UIState_KeyScan_Dispatch` is invoked for every event whose chain (at `EE7CA7[C080*4]`) includes it. At boot time, `8D38=0x00` → `table[0]={0xFFFF}` → returns early every time.
 
-After boot stabilizes (`8D38` changes to `0x01`), the event buffer at `0xBD3C` drains and FDB3D1 is never called again — because no user input occurs in MAME's automated test run. With an empty buffer, the dispatcher has nothing to process, so `LABEL_F98697` is never invoked again.
+After boot stabilizes (`8D38` changes to `0x01`), the event buffer at `0xBD3C` drains and FDB3D1 is never called again — because no user input occurs in MAME's automated test run. With an empty buffer, the dispatcher has nothing to process, so `UIState_KeyScan_Dispatch` is never invoked again.
 
-**Critically, the logic would work correctly with user input:** Table entry[1] (at ROM `0xE014D0`, used when `8D38=0x01`) contains a 16-bit array with `0x7002` at index [79] (ROM address `0xE0156E`). The comparison key is `(C080 << 8) | C07D = (0x70 << 8) | 0x02 = 0x7002`. So if `LABEL_F98697` were called post-boot with chain `0x70` and param `0x02`, it WOULD find a match and send event `0x1C00038`.
+**Critically, the logic would work correctly with user input:** Table entry[1] (at ROM `0xE014D0`, used when `8D38=0x01`) contains a 16-bit array with `0x7002` at index [79] (ROM address `0xE0156E`). The comparison key is `(C080 << 8) | C07D = (0x70 << 8) | 0x02 = 0x7002`. So if `UIState_KeyScan_Dispatch` were called post-boot with chain `0x70` and param `0x02`, it WOULD find a match and send event `0x1C00038`.
 
 **The real hardware** presumably triggers FDB3D1 via user button presses or directional encoder navigation, which posts events to the `0xBD3C` buffer. In MAME's automated Feature Demo test mode, no such input is simulated. The Feature Demo would work on real hardware if a user navigated to it with actual button input.
 
@@ -487,11 +487,11 @@ This has been fixed in the MAME driver. It is a separate issue from the Feature 
 
 ### How event 0x1C00038 is generated — detailed analysis
 
-#### `LABEL_F98697` — the event sender
+#### `UIState_KeyScan_Dispatch` — the event sender
 
-The function `LABEL_F98697` (ROM `0xF98697`) is the code that sends event `0x1C00038`. It is **not called directly** — instead, it appears as a function-pointer entry in many UI widget handler chains (in the ROM pointer tables at `LABEL_EE7FA8`, `LABEL_EE7FD4`, `LABEL_EE7FFC`, etc.). When any widget using one of these handler chains processes certain events (typically user interaction events), it walks its handler chain and calls `LABEL_F98697`.
+The function `UIState_KeyScan_Dispatch` (ROM `0xF98697`) is the code that sends event `0x1C00038`. It is **not called directly** — instead, it appears as a function-pointer entry in many UI widget handler chains (in the ROM pointer tables at `UIState_HandlerTable_WithProbe`, `UIState_HandlerTable_Standard`, `UIState_HandlerTable_Compact`, etc.). When any widget using one of these handler chains processes certain events (typically user interaction events), it walks its handler chain and calls `UIState_KeyScan_Dispatch`.
 
-`LABEL_F98697` logic:
+`UIState_KeyScan_Dispatch` logic:
 
 1. Calls `0xEF0797` to check bit 7 of DRAM `0x0406`. This flag is SET once during boot by `Boot_DisplayScreen` (call at line 89160) and CLEARED only during flash memory updates. It should be set throughout normal operation, so this check passes.
 2. Reads a byte from DRAM `0x8D38` (an array selector index `R`).
@@ -501,7 +501,7 @@ The function `LABEL_F98697` (ROM `0xF98697`) is the code that sends event `0x1C0
 
 #### `FA9945` — the broadcast event router
 
-`FA9945` is the intermediate event-routing function called by `LABEL_F98697`. It checks a dynamic routing table in DRAM at `0x02BC34` (populated at runtime by `FA9752`). For each registered entry, it checks whether the entry's event code matches `0x1C00038` **and** whether the entry's "match value" equals the upper 16 bits of the XDE parameter. If a match is found, the event is forwarded to the registered handler (GroupBoxProc instance).
+`FA9945` is the intermediate event-routing function called by `UIState_KeyScan_Dispatch`. It checks a dynamic routing table in DRAM at `0x02BC34` (populated at runtime by `FA9752`). For each registered entry, it checks whether the entry's event code matches `0x1C00038` **and** whether the entry's "match value" equals the upper 16 bits of the XDE parameter. If a match is found, the event is forwarded to the registered handler (GroupBoxProc instance).
 
 #### `FA9752` — the event queue writer (`PostEvent`)
 
@@ -515,7 +515,7 @@ entry[8..11] = param (XDE)
 
 `FA9945` is the queue **processor/router**: it reads pending entries from `0x02BC34`, and for each entry with event code `0x1C00038`, checks whether the upper 16 bits of the parameter match a value stored in the entry. If the queue is empty, it posts the new event directly via `FA9D58`.
 
-The event routing for `0x1C00038` therefore works through the standard event queue. `LABEL_F98697` acts as the PRODUCER: it checks state bytes, then pushes `0x1C00038` + packed XDE into the queue via `FA9945`. The CONSUMER is whichever widget handler receives the queued event — presumably GroupBoxProc, once it has received its own event setup during initialization.
+The event routing for `0x1C00038` therefore works through the standard event queue. `UIState_KeyScan_Dispatch` acts as the PRODUCER: it checks state bytes, then pushes `0x1C00038` + packed XDE into the queue via `FA9945`. The CONSUMER is whichever widget handler receives the queued event — presumably GroupBoxProc, once it has received its own event setup during initialization.
 
 For GroupBoxProc to receive the queued `0x1C00038`, it must either:
 - Be the current "active" widget receiving events from the queue, OR
@@ -523,7 +523,7 @@ For GroupBoxProc to receive the queued `0x1C00038`, it must either:
 
 ### Lua trace investigation findings (March 2026)
 
-Investigation used MAME Lua autoboot scripts to monitor `LABEL_F98697`, `FA9945`, and `GroupBoxProc_StartSSFPresentation` during MAME runs. Key findings:
+Investigation used MAME Lua autoboot scripts to monitor `UIState_KeyScan_Dispatch`, `FA9945`, and `GroupBoxProc_StartSSFPresentation` during MAME runs. Key findings:
 
 **MAME Lua API constraints discovered:**
 - `install_read_tap` requires **word-aligned ranges** (even→odd address pair, e.g., `0xF98696-0xF98697`)
@@ -533,7 +533,7 @@ Investigation used MAME Lua autoboot scripts to monitor `LABEL_F98697`, `FA9945`
 **Early trace results (pre-solution):**
 | Monitor | Count | Observations |
 |---------|-------|-------------|
-| `LABEL_F98697` tap (0xF98696-0xF98697) | 900+ calls | All during boot init; all with `8D38=0x00` (empty table); C080 sweeps `0x00→0x9A`, C07D cycles `0x01..0x17` |
+| `UIState_KeyScan_Dispatch` tap (0xF98696-0xF98697) | 900+ calls | All during boot init; all with `8D38=0x00` (empty table); C080 sweeps `0x00→0x9A`, C07D cycles `0x01..0x17` |
 | `FA9945` for XBC=0x1C00038 | 0 calls | Never fired — F98697 always returned early |
 | `GroupBoxProc_StartSSFPresentation` | 0 real calls | One false positive (tap at F9A272 fires from 3rd word fetch of `call 0xfa9660` instruction at F9A26F) |
 | DRAM `0x8D38` at ~12s, ~25s, ~37s | 0x00, 0xEF, 0x01 | Transitions from boot init → stable post-boot |
@@ -543,7 +543,7 @@ Investigation used MAME Lua autoboot scripts to monitor `LABEL_F98697`, `FA9945`
 **ftdemo_v3.lua results (REVISED — originally misinterpreted):**
 | Monitor | Count | Observations |
 |---------|-------|-------------|
-| `LABEL_F98697` | 994 calls | Called but EF0797 pre-condition blocked all (internal RAM 0x0406 bit 7 not set in emulation context) |
+| `UIState_KeyScan_Dispatch` | 994 calls | Called but EF0797 pre-condition blocked all (internal RAM 0x0406 bit 7 not set in emulation context) |
 | `FA9945` for 0x1C00038 | 0 calls | Event `0x1C00038` was never dispatched |
 | `GroupBoxProc_StartSSFPresentation` tap | 9 hits | **FALSE POSITIVE** — tap at `0xF9A272-0xF9A273` fires from `call 0xFA9660` encoding, not from actual SSF execution |
 
@@ -567,11 +567,11 @@ The table occupies 1024 bytes (0xE01F80–0xE02380) and consists of 256 `.long` 
 
 ```
 SSF_PresentationGateTable:
-    .long LABEL_E014CE    ; entry[0x00] — boot/init state
-    .long LABEL_E014D0    ; entry[0x01] — normal operation
-    .long LABEL_E0157E    ; entry[0x02]
+    .long SSF_GateStates_Mode00    ; entry[0x00] — boot/init state
+    .long SSF_GateStates_Mode01    ; entry[0x01] — normal operation
+    .long SSF_GateStates_Mode02    ; entry[0x02]
     ...                   ; (256 entries total)
-    .long LABEL_E01F7E    ; entry[0xFF]
+    .long SSF_GateStates_ModeFF    ; entry[0xFF]
 ```
 
 ### How It Works
@@ -607,20 +607,20 @@ Known arrays in ROM range 0xE014CE–0xE01F7E:
 
 | Label | Address | Entries | Content | Used by mode |
 |-------|---------|---------|---------|--------------|
-| `LABEL_E014CE` | 0xE014CE | 0 | `{0xFFFF}` — disabled | 0x00 (boot/init) |
-| `LABEL_E014D0` | 0xE014D0 | ~215 | Chains 0x00–0x0C, 0x91 — many states | 0x01 (normal) |
-| `LABEL_E0157E` | 0xE0157E | 0 | `{0xFFFF}` — disabled | 0x02 |
-| `LABEL_E01580` | 0xE01580 | ~215 | Chains 0x00–0x0C, 0x43, 0x48, 0x70, 0x80, 0x91, 0x98 | 0x03 |
-| `LABEL_E0174A` | 0xE0174A | 1 | Chain 0x91, param 0x00 | 0x04 |
+| `SSF_GateStates_Mode00` | 0xE014CE | 0 | `{0xFFFF}` — disabled | 0x00 (boot/init) |
+| `SSF_GateStates_Mode01` | 0xE014D0 | ~215 | Chains 0x00–0x0C, 0x91 — many states | 0x01 (normal) |
+| `SSF_GateStates_Mode02` | 0xE0157E | 0 | `{0xFFFF}` — disabled | 0x02 |
+| `SSF_GateStates_Mode03` | 0xE01580 | ~215 | Chains 0x00–0x0C, 0x43, 0x48, 0x70, 0x80, 0x91, 0x98 | 0x03 |
+| `SSF_GateStates_Mode04` | 0xE0174A | 1 | Chain 0x91, param 0x00 | 0x04 |
 | **`SSF_GateStates_Mode05`** | 0xE0174E | 14 | Chain 0x92, params 0x00–0x0D | **0x05** |
-| `LABEL_E0176C` | 0xE0176C | — | Binary data (incbin) | 0x06+ |
+| `SSF_GateStates_Mode06` | 0xE0176C | — | Binary data (incbin) | 0x06+ |
 
 The `SSF_GateStates_Mode05` array (0xE0174E) is a representative example: when the UI is in mode 5 (`0x8D38 = 0x05`), the SSF event fires only if the current panel state has chain index `0x92` and a param value between `0x00` and `0x0D`. All other panel states are blocked.
 
 ### Source Location
 
 - **Table definition:** `maincpu/kn5000_v10_program.s`, label `SSF_PresentationGateTable` (0xE01F80)
-- **Getter function:** `LABEL_F0618F` — loads index from DRAM 0x8D38
+- **Getter function:** `SeMenu_LoadRawAddr` — loads index from DRAM 0x8D38
 - **Consumer function:** `GroupBoxNotify_SendSSFEvent` (0xF98697) — reads and evaluates the table
 - **State-value arrays:** ROM range 0xE014CE–0xE01F7E (pointed to by table entries)
 - **Example array:** `SSF_GateStates_Mode05` (0xE0174E) — 14-entry filter for UI mode 5

@@ -24,7 +24,7 @@ The firmware has **no cryptographic authentication** of floppy disc content — 
 ### 1. LZSS Decompressor Trusts Attacker-Controlled Size
 
 **Severity:** High
-**Routine:** `LABEL_EF3FAB` (4KB-window LZSS) at `0xEF3FAB`
+**Routine:** `SLIDE_Decompress_4K_Init` (4KB-window LZSS) at `0xEF3FAB`
 
 The LZSS decompressor reads the expected decompressed size from the [SLIDE4K]({{ site.baseurl }}/lzss-compression/) stream header:
 
@@ -40,12 +40,12 @@ ADD XIX, XHL            ; XIX = expected decompressed size (24-bit)
 The main loop terminates only when `XHL >= XIX`:
 ```asm
 CP XHL, XIX             ; Current output count vs expected
-JRL NC, LABEL_EF40B8   ; Exit when done
+JRL NC, SLIDE_Decompress_4K_Done   ; Exit when done
 ```
 
 The decompressed size is read directly from the compressed data, which originates from floppy. The output pointer (`XDE3`) advances without any bounds checking against the destination buffer size. The dictionary index wraps with `AND BC, 0fffh`, protecting the 4KB dictionary buffer — but NOT the output buffer.
 
-A parallel 8KB-window variant (`LABEL_EF40C5` at `0xEF40C5`) has the same unbounded output behavior.
+A parallel 8KB-window variant (`SLIDE_Decompress_8K_Init` at `0xEF40C5`) has the same unbounded output behavior.
 
 ---
 
@@ -59,8 +59,8 @@ This is the most viable attack vector, chaining two operations across a reboot.
 #### Step 1 — Update disc writes to flash
 
 The type 7 handler (`HANDLE_UPDATE_FILE_TYPE_ID_007h` at `0xEF47FA`) calls:
-- `LABEL_EF4D95` — decompresses from floppy, writes to Table Data ROM at `0x800000`
-- `LABEL_EF4CF8` — decompresses from floppy, writes to Custom Data Flash at `0x3E0000`
+- `LZ_Decompress_Init` — decompresses from floppy, writes to Table Data ROM at `0x800000`
+- `LZSS_Decompress_ToFlash` — decompresses from floppy, writes to Custom Data Flash at `0x3E0000`
 
 The attacker controls the entire compressed payload on the floppy disc.
 
@@ -69,11 +69,11 @@ The attacker controls the entire compressed payload on the floppy disc.
 During the boot sequence (at `0xEF0710`):
 ```asm
 CP (0FFFEEDh), 0ffh       ; Check update-mode flag
-JR NZ, LABEL_EF072A       ; Skip if not update mode
+JR NZ, SubCPU_Payload_TransferPart2       ; Skip if not update mode
 LD XIZ, 00050000h
 LD XWA, 003e0000h         ; Source: Custom Data Flash
 LD XBC, 00050000h         ; Destination: RAM
-CALL LABEL_EF41E3         ; Decompress SLIDE4K → RAM
+CALL SLIDE_Parse_Header         ; Decompress SLIDE4K → RAM
 ```
 
 The SLIDE4K wrapper validates the "SLIDE" magic string, then calls the LZSS decompressor with `XBC = 0x050000` (RAM). If the attacker's payload at `0x3E0000` specifies a large decompressed size, the decompressor writes attacker-controlled bytes **sequentially from `0x050000` upward in RAM** with no bounds check.
@@ -96,14 +96,14 @@ The firmware copies 61 KB from offset `0x100` of the decompressed data to RAM at
 ```
 Floppy Disc (Type 7: "Technics KN5000 Program  DATA FILE PCK")
     │
-    ├──> LABEL_EF4D95: Decompress → Table Data ROM (0x800000)
+    ├──> LZ_Decompress_Init: Decompress → Table Data ROM (0x800000)
     │    [Attacker controls entire Table Data ROM content]
     │
-    └──> LABEL_EF4CF8: Decompress → Custom Data Flash (0x3E0000)
+    └──> LZSS_Decompress_ToFlash: Decompress → Custom Data Flash (0x3E0000)
          [Attacker controls SLIDE4K payload staged for next boot]
              │
              v (on next boot, version byte 0xFFFEED == 0xFF)
-         LABEL_EF41E3: Decompress 0x3E0000 → RAM 0x050000
+         SLIDE_Parse_Header: Decompress 0x3E0000 → RAM 0x050000
              │   [LZSS output size = attacker-controlled header value]
              │   [No bounds check on output buffer]
              v
@@ -146,9 +146,9 @@ JRL GT, SHOW_ILLEGAL_DISK_MESSAGE
 
 ### 4. Type 7 Decompressor Reads Size from Floppy Stream
 
-**Routine:** `LABEL_EF4D95` at `0xEF4D95`
+**Routine:** `LZ_Decompress_Init` at `0xEF4D95`
 
-The inline LZSS decompressor for type 7/8 updates reads the decompressed size directly from the floppy data stream (3 bytes → 24-bit value stored at `0x063E`). The decompression loop continues until the byte counter reaches this value. Each decompressed byte is accumulated in a 4-byte buffer, then written to flash via `LABEL_EF3D7B`.
+The inline LZSS decompressor for type 7/8 updates reads the decompressed size directly from the floppy data stream (3 bytes → 24-bit value stored at `0x063E`). The decompression loop continues until the byte counter reaches this value. Each decompressed byte is accumulated in a 4-byte buffer, then written to flash via `Flash_ProgramByte`.
 
 The flash destination starts at `TABLE_DATA_ROM__BASE_ADDR` (`0x800000`) and advances by 4 each write. If the attacker sets the decompressed size larger than 2 MB (the Table Data ROM size), writes continue past `0x9FFFFF` — but fail silently due to the chip-specific AMD flash unlock sequence (see Finding 6).
 
@@ -158,7 +158,7 @@ The flash destination starts at `TABLE_DATA_ROM__BASE_ADDR` (`0x800000`) and adv
 
 **Severity:** Low (denial of service only)
 
-The byte reader `LABEL_EF4C07` refills the sector buffer from floppy in 4-track chunks. If the attacker inflates the expected decompressed size but provides a short compressed stream, the decompressor exhausts the floppy data. The FDC read routine (`LABEL_EF42CC`) then retries indefinitely, creating an **infinite loop** requiring a power cycle.
+The byte reader `Parport_ReadNextByte` refills the sector buffer from floppy in 4-track chunks. If the attacker inflates the expected decompressed size but provides a short compressed stream, the decompressor exhausts the floppy data. The FDC read routine (`FDC_ReadSectors`) then retries indefinitely, creating an **infinite loop** requiring a power cycle.
 
 ---
 
@@ -181,7 +181,7 @@ The attacker cannot redirect writes to arbitrary flash regions. The disc type de
 
 ### Flash chip-select isolation
 
-Flash write routines use chip-specific AMD/Atmel unlock sequences. `LABEL_EF3D7B` (Table Data ROM writer) sends unlock commands to `0x815554` and `0x80AAA8` — addresses decoded by the Table Data ROM flash chip only. Writes to addresses outside that chip's range (`0x800000`–`0x9FFFFF`) fail silently. The Program ROM flash at `0xE00000` has its own unlock addresses and cannot be reprogrammed via the Table Data ROM writer.
+Flash write routines use chip-specific AMD/Atmel unlock sequences. `Flash_ProgramByte` (Table Data ROM writer) sends unlock commands to `0x815554` and `0x80AAA8` — addresses decoded by the Table Data ROM flash chip only. Writes to addresses outside that chip's range (`0x800000`–`0x9FFFFF`) fail silently. The Program ROM flash at `0xE00000` has its own unlock addresses and cannot be reprogrammed via the Table Data ROM writer.
 
 ### Code runs from ROM
 
@@ -197,7 +197,7 @@ The dictionary index in both LZSS variants uses `AND BC, 0fffh` (4KB) or `AND BC
 
 ### Normal file I/O uses ROM sources
 
-The SLIDE4K wrapper `LABEL_EF41E3` has only 3 callers:
+The SLIDE4K wrapper `SLIDE_Parse_Header` has only 3 callers:
 
 | Call Site | Source | Destination | Floppy-Reachable? |
 |-----------|--------|-------------|-------------------|
@@ -225,20 +225,20 @@ These areas require further investigation to determine whether the data-control 
 
 | Routine | Address | Purpose |
 |---------|---------|---------|
-| `LABEL_EF3FAB` | `0xEF3FAB` | 4KB-window LZSS decompressor |
-| `LABEL_EF40C5` | `0xEF40C5` | 8KB-window LZSS decompressor |
-| `LABEL_EF41E3` | `0xEF41E3` | SLIDE4K/8K wrapper (magic check, dispatch) |
-| `LABEL_EF3D7B` | `0xEF3D7B` | Flash write — Table Data ROM (AMD protocol) |
-| `LABEL_EF3815` | `0xEF3815` | Flash write — Custom Data / HDAE5000 |
-| `LABEL_EF42CC` | `0xEF42CC` | FDC sector read loop |
+| `SLIDE_Decompress_4K_Init` | `0xEF3FAB` | 4KB-window LZSS decompressor |
+| `SLIDE_Decompress_8K_Init` | `0xEF40C5` | 8KB-window LZSS decompressor |
+| `SLIDE_Parse_Header` | `0xEF41E3` | SLIDE4K/8K wrapper (magic check, dispatch) |
+| `Flash_ProgramByte` | `0xEF3D7B` | Flash write — Table Data ROM (AMD protocol) |
+| `Flash_ProgramWord` | `0xEF3815` | Flash write — Custom Data / HDAE5000 |
+| `FDC_ReadSectors` | `0xEF42CC` | FDC sector read loop |
 | `Detect_Disk_Type` | `0xEF42FE` | 38-byte signature matching |
 | `Erase_and_Burn____when_disk_is_valid` | `0xEF4745` | Update handler dispatch (validates type 1–8) |
-| `LABEL_EF441B` | `0xEF441B` | Uncompressed disc → flash writer |
-| `LABEL_EF454D` | `0xEF454D` | Extension/custom data → flash writer |
-| `LABEL_EF4D95` | `0xEF4D95` | Type 7/8 inline LZSS → Table Data ROM |
-| `LABEL_EF4CF8` | `0xEF4CF8` | Type 7 inline LZSS → Custom Data Flash |
-| `LABEL_EF4C07` | `0xEF4C07` | Byte reader with floppy refill |
-| `LABEL_EF4C7A` | `0xEF4C7A` | Decompressed byte → flash accumulator |
+| `FDC_WriteSectors` | `0xEF441B` | Uncompressed disc → flash writer |
+| `FDC_WriteSectors_Compressed` | `0xEF454D` | Extension/custom data → flash writer |
+| `LZ_Decompress_Init` | `0xEF4D95` | Type 7/8 inline LZSS → Table Data ROM |
+| `LZSS_Decompress_ToFlash` | `0xEF4CF8` | Type 7 inline LZSS → Custom Data Flash |
+| `Parport_ReadNextByte` | `0xEF4C07` | Byte reader with floppy refill |
+| `Flash_AccumWrite_Byte` | `0xEF4C7A` | Decompressed byte → flash accumulator |
 | `FLASH_MEM_UPDATE` | `0xEF4F6F` | Top-level update entry point |
 | `String_Compare` | `0xFF0CDA` | Byte-by-byte string comparison |
 

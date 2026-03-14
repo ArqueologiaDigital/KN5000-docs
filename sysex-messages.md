@@ -47,7 +47,7 @@ ld (xsp + 3), 0x87    ; Model: KN5000
 ld (xsp + 4), a       ; Command byte (from A register)
 ```
 
-It then calls `MIDI_SendCmdPacket` to transmit the packet through the MIDI output port, followed by `LABEL_FEBF79` (likely a post-send flush or delay).
+It then calls `MIDI_SendCmdPacket` to transmit the packet through the MIDI output port, followed by `MIDI_PostSendStub` (likely a post-send flush or delay).
 
 ## Incoming: Roland GS SysEx
 

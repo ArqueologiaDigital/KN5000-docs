@@ -216,10 +216,10 @@ The framebuffer is linear and row-major. The active display occupies the first 7
 
 ### Main Loop Driven (Not VBI)
 
-The firmware's display updates are **not driven by a vertical blank interrupt**. Instead, they occur as part of the main event loop at `LABEL_EF1245`:
+The firmware's display updates are **not driven by a vertical blank interrupt**. Instead, they occur as part of the main event loop at `MainLoop`:
 
 ```
-Main Event Loop (LABEL_EF1245)
+Main Event Loop (MainLoop)
     |
     +-- Control Panel Poll
     +-- Display Update          <-- firmware draws its UI
@@ -533,14 +533,14 @@ The redraw functions delegate to specialized rendering helpers:
 
 | Helper | Address | Purpose |
 |--------|---------|---------|
-| `LABEL_F0212C` | 0xF0212C | General UI element renderer |
-| `LABEL_FB15F6` | 0xFB15F6 | Two-descriptor pair renderer |
-| `LABEL_FB1594` | 0xFB1594 | Simple descriptor renderer |
-| `LABEL_F01930` | 0xF01930 | Content area renderer |
-| `LABEL_F01DAB` | 0xF01DAB | Number/value display renderer |
-| `LABEL_F023CF` | 0xF023CF | Dynamic value renderer |
-| `LABEL_FB2044` | 0xFB2044 | Parameter display renderer |
-| `LABEL_FB24CB` | 0xFB24CB | Status indicator renderer |
+| `Scoop_EventLoop_12Entry` | 0xF0212C | General UI element renderer |
+| `GraphicsRender_Start` | 0xFB15F6 | Two-descriptor pair renderer |
+| `GraphicsRender_ProcessEntries` | 0xFB1594 | Simple descriptor renderer |
+| `Scoop_CurveUpdate_SegmentEnd` | 0xF01930 | Content area renderer |
+| `Scoop_GlideParam_Setup` | 0xF01DAB | Number/value display renderer |
+| `Scoop_EventLoop_36Entry` | 0xF023CF | Dynamic value renderer |
+| `DrawFunc_Init` | 0xFB2044 | Parameter display renderer |
+| `ColorBlit_WithPaletteSave` | 0xFB24CB | Status indicator renderer |
 
 ### Button Label Organization
 

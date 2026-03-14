@@ -101,7 +101,7 @@ During boot, the firmware scans the control panel buttons via `CPanel_ScanButton
 
 This is the procedure described in the service manual under "INITIAL SETTING" (p I-3). It resets all programmable settings, functions, and memories to their factory-preset status. **Sequencer**, **Composer**, and **User MIDI** settings are initialized (Rhythm and Custom data are not affected).
 
-**Firmware flow:** The combo code is stored at address `0x402`. At `LABEL_EF07F3` (`0xEF07F3`), the firmware checks if `DRAM[0xFFCA] != 0x5AA5` (payload checksums invalid) **and** combo code == 1. If both conditions are true, it zero-fills all work DRAM (`0x400`–`0x100000`) and SRAM (`0x1E0000`–`0x200000`), then restarts the boot sequence. This is typically used after replacing Flash ROMs.
+**Firmware flow:** The combo code is stored at address `0x402`. At `Boot_HandleFactoryReset` (`0xEF07F3`), the firmware checks if `DRAM[0xFFCA] != 0x5AA5` (payload checksums invalid) **and** combo code == 1. If both conditions are true, it zero-fills all work DRAM (`0x400`–`0x100000`) and SRAM (`0x1E0000`–`0x200000`), then restarts the boot sequence. This is typically used after replacing Flash ROMs.
 
 For normal users, the factory reset is handled through the welcome screen UI widget when combo 2 is detected.
 
@@ -109,13 +109,13 @@ For normal users, the factory reset is handled through the welcome screen UI wid
 
 **Buttons:** Three buttons from the SOUND GROUP section on the right panel.
 
-Displays "ALL INITIAL SETTING!" on the LCD screen and shows the firmware version number on the control panel LEDs. At `LABEL_EF07A2` (`0xEF07A2`), the firmware reads the version byte from `0xFFFFE8` (currently `0x0A` = version 10), looks up the LED pattern from the table at `0xE00000`, and calls `Set_LEDs`.
+Displays "ALL INITIAL SETTING!" on the LCD screen and shows the firmware version number on the control panel LEDs. At `Boot_HandleComboDisplay` (`0xEF07A2`), the firmware reads the version byte from `0xFFFFE8` (currently `0x0A` = version 10), looks up the LED pattern from the table at `0xE00000`, and calls `Set_LEDs`.
 
 #### Combo 3: Software Version Screen
 
 **Buttons:** Four buttons spanning the AUTO PLAY CHORD area on the left panel.
 
-Displays the software version screen showing internal build numbers for all firmware components (main program, sub program, etc.). Implemented via `LABEL_F994BD`.
+Displays the software version screen showing internal build numbers for all firmware components (main program, sub program, etc.). Implemented via `SoundCtrl_SendCommand`.
 
 #### Combo 4: Flash Memory Update
 
@@ -258,8 +258,8 @@ Even with a properly functioning drive, occasional "NG" results may occur. If fr
 | `TEST3FUNC` | `0xFB7DA6` | `kn5000_v10_program.s:324419` | Wave ROM test handler (part) |
 | `TEST4FUNC` | `0xFB7DDA` | `kn5000_v10_program.s:324439` | CPR/CPL MCU test handler |
 | `TEST6FUNC` | `0xFB7E0E` | `kn5000_v10_program.s:324459` | Wave ROM test handler (part) |
-| `LABEL_EF07A2` | `0xEF07A2` | `kn5000_v10_program.s:89288` | Boot combo handler (LED version display) |
-| `LABEL_EF07F3` | `0xEF07F3` | `kn5000_v10_program.s:89329` | Boot combo handler (factory reset) |
+| `Boot_HandleComboDisplay` | `0xEF07A2` | `kn5000_v10_program.s:89288` | Boot combo handler (LED version display) |
+| `Boot_HandleFactoryReset` | `0xEF07F3` | `kn5000_v10_program.s:89329` | Boot combo handler (factory reset) |
 | `Get_Firmware_Version` | `0xFFFEE5` | `kn5000_v10_program.s:399800` | Returns firmware version byte |
 | `FIRMWARE_VERSION` | `0xFFFFE8` | `kn5000_v10_program.s:399878` | Version byte (0x0A = v10) |
 

@@ -26,14 +26,14 @@ SOME_DELAY:                 ; F97612
     CP HL, 0ffffh           ; Initial check (always passes)
     RET NC                  ; (never triggers on first pass)
 
-LABEL_F97621:               ; Polling loop
+SOME_DELAY_Loop:               ; Polling loop
     LD BC, (SYSTEM_TIMESTAMP) ; Read current timestamp
     SUB BC, DE              ; Elapsed = current - start
     CP BC, WA               ; Compare elapsed to target
     RET UGT                 ; Return if elapsed > target (delay complete)
     INC 1, HL               ; Increment timeout counter
     CP HL, 0ffffh           ; Check for timeout (65535 iterations)
-    JR C, LABEL_F97621      ; Continue polling
+    JR C, SOME_DELAY_Loop      ; Continue polling
     RET                     ; Timeout exit (safety)
 ```
 
@@ -150,7 +150,7 @@ Sets up FDC control register to 0xFF.
 ```asm
 FDC_INIT:                   ; F96BBF
     LD WA, 0036h
-    CALR LABEL_F96B1F
+    CALR FDC_Send_Command
     LD WA, 2
     CALR SOME_DELAY
     LD (8B04h), 0FFh
@@ -164,7 +164,7 @@ Complex routine that validates FDC status through multiple checks.
 ```asm
 FDC_CONFIG_VERIFY:          ; F96BD0
     PUSH XIZ
-    CALR LABEL_F975D6
+    CALR FDC_ClearStatus_InitTimer
     CALR LABEL_F97544
     CP HL, 0FFFFh
     JR Z, FDC_CONFIG_L1
@@ -177,7 +177,7 @@ FDC_CONFIG_L1:              ; F96BEB
     JRL Z, FDC_CONFIG_EXIT
     LD (8A20h), 0FFh
     LD WA, 0036h
-    CALR LABEL_F96B1F
+    CALR FDC_Send_Command
     LD WA, 2
     CALR SOME_DELAY
     CALR LABEL_F97544
@@ -186,43 +186,43 @@ FDC_CONFIG_L1:              ; F96BEB
     CALR LABEL_F97592
     CP HL, 0FFFFh
     JR Z, FDC_CONFIG_L2
-    CALR LABEL_F975D6
+    CALR FDC_ClearStatus_InitTimer
     CALR FDC_CMD_DISPATCH_SUB
     CP (8A24h), 0
     JR Z, FDC_CONFIG_L3
     LD (8A20h), 0
     JRL T, FDC_CONFIG_EXIT
 FDC_CONFIG_L3:              ; F96C2A
-    CALR LABEL_F96B13
+    CALR FDC_Read_Status
     BIT 7, L
     JR NZ, FDC_CONFIG_L4
     LD WA, 0032h
-    CALR LABEL_F975AD
+    CALR FDC_Set_Status
     JR T, FDC_CONFIG_L5
 FDC_CONFIG_L4:              ; F96C3A
     LD WA, 0031h
-    CALR LABEL_F975AD
+    CALR FDC_Set_Status
 FDC_CONFIG_L5:              ; F96C3F
-    CALR LABEL_F96B13
+    CALR FDC_Read_Status
     BIT 6, L
     JR Z, FDC_CONFIG_L6
     LD WA, 002Fh
-    CALR LABEL_F975AD
+    CALR FDC_Set_Status
 FDC_CONFIG_L6:              ; F96C4C
-    CALR LABEL_F96B13
+    CALR FDC_Read_Status
     CP L, 0FFh
     JR NZ, FDC_CONFIG_L7
     LD WA, 00FCh
-    CALR LABEL_F975AD
+    CALR FDC_Set_Status
     JR T, FDC_CONFIG_EXIT
 FDC_CONFIG_L7:              ; F96C5C
     LD WA, 0001h
-    CALR LABEL_F975AD
+    CALR FDC_Set_Status
     CALR LABEL_F97544
     CP HL, 0FFFFh
     JR Z, FDC_CONFIG_L2
     LD WA, 0001h
-    CALR LABEL_F975AD
+    CALR FDC_Set_Status
     CALR LABEL_F97592
     CP HL, 0FFFFh
     JR NZ, FDC_CONFIG_L8
@@ -232,7 +232,7 @@ FDC_CONFIG_L2:              ; F96C7B
     JR T, FDC_CONFIG_EXIT
 FDC_CONFIG_L8:              ; F96C88
     LD WA, 0036h
-    CALR LABEL_F96B1F
+    CALR FDC_Send_Command
     LD WA, 2
     CALR SOME_DELAY
 FDC_CONFIG_EXIT:            ; F96D93
@@ -248,14 +248,14 @@ Called by: FDC_HANDLER_10 (dispatch table entry).
 ```asm
 FDC_CMD_DISPATCH_SUB:       ; F96D95
     LD WA, 0036h
-    CALR LABEL_F96B1F
+    CALR FDC_Send_Command
     LD WA, 2
     CALR SOME_DELAY
-    CALR LABEL_F96B13
+    CALR FDC_Read_Status
     CP L, 0FFh
     JR NZ, FDC_H10_OK
     LD WA, 00FCh
-    CALR LABEL_F975AD
+    CALR FDC_Set_Status
 FDC_H10_OK:                 ; F96DAE
     LD HL, 0
     RET
@@ -287,7 +287,7 @@ FDC_SH_L1:                  ; F976C3
 ; Secondary status handler
 FDC_STATUS_HANDLER_2:       ; F976C9
     LD (8A28h), 0C6h
-    CALR LABEL_F97052
+    CALR FDC_Setup_DMA_Mode
     CALR LABEL_F975DC
     LD WA, 00C6h
     CALR LABEL_F972F9
@@ -353,7 +353,7 @@ FDC_MODE_CONFIG:            ; F97984
     CALR FDC_INTERRUPT_HANDLER
     CP (8A24h), 0
     JRL NZ, FDC_MC_EXIT
-    CALR LABEL_F97652
+    CALR FDC_SeekRecalibrate
     CP (8A24h), 0
     JRL NZ, FDC_MC_EXIT
     LD A, (8A6Ch)           ; Load FDC mode
@@ -400,7 +400,7 @@ FDC_CMD_ENABLE:             ; F97C21
     CP (8A24h), 0
     JR Z, FDC_CE_READY
     LD WA, 0031h
-    CALR LABEL_F975AD
+    CALR FDC_Set_Status
     JR T, FDC_CE_DONE
 FDC_CE_READY:               ; F97C3A
     LD IZ, 1
@@ -450,7 +450,7 @@ FDC_OUTPUT_CTRL:            ; F97C5B
     JR T, FDC_OC_DISABLE
 FDC_OC_OTHER:               ; F97C69
     LD WA, 00FEh
-    CALR LABEL_F975AD
+    CALR FDC_Set_Status
     RET
 FDC_OC_ENABLE:              ; F97C70
     LD (8A6Ah), 0FFh
@@ -473,25 +473,25 @@ FDC_INTERRUPT_HANDLER:      ; F97C7C
     CALR LABEL_F972F9
     CP (8A24h), 0
     JR NZ, FDC_IH_EXIT
-    CALR LABEL_F970C9
+    CALR FDC_Wait_Ready_Timeout
     CP (8A24h), 0
     JR NZ, FDC_IH_EXIT
-    CALR LABEL_F96B19
+    CALR FDC_Read_Data
     LD QIZH, L
     BIT 7, QIZH
     JR Z, FDC_IH_L1
     LD WA, 0032h
-    CALR LABEL_F975AD
+    CALR FDC_Set_Status
 FDC_IH_L1:                  ; F97CAE
     BIT 5, QIZH
     JR NZ, FDC_IH_L2
     LD WA, 0031h
-    CALR LABEL_F975AD
+    CALR FDC_Set_Status
 FDC_IH_L2:                  ; F97CBA
     BIT 6, QIZH
     JR Z, FDC_IH_EXIT
     LD WA, 002Fh
-    CALR LABEL_F975AD
+    CALR FDC_Set_Status
 FDC_IH_EXIT:                ; F97CC6
     POP QIZ
     RET
@@ -506,7 +506,7 @@ The FDC uses a handler dispatch table starting at 0xF97D8D:
 | Index | Address | Handler Name | Description |
 |-------|---------|--------------|-------------|
 | 0 | F97D8D | DISPATCH_BASE | Basic handler (calls F97639) |
-| 1 | F97D93 | HANDLER_01 | CMD_ENABLE + LABEL_F97652 |
+| 1 | F97D93 | HANDLER_01 | CMD_ENABLE + FDC_SeekRecalibrate |
 | 2 | F97D99 | HANDLER_02 | CMD_ENABLE + STATUS_HANDLER |
 | 3 | F97D9F | HANDLER_03 | CMD_ENABLE + CMD_EXEC |
 | 4 | F97DA5 | HANDLER_04 | CMD_ENABLE + SECTOR_XFER |
@@ -518,7 +518,7 @@ The FDC uses a handler dispatch table starting at 0xF97D8D:
 | 10 | F97DC1 | HANDLER_10 | CMD_DISPATCH_SUB |
 | 11 | F97DC5 | HANDLER_11 | CMD_ENABLE + INTERRUPT_HANDLER |
 
-All handlers end by jumping to LABEL_F97DE1 which sets the status flag and returns.
+All handlers end by jumping to FDC_Handler_ExitStatus which sets the status flag and returns.
 
 ## Code References
 

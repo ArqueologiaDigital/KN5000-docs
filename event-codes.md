@@ -129,7 +129,7 @@ These are **request/action events** that reach the record function directly. The
 | Code | Name | Source | Description |
 |------|------|--------|-------------|
 | **`0x01C00008`** | **`EVT_ACTIVATE`** | Button press | Sent by firmware when user selects a DISK MENU entry via LCD panel button. **This is the event to intercept for button-press activation.** |
-| **`0x01E0009C`** | **`EVT_POST_ACTIVATE`** | PostEvent injection | Sent by `LABEL_F8B1DF` via `PostEvent(0x00600002, 0x01E0009C, 0)`. Used for programmatic activation. Falls through ClassProc → ObjectProc → InheritedProc chain. |
+| **`0x01E0009C`** | **`EVT_POST_ACTIVATE`** | PostEvent injection | Sent by `FileIO_DiskRemoved` via `PostEvent(0x00600002, 0x01E0009C, 0)`. Used for programmatic activation. Falls through ClassProc → ObjectProc → InheritedProc chain. |
 
 ### Display/Memory Allocation Events
 
@@ -220,7 +220,7 @@ The complete sequence when a user selects a DISK MENU entry by pressing a panel 
 For comparison, programmatic activation via `PostEvent`:
 
 ```
-1. LABEL_F8B1DF calls PostEvent(0x00600002, 0x01E0009C, 0)
+1. FileIO_DiskRemoved calls PostEvent(0x00600002, 0x01E0009C, 0)
 2. Main loop dequeues event
 3. SendEvent(slot[+0x00], 0x01E0009C, 0)
 4. ClassProc: not a getter → ObjectProc

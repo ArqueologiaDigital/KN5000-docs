@@ -263,10 +263,10 @@ The `JP` instruction (opcode `0x1B`) is followed by a 24-bit little-endian targe
 
 ### Firmware XAPR Validation
 
-The main firmware validates the extension ROM and calls Boot_Init from routine `LABEL_F1E9E0`:
+The main firmware validates the extension ROM and calls Boot_Init from routine `LoadAndRunXapr_Entry`:
 
 ```asm
-; At LABEL_F1E9E0 in kn5000_v10_program.rom:
+; At LoadAndRunXapr_Entry in kn5000_v10_program.rom:
 PUSHW 0004h                          ; Compare 4 bytes
 PUSHW 00e1h                          ; String compare flags
 PUSHW 0ffc6h                         ; Pointer to "XAPR" in firmware ROM
@@ -287,7 +287,7 @@ CALL  T, XHL                        ; Call Boot_Init(XWA = workspace_ptr)
 RET
 ```
 
-The frame handler dispatcher (`LABEL_F1E9D0`) runs every iteration of the main event loop:
+The frame handler dispatcher (`CallExtIfActive_Entry`) runs every iteration of the main event loop:
 
 ```asm
 ; Frame handler dispatcher:
@@ -564,10 +564,10 @@ Understanding how the firmware manages the LCD display is critical for any homeb
 
 ### Firmware Display Architecture
 
-The KN5000 display is **NOT driven by a vertical blank interrupt (VBI)**. Instead, display updates happen in the firmware's main event loop at `LABEL_EF1245`:
+The KN5000 display is **NOT driven by a vertical blank interrupt (VBI)**. Instead, display updates happen in the firmware's main event loop at `MainLoop`:
 
 ```
-Main Event Loop (LABEL_EF1245)
+Main Event Loop (MainLoop)
     |
     +-- Control Panel Poll
     +-- Display Update         <-- firmware draws its UI here
@@ -886,11 +886,11 @@ When the user selects a DISK MENU entry, the firmware does not directly call the
 
 ### Activation Trigger
 
-The main firmware routine at `LABEL_F8B1DF` handles extension board activation:
+The main firmware routine at `FileIO_DiskRemoved` handles extension board activation:
 
 ```asm
-; LABEL_F8B1DF: Check if HDAE5000 extension is present
-CALL  LABEL_F1E9A3           ; Read XAPR detection flag from (0x03DD04)
+; FileIO_DiskRemoved: Check if HDAE5000 extension is present
+CALL  GetAprStatus_Entry           ; Read XAPR detection flag from (0x03DD04)
 CP    L, 0
 JR    Z, .no_extension       ; Skip if no extension ROM
 
@@ -969,7 +969,7 @@ The Mines project demonstrates that full participation in the object dispatch sy
 4. All other requests are delegated to `workspace[0x0E0A][0x00DC]` (default handler)
 5. Frame_Handler checks `GAME_ACTIVE` and branches into the C game code when set
 
-**Key discovery:** When the user selects a DISK MENU entry via a physical button press, the firmware dispatches event code **`0x01C00008`** (not `0x01E0009C`) to the handler's record function. The activation event `0x01E0009C` is only used for direct `PostEvent` injection (e.g., from `LABEL_F8B1DF`). The handler must intercept **both** codes to support both activation paths.
+**Key discovery:** When the user selects a DISK MENU entry via a physical button press, the firmware dispatches event code **`0x01C00008`** (not `0x01E0009C`) to the handler's record function. The activation event `0x01E0009C` is only used for direct `PostEvent` injection (e.g., from `FileIO_DiskRemoved`). The handler must intercept **both** codes to support both activation paths.
 
 When activation is intercepted, the handler should **skip delegation** to the default handler — otherwise the default handler shows its own UI (e.g., "FD SAVE/LOAD TEST") which would interfere with the game.
 

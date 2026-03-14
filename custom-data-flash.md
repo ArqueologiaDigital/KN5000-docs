@@ -35,7 +35,7 @@ The 8KB gaps between style sections correspond to flash boot block sector bounda
 
 ## Section Pointer Table
 
-The firmware computes 8 section pointers at runtime (`LABEL_F16A57` in main CPU ROM) and stores them in internal RAM:
+The firmware computes 8 section pointers at runtime (`Flash_InitExtMemAddrs` in main CPU ROM) and stores them in internal RAM:
 
 | Section | Address | RAM Ptr | Contents |
 |:---|:---|:---|:---|

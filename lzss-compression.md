@@ -70,13 +70,13 @@ The address `0x3E0000` is **Custom Data Flash** (not an alternate ROM mapping). 
 HANDLE_UPDATE_FILE_TYPE_ID_007h:
     LD WA, 1                    ; Select Custom Data Flash
     LD XBC, 003e0000h           ; Write to 0x3E0000
-    CALL LABEL_EF3929           ; Flash write routine
+    CALL Flash_EraseSectorWithBankSelect           ; Flash write routine
     LD WA, 1
     LD XBC, 003f0000h           ; Write to 0x3F0000
-    CALL LABEL_EF3929           ; Flash write routine
+    CALL Flash_EraseSectorWithBankSelect           ; Flash write routine
 ```
 
-The flash write routine (`LABEL_EF3929`) uses `CUSTOM_DATA_FLASH__BASE_ADDR` (0x300000) as the base when `WA=1`.
+The flash write routine (`Flash_EraseSectorWithBankSelect`) uses `CUSTOM_DATA_FLASH__BASE_ADDR` (0x300000) as the base when `WA=1`.
 
 ### Update File Types
 

@@ -309,7 +309,7 @@ Displayed when:
 
 **Address:** `SHOW_ILLEGAL_DISK_MESSAGE` (`0xEF482A`)
 
-After displaying "Illegal Disk!", the firmware enters an **infinite loop** (`jr LABEL_EF4841` at address `0xEF4841`). The only recovery is power cycling the keyboard.
+After displaying "Illegal Disk!", the firmware enters an **infinite loop** (`jr IllegalDisk_HaltLoop` at address `0xEF4841`). The only recovery is power cycling the keyboard.
 
 ### Disc Swap Mismatch
 

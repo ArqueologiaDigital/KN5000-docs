@@ -508,7 +508,7 @@ python compare_roms.py # Verify against originals
 
 ### March 2026: Complete LABEL_XXXXXX Elimination
 
-**All address-based labels replaced with semantic names across the entire ROM set.** Every `LABEL_XXXXXX` placeholder (labels named after their hex address, e.g., `LABEL_F873ED`) has been analyzed and renamed to a meaningful, descriptive name reflecting its purpose (e.g., `FileIO_ValidateWithExtHeader`, `SeqByteBlock_DispatchJumpTable`). This represents the completion of a major project goal:
+**All address-based labels replaced with semantic names across the entire ROM set.** Every `LABEL_XXXXXX` placeholder (e.g., `LABEL_F873ED`) has been analyzed and renamed to a meaningful, descriptive name reflecting its purpose (e.g., `FileIO_ValidateWithExtHeader`, `SeqByteBlock_DispatchJumpTable`). This represents the completion of a major project goal:
 
 - **~10,000 labels renamed** across 94+ source files in maincpu alone
 - **0 LABEL_XXXXXX remaining** in any ROM directory (maincpu, subcpu, hdae5000, table_data, custom_data)

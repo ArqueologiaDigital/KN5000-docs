@@ -1562,7 +1562,7 @@ CALL FLASH_MEM_UPDATE            ; Enter update mode
 **Notes:**
 - Update mode only accessible from boot ROM (virgin/corrupted flash)
 - "Please Wait !!" bitmap displayed at 0xEF0536 when in boot ROM mode
-- System halts after update (infinite loop at LABEL_EF05E6)
+- System halts after update (infinite loop at Boot_MainSequence_Trampoline)
 
 ### File Types and Target Components
 
@@ -1874,20 +1874,20 @@ Multi-level dispatch using nested jump tables:
     LD XHL, (XHL + A)
     JP T, XHL
 
-LABEL_EF0D64:
-    dd LABEL_EF0D70         ; State 0
-    dd LABEL_EF0D73         ; State 1
-    dd LABEL_EF0D8F         ; State 2
+UI_STATE_MACHINE_TABLE:
+    dd UI_STATE_0_IDLE         ; State 0
+    dd UI_STATE_1_PROCESS         ; State 1
+    dd UI_STATE_2_SUBSTATE         ; State 2
 
 ; State 2 has 16 sub-states
-LABEL_EF0D8F:
+UI_STATE_2_SUBSTATE:
     LDA XHL, 0EF0DA5h       ; Sub-state table
     LD XHL, (XHL + A)
     JP T, XHL
 
-LABEL_EF0DA5:
-    dd LABEL_EF0DE5         ; Sub-state 0
-    dd LABEL_EF0DEF         ; Sub-state 1
+UI_SUBSTATE_TABLE:
+    dd UI_SUBSTATE_CLEAR_FLAGS         ; Sub-state 0
+    dd UI_SUBSTATE_PROCESS_A         ; Sub-state 1
     ... (16 total entries)
 ```
 
@@ -1898,19 +1898,19 @@ The FDC handler dispatch table (`FDC_HANDLER_OFFSETS` at 0xEA98CA) calls helper 
 | Routine | Address | Status | Called By |
 |---------|---------|--------|-----------|
 | `LABEL_F97696` | 0xF97696 | Raw bytes | FDC_HANDLER_02 |
-| `LABEL_F976E4` | 0xF976E4 | Raw bytes | FDC_HANDLER_03 |
+| `FDC_CMD_EXEC` | 0xF976E4 | Raw bytes | FDC_HANDLER_03 |
 | `LABEL_F97835` | 0xF97835 | Raw bytes | FDC_HANDLER_04 |
 | `LABEL_F97C21` | 0xF97C21 | Raw bytes | Multiple handlers |
-| `LABEL_F97C7C` | 0xF97C7C | Raw bytes | FDC_HANDLER_11 |
-| `LABEL_F96BBF` | 0xF96BBF | Raw bytes | LABEL_F97639 |
-| `LABEL_F96BD0` | 0xF96BD0 | Raw bytes | LABEL_F97639 |
-| `LABEL_F97984` | 0xF97984 | Raw bytes | FDC_HANDLER_05 |
+| `FDC_INTERRUPT_HANDLER` | 0xF97C7C | Raw bytes | FDC_HANDLER_11 |
+| `LABEL_F96BBF` | 0xF96BBF | Raw bytes | FDC_InitSequence_Full |
+| `LABEL_F96BD0` | 0xF96BD0 | Raw bytes | FDC_InitSequence_Full |
+| `FDC_MODE_CONFIG` | 0xF97984 | Raw bytes | FDC_HANDLER_05 |
 | `LABEL_F97C4B` | 0xF97C4B | Raw bytes | FDC_HANDLER_07 |
-| `LABEL_F97C54` | 0xF97C54 | Raw bytes | FDC_HANDLER_08 |
+| `FDC_STATUS_COPY` | 0xF97C54 | Raw bytes | FDC_HANDLER_08 |
 | `LABEL_F97C5B` | 0xF97C5B | Raw bytes | FDC_HANDLER_09 |
 | `LABEL_F96D95` | 0xF96D95 | Raw bytes | FDC_HANDLER_10 |
 
-These routines are in `LABEL_F97652` raw byte block (lines 336862-336929).
+These routines are in `FDC_SeekRecalibrate` raw byte block (lines 336862-336929).
 
 ### Finding Jump Tables
 
@@ -1992,9 +1992,9 @@ The main UI uses a two-level state machine:
 
 ```
 Level 1 (0xEF0D64): 3 main states
-  ├── State 0: LABEL_EF0D70
-  ├── State 1: LABEL_EF0D73
-  └── State 2: LABEL_EF0D8F → Level 2
+  ├── State 0: UI_STATE_0_IDLE
+  ├── State 1: UI_STATE_1_PROCESS
+  └── State 2: UI_STATE_2_SUBSTATE → Level 2
 
 Level 2 (0xEF0DA5): 16 sub-states for detailed UI handling
 ```

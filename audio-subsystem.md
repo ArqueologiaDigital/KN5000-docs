@@ -355,15 +355,15 @@ The Sub CPU firmware contains a master DSP state dispatcher at `DSP_State_Dispat
 Audio_System_Init (0x01FACB)        -- on boot
   -> DSP_System_Init (0x034C45)
     -> DSP_Reset (0x0360A3)
-      -> LABEL_038E6E               -- full DSP reconfigure
-        -> LABEL_036E3D              -- DSP state apply orchestrator
+      -> DSP_State_LoadAndApplyAll               -- full DSP reconfigure
+        -> DSP_State_ApplyAll              -- DSP state apply orchestrator
           -> DSP_State_Dispatcher    -- master DSP state dispatcher
 
 Audio_Main_Loop (0x01FAEB)          -- at runtime
   -> Audio_Process_DSP (0x035A7D)   -- reads ring buffer at 0x3B60
     -> command 0x2D dispatch
-      -> LABEL_035F32                -- sub-command router
-        -> ... -> LABEL_036E3D -> DSP_State_Dispatcher (same chain)
+      -> DSP_CmdHandler_2D                -- sub-command router
+        -> ... -> DSP_State_ApplyAll -> DSP_State_Dispatcher (same chain)
 ```
 
 The master dispatcher (`DSP_State_Dispatcher`) takes a pointer to a state structure in XWA:
@@ -494,7 +494,7 @@ The 56-byte parameter block is compared against the current slot buffer at `4496
 
 Each slot contains 28 word-sized parameters. Word[0] is the **algorithm ID** (e.g., 0x0014 = algorithm 20 = CONCERT REVERB 1). The remaining words are effect-type-specific parameter values.
 
-If any parameters changed, `DSP_ApplyConfig` (at 0x03616A) copies the full 290-byte DSP state (8-byte header + 5 × 56-byte slots) from `0x448E` to an allocated work buffer via `LABEL_038E31` (at 0x038E31), which marks it as dirty and triggers processing by the DSP state dispatcher.
+If any parameters changed, `DSP_ApplyConfig` (at 0x03616A) copies the full 290-byte DSP state (8-byte header + 5 × 56-byte slots) from `0x448E` to an allocated work buffer via `DSP_State_ApplyBuf` (at 0x038E31), which marks it as dirty and triggers processing by the DSP state dispatcher.
 
 ### DSP Data Tables
 
@@ -1065,7 +1065,7 @@ MIDI Note On (channel, note, velocity)
 
 Volume (CC 0x07) and Expression (CC 0x0B) both use a shared **scaling lookup table** at ROM 0x011D16. The final output level is the product of volume and expression, applied to the tone generator's volume registers (groups 0x08-0x09).
 
-Pan (CC 0x0A) is a direct value (0-127) written to channel offset +0x08 and translated to left/right balance via `LABEL_032E1E`.
+Pan (CC 0x0A) is a direct value (0-127) written to channel offset +0x08 and translated to left/right balance via `EnvTranspose_UpdateLoop`.
 
 ### Envelope Processing
 
@@ -1114,12 +1114,12 @@ Filter behavior is fixed per voice preset — no real-time filter sweeps are imp
 
 | CC | Handler | Channel Offset | Function |
 |----|---------|---------------|----------|
-| 0x91 | LABEL_028A44 | +0x11 | Frequency multiplier (via lookup table) |
-| 0x95 | LABEL_028A55 | +0x04 | Portamento enable/disable (boolean flag) |
-| 0x97 | LABEL_028A7F | +0x12 | Fine pitch tuning (semitone-level adjustment) |
-| 0x9B | LABEL_028A90 | +0x1F | Vibrato depth (via lookup table) |
-| 0x9C | LABEL_028AA1 | — | Vibrato enable/disable (bit 8 toggle) |
-| 0x9D | LABEL_028ACB | +0x20 | Tremolo/AM depth (via lookup table) |
+| 0x91 | Voice_CC_SetReverbDepth | +0x11 | Frequency multiplier (via lookup table) |
+| 0x95 | Voice_CC_SetChorusEnable | +0x04 | Portamento enable/disable (boolean flag) |
+| 0x97 | Voice_CC_SetChorusDepth | +0x12 | Fine pitch tuning (semitone-level adjustment) |
+| 0x9B | Voice_CC_SetDelayDepth | +0x1F | Vibrato depth (via lookup table) |
+| 0x9C | Voice_CC_SetDelayEnable | — | Vibrato enable/disable (bit 8 toggle) |
+| 0x9D | Voice_CC_SetDelayFeedback | +0x20 | Tremolo/AM depth (via lookup table) |
 
 All proprietary CCs use `channel × 0x11F + base_offset` to access per-channel data. CCs 0x91, 0x97, 0x9B, and 0x9D read values from a shared lookup table at 0x011D16. CCs 0x95 and 0x9C are boolean toggles using OR/AND bit masks.
 

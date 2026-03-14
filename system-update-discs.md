@@ -239,7 +239,7 @@ An important architectural finding: **the KN5000 never executes code loaded from
 
 ### Evidence
 
-1. **Boot sector is never read.** All 9 calls to the FDC read routine (`LABEL_EF42CC`) use sector 33 or higher. The `Detect_Disk_Type` routine reads the data area to find the signature file — it never examines sector 0, the BPB, or any boot code.
+1. **Boot sector is never read.** All 9 calls to the FDC read routine (`FDC_ReadSectors`) use sector 33 or higher. The `Detect_Disk_Type` routine reads the data area to find the signature file — it never examines sector 0, the BPB, or any boot code.
 
 2. **All update handlers write to flash.** Every disc type handler (types 1–8) programs flash memory and then enters an infinite loop displaying "Turn On AGAIN!!" (`0xEF05E6`). No handler copies data to RAM and jumps to it.
 
