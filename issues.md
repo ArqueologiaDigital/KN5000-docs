@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 314 (9 open, 301 closed)
+**Total Issues:** 317 (8 open, 305 closed)
 
 **Quick Links:** 
-[Other](#other) (9)
+[Other](#other) (8)
 
 ---
 
@@ -126,27 +126,11 @@ THE single biggest blocker across the project. Waveform ROMs IC304-IC306 (1.2MB 
 
 ---
 
-#### 🟡 MAME: Implement MIDI output (TX0) {#issue-kn5000-9qt3}
-
-**ID:** `kn5000-9qt3` | **Priority:** Medium | **Created:** 2026-03-10
-
-Currently only MIDI RX0 is connected in the MAME driver. TX0 (MIDI output) is marked TODO at line 834 of kn5000.cpp. The KN5000 can output MIDI from its sequencer, accompaniment engine, and keyboard. Implementing MIDI output would make the emulator useful as a virtual MIDI instrument. Need to: (1) wire TX0 serial output to a midi_port device, (2) configure baud rate (31250 standard MIDI), (3) test with a MIDI monitor to verify note output from keybed.
-
----
-
 #### 🟡 MAME: Update PR #14558 with accumulated driver fixes {#issue-kn5000-f8gw}
 
 **ID:** `kn5000-f8gw` | **Priority:** Medium | **Created:** 2026-03-10
 
 The MAME upstream PR #14558 was opened with an earlier version of the driver. Since then, many significant fixes have been committed locally: INT0 level-triggered starvation fix, PORT Z MSTAT readback fix, tone generator hold timer, SNS NMI emulation, HDAE5000 IDE/ATA wiring, FDC device instantiation, control panel HLE improvements, DSP device stubs, and more. Need to: (1) rebase kn5000_pr branch onto current MAME master, (2) cherry-pick/squash all relevant fixes, (3) ensure MAME code style compliance (BIT() macros, logmacro.h, no AI attribution), (4) update PR description with current feature list, (5) address any reviewer feedback.
-
----
-
-#### ⚪ Disassembly: Semantic analysis of NAKA obfuscated code blocks {#issue-kn5000-iueh}
-
-**ID:** `kn5000-iueh` | **Priority:** Low | **Created:** 2026-03-10
-
-18 NAKA files in maincpu/ contain ~41,000 lines with ~9,109 LABEL_XXXXXX placeholder names. These are deliberately obfuscated code blocks (likely style/rhythm/accompaniment-related proprietary algorithms). Semantic analysis would: (1) identify callers from dispatch tables, (2) trace register usage and memory access patterns, (3) cross-reference with known subsystems (sequencer, tone gen, accompaniment engine), (4) assign meaningful labels. This is the largest remaining chunk of unanalyzed code. Start with smaller NAKA files (86-683 lines) before tackling the large ones (5,000-8,000 lines).
 
 ---
 
@@ -206,10 +190,22 @@ Production-ready emulation and homebrew support.
 
 ---
 
+#### ⚪ Rename LABEL_XXXXXX placeholders in NAKA ui_widgets files to semantic names {#issue-kn5000-42jw}
+
+**ID:** `kn5000-42jw` | **Priority:** P4 | **Created:** 2026-03-14
+
+With NAKA files identified as UI widget descriptors, the ~9,015 LABEL_XXXXXX placeholders can be renamed to semantic names based on widget type, screen context, and handler function. Start with smaller files. Cross-reference RegisterObjectTable() entries and Proc handler names (Ac*, Iv*, Ps*, Vw* prefixes). Follow-up to kn5000-iueh research.
+
+---
+
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-cpn5` | Convert 357 R+d16 .byte instructions to native mnemonics | 2026-03-14 |
+| `kn5000-iueh` | Disassembly: Semantic analysis of NAKA obfuscated code bl... | 2026-03-14 |
+| `kn5000-2w05` | Rename NAKA ui_widgets files to semantic names | 2026-03-14 |
+| `kn5000-9qt3` | MAME: Implement MIDI output (TX0) | 2026-03-14 |
 | `kn5000-psio` | LLVM: Add R+d16 addressing mode for TLCS-900 backend | 2026-03-14 |
 | `kn5000-rqtw` | TMP94C241: Internal RAM range 0xC00-0xFFF missing from ad... | 2026-03-14 |
 | `kn5000-umft` | MAME: Complete FDC address mapping at 0x110000-0x12FFFF | 2026-03-14 |
@@ -226,12 +222,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-5uor` | Decode all style_ui_paramblock_*.s files | 2026-03-13 |
 | `kn5000-jyo7` | MAME: Build and test TMP94C241 16-bit timer interrupt fix | 2026-03-13 |
 | `kn5000-xpkj` | Annotate all StyleUI screendata bytecode files | 2026-03-13 |
-| `kn5000-hkeq` | Decode style_ui_screendata_main.s bytecode format | 2026-03-13 |
-| `kn5000-ko7x` | Document all dispatch/jump tables in ROM disassembly | 2026-03-09 |
-| `kn5000-3sar` | Fix cpanel HLE for Feature Demo navigation without breaki... | 2026-03-09 |
-| `kn5000-tgd6` | MAME: TMP94C241 timer output callbacks fire unconditional... | 2026-03-09 |
 
-*...and 281 more closed issues*
+*...and 285 more closed issues*
 
 ---
 
@@ -243,15 +235,16 @@ Production-ready emulation and homebrew support.
 |----------|-------|
 | Critical | 1 |
 | High | 2 |
-| Medium | 2 |
-| Low | 4 |
+| Medium | 1 |
+| Low | 3 |
+| P4 | 1 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 9 |
+| Other | 8 |
 
 ---
 
-*Last updated: 2026-03-14 11:32*
+*Last updated: 2026-03-14 12:00*
