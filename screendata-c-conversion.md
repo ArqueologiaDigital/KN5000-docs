@@ -74,5 +74,19 @@ These C files currently serve as typed documentation. The original data remains 
 | 1 | Accompaniment engine (1 pair, 277 bytes) | **Done** |
 | 2 | Sound editor inventory & tooling generalization | **Done** |
 | 3 | Sound editor extraction & conversion (22 files, 3,238 bytes) | **Done** |
-| 4 | Symbolic SD_PTR cross-references | Not started |
-| 5 | Build integration (replace inline .byte with .incbin) | Not started |
+| 4 | Symbolic SD_PTR cross-references | **Done** |
+| 5 | Build integration (replace inline .byte with .incbin) | Deferred |
+
+## Phase 4 Details: SD_PTR Cross-References
+
+The `screendata_parser.py` generator now automatically detects self-referential WIDGET handler addresses and emits `SD_PTR(field)` expressions. Analysis of all 23 blocks found only `accomp_display.c` has self-referential handlers (4 WIDGETs pointing to string data within the same block). All sound editor blocks reference external handler addresses.
+
+## Phase 5 Details: Build Integration Blockers
+
+Making C the authoritative source requires replacing inline `.byte` in assembly with `.incbin` of compiled C output. Two obstacles:
+
+**Sound editor (`sound_editor_ui.s`):** The screen data region contains 17 internal labels referenced by dispatch tables and code (e.g., `LABEL_F12C6F`, `LABEL_F12C83` for drum kit variant selection; `LABEL_F1440B`-`LABEL_F144D3` for parameter grid sub-blocks). Splitting the data at each label boundary and stitching `.incbin` segments between label definitions is possible but fragile.
+
+**Accompaniment (`accompaniment_engine.s`):** The 277-byte `accomp_display` data sits at offset 0x360 within a larger 2,096-byte data block (`LABEL_F6A9D7`–`LABEL_F6B207`) that has no internal labels. The block could be split at the accomp_display boundaries, but the surrounding data would also need to be extracted as separate binary segments.
+
+Both cases load data by raw immediate address (`ld xiy, 0xF6AD37`), not by label — so the binary position must remain exact, which byte-matching guarantees.
