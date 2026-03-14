@@ -284,47 +284,83 @@ The correct button sequence to activate the Feature Demo from the home screen:
 
 ---
 
-## Two Separate Systems in the Feature Demo
+## Two Distinct Activation Paths
 
-The Feature Demo consists of two independent subsystems that operate in parallel:
+The Feature Demo's visual SSF presentation has TWO completely different activation paths. Understanding the distinction is critical to diagnosing why the automated demo fails in MAME.
 
-### 1. Demo Timer System (Song Cycling)
+### Path 1 — Manual (Physical Button Press): WORKS
 
-- **Timer variable:** DRAM address `0x0D2F` (3375 decimal)
-- **Purpose:** Independent countdown timer that controls song cycling through demo items
-- **Entry point:** `Demo_SelectEntry_TimerTick` (0xF86D45), called from the main loop timer
-- **MAME status:** **Works correctly** with the tone gen hold timer fix
+This is the path triggered by a real user pressing a physical panel button while in the Feature Presentation sub-menu:
 
-The Demo Timer System handles the musical demonstration — it sequences through songs, manages auto-play timing, and coordinates playback state transitions. This is the system responsible for the audio content of the Feature Demo.
+```
+Physical button press
+  → UIState_KeyScan_Dispatch
+    → event 0x1C00038
+      → GroupBoxProc (UI container widget handler)
+        → GroupBoxProc_StartSSFPresentation (0xF9A273)
+          → allocates workspace with tag 0xB80A
+            → event 0x1C0001C
+              → AcPresentCtrl_CheckSSFStart (0xF84625)
+                → tag == 0xB80A? YES
+                  → event 0x1C00006
+                    → SSF XML parser starts
+                      → FTBMP bitmaps rendered to VRAM
+```
 
-### 2. SSF Visual Presentation (Bitmap Rendering)
+Key: `GroupBoxProc_StartSSFPresentation` builds the workspace bytes individually from stack-resident parameters, producing `workspace[0]=0x0A, workspace[1]=0xB8, workspace[2..3]=0x00` — the type-tag `0x0000B80A`. It then sends event `0x1C0001C` via **direct** `SendEvent` (`0xFA9660`).
 
-- **Trigger event:** `0x1C00038`
-- **Purpose:** Handles FTBMP bitmap rendering — the visual slideshow of images (Technics logo, subwoofers, floppy discs, etc.)
-- **Handler:** `GroupBoxProc_StartSSFPresentation` (0xF9A273) — should create workspace with tag `0xB80A` and dispatch to `AcPresentCtrl_CheckSSFStart`
-- **MAME status:** **Currently broken** — event `0x1C00038` does not reach `GroupBoxProc_StartSSFPresentation`
+### Path 2 — Automated (Demo Timer/Sequencer): FAILS
 
-The SSF system parses the XML script (`hkst_55.ssf`) and renders the FTBMP bitmap images to VRAM. Without this system working, the demo plays songs but does not display the accompanying visual presentation.
+This is the path taken by the automated demo sequencer when cycling through demo items:
+
+```
+Demo timer/sequencer
+  → DemoMenu_BuildItemWorkspace (0xF83CEA)
+    → allocates workspace with tag 0x82xx (from table at 0xE9F88C)
+      → event 0x1C0001C (via PostEventWithParam, queued)
+        → AcPresentCtrl_CheckSSFStart (0xF84625)
+          → tag == 0xB80A? NO (tag is 0x82xx)
+            → event 0x1C00006 NEVER SENT
+              → SSF parser never starts
+                → FTBMP bitmaps never render
+```
+
+`DemoMenu_BuildItemWorkspace` reads a "part select" index `R` from DRAM `0x8D3A` and computes `workspace[0..3] = table[0xE9F88C + iz*2] + R*1024`. The table holds 16-bit values in the `0x82xx`-`0x82CC` range. This formula can **never** produce `0x0000B80A` for any byte `R`, because the difference `0xB80A - 0x82xx` is never divisible by 1024.
+
+### Why the Automated Path Cannot Trigger SSF
+
+The workspace tag mismatch is architectural: the automated demo sequencer uses `DemoMenu_BuildItemWorkspace` which creates workspaces tagged for song/style selection (`0x82xx`), not for SSF presentation (`0xB80A`). The SSF-correct tag is only produced by `GroupBoxProc_StartSSFPresentation`, which is only reached via the manual button-press path through event `0x1C00038`.
+
+Additionally, the demo state machine variable at DRAM `0x0251D8` stays `0x0000` throughout the automated demo. This state machine is what should drive the visual SSF through its presentation sequence, but it never advances because the sequencer parts (`DRAM[0x10420] = 0xFFFF`, all 16 parts active) never complete without waveform ROMs.
 
 ### SSF Gate State 0xE4
 
-The gate table entry for state `0xE4` (FEATURE PRESENTATION sub-menu) contains the **unconditional marker** `0xFFFE`. This means any key press in state `0xE4` should broadcast event `0x1C00038` — the gate is wide open.
+The gate table entry for state `0xE4` (FEATURE PRESENTATION sub-menu) contains the **unconditional marker** `0xFFFE`. This means any key press in state `0xE4` should broadcast event `0x1C00038` — the gate is wide open. This confirms the manual path would work if physical button input were simulated.
 
-### Workspace Tag Mismatch
+### Key Code Locations
 
-The root cause of the SSF failure involves a workspace type-tag mismatch between two code paths:
-
-- **`DemoMenu_BuildItemWorkspace`** (0xF83CEA): Creates workspaces with `0x82xx` tags (computed from table at `0xE9F88C` plus a part-select offset). These tags **never** equal `0xB80A`.
-- **`AcPresentCtrl_CheckSSFStart`** (0xF84625): Requires workspace tag `0xB80A` to start the SSF presentation.
-- **`GroupBoxProc_StartSSFPresentation`** (0xF9A273): Should create the correct `0xB80A` tag, but **never receives event `0x1C00038`** in the current MAME emulation.
-
-The mismatch means that even though `DemoMenu_BuildItemWorkspace` fires event `0x1C0001C` repeatedly (once per menu item), the workspace tag check at `AcPresentCtrl_CheckSSFStart` always fails. The correct path requires `GroupBoxProc_StartSSFPresentation` to receive `0x1C00038` first and build the `0xB80A`-tagged workspace, but this event never arrives.
+| Function | ROM Address | Source File | Purpose |
+|----------|-------------|-------------|---------|
+| `GroupBoxProc_StartSSFPresentation` | 0xF9A273 | `presentation_sound_nav.s:33` | Builds correct `0xB80A` workspace, sends direct event |
+| `AcPresentCtrl_CheckSSFStart` | 0xF84625 | `drawbar_panel_ui.s:15535` | Checks workspace tag, gates SSF start |
+| `DemoMenu_BuildItemWorkspace` | 0xF83CEA | `drawbar_panel_ui.s:14643` | Builds `0x82xx` workspace (wrong tag for SSF) |
+| Workspace tag table | 0xE9F88C | — | 16-bit values in `0x82xx` range |
 
 ---
 
 ## MAME Emulation Status
 
-**Current status (March 2026):** **Partially working.** The Demo Timer System (song cycling) works correctly in MAME — the timer counts down, songs cycle, and `PlaySong` returns after ~16 seconds of SwbtWr buffer processing. The SSF Visual Presentation (FTBMP bitmap rendering) is currently broken — event `0x1C00038` does not reach `GroupBoxProc_StartSSFPresentation`.
+**Current status (March 2026):** **Partially working.** The Demo Timer System (song cycling) works correctly in MAME — the timer counts down, songs cycle, and `PlaySong` returns after ~16 seconds of SwbtWr buffer processing. The SSF Visual Presentation (FTBMP bitmap rendering) does not trigger because the automated demo path uses workspace tags (`0x82xx`) that fail the `0xB80A` check in `AcPresentCtrl_CheckSSFStart`.
+
+**Root cause summary:**
+- The automated demo sequencer (`DemoMenu_BuildItemWorkspace`) creates workspaces with `0x82xx` tags
+- The SSF presentation requires workspace tag `0xB80A`, which is only created by the manual button-press path (`GroupBoxProc_StartSSFPresentation`)
+- `demo_state` at DRAM `0x0251D8` stays `0x0000` — the visual state machine never advances
+- Sequencer parts never complete (`DRAM[0x10420] = 0xFFFF`) without waveform ROMs
+
+**Two independent bugs remain:**
+1. **Song cycling stuck:** Sequencer parts never complete without waveform ROMs, preventing the timer from resetting for the next song
+2. **SSF never triggers in automated mode:** The automated path fundamentally cannot produce the correct workspace tag; only the manual button-press path through `GroupBoxProc_StartSSFPresentation` creates tag `0xB80A`
 
 **Reference Lua script:** `/tmp/ftdemo_v3.lua` — automated navigation from boot to Feature Demo activation.
 
@@ -384,9 +420,14 @@ jrl z, GroupBoxProc_Ev1C00030              ; via show-item handler
 
 When this event reaches `AcPresentCtrl_CheckSSFStart`, the type-tag check **passes**, and the handler sends event `0x1C00006` — which starts SSF presentation parsing, loads the XML from ROM, and begins rendering FTBMP images.
 
-#### Root cause summary (initial hypothesis — superseded)
+#### Root cause summary
 
-Initial analysis concluded that `GroupBoxProc_StartSSFPresentation` was never reached via the button-press navigation path tested. Subsequent investigation revealed the correct navigation: pressing **DEMO** (not LEFT 2) in state `0xE4` triggers `GroupBoxProc`'s event handler directly, which calls `GroupBoxProc_StartSSFPresentation` and correctly builds the `0xB80A` workspace tag. See "MAME Emulation Status" above for the confirmed working sequence.
+The Feature Demo has two distinct activation paths with fundamentally different workspace tag behavior (see "Two Distinct Activation Paths" above):
+
+- **Manual path** (physical button press in state `0xE4`): `UIState_KeyScan_Dispatch` → event `0x1C00038` → `GroupBoxProc_StartSSFPresentation` → workspace tag `0xB80A` → `AcPresentCtrl_CheckSSFStart` passes → SSF starts
+- **Automated path** (demo timer/sequencer): `DemoMenu_BuildItemWorkspace` → workspace tag `0x82xx` → `AcPresentCtrl_CheckSSFStart` fails → SSF never starts
+
+The automated path cannot produce the correct workspace tag by design. The `0x82xx` tags from the table at `0xE9F88C` serve a different purpose (song/style selection). Only `GroupBoxProc_StartSSFPresentation` constructs the `0xB80A` tag needed for SSF, and it is only reachable through the manual button-press event chain.
 
 ### Call-chain overview
 
@@ -508,11 +549,11 @@ Investigation used MAME Lua autoboot scripts to monitor `LABEL_F98697`, `FA9945`
 
 **Correction (March 9):** The original conclusion that "the Feature Demo works correctly" was **wrong**. The 9 "SSF START" hits were false positives caused by the ROM read tap overlapping with the instruction encoding of `call 0xFA9660` at address `0xF9A26F`. The "FTBMP01.BMP in VRAM" observation was likely from boot initialization, not from the demo.
 
-**Current status:** Pressing DEMO in state `0xE4` transitions directly to `0x01` (normal mode), exiting the demo menu entirely. It does NOT trigger SSF. Pressing LEFT 2 starts the demo timer (song cycling) but does NOT trigger SSF visual presentation. The `demo_state` at `0x0251D8` remains `0x0000` throughout.
+**Current status:** Pressing DEMO in state `0xE4` transitions directly to `0x01` (normal mode), exiting the demo menu entirely. It does NOT trigger SSF. Pressing LEFT 2 starts the demo timer (song cycling) but does NOT trigger SSF visual presentation. The `demo_state` at DRAM `0x0251D8` remains `0x0000` throughout — the visual state machine never advances because sequencer parts never complete (`DRAM[0x10420] = 0xFFFF` without waveform ROMs).
 
 **Two independent bugs remain:**
-1. **Song cycling stuck:** Sequencer parts (`DRAM[10420]=0xFFFF`) never complete without waveform ROMs, preventing the timer from resetting for the next song
-2. **SSF never triggers:** No button press in the current emulation triggers `GroupBoxProc_StartSSFPresentation`. The mechanism that sets `demo_state` at `0x0251D8` to a non-zero value has not been identified
+1. **Song cycling stuck:** Sequencer parts (`DRAM[0x10420]=0xFFFF`) never complete without waveform ROMs, preventing the timer from resetting for the next song
+2. **SSF never triggers in automated mode:** The automated demo path through `DemoMenu_BuildItemWorkspace` creates workspace tags in the `0x82xx` range (from table at `0xE9F88C`), which always fail the `0xB80A` check in `AcPresentCtrl_CheckSSFStart`. Only the manual button-press path through `GroupBoxProc_StartSSFPresentation` (0xF9A273, in `presentation_sound_nav.s:33`) can produce the correct tag
 
 ---
 
@@ -675,4 +716,4 @@ After SwbtWr processing completes (~960 frames), PlaySong returns (sets `DRAM[0x
 
 ---
 
-*Last updated: March 9, 2026*
+*Last updated: March 14, 2026*
