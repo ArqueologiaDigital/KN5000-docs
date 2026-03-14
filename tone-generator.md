@@ -93,22 +93,22 @@ Each of the 64 voices has registers organized into groups. The register address 
 | +0x0440 | 0x04 | 1 | +0x10 | Level/key parameter bank 1 |
 | +0x0480 | 0x04 | 2 | +0x12 | Level/key parameter bank 2 |
 | +0x04C0 | 0x04 | 3 | +0x14 | Level/key parameter bank 3 |
-| +0x0500 | 0x05 | 0 | +0x16 | Voice parameter 5, bank 0 |
-| +0x0540 | 0x05 | 1 | +0x3A | Voice parameter 5, bank 1 (bit 15 = latch strobe) |
-| +0x0580 | 0x05 | 2 | +0x3C | Voice parameter 5, bank 2 (bit 15 = latch strobe) |
-| +0x05C0 | 0x05 | 3 | +0x3E | Voice parameter 5, bank 3 (bit 15 = latch strobe) |
-| +0x0600 | 0x06 | 0 | +0x40 | Voice parameter 6, bank 0 |
-| +0x0640 | 0x06 | 1 | +0x42 | Voice parameter 6, bank 1 |
+| +0x0500 | 0x05 | 0 | +0x16 | **Modulation param** (written just before KEY ON) |
+| +0x0540 | 0x05 | 1 | +0x3A | **Extended param 1** (bit 15 = latch strobe) |
+| +0x0580 | 0x05 | 2 | +0x3C | **Extended param 2** (bit 15 = latch strobe) |
+| +0x05C0 | 0x05 | 3 | +0x3E | **Extended param 3** (bit 15 = latch strobe) |
+| +0x0600 | 0x06 | 0 | +0x40 | **Aux routing param 0** |
+| +0x0640 | 0x06 | 1 | +0x42 | **Aux routing param 1** |
 | +0x0800 | 0x08 | 0 | +0x18 | **Main Volume** (0xFF80=mute, lower=louder) |
 | +0x0840 | 0x08 | 1 | +0x1A | **Pan Left** (0x00=silent, 0x3C=center, 0x78=full) |
 | +0x0880 | 0x08 | 2 | +0x1C | **Pan Right** (0x00=silent, 0x3C=center, 0x78=full) |
 | +0x08C0 | 0x08 | 3 | +0x1E | **DSP/Effects Send Level** |
-| +0x0900 | 0x09 | 0 | +0x20 | Aux level, bank 0 |
-| +0x0940 | 0x09 | 1 | +0x22 | Aux level, bank 1 |
-| +0x0980 | 0x09 | 2 | +0x24 | Aux level, bank 2 |
-| +0x09C0 | 0x09 | 3 | +0x26 | Aux level, bank 3 |
-| +0x0A00 | 0x0A | 0 | +0x28 | Aux parameter, bank 0 |
-| +0x0A40 | 0x0A | 1 | +0x2A | Aux parameter, bank 1 |
+| +0x0900 | 0x09 | 0 | +0x20 | **DSP effects send 0** (4 independent aux sends) |
+| +0x0940 | 0x09 | 1 | +0x22 | **DSP effects send 1** |
+| +0x0980 | 0x09 | 2 | +0x24 | **DSP effects send 2** |
+| +0x09C0 | 0x09 | 3 | +0x26 | **DSP effects send 3** |
+| +0x0A00 | 0x0A | 0 | +0x28 | **Secondary aux param 0** (post-processing) |
+| +0x0A40 | 0x0A | 1 | +0x2A | **Secondary aux param 1** |
 
 ### ToneGen_WriteVoiceParams Sequence
 
