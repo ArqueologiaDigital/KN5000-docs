@@ -126,15 +126,17 @@ The SubCPU firmware writes waveform addresses to the tone generator via two per-
 
 | Register Offset | Struct Offset | Description |
 |-----------------|---------------|-------------|
-| +0x0040 (group 0, bank 1) | +2 | Waveform pointer low (16-bit) |
-| +0x0080 (group 0, bank 2) | +4 | Waveform pointer high (16-bit, bit 15 = latch strobe) |
-| +0x00C0 (group 0, bank 3) | +6 | Waveform control |
+| +0x0040 (group 0, bank 1) | +2 | **Pitch increment** (16-bit semitone table lookup) |
+| +0x0080 (group 0, bank 2) | +4 | **Voice mode/velocity** (bit 15 = latch strobe; velocity OR'd in) |
+| +0x00C0 (group 0, bank 3) | +6 | Waveform control (cleared on note-off) |
 
-Together, the low and high pointer registers form a 32-bit address into the 16 MB waveform ROM space. The latch strobe protocol (write with bit 15 SET, then rewrite with bit 15 CLEAR) triggers the tone generator hardware to load the sample data from the addressed ROM location.
+The firmware computes: `velocity_volume = (vel^2 / 4) + 63` (range 63-4095) and OR's it into register +0x0080. The latch strobe protocol (write with bit 15 SET, then rewrite with bit 15 CLEAR) triggers the tone generator hardware to load and process the voice parameters.
+
+> **Note:** These registers were previously labeled "waveform pointer low/high" based on their position in the write sequence. Firmware analysis of `ToneGen_SetupPolyVoice` confirms they carry pitch and velocity data instead.
 
 ## Sample Rate
 
-The native sample rate of the waveform data is not explicitly stored in the ROM. The tone generator hardware plays back samples at a rate determined by the pitch registers (groups 4 and 5), which are computed from the MIDI note number. The waveform data is recorded at a fixed base sample rate and pitch-shifted by the hardware during playback.
+The native sample rate of the waveform data is not explicitly stored in the ROM. The pitch increment register (+0x0040) controls the playback rate. The firmware computes: `octave = (MIDI_note + 36) / 12`, `semitone = remainder`, then looks up a 16-bit value from the pitch table at ROM 0x01217D (12 entries, one per semitone). This value is written to the pitch register. The waveform data is recorded at a fixed base sample rate and pitch-shifted by the hardware during playback.
 
 Based on the DAC specification (PCM69AU, 18-bit stereo) and typical Matsushita tone generator designs, the output sample rate is likely **48 kHz** or **44.1 kHz**.
 
