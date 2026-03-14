@@ -1127,7 +1127,7 @@ All proprietary CCs use `channel × 0x11F + base_offset` to access per-channel d
 
 The tone generator (IC303, TC183C230002) is a custom Matsushita 64-voice wavetable synthesis LSI. It has two interfaces:
 
-- **Register config** at 0x100000/0x100002: Write voice parameters and global settings via register-indirect addressing (28 params per voice, 13 global registers)
+- **Register config** at 0x100000/0x100002: Write voice parameters and global settings via register-indirect addressing (32 registers per voice across 8 groups × 4 banks, 13 global registers)
 - **Keyboard input** at 0x110000/0x110002: Read voice events (note on/off with velocity)
 
 See [Tone Generator]({{ site.baseurl }}/tone-generator/) for the complete register map, initialization sequence, and chip inventory.

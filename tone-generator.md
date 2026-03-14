@@ -17,7 +17,7 @@ The KN5000's tone generator is a custom Matsushita LSI (TC183C230002, IC303) tha
 | Chip | TC183C230002 (Matsushita custom) |
 | Package Location | IC303 |
 | Voice Count | 64 independent voices |
-| Parameters per Voice | 28 registers (68-byte parameter struct) |
+| Parameters per Voice | 32 registers (8 groups × 4 banks, 44-byte firmware struct) |
 | Global Registers | 13 (system config + DSP/effects) |
 | Interface | Memory-mapped register-indirect (address/data pair) |
 | Address Lines | SubCPU memory bus + P6.7 chip-select |
