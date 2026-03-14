@@ -13,41 +13,41 @@ Detailed hardware documentation extracted from the service manual schematics.
 ## System Overview
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│                         CONTROL PANEL                          │
-│  ┌──────────────┐  ┌─────────┐  ┌─────────┐  ┌──────────────┐ │
-│  │     CPL      │  │  CPCL   │  │  CPCR   │  │     CPR      │ │
-│  │ M37471M2196S │  │ Switches│  │ Switches│  │ M37471M2196S │ │
-│  │   8-bit MCU  │  │  LEDs   │  │         │  │   8-bit MCU  │ │
-│  └──────┬───────┘  └────┬────┘  └────┬────┘  └──────┬───────┘ │
-│         │ SIN/SOUT/CLK  │            │       SIN/SOUT/CLK │   │
-└─────────┼───────────────┴────────────┴────────────────────┼───┘
-          │                                                 │
-          └────────────────────┬────────────────────────────┘
-                               │ Serial Bus
-┌──────────────────────────────┴─────────────────────────────────┐
-│                          MAIN PCB                              │
-│                                                                │
-│  ┌─────────┐    Latch     ┌─────────┐                         │
-│  │  IC5    │◄──0x120000──►│  IC27   │                         │
-│  │Main CPU │              │ Sub CPU │                         │
-│  │TLCS-900 │              │TLCS-900 │                         │
-│  └────┬────┘              └─┬──┬──┬─┘                         │
-│       │                     │  │  │                            │
-│  ┌────┴────┐           ┌────┘  │  └────┐                      │
-│  │ IC206   │           │       │       │                      │
-│  │  LCD    │      ┌────┴───┐ ┌─┴────┐ ┌┴───────┐             │
-│  │ MN89304 │      │ IC303  │ │IC311 │ │ IC310  │             │
-│  └────┬────┘      │Tone Gen│ │ DSP1 │ │  DSP2  │             │
-│       │           │TC183C..│ │Effect│ │Mix/EQ  │             │
-│  ┌────┴────┐      └────┬───┘ └──────┘ └────────┘             │
-│  │ IC207   │           │                                      │
-│  │ VRAM    │      ┌────┴───┐                                  │
-│  │4Mbit    │      │IC304-6 │   ┌────────┐                    │
-│  └─────────┘      │Waveform│   │ IC208  │                    │
-│                    │ ROMs   │   │  FDC   │                    │
-│                    └────────┘   └────────┘                    │
-└───────────────────────────────────────────────────────────────┘
++----------------------------------------------------------------+
+|                         CONTROL PANEL                          |
+|  +--------------+  +---------+  +---------+  +--------------+ |
+|  |     CPL      |  |  CPCL   |  |  CPCR   |  |     CPR      | |
+|  | M37471M2196S |  | Switches|  | Switches|  | M37471M2196S | |
+|  |   8-bit MCU  |  |  LEDs   |  |         |  |   8-bit MCU  | |
+|  +------+-------+  +----+----+  +----+----+  +------+-------+ |
+|         | SIN/SOUT/CLK  |            |    SIN/SOUT/CLK |       |
++---------+---------------+------------+----+------------+-------+
+          |                                              |
+          +--------------------+-------------------------+
+                               | Serial Bus
++------------------------------+-------------------------------+
+|                          MAIN PCB                             |
+|                                                               |
+|  +---------+     Latch    +---------+                         |
+|  |  IC5    |<--0x120000-->|  IC27   |                         |
+|  |Main CPU |              | Sub CPU |                         |
+|  |TLCS-900 |              |TLCS-900 |                         |
+|  +----+----+              +-+--+--+-+                         |
+|       |                     |  |  |                           |
+|  +----+----+           +----+  |  +----+                      |
+|  | IC206   |           |       |       |                      |
+|  |  LCD    |      +----+---+ +-+----+ ++-------+              |
+|  | MN89304 |      | IC303  | |IC311 | | IC310  |             |
+|  +----+----+      |Tone Gen| | DSP1 | |  DSP2  |             |
+|       |           |TC183C..| |Effect| |Mix/EQ  |             |
+|  +----+----+      +----+---+ +------+ +--------+             |
+|  | IC207   |           |                                      |
+|  | VRAM    |      +----+---+                                  |
+|  | 4Mbit   |      |IC304-6 |   +--------+                    |
+|  +---------+      |Waveform|   | IC208  |                    |
+|                    | ROMs   |   |  FDC   |                    |
+|                    +--------+   +--------+                    |
++---------------------------------------------------------------+
 ```
 
 **Signal flow:** Main CPU handles UI, sequencing, and high-level music control. It sends MIDI-like commands to the Sub CPU via the inter-CPU latch at 0x120000. The Sub CPU translates these into low-level register writes for the tone generator (IC303) and DSP chips (IC310, IC311). Waveform data is stored in IC304-306 (currently undumped). Audio output goes through the DSPs for effects processing and mixing before reaching the DAC.

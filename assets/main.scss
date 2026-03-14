@@ -4,6 +4,15 @@
 @import "minima";
 
 /* ============================================================
+   Code blocks: use fonts with reliable Unicode box-drawing
+   ============================================================ */
+
+pre, code {
+  font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono",
+               "Liberation Mono", Menlo, Monaco, Consolas, monospace;
+}
+
+/* ============================================================
    Sidebar Navigation
    ============================================================ */
 
