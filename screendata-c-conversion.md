@@ -22,40 +22,57 @@ Packed binary commands with opcodes: 0x01 HLINE, 0x02 WIDGET/VLINE, 0x06 LABELED
 | style_ui/ctlonly.c | 551 bytes | Control-only variant |
 | style_ui/paramblock/*.c (12 files) | 39-250 bytes each | Parameter display blocks |
 
-## Remaining Work
+## Converted (Sound Editor + Accompaniment)
 
-### Sound Editor UI (audio/sound_editor_ui.s)
+22 sound editor screen data files and 1 accompaniment engine file, totaling 3,515 bytes across 23 C source files. All verified 100% byte-match against the original ROM.
 
-- 30 screen data pairs (55 unique addresses)
-- ~14 KB of data across addresses 0xF12B86-0xF163E1
-- Inline .byte data interleaved with code
-- Includes: DrumKit screens, WaveformSelect, RhythmTransport, etc.
+| File | Size | Commands | Description |
+|------|------|----------|-------------|
+| se_drumkit_display.c | 293 bytes | 27 | Drum kit variant selection |
+| se_general_edit.c | 96 bytes | 7 | General parameter edit |
+| se_compare_screen.c | 139 bytes | 13 | Compare/apply screen |
+| se_name_editor.c | 218 bytes | 18 | Sound name editor |
+| se_parameter_grid.c | 221 bytes | 18 | Parameter grid display |
+| se_transport_display.c | 141 bytes | 10 | Transport controls |
+| se_apply_confirm.c | 55 bytes | 5 | Apply confirmation |
+| se_setup_params_full.c | 471 bytes | 52 | Full parameter setup |
+| se_setup_nav_full.c | 293 bytes | 35 | Navigation setup |
+| se_setup_editor_full.c | 266 bytes | 28 | Editor setup |
+| se_setup_waveform.c | 206 bytes | 22 | Waveform selection |
+| se_setup_rhythm.c | 191 bytes | 23 | Rhythm setup |
+| se_setup_ctrl_full.c | 167 bytes | 21 | Controller setup |
+| se_setup_ctrl_list.c | 130 bytes | 14 | Controller list |
+| se_setup_transport.c | 107 bytes | 11 | Transport setup |
+| se_setup_env.c | 107 bytes | 13 | Envelope setup |
+| se_setup_labels.c | 47 bytes | 5 | Label definitions |
+| se_setup_sel_rects.c | 30 bytes | 3 | Selection rectangles |
+| se_setup_sel{1-4}.c | 10-30 bytes | 1-2 | Selection rect entries |
+| accomp_display.c | 277 bytes | 13 | Accompaniment editor display |
 
-### Accompaniment Engine (sequencer/accompaniment_engine.s)
+### Remaining: Build Integration
 
-- 1 screen data pair (~200 bytes)
-- Addresses 0xF6AD37-0xF6AD67
+These C files currently serve as typed documentation. The original data remains as inline `.byte` directives in `sound_editor_ui.s` and `accompaniment_engine.s`. Replacing the inline data with `.incbin` references (making C the authoritative source) requires handling label dependencies within the data blocks — labels referenced by surrounding code point into the middle of these data regions.
 
 ### NOT in scope: NAKA Widget Tables
 
-~74 screen definitions using a completely different format (hierarchical .long pointer chains). Separate rendering pipeline - future project.
+~74 screen definitions using a completely different format (hierarchical .long pointer chains). Separate rendering pipeline — future project.
 
 ## Conversion Pipeline
 
-1. Python generator reads ROM binary at known offset
-2. Parses ScreenData bytecodes into typed structs (screendata_types.h)
-3. Emits C source with packed struct initializers
-4. Self-referential handler addresses use SD_PTR(field) macro
-5. clang compiles C to object, llvm-objcopy extracts .text section
-6. Assembly .incbin includes the compiled binary
-7. Verified by compare_roms.py (100% byte match required)
+1. `screendata_parser.py` reads ROM binary and parses ScreenData bytecodes
+2. `generate_all_screendata.py` generates typed C struct source files for all known blocks
+3. Self-referential handler addresses use `SD_PTR(field)` macro
+4. `clang -target tlcs900` compiles C to object, `llvm-objcopy` extracts `.text` section
+5. For Style UI: assembly `.incbin` includes the compiled binary (authoritative)
+6. For sound editor/accompaniment: C files verified against ROM but not yet integrated into build
+7. All verified by `compare_roms.py` (100% byte match required)
 
 ## Phase Plan
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| 1 | Accompaniment engine (1 pair, ~200 bytes) | Not started |
-| 2 | Sound editor inventory & tooling generalization | Not started |
-| 3 | Sound editor extraction & conversion (~30 pairs) | Not started |
+| 1 | Accompaniment engine (1 pair, 277 bytes) | **Done** |
+| 2 | Sound editor inventory & tooling generalization | **Done** |
+| 3 | Sound editor extraction & conversion (22 files, 3,238 bytes) | **Done** |
 | 4 | Symbolic SD_PTR cross-references | Not started |
-| 5 | Final verification & cleanup | Not started |
+| 5 | Build integration (replace inline .byte with .incbin) | Not started |
