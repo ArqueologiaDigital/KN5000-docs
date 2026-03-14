@@ -116,28 +116,28 @@ The firmware's `ToneGen_WriteVoiceParams` function (at subcpu 0x02D0FD) writes 2
 
 | Step | Register | Struct Offset | Notes |
 |------|----------|--------------|-------|
-| 1 | +0x040 | +2 | Group 0, bank 1 |
-| 2 | +0x080 | +4 | Group 0, bank 2 (bit 15 SET = strobe) |
-| 3 | +0x0C0 | +6 | Group 0, bank 3 |
+| 1 | +0x040 | +2 | **Pitch increment** (semitone table, 0x8000=1.0x) |
+| 2 | +0x080 | +4 | **Voice mode/velocity** (bit 15 SET = latch strobe) |
+| 3 | +0x0C0 | +6 | **Waveform control** (cleared on note-off) |
 | 4 | +0x100 | +8 | Interpolated pitch (portamento/legato) |
 | 5 | +0x140 | +10 | Secondary pitch offset (detune) |
 | 6 | +0x180 | +12 | Velocity/expression coefficient |
-| 7 | +0x400 | +14 | Group 4, bank 0 (note key info: note<<8, bit 15=active) |
-| 8 | +0x440 | +16 | Group 4, bank 1 |
-| 9 | +0x480 | +18 | Group 4, bank 2 |
-| 10 | +0x4C0 | +20 | Group 4, bank 3 |
-| 11 | +0x500 | +22 | Group 5, bank 0 |
-| 12 | +0x000 | — | Voice control = 0x8100 (KEY ON) |
-| 13 | +0x840 | +26 | Pan left (0-0x78, center=0x3C) |
-| 14 | +0x880 | +28 | Pan right (0-0x78, center=0x3C) |
-| 15 | +0x8C0 | +30 | DSP/effects send level |
-| 16 | +0x900 | +32 | Aux level, bank 0 |
-| 17 | +0x940 | +34 | Aux level, bank 1 |
-| 18 | +0x980 | +36 | Aux level, bank 2 |
-| 19 | +0x9C0 | +38 | Aux level, bank 3 |
-| 20 | +0xA00 | +40 | Aux param, bank 0 |
-| 21 | +0xA40 | +42 | Aux param, bank 1 |
-| 22 | +0x080 | +4 | Group 0, bank 2 (bit 15 CLEAR = complete strobe) |
+| 7 | +0x400 | +14 | **Note key info** (note<<8, bit 15=active) |
+| 8 | +0x440 | +16 | Level/key param bank 1 |
+| 9 | +0x480 | +18 | Level/key param bank 2 |
+| 10 | +0x4C0 | +20 | Level/key param bank 3 |
+| 11 | +0x500 | +22 | **Modulation param** |
+| 12 | +0x000 | — | Voice control = **0x8100** (KEY ON) |
+| 13 | +0x840 | +26 | **Pan left** (0-0x78, center=0x3C) |
+| 14 | +0x880 | +28 | **Pan right** (0-0x78, center=0x3C) |
+| 15 | +0x8C0 | +30 | **DSP/effects send level** |
+| 16 | +0x900 | +32 | DSP effects send 0 |
+| 17 | +0x940 | +34 | DSP effects send 1 |
+| 18 | +0x980 | +36 | DSP effects send 2 |
+| 19 | +0x9C0 | +38 | DSP effects send 3 |
+| 20 | +0xA00 | +40 | Secondary aux param 0 |
+| 21 | +0xA40 | +42 | Secondary aux param 1 |
+| 22 | +0x080 | +4 | Voice mode/velocity (bit 15 CLEAR = latch release) |
 
 Note: Step 12 writes the constant 0x8100 (key-on) to the voice control register, NOT from the struct. Steps 2 and 22 form a SET/CLEAR strobe pair on register +0x080 bit 15.
 
