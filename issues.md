@@ -8,7 +8,7 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 321 (4 open, 316 closed)
+**Total Issues:** 323 (4 open, 318 closed)
 
 **Quick Links:** 
 [Other](#other) (4)
@@ -130,6 +130,8 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-02h7` | Rename LABEL_ placeholders in note_voice_mapping.s | 2026-03-14 |
+| `kn5000-h1d0` | Rename LABEL_XXXXXX to semantic names in audio_control_en... | 2026-03-14 |
 | `kn5000-xm8x` | MAME: Fix FDC disk detection (dskchg polarity) | 2026-03-14 |
 | `kn5000-qkdr` | Rename LABEL_XXXXXX to semantic names in accompaniment_en... | 2026-03-14 |
 | `kn5000-dnl` | Phase 2 Completion: Core functionality working | 2026-03-14 |
@@ -148,10 +150,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-psio` | LLVM: Add R+d16 addressing mode for TLCS-900 backend | 2026-03-14 |
 | `kn5000-rqtw` | TMP94C241: Internal RAM range 0xC00-0xFFF missing from ad... | 2026-03-14 |
 | `kn5000-umft` | MAME: Complete FDC address mapping at 0x110000-0x12FFFF | 2026-03-14 |
-| `kn5000-f8d2` | Fix Unicode box-drawing diagrams in docs website | 2026-03-14 |
-| `kn5000-n1lw` | Use symbolic handler references in all C screen data files | 2026-03-14 |
 
-*...and 296 more closed issues*
+*...and 298 more closed issues*
 
 ---
 
@@ -173,4 +173,4 @@ Production-ready emulation and homebrew support.
 
 ---
 
-*Last updated: 2026-03-14 14:01*
+*Last updated: 2026-03-14 14:12*
