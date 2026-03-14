@@ -46,7 +46,7 @@ The KN5000 audio subsystem handles all sound generation, processing, and output.
   │  IC303          │   │   PCM69AU       │   │   IC310 + IC311  │
   │                 │   │                 │   │                  │
   │  64 voices      │   │  18-bit stereo  │   │  4 channels      │
-  │  28 params each │   │  (via serial)   │   │  0x20 bytes/ch   │
+  │  32 regs each   │   │  (via serial)   │   │  0x20 bytes/ch   │
   └────────┬────────┘   └────────┬────────┘   └──────────────────┘
            │                     │
        [0x110000]          [BCK/SDOR/SDOF]
