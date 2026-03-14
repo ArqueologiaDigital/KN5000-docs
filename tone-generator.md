@@ -85,14 +85,14 @@ Each of the 64 voices has registers organized into groups. The register address 
 | +0x0040 | 0x00 | 1 | +0x02 | **Pitch increment** (semitone table lookup from ROM 0x01217D) |
 | +0x0080 | 0x00 | 2 | +0x04 | **Voice mode/velocity** (bit 15 = latch strobe; velocity OR'd in) |
 | +0x00C0 | 0x00 | 3 | +0x06 | **Waveform control** (cleared on note-off) |
-| +0x0100 | 0x01 | 0 | +0x08 | Envelope parameter 0 |
-| +0x0140 | 0x01 | 1 | +0x0A | Envelope parameter 1 |
-| +0x0180 | 0x01 | 2 | +0x0C | Envelope parameter 2 |
-| +0x01C0 | 0x01 | 3 | +0x38 | Voice parameter 1, bank 3 |
-| +0x0400 | 0x04 | 0 | +0x0E | Voice parameter 4, bank 0 |
-| +0x0440 | 0x04 | 1 | +0x10 | Voice parameter 4, bank 1 |
-| +0x0480 | 0x04 | 2 | +0x12 | Voice parameter 4, bank 2 |
-| +0x04C0 | 0x04 | 3 | +0x14 | Voice parameter 4, bank 3 |
+| +0x0100 | 0x01 | 0 | +0x08 | **Interpolated pitch** (16-bit signed, from portamento/legato) |
+| +0x0140 | 0x01 | 1 | +0x0A | **Secondary pitch offset** (portamento/detune amount) |
+| +0x0180 | 0x01 | 2 | +0x0C | **Velocity/expression coefficient** (8-bit signed, scaled) |
+| +0x01C0 | 0x01 | 3 | +0x38 | **Key-on flag** (hard-coded 0x8100 by firmware) |
+| +0x0400 | 0x04 | 0 | +0x0E | **Note key info** (note<<8, bit 15=active) |
+| +0x0440 | 0x04 | 1 | +0x10 | Level/key parameter bank 1 |
+| +0x0480 | 0x04 | 2 | +0x12 | Level/key parameter bank 2 |
+| +0x04C0 | 0x04 | 3 | +0x14 | Level/key parameter bank 3 |
 | +0x0500 | 0x05 | 0 | +0x16 | Voice parameter 5, bank 0 |
 | +0x0540 | 0x05 | 1 | +0x3A | Voice parameter 5, bank 1 (bit 15 = latch strobe) |
 | +0x0580 | 0x05 | 2 | +0x3C | Voice parameter 5, bank 2 (bit 15 = latch strobe) |
@@ -119,9 +119,9 @@ The firmware's `ToneGen_WriteVoiceParams` function (at subcpu 0x02D0FD) writes 2
 | 1 | +0x040 | +2 | Group 0, bank 1 |
 | 2 | +0x080 | +4 | Group 0, bank 2 (bit 15 SET = strobe) |
 | 3 | +0x0C0 | +6 | Group 0, bank 3 |
-| 4 | +0x100 | +8 | Group 1, bank 0 |
-| 5 | +0x140 | +10 | Group 1, bank 1 |
-| 6 | +0x180 | +12 | Group 1, bank 2 |
+| 4 | +0x100 | +8 | Interpolated pitch (portamento/legato) |
+| 5 | +0x140 | +10 | Secondary pitch offset (detune) |
+| 6 | +0x180 | +12 | Velocity/expression coefficient |
 | 7 | +0x400 | +14 | Group 4, bank 0 (note key info: note<<8, bit 15=active) |
 | 8 | +0x440 | +16 | Group 4, bank 1 |
 | 9 | +0x480 | +18 | Group 4, bank 2 |
