@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 330 (5 open, 325 closed)
+**Total Issues:** 331 (6 open, 325 closed)
 
 **Quick Links:** 
-[Other](#other) (5)
+[Other](#other) (6)
 
 ---
 
@@ -94,6 +94,14 @@ Keep the kn5000-docs Jekyll website in sync with reverse engineering progress. U
 
 ---
 
+#### ⚪ NAKA C files: Convert remaining raw byte arrays to structs {#issue-kn5000-vc1b}
+
+**ID:** `kn5000-vc1b` | **Priority:** Low | **Created:** 2026-03-15
+
+naka_sequencer_channels.c (7936B, 13 mixed widget types) needs conversion. The 5 largest files (22KB-159KB) are genuine data blobs. Also naka_sound_menu_drawbar trailing 2170B has complex mixed data (EV/MT tables, proc tables) that could benefit from further struct decomposition.
+
+---
+
 #### ⚪ Phase 4 Completion: Production-ready quality {#issue-kn5000-nca}
 
 **ID:** `kn5000-nca` | **Priority:** Low | **Created:** 2026-01-31
@@ -171,14 +179,14 @@ Production-ready emulation and homebrew support.
 |----------|-------|
 | Critical | 1 |
 | Medium | 1 |
-| Low | 3 |
+| Low | 4 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 5 |
+| Other | 6 |
 
 ---
 
-*Last updated: 2026-03-15 09:30*
+*Last updated: 2026-03-15 11:04*
