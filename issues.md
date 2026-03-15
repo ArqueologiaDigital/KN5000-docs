@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 331 (6 open, 325 closed)
+**Total Issues:** 332 (7 open, 325 closed)
 
 **Quick Links:** 
-[Other](#other) (6)
+[Other](#other) (7)
 
 ---
 
@@ -67,6 +67,14 @@ All subsystem pages documented, no placeholders remain.
 - **R+d16 LLVM addressing** — SRI prefix encoding fixed, 357 .byte→native conversions in roms-disasm.
 - **App Loader (HDAE5000)** — Working end-to-end: FAT16 filesystem, menu UI, APP.BIN loading, Mines game launches from disk.
 - **ROM reconstruction** — 279,798 native instructions, 0 .byte fallbacks, 100% byte match on all 6 ROMs.
+
+---
+
+#### 🟠 Raw Byte Code Elimination: Audit all .byte sequences {#issue-kn5000-rtru}
+
+**ID:** `kn5000-rtru` | **Priority:** High | **Created:** 2026-03-15
+
+Step 1 of the Raw Byte Code Elimination plan. Write a Python script that parses all .s files, identifies .byte sequences in code context, classifies them by opcode prefix, and attempts llvm-mc disassembly to determine which are already decodable vs need LLVM backend additions.
 
 ---
 
@@ -178,6 +186,7 @@ Production-ready emulation and homebrew support.
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
+| High | 1 |
 | Medium | 1 |
 | Low | 4 |
 
@@ -185,8 +194,8 @@ Production-ready emulation and homebrew support.
 
 | Category | Count |
 |----------|-------|
-| Other | 6 |
+| Other | 7 |
 
 ---
 
-*Last updated: 2026-03-15 11:04*
+*Last updated: 2026-03-15 14:47*
