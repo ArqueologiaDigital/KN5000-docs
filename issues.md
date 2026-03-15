@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 330 (6 open, 324 closed)
+**Total Issues:** 330 (5 open, 325 closed)
 
 **Quick Links:** 
-[Other](#other) (6)
+[Other](#other) (5)
 
 ---
 
@@ -67,14 +67,6 @@ All subsystem pages documented, no placeholders remain.
 - **R+d16 LLVM addressing** — SRI prefix encoding fixed, 357 .byte→native conversions in roms-disasm.
 - **App Loader (HDAE5000)** — Working end-to-end: FAT16 filesystem, menu UI, APP.BIN loading, Mines game launches from disk.
 - **ROM reconstruction** — 279,798 native instructions, 0 .byte fallbacks, 100% byte match on all 6 ROMs.
-
----
-
-#### 🟡 Convert NAKA widget descriptors to C structs {#issue-kn5000-pn28}
-
-**ID:** `kn5000-pn28` | **Priority:** Medium | **Created:** 2026-03-15
-
-Convert ~3,002 NAKA UI widget descriptors across 28 assembly files from raw .byte sequences to C structs with named fields. Uses naka_to_c.py automated script. Progress: 193/3002 widgets done (control_menu_screens.s header + body).
 
 ---
 
@@ -146,6 +138,7 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-pn28` | Convert NAKA widget descriptors to C structs | 2026-03-15 |
 | `kn5000-j8pz` | Phase 4: Continue LABEL_XXXXXX semantic renaming | 2026-03-14 |
 | `kn5000-2wj1` | Rename all LABEL_ in extension_data.s to semantic names | 2026-03-14 |
 | `kn5000-3j4z` | Rename LABEL_ in performance_style_screens.s | 2026-03-14 |
@@ -165,9 +158,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-y7t5` | Trace full code path: Feature Demo selection → FTBMP bitm... | 2026-03-14 |
 | `kn5000-ht11` | DSP2: Trace bytecode programs to map registers to effect ... | 2026-03-14 |
 | `kn5000-46mu` | Generate synthetic waveform ROMs (IC304, IC305, IC306) fo... | 2026-03-14 |
-| `kn5000-cpn5` | Convert 357 R+d16 .byte instructions to native mnemonics | 2026-03-14 |
 
-*...and 304 more closed issues*
+*...and 305 more closed issues*
 
 ---
 
@@ -178,15 +170,15 @@ Production-ready emulation and homebrew support.
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| Medium | 2 |
+| Medium | 1 |
 | Low | 3 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 6 |
+| Other | 5 |
 
 ---
 
-*Last updated: 2026-03-15 04:49*
+*Last updated: 2026-03-15 09:30*
