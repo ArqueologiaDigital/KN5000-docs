@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 340 (7 open, 332 closed)
+**Total Issues:** 340 (6 open, 333 closed)
 
 **Quick Links:** 
-[Other](#other) (7)
+[Other](#other) (6)
 
 ---
 
@@ -97,14 +97,6 @@ Create a new MAME upstream PR (PR5) for accumulated driver fixes on kn5000_pr5_d
 
 ---
 
-#### 🟡 MAME: Wire FDC Terminal Count (TC) signal from TMP94C241 Timer 0 {#issue-kn5000-kdis}
-
-**ID:** `kn5000-kdis` | **Priority:** Medium | **Created:** 2026-03-16
-
-FDC Read Data command hangs because the TC signal from TMP94C241 Timer 0 output (TO0) is not wired to upd72067::tc_line_w(). Without TC, multi-sector reads never complete. Fix: add to0_write devcb to TMP94C241, then wire m_maincpu->to0_write().set(m_fdc, FUNC(upd72067_device::tc_line_w)) in machine config. Key files: tmp94c241.h, kn5000.cpp, upd765.h (tc_line_w at line 52).
-
----
-
 #### ⚪ MAME: Decode voice parameter template (ROM 0x12115, 34 bytes) {#issue-kn5000-v0uv}
 
 **ID:** `kn5000-v0uv` | **Priority:** Low | **Created:** 2026-03-14
@@ -173,6 +165,7 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-vc1b` | NAKA C files: Convert remaining raw byte arrays to structs | 2026-03-16 |
 | `kn5000-u4k7` | Add MAME screenshots to playing-games tutorial | 2026-03-16 |
 | `kn5000-bxwb` | Test floppy disk I/O in MAME | 2026-03-16 |
 | `kn5000-vpmb` | Disassembly quality audit: verify code vs data classifica... | 2026-03-16 |
@@ -192,9 +185,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-xm8x` | MAME: Fix FDC disk detection (dskchg polarity) | 2026-03-14 |
 | `kn5000-qkdr` | Rename LABEL_XXXXXX to semantic names in accompaniment_en... | 2026-03-14 |
 | `kn5000-dnl` | Phase 2 Completion: Core functionality working | 2026-03-14 |
-| `kn5000-a0k` | MAME: Storage subsystem emulation milestone | 2026-03-14 |
 
-*...and 312 more closed issues*
+*...and 313 more closed issues*
 
 ---
 
@@ -205,15 +197,15 @@ Production-ready emulation and homebrew support.
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| Medium | 2 |
+| Medium | 1 |
 | Low | 4 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 7 |
+| Other | 6 |
 
 ---
 
-*Last updated: 2026-03-16 04:14*
+*Last updated: 2026-03-16 04:22*
