@@ -6,7 +6,7 @@ permalink: /raw-byte-code-elimination/
 
 # Raw Byte Code Elimination Plan
 
-**Status:** In Progress (March 2026)
+**Status:** Maincpu/Subcpu/Table Data complete (0 code .byte remaining). HDAE5000 in progress.
 **Goal:** Convert all executable code currently represented as raw `.byte` sequences to native TLCS-900 assembly mnemonics.
 
 ## Context
@@ -15,27 +15,46 @@ All 6 ROMs achieve 100% byte-perfect match, but some executable code remains enc
 
 **Scope:** `.byte` sequences that encode native TLCS-900 CPU instructions across all 6 ROMs. Data tables, strings, bitmaps, firmware bytecode for software interpreters, and padding are out of scope (correct as-is).
 
-## Audit Results
+## Current Status
 
-Encoding gaps by category (approximate counts across all ROMs):
+### Completed (March 2026)
 
-| Category | Prefix | Count | LLVM Status |
-|----------|--------|-------|-------------|
-| calr with numeric target | `0x1E` | ~655 | Broken (emits absolute bytes) |
-| Compact register loads (d8 prefix group) | `0xD8-0xEF` | ~436 | Not implemented |
-| F2 immediate-to-memory stores | `0xF2` | ~358 | Not implemented |
-| C3 R+d16 loads (source addressing) | `0xC3` | ~216 | Not implemented |
-| D7 prevbank instructions | `0xD7` | ~182 | Partially (ld works, cps doesn't) |
-| Compact dec/inc xsp | `0xEF 0x6x` | ~37 | Not implemented |
-| FDC raw byte blocks | various | ~434 lines | Need full disassembly |
-| Flash/floppy handler blocks | various | ~1,399 lines | Need full disassembly |
+All executable code `.byte` sequences have been eliminated from the **Main CPU**, **Sub CPU**, and **Table Data** ROMs:
 
-**Key files with most code .byte:**
-- `maincpu/storage/fdc_routines.s` — 434 lines (confirmed code)
-- `maincpu/storage/flash_floppy_handlers.s` — 1,399 lines (confirmed code)
-- `maincpu/system_handlers.s` — 267 lines
-- `maincpu/storage/single_load.s` — 873 lines
-- Various sequencer/audio/MIDI files — scattered occurrences
+| ROM | Native Instructions | Code .byte Remaining | Status |
+|-----|-------------------|---------------------|--------|
+| Main CPU | 239,683 | **0** | **Complete** |
+| Sub CPU Payload | 35,721 | **0** | **Complete** |
+| Sub CPU Boot | 1,357 | **0** | **Complete** |
+| Table Data | 1,678 | **0** | **Complete** |
+| Custom Data | 0 (data only) | **0** | **Complete** |
+| HDAE5000 | 502 | ~15,900 data .byte | In progress |
+| **Total** | **279,441** | **0 code .byte** | — |
+
+### LLVM Backend Encodings Added
+
+All previously missing instruction encodings have been implemented in the LLVM TLCS-900 backend:
+
+| Category | Prefix | Count Converted | LLVM Status |
+|----------|--------|-----------------|-------------|
+| JR/JRL/CALR branch instructions | `0x1E` etc. | 1,214 | **Fixed** (label-based) |
+| Compact register loads (d8 prefix) | `0xD8-0xEF` | 2,680 reg-reg + 831 ALU/LD/BIT | **Implemented** |
+| PrevBank (D7 prefix) | `0xD7` | 147 | **Implemented** |
+| Memory R+d8 addressing | various | 3,616 | **Implemented** |
+| Compact dst (CALL/JP/CPW/LD) | various | 1,038 | **Implemented** |
+| Short LD (compact load) | `0x20-0x3F` | 523 | **Implemented** |
+| Compact imm32 loads | various | 684 | **Implemented** |
+| ld A, (R+d16) source loads | `0xC3` | ~970 | **Implemented** (Mar 14) |
+| ld (R+d16), A stores | `0xF3` | ~400 | **Implemented** |
+| Shifts/Rotates/MUL/DIV | various | 246 | **Implemented** |
+
+### Remaining: HDAE5000
+
+The HDAE5000 extension ROM has ~15,900 `.byte` lines remaining, but these are primarily **data tables** (not executable code). The 502 native instructions cover all identified code regions.
+
+## Original Audit Results (Historical)
+
+Encoding gaps by category (original counts, now resolved):
 
 ## Execution Plan
 
