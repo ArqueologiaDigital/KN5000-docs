@@ -77,7 +77,7 @@ If you have a working KN5000:
 
 ### Tooling
 
-- Extend LLVM TLCS-900 backend for additional addressing modes (direct memory, F2 immediate stores)
+- Extend LLVM TLCS-900 backend for remaining addressing modes (compact zero-load, compact load-1, calr with numeric targets)
 - Create visualization tools for protocol analysis
 - Build comparison/diff tools for ROM analysis
 
