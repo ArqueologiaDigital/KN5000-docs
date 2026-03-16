@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 340 (4 open, 335 closed)
+**Total Issues:** 344 (6 open, 337 closed)
 
 **Quick Links:** 
-[Other](#other) (4)
+[Other](#other) (6)
 
 ---
 
@@ -97,6 +97,14 @@ Create a new MAME upstream PR (PR5) for accumulated driver fixes on kn5000_pr5_d
 
 ---
 
+#### ⚪ Improve NAKA decoded field names: replace field_NNNN with semantic names {#issue-kn5000-z4qg}
+
+**ID:** `kn5000-z4qg` | **Priority:** Low | **Created:** 2026-03-16
+
+The naka_struct_decode.py conversion left ~447K field_NNNN references across 23 files. Many of these can be given meaningful names by analyzing the widget type patterns (dispatch_t fields are already well-named, but raw_u16/raw_bytes segments need analysis).
+
+---
+
 #### ⚪ MAME: Feature Demo SSF visual presentation {#issue-kn5000-jbhk}
 
 **ID:** `kn5000-jbhk` | **Priority:** Low | **Created:** 2026-03-16
@@ -145,10 +153,20 @@ Production-ready emulation and homebrew support.
 
 ---
 
+#### ⚪ Resolve remaining 560 LABEL_XXXXXX labels in maincpu {#issue-kn5000-iv02}
+
+**ID:** `kn5000-iv02` | **Priority:** P4 | **Created:** 2026-03-16
+
+560 opaque LABEL_XXXXXX labels remain (544 in kn5000_v10_program.s, 16 scattered). Per policy, all labels must have semantic names. These are maintenance exceptions that should be resolved when capacity allows.
+
+---
+
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-6o8f` | Rename proc_addr to dispatch_table_ptr in CONTAINER/MENU_... | 2026-03-16 |
+| `kn5000-tbo7` | NAKA widget C files: full struct decoding | 2026-03-16 |
 | `kn5000-v0uv` | MAME: Decode voice parameter template (ROM 0x12115, 34 by... | 2026-03-16 |
 | `kn5000-kdis` | MAME: Wire FDC Terminal Count (TC) signal from TMP94C241 ... | 2026-03-16 |
 | `kn5000-vc1b` | NAKA C files: Convert remaining raw byte arrays to structs | 2026-03-16 |
@@ -167,10 +185,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-u8fl` | MAME: DSP device stubs for IC310 (MN19413) and IC311 (DS3... | 2026-03-14 |
 | `kn5000-wmfd` | MAME: Tone generator device (IC303) — refine waveform pla... | 2026-03-14 |
 | `kn5000-02h7` | Rename LABEL_ placeholders in note_voice_mapping.s | 2026-03-14 |
-| `kn5000-h1d0` | Rename LABEL_XXXXXX to semantic names in audio_control_en... | 2026-03-14 |
-| `kn5000-xm8x` | MAME: Fix FDC disk detection (dskchg polarity) | 2026-03-14 |
 
-*...and 315 more closed issues*
+*...and 317 more closed issues*
 
 ---
 
@@ -182,14 +198,15 @@ Production-ready emulation and homebrew support.
 |----------|-------|
 | Critical | 1 |
 | Medium | 1 |
-| Low | 2 |
+| Low | 3 |
+| P4 | 1 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 4 |
+| Other | 6 |
 
 ---
 
-*Last updated: 2026-03-16 06:11*
+*Last updated: 2026-03-16 06:21*
