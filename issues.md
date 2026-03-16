@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 332 (6 open, 325 closed)
+**Total Issues:** 340 (7 open, 332 closed)
 
 **Quick Links:** 
-[Other](#other) (6)
+[Other](#other) (7)
 
 ---
 
@@ -37,18 +37,18 @@ This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) 
 *Goal: Get basic emulator running with display and sound*
 All Phase 1 sub-issues complete. MAME boots with display and audio subsystem traffic logged.
 
-### Phase 2: Core Functionality - kn5000-dnl (OPEN)
+### Phase 2: Core Functionality - kn5000-dnl ✅ CLOSED
 *Goal: User interaction and file I/O working*
 
 **UI/Input (kn5000-1vz): ✅ CLOSED**
 - All sub-issues complete. UI navigation verified working in MAME.
 
-**Storage (kn5000-a0k): IN PROGRESS**
+**Storage (kn5000-a0k): ✅ CLOSED**
 - FDC fully wired (UPD72067, MSR at 0x110008, FIFO at 0x11000A, DMA at 0x120000)
 - HDAE5000 IDE/ATA working — App Loader reads FAT16 from hard disk
 - Custom Data Flash: mapped, NVRAM-backed
 - Table Data ROM: working (sequencer reads rhythm data)
-- Remaining: floppy disk read test (floppy images ready, FDC wired)
+- Floppy disk testing: separate issue kn5000-bxwb still open
 
 ### Phase 3: Complete Documentation - kn5000-9m6 ✅ CLOSED
 *Goal: All subsystems fully documented*
@@ -58,15 +58,34 @@ All subsystem pages documented, no placeholders remain.
 *Goal: Production-ready emulation and homebrew support*
 - Validation test suite: created (boot/menu/display tests)
 - SDK documentation: comprehensive (1442 lines, Quick Start guide, Makefile template)
+- MAME PR update pending (kn5000-f8gw): accumulated driver fixes need to be pushed upstream
+- Quality audit: NAKA C file struct conversion in progress (kn5000-vc1b)
+- Playing-games tutorial: added to docs website
+
+## Current Stats (Mar 16, 2026)
+- **Total issues:** 334 (328 closed, 6 open)
+- **ROM reconstruction:** 279,441 native instructions, 0 .byte fallbacks, 100% byte match on all 6 ROMs
+- **.byte code elimination:** ✅ COMPLETE — all executable code is native TLCS-900 instructions
+- **Data reversion fix:** 25 data regions across 10 files reverted from bogus instruction mnemonics back to .byte data
+- **LABEL_XXXXXX elimination:** ✅ COMPLETE (0 remaining across all ROMs)
 
 ## Recent Milestones (Mar 2026)
-- **Tone Generator device (IC303)** — kn5000_tonegen_device added to MAME. 64-voice PCM wavetable with register-indirect interface, waveform ROM reading, stereo 48kHz output. First step toward actual sound.
+- **Phase 2 CLOSED** — All core functionality sub-issues resolved.
+- **.byte code elimination COMPLETE** — Zero remaining .byte code fallbacks. 279,441 native instructions across all 6 ROMs.
+- **Data reversion fix** — 25 data regions across 10 files that had been incorrectly converted to instruction mnemonics were reverted to proper .byte data sequences.
+- **Playing-games tutorial** — New tutorial page added to the documentation website explaining how to play homebrew games on the KN5000 via MAME.
+- **Tone Generator device (IC303)** — kn5000_tonegen_device added to MAME. 64-voice PCM wavetable with register-indirect interface, waveform ROM reading, stereo 48kHz output.
 - **UART mode** — 8-bit UART TX/RX implemented in TMP94C241 serial. Enables MIDI output at 31250 baud.
 - **MIDI output** — TX0 wired to midi_port device. MAME emits MIDI.
 - **FDC address mapping** — UPD72067 registers properly mapped with PC AT layout + 16-bit bus doubling.
 - **R+d16 LLVM addressing** — SRI prefix encoding fixed, 357 .byte→native conversions in roms-disasm.
 - **App Loader (HDAE5000)** — Working end-to-end: FAT16 filesystem, menu UI, APP.BIN loading, Mines game launches from disk.
-- **ROM reconstruction** — 279,798 native instructions, 0 .byte fallbacks, 100% byte match on all 6 ROMs.
+
+## Success Criteria
+1. ✅ All 6 ROMs 100% byte-match reconstruction
+2. ✅ All subsystems documented (no placeholder pages)
+3. ✅ Homebrew SDK functional (App Loader + Mines game working)
+4. ⬜ MAME driver merged upstream (PR update pending — kn5000-f8gw)
 
 ---
 
@@ -78,6 +97,14 @@ Create a new MAME upstream PR (PR5) for accumulated driver fixes on kn5000_pr5_d
 
 ---
 
+#### 🟡 MAME: Wire FDC Terminal Count (TC) signal from TMP94C241 Timer 0 {#issue-kn5000-kdis}
+
+**ID:** `kn5000-kdis` | **Priority:** Medium | **Created:** 2026-03-16
+
+FDC Read Data command hangs because the TC signal from TMP94C241 Timer 0 output (TO0) is not wired to upd72067::tc_line_w(). Without TC, multi-sector reads never complete. Fix: add to0_write devcb to TMP94C241, then wire m_maincpu->to0_write().set(m_fdc, FUNC(upd72067_device::tc_line_w)) in machine config. Key files: tmp94c241.h, kn5000.cpp, upd765.h (tc_line_w at line 52).
+
+---
+
 #### ⚪ MAME: Decode voice parameter template (ROM 0x12115, 34 bytes) {#issue-kn5000-v0uv}
 
 **ID:** `kn5000-v0uv` | **Priority:** Low | **Created:** 2026-03-14
@@ -86,19 +113,19 @@ The 34-byte voice parameter template at SubCPU ROM 0x12115 contains default regi
 
 ---
 
+#### ⚪ MAME: Feature Demo SSF visual presentation {#issue-kn5000-jbhk}
+
+**ID:** `kn5000-jbhk` | **Priority:** Low | **Created:** 2026-03-16
+
+The Feature Demo button sequence (DEMO → LEFT 4 → LEFT 2) plays demo songs correctly but the visual SSF presentation never renders. The FTBMP bitmaps don't appear because demo_state at DRAM 0x0251D8 stays 0x0000. Root cause is event routing — SSF event 0x1C00038 doesn't reach GroupBoxProc_StartSSFPresentation. Investigate and fix the event dispatch path.
+
+---
+
 #### ⚪ Maintain documentation website {#issue-kn5000-9a0}
 
 **ID:** `kn5000-9a0` | **Priority:** Low | **Created:** 2026-01-25
 
 Keep the kn5000-docs Jekyll website in sync with reverse engineering progress. Update status, add findings, maintain open questions list. Website repo: claude_jail/kn5000-docs/
-
----
-
-#### ⚪ NAKA C files: Convert remaining raw byte arrays to structs {#issue-kn5000-vc1b}
-
-**ID:** `kn5000-vc1b` | **Priority:** Low | **Created:** 2026-03-15
-
-naka_sequencer_channels.c (7936B, 13 mixed widget types) needs conversion. The 5 largest files (22KB-159KB) are genuine data blobs. Also naka_sound_menu_drawbar trailing 2170B has complex mixed data (EV/MT tables, proc tables) that could benefit from further struct decomposition.
 
 ---
 
@@ -146,6 +173,13 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-u4k7` | Add MAME screenshots to playing-games tutorial | 2026-03-16 |
+| `kn5000-bxwb` | Test floppy disk I/O in MAME | 2026-03-16 |
+| `kn5000-vpmb` | Disassembly quality audit: verify code vs data classifica... | 2026-03-16 |
+| `kn5000-hrtz` | Update project roadmap with current status | 2026-03-16 |
+| `kn5000-rtru` | Raw Byte Code Elimination: Audit all .byte sequences | 2026-03-16 |
+| `kn5000-sitw` | Write user-facing tutorial: Running games on MAME | 2026-03-16 |
+| `kn5000-7geb` | Revert bogus instruction mnemonics in data regions back t... | 2026-03-16 |
 | `kn5000-pn28` | Convert NAKA widget descriptors to C structs | 2026-03-15 |
 | `kn5000-j8pz` | Phase 4: Continue LABEL_XXXXXX semantic renaming | 2026-03-14 |
 | `kn5000-2wj1` | Rename all LABEL_ in extension_data.s to semantic names | 2026-03-14 |
@@ -159,15 +193,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-qkdr` | Rename LABEL_XXXXXX to semantic names in accompaniment_en... | 2026-03-14 |
 | `kn5000-dnl` | Phase 2 Completion: Core functionality working | 2026-03-14 |
 | `kn5000-a0k` | MAME: Storage subsystem emulation milestone | 2026-03-14 |
-| `kn5000-42jw` | Rename LABEL_XXXXXX placeholders in NAKA ui_widgets files... | 2026-03-14 |
-| `kn5000-0vuo` | MAME: Implement VRAM A18 banking (VGA display modes) | 2026-03-14 |
-| `kn5000-u573` | Waveform ROM investigation: dump IC304-IC306 or create ap... | 2026-03-14 |
-| `kn5000-yhj` | HDAE5000 Generic Program Loader: FAT filesystem, HD boot,... | 2026-03-14 |
-| `kn5000-y7t5` | Trace full code path: Feature Demo selection → FTBMP bitm... | 2026-03-14 |
-| `kn5000-ht11` | DSP2: Trace bytecode programs to map registers to effect ... | 2026-03-14 |
-| `kn5000-46mu` | Generate synthetic waveform ROMs (IC304, IC305, IC306) fo... | 2026-03-14 |
 
-*...and 305 more closed issues*
+*...and 312 more closed issues*
 
 ---
 
@@ -178,15 +205,15 @@ Production-ready emulation and homebrew support.
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| Medium | 1 |
+| Medium | 2 |
 | Low | 4 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 6 |
+| Other | 7 |
 
 ---
 
-*Last updated: 2026-03-15 21:52*
+*Last updated: 2026-03-16 04:14*
