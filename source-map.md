@@ -204,6 +204,10 @@ maincpu/
 
 The "NAKA" widget format defines UI screen layouts as hierarchical widget trees. These files contain the screen definitions for nearly every UI mode. "NAKA" is a Matsushita/Technics developer codename; all original symbol names (`InitializeNaka`, `NAKA_TYPE_*`, etc.) are preserved in the code.
 
+Each assembly `.s` file uses `.incbin` to include a compiled C struct binary. The C files (`*.c`) contain typed packed structs with named fields, readable string literals, and symbolic pointer references (`NAKA_ADDR`, `SELF`). Linker scripts (`*_link.ld`) resolve external symbol addresses from the main ELF. Type definitions are in `naka_types.h`.
+
+**Assembly files** (26 files — widget data regions with `.incbin` directives):
+
 | File | Lines | Description |
 |------|-------|-------------|
 | `ui_widgets/widget_descriptors.s` | 9,325 | Widget type definitions and descriptor tables |
@@ -233,6 +237,20 @@ The "NAKA" widget format defines UI screen layouts as hierarchical widget trees.
 | `ui_widgets/ed3cc0_ed665a.s` | 1,940 | Extension-region widget data |
 | `ui_widgets/ed803c_eda02c.s` | 2,727 | Extension-region widget data |
 | `ui_widgets/eee718_eef588.s` | 1,015 | Final widget block before boot code |
+
+**C struct files** (26 `.c` + 1 `.h` — typed widget data with named fields):
+
+| File | Lines | Size | Description |
+|------|-------|------|-------------|
+| `naka_types.h` | 260 | — | Struct definitions: `naka_container_t`, `naka_menu_item_t`, `naka_dispatch_t`, etc. |
+| `control_menu_header.c` | 323 | 592B | Control Menu screen header (hand-crafted gold standard) |
+| `naka_sequencer_exit.c` | 381 | 692B | Sequencer exit controls (hand-crafted gold standard) |
+| `naka_master_style.c` | 410 | 944B | Master Style grid (hand-crafted gold standard) |
+| `naka_widget_tables_2.c` | 190K | 159KB | Largest: CtlMsg, MIDI control, additional NAKA types |
+| `naka_widget_descriptors.c` | 197K | 151KB | Effects presets, lookup tables |
+| `naka_technichord_strings.c` | 117K | 112KB | TechniChord string tables |
+| `naka_style_bitmaps.c` | 38K | 102KB | Style selection bitmaps |
+| Other 19 files | 180K | 1-37KB | Various UI screens and widget blocks |
 
 ### `includes/` — Style UI Parameter Blocks & Screen Data
 
