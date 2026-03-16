@@ -139,7 +139,62 @@ The disassembly uses EQU constants for type bytes and a `naka_header` macro for 
     .byte 0x1a, 0x00, 0xff, 0xff, ...  ; type-specific body fields
 ```
 
-The body bytes remain as raw `.byte` directives because structure sizes vary even within the same type (e.g., type `0x34` ranges 42-44 bytes). Full body parameterization requires deeper reverse-engineering of field consumption.
+## C Struct Conversion (Complete)
+
+All 26 NAKA widget data blocks have been converted from raw `.byte` assembly directives to **typed C struct initializers** with named fields, readable string literals, and symbolic pointer references. The conversion uses packed C structs compiled by the LLVM TLCS-900 backend, linked against symbol addresses from the main ELF, producing byte-identical ROM binaries.
+
+### Available Struct Types (naka_types.h)
+
+| Type Code | C Struct | Fixed Size | Trailing String |
+|-----------|----------|------------|-----------------|
+| `0x34` | `naka_container_t` | 42 bytes | Yes (title text) |
+| `0x1D` | `naka_menu_item_t` | 54 bytes | Yes (button text) |
+| `0x2B` | `naka_label_t` | 32 bytes | Yes (display text) |
+| `0x30` | `naka_slider_t` | 44 bytes | No |
+| `0x31` | `naka_group_t` | 26 bytes | No |
+| `0x48` | `naka_type_0x48_t` | 26 bytes | No |
+| Dispatch types | `naka_dispatch_t` | 24 bytes | No |
+
+**Dispatch types** (0x00, 0x10, 0x12, 0x15, 0x20, 0x21, 0x22, 0x26, 0x27, 0x33, 0x40, 0x44, 0x45, 0x47, 0x54, and others) all share a compact 24-byte layout: 4-byte header + `field_04` (uint16) + `field_06` (uint16) + `name_ptr` + `inst_ptr` + `link_ptr` + `proc_addr` (four uint32 pointers).
+
+### Pointer Resolution Macros
+
+| Macro | Purpose |
+|-------|---------|
+| `NAKA_HDR(type)` | 4-byte widget header initializer |
+| `NAKA_ADDR(symbol)` | External ROM address (resolved by linker) |
+| `SELF(field)` | Self-referential pointer within same data block |
+| `ALIGNED_STRING(s)` | NUL-terminated string with 0xFF pad to even boundary |
+
+### handler_table Field (CONTAINER / MENU_ITEM)
+
+The `handler_table` field (offset +30 in CONTAINER, +38 in MENU_ITEM) is **not a function pointer** — it is a DRAM address pointing to an **event handler dispatch table**. The firmware's `InheritedProc` function:
+
+1. Loads the widget's object record from the DRAM object table at `0x27ED2`
+2. Extracts the handler dispatch table address from offset +10 of the record
+3. Indexes into the table by event code to find the actual handler function
+4. Calls the handler via indirect `call (xhl)`
+
+Evidence: handler_table values increment by 2 per consecutive menu item (e.g., `0x0003F434`, `0x0003F436`, `0x0003F438`...) and fall in the `0x0003xxxx` address range (unmapped by ROM — written to DRAM at runtime). In contrast, dispatch widget `proc_addr` values resolve to actual ROM function symbols like `IvDrawbarProc`.
+
+### Conversion Script
+
+`scripts/naka_struct_decode.py` performs automated conversion:
+1. Reads ROM bytes at the block's base address
+2. Forward-scans for NAKA headers, strings, pointer tables, padding
+3. Resolves pointers via ELF symbol table (36,849 symbols)
+4. Generates C struct + linker script with `_Static_assert` size verification
+5. All 23 auto-generated files verified byte-perfect
+
+### Source Files
+
+| File | Contents |
+|------|----------|
+| `maincpu/ui_widgets/naka_types.h` | Packed struct definitions and macros |
+| `maincpu/ui_widgets/*.c` | 26 C data files (3 hand-crafted, 23 auto-generated) |
+| `maincpu/ui_widgets/*_link.ld` | Linker scripts for extern symbol resolution |
+| `scripts/naka_struct_decode.py` | Automated conversion tool |
+| `scripts/naka_to_c.py` | Original conversion tool (used for hand-crafted files) |
 
 ---
 
