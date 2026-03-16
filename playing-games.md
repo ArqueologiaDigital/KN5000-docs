@@ -62,6 +62,9 @@ Place these in a directory structure like:
 
 You should see the KN5000 control panel with the LCD displaying the startup screen.
 
+![KN5000 firmware startup screen in MAME]({{ site.baseurl }}/assets/images/tutorial/firmware-boot.png)
+*The KN5000 firmware fully booted in MAME, showing the default Panel Memory screen with instrument assignments and rhythm levels.*
+
 ---
 
 ## Game 1: Another World
@@ -102,6 +105,9 @@ make test
 ```
 
 The game starts immediately — the intro cinematic plays on the KN5000's LCD.
+
+![Another World running on the KN5000 in MAME]({{ site.baseurl }}/assets/images/tutorial/another-world.png)
+*Another World's intro cinematic rendered on the KN5000 LCD via the MAME emulator.*
 
 ### Extension ROM Mode
 
@@ -153,6 +159,9 @@ After MAME boots the firmware:
 3. Select it to launch the game
 
 The game renders on the KN5000 LCD: a green border, red minefield, and yellow tile markers.
+
+![Minesweeper running on the KN5000 in MAME]({{ site.baseurl }}/assets/images/tutorial/mines-game.png)
+*Minesweeper game rendering on the KN5000 LCD. The green border, red minefield grid, and yellow tile markers are drawn by the HDAE5000 extension ROM.*
 
 > **Note:** The game currently requires MAME's `-seconds_to_run` flag or a Lua script to automate activation for headless testing. For interactive play, just navigate the DISK MENU as described above.
 
