@@ -390,7 +390,7 @@ The SubCPU firmware provides two voice setup paths, both called via a dispatch t
 
 Called for standard polyphonic note-on events. Performs:
 
-1. **Copy template**: Copies 34-byte (0x22) voice parameter template from ROM `0x012115` to working buffer at `0x3B1C`
+1. **Copy template**: Copies 34-byte (0x22) voice parameter template from ROM `0x012115` to working buffer at `0x3B1C`. Default values (uint16_t LE): `0x06FF` (header), then `0x0600, 0x0800, 0x0800, 0x0800, 0x0A00, 0x0A00, 0x0C00, 0x0C00, 0x0E00, 0x0E00, 0x0F00, 0x1100, 0x1300, 0x1300, 0x1500, 0x1700` (16 register defaults). An additional word `0x1900` at `+34` is read beyond the copied region.
 2. **Compute pitch**: MIDI note lookup → octave calculation (`note / 12`), remainder used for fine pitch from table at `0x01217D`
 3. **Apply velocity**: `DSP_VelocityToVolume` converts MIDI velocity to volume level, OR'd into struct offset +24 (volume bank 0)
 4. **Apply effect routing**: `DSP_GetEffectRouting` determines reverb/chorus send levels, OR'd into struct offset +26
