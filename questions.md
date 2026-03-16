@@ -69,6 +69,20 @@ Things we don't know yet and need to investigate.
 - [x] What file formats are embedded (images, samples)? **BMP bitmap data** (FTBMP format for Feature Demo), **SSF XML** (presentation scripts), **rhythm pattern data**, **sound parameter tables**
 - [x] How is data indexed/accessed? **Via pointer tables in main program ROM** — e.g., file entry index at 0x8CE01C for bitmap lookup, SSF data at 0x88000E
 
+## NAKA Widget System
+
+### handler_table Dispatch
+- [x] What is the `handler_table` field in CONTAINER/MENU_ITEM widgets? **DRAM dispatch table address** — not a function pointer. Values increment by 2 per menu item (e.g., 0x0003F434, 0x0003F436, 0x0003F438). `InheritedProc` indexes into this table by event code.
+- [ ] Where are the handler dispatch tables in DRAM? Values in 0x0003xxxx range don't map to ROM or standard DRAM (0x200000+). Is this CPU internal RAM or a special address space?
+- [ ] How does `RegisterObjectTable` populate the 14-byte object records at DRAM 0x27ED2?
+- [ ] What determines the screen_id values (e.g., 0x01A0 for CONTROL MENU)?
+- [ ] How does the firmware resolve the handler_table DRAM address from the ROM descriptor?
+
+### Compact Dispatch Widgets
+- [x] What is the 24-byte dispatch format? **header(4) + field_04(2) + field_06(2) + name_ptr(4) + inst_ptr(4) + link_ptr(4) + proc_addr(4)**. Used by types 0x10, 0x12, 0x20, 0x26, 0x27, 0x33, 0x40, 0x44, 0x45, 0x47, 0x54, etc.
+- [ ] What do field_04 and field_06 represent? (field_04 appears to be a screen/index value, field_06 may be child count or flags)
+- [ ] What is the relationship between inst_ptr (code string) and proc_addr (handler function)?
+
 ## Needs Technical Documentation
 
 These areas would benefit from official datasheets or service manuals:
@@ -107,6 +121,6 @@ Some flag bits appear unused in the code we've analyzed:
 
 ---
 
-*Last updated: January 2026*
+*Last updated: March 2026*
 
 *Have answers or new questions? Contribute to the project!*
