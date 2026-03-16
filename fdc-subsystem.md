@@ -549,8 +549,8 @@ All handlers end by jumping to FDC_Handler_ExitStatus which sets the status flag
 | FDC device | **Working** | UPD72067 at 0x110008/0x11000A, 32MHz clock |
 | DMA data port | **Working** | 0x120000 for software DMA channel 3 |
 | IRQ routing | **Working** | INT4 (command complete), INT5 (DRQ) |
-| Floppy connector | **Working** | 3.5" HD (1.44MB), MFI format supported |
-| TC signal | **Working** | Timer 0 output (TO0) wired to FDC TC via TMP94C241 timer callbacks |
+| Floppy connector | **Working** | 3.5" HD (1.44MB, default) and DD (720K), MFI format supported |
+| TC signal | **NOT IMPLEMENTED** | Timer 0 output (TO0) should pulse FDC TC, but TMP94C241 CPU core lacks timer output callbacks. Transfers hang without TC. |
 | Disk images | **Available** | v5-v10 firmware update disks from [archive.org](https://archive.org/details/technics-kn5000-system-update-disks) |
 | Disk change detect | **Fixed** | Port D bit 6 — dskchg_r() inverted for active-low hardware signal |
 
@@ -560,7 +560,7 @@ All handlers end by jumping to FDC_Handler_ExitStatus which sets the status flag
 
 The firmware's `Check_for_Floppy_Disk_Change` (at 0xEF4F5E) reads Port D bit 6 before issuing any FDC commands. This signal is active-low on the hardware (low = disk change detected). MAME's `floppy_image_device::dskchg_r()` returns active-high (1 = change detected), so the signal must be inverted: `(!floppy->dskchg_r()) << 6`. Without this inversion, the firmware always shows "ERROR 02! There is no disk in the disk drive."
 
-The TC (Terminal Count) signal terminates multi-sector FDC transfers. It is wired from the Main CPU Timer 0 output (TO0) to the FDC TC input via TMP94C241 timer output callbacks added to the MAME CPU core.
+The TC (Terminal Count) signal terminates multi-sector FDC transfers. It should be wired from the Main CPU Timer 0 output (TO0) to the FDC TC input. **STATUS: NOT IMPLEMENTED** — the TMP94C241 MAME CPU core does not expose timer output callbacks (no `to0_write` devcb). Without TC, FDC Read Data commands hang indefinitely because `upd765::tc_done` is never set. Implementing this requires adding timer output callback support to the TMP94C241 CPU device, then wiring `m_maincpu->to0_write().set(m_fdc, FUNC(upd72067_device::tc_line_w))` in the machine configuration.
 
 ---
 
