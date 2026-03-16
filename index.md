@@ -82,6 +82,7 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 
 | Page | Description |
 |------|-------------|
+| [Playing Games on MAME]({{ site.baseurl }}/playing-games/) | Step-by-step guide to running homebrew games in the emulator |
 | [Another World VM]({{ site.baseurl }}/another-world-vm/) | Full game port: bytecode VM, polygon rendering, input, frame timing |
 
 ### Resources
@@ -106,11 +107,12 @@ Choose based on your goal:
 4. [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) - HLE for buttons/LEDs
 
 ### Homebrew Development
-1. [CPU Subsystem]({{ site.baseurl }}/cpu-subsystem/) - TMP94C241F programming
-2. [Memory Map]({{ site.baseurl }}/memory-map/) - Available resources
-3. [Display Subsystem]({{ site.baseurl }}/display-subsystem/) - Graphics output
-4. [Another World VM]({{ site.baseurl }}/another-world-vm/) - Full game port example
-5. [Help Wanted]({{ site.baseurl }}/help-wanted/) - Tool development needs
+1. [Playing Games on MAME]({{ site.baseurl }}/playing-games/) - Get the emulator running first
+2. [CPU Subsystem]({{ site.baseurl }}/cpu-subsystem/) - TMP94C241F programming
+3. [Memory Map]({{ site.baseurl }}/memory-map/) - Available resources
+4. [Display Subsystem]({{ site.baseurl }}/display-subsystem/) - Graphics output
+5. [Another World VM]({{ site.baseurl }}/another-world-vm/) - Full game port example
+6. [Help Wanted]({{ site.baseurl }}/help-wanted/) - Tool development needs
 
 ### Reverse Engineering Research
 1. [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) - Current progress
