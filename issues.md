@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 340 (6 open, 333 closed)
+**Total Issues:** 340 (5 open, 334 closed)
 
 **Quick Links:** 
-[Other](#other) (6)
+[Other](#other) (5)
 
 ---
 
@@ -113,14 +113,6 @@ The Feature Demo button sequence (DEMO → LEFT 4 → LEFT 2) plays demo songs c
 
 ---
 
-#### ⚪ Maintain documentation website {#issue-kn5000-9a0}
-
-**ID:** `kn5000-9a0` | **Priority:** Low | **Created:** 2026-01-25
-
-Keep the kn5000-docs Jekyll website in sync with reverse engineering progress. Update status, add findings, maintain open questions list. Website repo: claude_jail/kn5000-docs/
-
----
-
 #### ⚪ Phase 4 Completion: Production-ready quality {#issue-kn5000-nca}
 
 **ID:** `kn5000-nca` | **Priority:** Low | **Created:** 2026-01-31
@@ -165,6 +157,7 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-kdis` | MAME: Wire FDC Terminal Count (TC) signal from TMP94C241 ... | 2026-03-16 |
 | `kn5000-vc1b` | NAKA C files: Convert remaining raw byte arrays to structs | 2026-03-16 |
 | `kn5000-u4k7` | Add MAME screenshots to playing-games tutorial | 2026-03-16 |
 | `kn5000-bxwb` | Test floppy disk I/O in MAME | 2026-03-16 |
@@ -184,9 +177,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-h1d0` | Rename LABEL_XXXXXX to semantic names in audio_control_en... | 2026-03-14 |
 | `kn5000-xm8x` | MAME: Fix FDC disk detection (dskchg polarity) | 2026-03-14 |
 | `kn5000-qkdr` | Rename LABEL_XXXXXX to semantic names in accompaniment_en... | 2026-03-14 |
-| `kn5000-dnl` | Phase 2 Completion: Core functionality working | 2026-03-14 |
 
-*...and 313 more closed issues*
+*...and 314 more closed issues*
 
 ---
 
@@ -198,14 +190,14 @@ Production-ready emulation and homebrew support.
 |----------|-------|
 | Critical | 1 |
 | Medium | 1 |
-| Low | 4 |
+| Low | 3 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 6 |
+| Other | 5 |
 
 ---
 
-*Last updated: 2026-03-16 04:22*
+*Last updated: 2026-03-16 04:32*
