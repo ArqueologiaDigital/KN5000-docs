@@ -523,6 +523,8 @@ This milestone significantly improves codebase navigability and makes the disass
 
 **16 NAKA UI widget files renamed to semantic names** — Previously opaque address-based filenames (e.g., `ui_widgets_EBxxxx.s`) renamed to descriptive names based on reverse engineering research (e.g., `technichord_string_data.s`, `sound_editor_widgets.s`), improving codebase navigability.
 
+**All 26 NAKA widget C files converted to named struct format** — Raw `unsigned char data[N] = { 0xNN, ... }` byte arrays replaced with packed C structs using named fields, `NAKA_HDR()` type headers, `NAKA_ADDR()` pointer symbol resolution, and `_Static_assert` size verification. Pointer tables have 800+ external symbols resolved via ELF symbol table. Named regions derived from `.equ` offsets in assembly wrappers provide clear structural decomposition of widget descriptors, string tables, bitmap data, palette entries, and handler configuration.
+
 **All C screen data `.handler` fields now use symbolic references** — 52 handler symbols across 2 linker scripts (`maincpu.ld`, `ctlonly.ld`) replace raw numeric addresses in the C-compiled screen data structures, enabling cross-reference navigation and maintaining the link between C UI definitions and assembly handler routines.
 
 **IC307 waveform ROM format fully decoded** — The waveform ROM (IC307, 4MB) format has been fully reverse-engineered: 16-bit signed PCM samples at 32kHz, organized as a sample table (512 entries with start/end/loop addresses) followed by raw sample data. See [Waveform ROM Format](/waveform-rom-format/) for full documentation.
