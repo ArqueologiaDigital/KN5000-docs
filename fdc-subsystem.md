@@ -131,13 +131,13 @@ Actual_delay_ms = WA / 2
 | Address | Name | Description | Status |
 |---------|------|-------------|--------|
 | 0xF97612 | SOME_DELAY | Millisecond delay using SYSTEM_TIMESTAMP | **Documented** |
-| 0xF97544 | LABEL_F97544 | FDC drive detection routine | Raw bytes |
-| 0xF97592 | LABEL_F97592 | FDC drive status routine | Raw bytes |
-| 0xF975AC | LABEL_F975AC | FDC pre-operation check | Raw bytes |
-| 0xF975DC | LABEL_F975DC | FDC timing/delay routine | Raw bytes |
-| 0xF975E2 | LABEL_F975E2 | FDC post-operation routine | Raw bytes |
-| 0xF972F9 | LABEL_F972F9 | FDC command send routine | Raw bytes |
-| 0xF974FE | LABEL_F974FE | FDC detection check routine | Raw bytes |
+| 0xF97544 | FDC_DRIVE_DETECT | FDC drive detection routine | Raw bytes |
+| 0xF97592 | FDC_DRIVE_STATUS | FDC drive status routine | Raw bytes |
+| 0xF975AC | FDC_PRE_OP_CHECK | FDC pre-operation check | Raw bytes |
+| 0xF975DC | FDC_TIMING_DELAY | FDC timing/delay routine | Raw bytes |
+| 0xF975E2 | FDC_POST_OP | FDC post-operation routine | Raw bytes |
+| 0xF972F9 | FDC_CMD_SEND | FDC command send routine | Raw bytes |
+| 0xF974FE | FDC_DETECT_CHECK | FDC detection check routine | Raw bytes |
 
 ---
 
@@ -165,10 +165,10 @@ Complex routine that validates FDC status through multiple checks.
 FDC_CONFIG_VERIFY:          ; F96BD0
     PUSH XIZ
     CALR FDC_ClearStatus_InitTimer
-    CALR LABEL_F97544
+    CALR FDC_DRIVE_DETECT
     CP HL, 0FFFFh
     JR Z, FDC_CONFIG_L1
-    CALR LABEL_F97592
+    CALR FDC_DRIVE_STATUS
     CP HL, 0FFFFh
     JR Z, FDC_CONFIG_L1
     LD (8B04h), 0FFh
@@ -180,10 +180,10 @@ FDC_CONFIG_L1:              ; F96BEB
     CALR FDC_Send_Command
     LD WA, 2
     CALR SOME_DELAY
-    CALR LABEL_F97544
+    CALR FDC_DRIVE_DETECT
     CP HL, 0FFFFh
     JR Z, FDC_CONFIG_L2
-    CALR LABEL_F97592
+    CALR FDC_DRIVE_STATUS
     CP HL, 0FFFFh
     JR Z, FDC_CONFIG_L2
     CALR FDC_ClearStatus_InitTimer
@@ -218,12 +218,12 @@ FDC_CONFIG_L6:              ; F96C4C
 FDC_CONFIG_L7:              ; F96C5C
     LD WA, 0001h
     CALR FDC_Set_Status
-    CALR LABEL_F97544
+    CALR FDC_DRIVE_DETECT
     CP HL, 0FFFFh
     JR Z, FDC_CONFIG_L2
     LD WA, 0001h
     CALR FDC_Set_Status
-    CALR LABEL_F97592
+    CALR FDC_DRIVE_STATUS
     CP HL, 0FFFFh
     JR NZ, FDC_CONFIG_L8
 FDC_CONFIG_L2:              ; F96C7B
@@ -273,10 +273,10 @@ FDC_STATUS_HANDLER:         ; F97696
     LD (8B04h), (8A36h)
     LD WA, 2
     CALR SOME_DELAY
-    CALR LABEL_F975DC
+    CALR FDC_TIMING_DELAY
     LD WA, 000Fh
-    CALR LABEL_F972F9
-    CALR LABEL_F975E2
+    CALR FDC_CMD_SEND
+    CALR FDC_POST_OP
     CP (8A24h), 0
     JR Z, FDC_SH_L1
     LD (8B04h), 0FFh
@@ -288,12 +288,12 @@ FDC_SH_L1:                  ; F976C3
 FDC_STATUS_HANDLER_2:       ; F976C9
     LD (8A28h), 0C6h
     CALR FDC_Setup_DMA_Mode
-    CALR LABEL_F975DC
+    CALR FDC_TIMING_DELAY
     LD WA, 00C6h
-    CALR LABEL_F972F9
+    CALR FDC_CMD_SEND
     CP (8A24h), 0
     RET NZ
-    JRL T, LABEL_F975E2
+    JRL T, FDC_POST_OP
 ```
 
 ### FDC_CMD_EXEC (0xF976E4) - Command Execution Handler
@@ -303,13 +303,13 @@ Handles FDC command execution with detection and validation.
 ```asm
 FDC_CMD_EXEC:               ; F976E4
     PUSH IZ
-    CALR LABEL_F974FE
+    CALR FDC_DETECT_CHECK
     CP HL, 0
     JR Z, FDC_CE_L1
     LD (8A68h), 001h
     JRL T, FDC_CE_DISPATCH  ; 0xF9782A
 FDC_CE_L1:                  ; F976F4
-    CALR LABEL_F97544
+    CALR FDC_DRIVE_DETECT
     CP HL, 0
     JR NZ, FDC_CE_L2
     LD (8A68h), 008h
@@ -347,7 +347,7 @@ Configures FDC for different operating modes (0-5).
 
 ```asm
 FDC_MODE_CONFIG:            ; F97984
-    CALR LABEL_F975AC
+    CALR FDC_PRE_OP_CHECK
     CP (8A24h), 0
     JRL NZ, FDC_MC_EXIT     ; 0xF97A3C
     CALR FDC_INTERRUPT_HANDLER
@@ -396,7 +396,7 @@ FDC_CMD_ENABLE:             ; F97C21
     PUSH IZ
     SET 3, (28h)
     LD WA, 00FEh
-    CALR LABEL_F972F9
+    CALR FDC_CMD_SEND
     CP (8A24h), 0
     JR Z, FDC_CE_READY
     LD WA, 0031h
@@ -423,7 +423,7 @@ Clears bit 3 at 0x28.
 FDC_CMD_DISABLE:            ; F97C4B
     RES 3, (28h)
     LD WA, 000Eh
-    JRL T, LABEL_F972F9
+    JRL T, FDC_CMD_SEND
 ```
 
 ### FDC_STATUS_COPY (0xF97C54) - Copy Cached Status
@@ -470,7 +470,7 @@ FDC_INTERRUPT_HANDLER:      ; F97C7C
     CP (8A24h), 0
     JR NZ, FDC_IH_EXIT
     LD WA, 4
-    CALR LABEL_F972F9
+    CALR FDC_CMD_SEND
     CP (8A24h), 0
     JR NZ, FDC_IH_EXIT
     CALR FDC_Wait_Ready_Timeout
