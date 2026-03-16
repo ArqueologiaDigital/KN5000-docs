@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 340 (5 open, 334 closed)
+**Total Issues:** 340 (4 open, 335 closed)
 
 **Quick Links:** 
-[Other](#other) (5)
+[Other](#other) (4)
 
 ---
 
@@ -97,14 +97,6 @@ Create a new MAME upstream PR (PR5) for accumulated driver fixes on kn5000_pr5_d
 
 ---
 
-#### ⚪ MAME: Decode voice parameter template (ROM 0x12115, 34 bytes) {#issue-kn5000-v0uv}
-
-**ID:** `kn5000-v0uv` | **Priority:** Low | **Created:** 2026-03-14
-
-The 34-byte voice parameter template at SubCPU ROM 0x12115 contains default register values for all tone gen registers. Decoding this would improve waveform selection accuracy — currently the mapping from register values to waveform ROM addresses is unknown. Tasks: (1) Extract the template bytes from the SubCPU ROM. (2) Map each byte pair to the corresponding tone gen register. (3) Understand what default waveform, pitch, and volume values are set.
-
----
-
 #### ⚪ MAME: Feature Demo SSF visual presentation {#issue-kn5000-jbhk}
 
 **ID:** `kn5000-jbhk` | **Priority:** Low | **Created:** 2026-03-16
@@ -157,6 +149,7 @@ Production-ready emulation and homebrew support.
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-v0uv` | MAME: Decode voice parameter template (ROM 0x12115, 34 by... | 2026-03-16 |
 | `kn5000-kdis` | MAME: Wire FDC Terminal Count (TC) signal from TMP94C241 ... | 2026-03-16 |
 | `kn5000-vc1b` | NAKA C files: Convert remaining raw byte arrays to structs | 2026-03-16 |
 | `kn5000-u4k7` | Add MAME screenshots to playing-games tutorial | 2026-03-16 |
@@ -176,9 +169,8 @@ Production-ready emulation and homebrew support.
 | `kn5000-02h7` | Rename LABEL_ placeholders in note_voice_mapping.s | 2026-03-14 |
 | `kn5000-h1d0` | Rename LABEL_XXXXXX to semantic names in audio_control_en... | 2026-03-14 |
 | `kn5000-xm8x` | MAME: Fix FDC disk detection (dskchg polarity) | 2026-03-14 |
-| `kn5000-qkdr` | Rename LABEL_XXXXXX to semantic names in accompaniment_en... | 2026-03-14 |
 
-*...and 314 more closed issues*
+*...and 315 more closed issues*
 
 ---
 
@@ -190,14 +182,14 @@ Production-ready emulation and homebrew support.
 |----------|-------|
 | Critical | 1 |
 | Medium | 1 |
-| Low | 3 |
+| Low | 2 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 5 |
+| Other | 4 |
 
 ---
 
-*Last updated: 2026-03-16 04:32*
+*Last updated: 2026-03-16 05:40*
