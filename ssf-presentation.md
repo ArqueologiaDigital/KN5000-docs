@@ -1231,28 +1231,79 @@ DRAM[61854] (part enable bitmask)
 
 If DRAM[61854] is zero (no parts enabled), the entire chain produces zero. `SeqPlay_PreparePlaybackState` is called from within `SeqStep_PlaybackCheckBeat`, which is itself called from the tick processing that `Seq_DispatcherTick` gates — so if the gating check blocks ticks, parts are never activated.
 
-**Investigation in progress (Trace 9):** Monitoring DRAM[36150] (acc_mode), DRAM[8968] (chord override), DRAM[61854] (part enable bitmask), and DRAM[8980] (pending parts) during the Feature Demo. If `acc_mode` is in the 16-22 range, it confirms the gating check is the direct cause of zero note events.
+### Trace 9 Results and RhythmROM Gate Discovery
+
+Trace 9 produced definitive data:
+
+```
+f=2385 acc_mode=228 chord_ovr=0 part_en=0x0000 pending=0x5151 parts=0x0000 timer=13 play=4
+f=2415 acc_mode=228 chord_ovr=0 part_en=0x0000 pending=0x5151 parts=0x0000 timer=10 play=4
+f=2445 acc_mode=228 chord_ovr=0 part_en=0x0000 pending=0xFFFF parts=0x0000 timer=9  play=6
+f=2475 acc_mode=228 chord_ovr=0 part_en=0xFFFF pending=0xFFFF parts=0x0000 timer=3  play=6
+f=2505 acc_mode=228 chord_ovr=0 part_en=0xFFFF pending=0xFFFF parts=0x0000 timer=0  play=6
+... (parts=0x0000 forever, play=6 forever)
+```
+
+**Key findings:**
+
+| Variable | Value | Meaning |
+|----------|-------|---------|
+| `acc_mode` | 228 (0xE4) | > 22, so gating check PASSES -- **not the issue** |
+| `chord_ovr` | 0 | Demo chord override NOT active |
+| `part_en` | 0x0000 -> 0xFFFF | All 16 parts DO get enabled |
+| `pending` | 0x5151 -> 0xFFFF | Pending parts ARE populated |
+| `parts` | 0x0000 (always) | **Copy from pending->parts NEVER happens** |
+| `play` | 4 -> 6 | Sequencer IS started |
+
+**The broken link:** `pending=0xFFFF` but `parts=0x0000`. The copy is performed by `SeqPlay_PreparePlaybackState` (called from `SeqStep_PlaybackCheckBeat`), which is called from within the sequencer tick processing chain. Despite the gating check passing, the tick processing never reaches the beat check.
+
+**Root cause discovered: `RhythmROM_CheckValid` gate** (seq_audio_mode.s:1348-1367):
+
+```asm
+RhythmROM_CheckValid:
+    ldb c, 0x0                    ; assume valid
+    ld xwa, 0xFFFFFFFF
+    cpda32 xwa, 12919             ; compare DRAM[12919] with 0xFFFFFFFF
+    jr z, RhythmROM_InvalidIncrement  ; if equal → INVALID
+    jr RhythmROM_CheckDone            ; if not equal → valid, proceed
+```
+
+This check runs at the TOP of `Seq_DispatcherTick_Process` (smf_event_processor.s:11215-11217):
+
+```asm
+call RhythmROM_CheckValid
+cps c, 0
+jr nz, Seq_DispatcherTickReturn    ; c=1 → SKIP ENTIRE TICK
+```
+
+If `DRAM[12919]` (address `0x3277`) equals `0xFFFFFFFF`, the rhythm ROM is considered invalid and **every single sequencer tick is skipped**. This means:
+- No `SeqTick_ReadControlState`
+- No `Seq_ReadTempoLookup`
+- No `Rhythm_CompareAndTrigger`
+- No `AccTick_Main`
+- No `AccProcess_Entry`
+- No `SeqStep_PlaybackCheckBeat` -> no copy of pending->parts
+
+**This is the most likely direct cause of `parts` staying at 0x0000.** A Lua trace (trace10) is checking whether `DRAM[0x3277]` equals `0xFFFFFFFF` after boot.
+
+If confirmed, the fix requires understanding what firmware initialization code writes a valid value to `DRAM[12919]` during the rhythm ROM validation process, and what hardware emulation issue prevents that initialization from completing.
 
 ```mermaid
 flowchart TD
-    TICK["INTT1 timer → Seq_DispatcherEntry"] --> CHECK{"DRAM[36150]<br/>acc_mode value?"}
-    CHECK -- "< 16 or > 22" --> PROCESS["Process sequencer tick"]
-    CHECK -- "16-22 (GATED)" --> SKIP["Skip ALL accompaniment<br/>No rhythm, no chords,<br/>no note events"]
+    TICK["Seq_DispatcherTick_Process"] --> RCHECK["RhythmROM_CheckValid"]
+    RCHECK --> CMP{"DRAM[12919]<br/>== 0xFFFFFFFF?"}
+    CMP -- "YES (invalid)" --> C1["c = 1"]
+    CMP -- "NO (valid)" --> C0["c = 0"]
+    C1 --> SKIP["cps c, 0 → jr nz<br/>SKIP ENTIRE TICK"]
+    C0 --> PROCESS["Process tick:<br/>ReadControlState<br/>ReadTempoLookup<br/>Rhythm_CompareAndTrigger<br/>AccTick_Main<br/>AccProcess_Entry"]
+    PROCESS --> BEAT["SeqStep_PlaybackCheckBeat"]
+    BEAT --> COPY["SeqPlay_PreparePlaybackState<br/>pending → parts"]
 
-    PROCESS --> RHYTHM["AccTick_Main<br/>Rhythm processing"]
-    RHYTHM --> CHORD{"DRAM[8968]<br/>chord override?"}
-    CHORD -- "!= 0 (demo)" --> DEMO_CHORD["Read demo chords<br/>from DRAM[8960-8966]"]
-    CHORD -- "== 0 (normal)" --> KBD_CHORD["Read keyboard chords<br/>from DRAM[52958-52961]"]
-    KBD_CHORD --> ZERO["Zero in MAME<br/>(no keyboard input)"]
-    ZERO --> NO_NOTES["No chord → no accompaniment<br/>seq_parts stays 0"]
-    DEMO_CHORD --> NOTES["Chord data available<br/>→ accompaniment plays<br/>→ seq_parts non-zero"]
-
-    SKIP --> STUCK["seq_parts stays 0<br/>Demo stuck forever"]
+    SKIP --> STUCK["parts stays 0x0000<br/>Demo stuck forever"]
 
     style SKIP fill:#fcc,stroke:#c00,color:#800
     style STUCK fill:#fcc,stroke:#c00,color:#800
-    style ZERO fill:#ffc,stroke:#cc0,color:#880
-    style NOTES fill:#cfc,stroke:#0c0,color:#080
+    style COPY fill:#cfc,stroke:#0c0,color:#080
 ```
 
 ---
