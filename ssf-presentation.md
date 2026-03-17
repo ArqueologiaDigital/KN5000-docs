@@ -133,37 +133,121 @@ ApPreControl receives 0x1C00006
 
 The parser reads `hkst_55.ssf` from ROM, processes `<SHOW OBJ="...">` actions, and renders FTBMP bitmaps to the display.
 
-### Dispatch Chain Diagram
+### Full System Flowchart
 
+The following flowchart shows the complete SSF activation path from button press to bitmap rendering, including all decision points and the two competing event paths (correct path via GroupBoxProc vs. automated path via DemoMenu). Red nodes indicate where the chain breaks in MAME.
+
+```mermaid
+flowchart TD
+    A[/"🎹 Physical Button Press<br/>(Control Panel MCU)"/] --> B["DRAM Key Scan Data<br/>0xC07D-0xC080"]
+    B --> C{"Boot flag<br/>DRAM[0x0406] bit 7?"}
+    C -- "0 (not booted)" --> C_FAIL["❌ Key scan ignored"]
+    C -- "1 (booted)" --> D["Read UI state<br/>DRAM[0x8D38]"]
+    D --> E{"SSF_PresentationGateTable<br/>[state] check"}
+    E -- "0xFFFF (disabled)" --> E_FAIL["❌ Event suppressed<br/>(wrong UI state)"]
+    E -- "0xFFFE (unconditional)<br/>state = 0xE4" --> F["Pack key data into XDE<br/>Dispatch event 0x1C00038"]
+    E -- "Match panel state" --> F
+
+    F --> G{"EventDispatch_Direct<br/>Registration table scan"}
+    G -- "No handler registered<br/>for 0x1C00038" --> G_FAIL["❌ Event has no recipient<br/>(MAME failure point #1)"]:::failnode
+    G -- "GroupBoxProc<br/>registered" --> H["GroupBoxProc<br/>receives 0x1C00038"]
+
+    H --> I["GroupBoxProc_StartSSFPresentation<br/>(0xF9A273)"]
+    I --> J["Build workspace:<br/>tag = 0x0000B80A"]
+    J --> K["SendEvent (direct)<br/>event 0x1C0001C"]
+
+    K --> L{"AcPresentationControlProc<br/>tag == 0xB80A?"}
+    L -- "Yes (correct path)" --> M["Send event 0x1C00006"]
+    L -- "No (tag mismatch)" --> L_FAIL["❌ SSF not started"]
+
+    M --> N["ApPreControl<br/>receives 0x1C00006"]
+    N --> O["FDemo_ProcessDisplayStateQuery"]
+    O --> P["FDemoText_ProcessTextMarkup<br/>(SSF XML parser)"]
+    P --> Q["Parse hkst_55.ssf<br/>27 ACT entries"]
+    Q --> R["Load FTBMP01-06<br/>from Table Data ROM"]
+    R --> S["DrawBitmapFile<br/>(BMP decode + palette)"]
+    S --> T["Blit to OFFSCREEN_BUFFER<br/>(0x43C00)"]
+    T --> U["Copy to VIDEO_RAM<br/>(0x1A0000)"]
+    U --> V[/"🖥️ FTBMP bitmap<br/>visible on LCD"/]
+
+    %% Competing path (automated demo)
+    DM["DemoMenu_BuildItemWorkspace<br/>(automated demo path)"] --> DM_WS["Build workspace:<br/>tag = 0x82xx"]
+    DM_WS --> DM_POST["ApPostEvent (queued)<br/>event 0x1C0001C"]
+    DM_POST --> L
+
+    classDef failnode fill:#fcc,stroke:#c00,color:#800
 ```
-Physical Button Press
-  |
-  v
-Control Panel MCU -> DRAM key scan data
-  |
-  v
-[Stage 2] UIState_KeyScan_Dispatch (0xF98697)
-  |  reads DRAM[0x8D38], checks SSF_PresentationGateTable
-  |  packs key data, dispatches event 0x1C00038
-  v
-[Stage 3] EventDispatch_Direct (0xFA9945)
-  |  ring buffer + registration table scan
-  v
-[Stage 4] GroupBoxProc receives 0x1C00038
-  |  routes to SSF startup handler
-  v
-[Stage 5] GroupBoxProc_StartSSFPresentation (0xF9A273)
-  |  builds workspace with tag 0x0000B80A
-  |  sends event 0x1C0001C
-  v
-[Stage 6] AcPresentationControlProc (0xF8450B)
-  |  checks workspace tag == 0xB80A
-  |  sends event 0x1C00006
-  v
-[Stage 7] ApPreControl -> FDemo_ProcessDisplayStateQuery
-  |  -> FDemoText_ProcessTextMarkup -> DrawBitmapFile
-  v
-FTBMP bitmaps rendered to VRAM
+
+### UI State Machine Flowchart
+
+```mermaid
+stateDiagram-v2
+    [*] --> Normal: Boot complete
+    Normal --> DemoMenu: DEMO button<br/>evt 0x1C00013
+    DemoMenu --> Demonstration: LEFT 2<br/>(CPL_SEG10)
+    DemoMenu --> StyleSelect: LEFT 4<br/>(CPL_SEG9)
+    DemoMenu --> FeaturePresentation: evt 0x1C00002<br/>to AcPresCtrl
+    Demonstration --> RhythmSelect: encoder
+    StyleSelect --> RhythmSelect: encoder
+    RhythmSelect --> StyleSelect: encoder
+    FeaturePresentation --> Normal: EXIT button
+
+    state "Normal (0x01)" as Normal
+    state "Demo Menu (0xE0)" as DemoMenu
+    state "Demonstration (0xE1)" as Demonstration
+    state "Style Select (0xE2)" as StyleSelect
+    state "Rhythm Select (0xE3)" as RhythmSelect
+    state "Feature Presentation (0xE4)" as FeaturePresentation
+
+    note right of FeaturePresentation
+        SSF gate = 0xFFFE (unconditional)
+        Event 0x1C00038 permitted
+        Demo timer: 15 → 10 → 0
+    end note
+```
+
+### Demo Timer and Song Playback Flowchart
+
+```mermaid
+flowchart TD
+    START["Enter Feature Presentation<br/>(state 0xE4)"] --> RESET["Demo_ResetCountdownTimer<br/>DRAM[0x0D2F] = 15"]
+    RESET --> TICK["Timer tick<br/>DRAM[0x0D2F]--"]
+    TICK --> CHK15{"DRAM[0x0D2F]<br/>== 10?"}
+    CHK15 -- "No" --> TICK
+    CHK15 -- "Yes" --> PARSE["Demo_ParseSlideHeader<br/>Load slide data from 0x9C4000"]
+    PARSE --> PLAY["Demo_SelectEntry_PlaySong"]
+    PLAY --> GUARD{"FDemo_MultiGuardCheck"}
+    GUARD -- "state != 0xE4" --> GUARD_FAIL["❌ Guard fails"]:::failnode
+    GUARD -- "DRAM[10420] != 0<br/>(seq parts active)" --> GUARD_FAIL2["❌ Guard fails<br/>(waveform ROMs missing<br/>→ parts never finish)"]:::failnode
+    GUARD -- "All checks pass" --> SWBT["SwbtWr_ReinitBothBanks<br/>(~16s blocking)"]
+    SWBT --> SEQ["Seq_DispatcherEntry<br/>Start sequencer"]
+    SEQ --> TEMPO["SeqTimer_UpdateTempoReg"]
+    TEMPO --> PLAYING["DRAM[0x8F4E] = 6<br/>(playing)"]
+    PLAYING --> EVT5["Seq_DispatchEventType5<br/>evt 0x1C10005"]
+    EVT5 --> NEXT_TICK["Continue timer<br/>DRAM[0x0D2F]--"]
+    NEXT_TICK --> CHK3{"== 3?"}
+    CHK3 -- "No" --> CHK1{"== 1?"}
+    CHK3 -- "Yes" --> STARTPB["Demo_SelectEntry_StartPlayback"]
+    CHK1 -- "No" --> CHK0{"== 0?"}
+    CHK1 -- "Yes" --> SIG["DRAM[10598] = 133<br/>(transition signal)"]
+    CHK0 -- "No" --> NEXT_TICK
+    CHK0 -- "Yes" --> IDLE["Timer idle<br/>Wait for song end"]
+
+    classDef failnode fill:#fcc,stroke:#c00,color:#800
+```
+
+### Rendering Pipeline Flowchart
+
+```mermaid
+flowchart LR
+    BMP["FTBMP in Table Data ROM<br/>(BMP file, 8bpp indexed)"] --> HDR["Validate BMP header<br/>biSize=0x28, biBitCount≤8"]
+    HDR --> PAL["Load 256-color palette<br/>→ OFFSCREEN_BUFFER_4<br/>(0x69400)"]
+    PAL --> DECODE["Gfx_ProcessSplashData<br/>1bpp/4bpp/8bpp decode"]
+    DECODE --> REMAP["Gfx_DecodeImageToBuffer<br/>Palette remap"]
+    REMAP --> BUF1["Write to OFFSCREEN_BUFFER_1<br/>(0x43C00, 76800 bytes)"]
+    BUF1 --> VRAM["Mem_Copy to VIDEO_RAM<br/>(0x1A0000)"]
+    VRAM --> PALREG["ChangePalette_Impl<br/>Write VGA port 0x3C9"]
+    PALREG --> LCD[/"320×240 8bpp LCD"/]
 ```
 
 ---
