@@ -22,7 +22,7 @@ If you have a KN5000 and can dump ROMs, please reach out!
 
 ### ROM Disassembly Improvements
 
-All ROMs achieve 100% byte-perfect match. All `LABEL_XXXXXX` address-based labels have been replaced with semantic names (completed March 2026). All NAKA widget C data files have been converted from raw byte arrays to named packed structs. Remaining work includes converting ~4,663 `.byte` fallbacks in the HDAE5000 ROM to native LLVM instructions (requires LLVM backend additions for additional addressing modes).
+All ROMs achieve 100% byte-perfect match. All `LABEL_XXXXXX` address-based labels have been replaced with semantic names (completed March 2026). All NAKA widget C data files have been converted from raw byte arrays to named packed structs. All executable `.byte` code has been eliminated — 279,441 native instructions across all 6 ROMs with zero code `.byte` fallbacks. 15 sound data files have been converted to C structs with named fields.
 
 ### HDAE5000 ROM Disassembly
 
@@ -77,7 +77,7 @@ If you have a working KN5000:
 
 ### Tooling
 
-- Extend LLVM TLCS-900 backend for remaining addressing modes (compact zero-load, compact load-1, calr with numeric targets)
+- Extend LLVM TLCS-900 backend for remaining niche encodings (compact zero-load, compact load-1, dec/inc N xsp)
 - Create visualization tools for protocol analysis
 - Build comparison/diff tools for ROM analysis
 
@@ -145,9 +145,9 @@ See `CLAUDE.md` in the repository for complete policy details.
 A **custom LLVM backend for TLCS-900** is already operational and used as the authoritative build system for all ROM reconstruction. It supports C compilation targeting the TMP94C241F, and has been used to build the Minesweeper homebrew game.
 
 **Remaining compiler work:**
-- Additional addressing modes (direct memory, F2 immediate stores)
 - Optimization passes for code density
 - Standard library support for homebrew development
+- Niche encoding variants (compact zero-load, dec/inc xsp) for 100% assembler coverage
 
 ## Skills We Need
 

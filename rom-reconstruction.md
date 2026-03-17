@@ -93,7 +93,7 @@ The project uses a **custom LLVM backend** (`llvm-mc -triple=tlcs900`) for assem
 
 As of March 2026, **all six ROMs** rebuild with 100% byte accuracy using LLVM assembly (~370,000 native instructions, 0 workaround macros):
 
-- **Main CPU** (2MB) - Complete disassembly with symbolic labels (~330,000 instructions (90K .byte converted to native))
+- **Main CPU** (2MB) - Complete disassembly with symbolic labels (239,683 native instructions, 0 code .byte remaining)
 - **Sub CPU Payload** (192KB) - Full protocol implementation (35,747 instructions)
 - **Sub CPU Boot** (128KB) - Boot ROM with VGA initialization (1,357 instructions)
 - **Table Data** (2MB) - Feature demo, wallpapers, icons, bootloader (1,678 instructions)
@@ -505,6 +505,16 @@ python compare_roms.py # Verify against originals
 ```
 
 ## Recent Improvements
+
+### March 2026: Sound Data C Struct Conversion and Code Quality
+
+**15 sound data files converted to C structs** — Raw byte arrays in `maincpu/audio/sound_data/` converted to typed C struct arrays with named fields, section labels, and `_Static_assert` size verification. Files include piano, guitar, strings/vocal, organ, brass, flute, sax/reed, mallet/orch perc, drum kits, and more. The `sepaout_config.s` data was also converted to a C struct with separator/output configuration fields.
+
+**1,398 generic labels renamed to semantic names** — Remaining hex-suffixed parameter labels, `.set` aliases, and address-based labels across all source files replaced with sequential or descriptive names.
+
+**LLVM backend improvements** — Misaligned memory access fix, D7 prevbank disassembler fix, SRI prefix encoding fix for R+d16 addressing, F0 8-bit direct memory support, auto-increment addressing, round-trip assembly tests, `.word`/`.hword` directive support, and `calr` relative call fix. Backend documentation added.
+
+**MAME driver style audit passed** — All upstream PR branches reviewed for MAME code style compliance.
 
 ### March 2026: Complete LABEL_XXXXXX Elimination
 

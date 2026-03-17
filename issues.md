@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 395 (10 open, 384 closed)
+**Total Issues:** 395 (9 open, 385 closed)
 
 **Quick Links:** 
-[Other](#other) (10)
+[Other](#other) (9)
 
 ---
 
@@ -104,14 +104,6 @@ Create a new MAME upstream PR (PR5) for accumulated driver fixes on kn5000_pr5_d
 **ID:** `kn5000-jt0b` | **Priority:** Medium | **Created:** 2026-03-16
 
 The kn5000_pr5_driver branch needs rebasing onto current upstream MAME master before creating PR. Check for conflicts with recent MAME changes.
-
----
-
-#### ⚪ LLVM TLCS-900: Fix calr with numeric address targets {#issue-kn5000-cy4r}
-
-**ID:** `kn5000-cy4r` | **Priority:** Low | **Created:** 2026-03-16
-
-calr (relative call with 16-bit offset) with numeric address targets emits absolute bytes instead of computing relative offset. Currently must use labels or .byte fallback. Fix: compute PC-relative offset at emission time.
 
 ---
 
@@ -219,6 +211,7 @@ Switch statements compile to arithmetic chains instead of jump tables because BR
 | Issue | Title | Closed |
 |-------|-------|--------|
 | `kn5000-riek` | LLVM TLCS-900: Add auto-increment addressing mode for CP | 2026-03-17 |
+| `kn5000-cy4r` | LLVM TLCS-900: Fix calr with numeric address targets | 2026-03-17 |
 | `kn5000-jd8s` | LLVM TLCS-900: Add 8-bit direct addressing mode (F0 prefix) | 2026-03-17 |
 | `kn5000-205q` | LLVM TLCS-900: Fix R+d16 addressing in disassembler (SRI ... | 2026-03-17 |
 | `kn5000-rv4p` | LLVM TLCS-900: Add backend documentation (README/architec... | 2026-03-17 |
@@ -237,9 +230,8 @@ Switch statements compile to arithmetic chains instead of jump tables because BR
 | `kn5000-4wd3` | Add file header comments to 36 assembly files missing them | 2026-03-17 |
 | `kn5000-o97p` | Extract 43 remaining inline data blocks from kn5000_v10_p... | 2026-03-17 |
 | `kn5000-fp95` | Maincpu ROM build broken: .org overflow in fdc_routines.s... | 2026-03-17 |
-| `kn5000-ickl` | Merge single-byte .byte fragments with adjacent native in... | 2026-03-17 |
 
-*...and 364 more closed issues*
+*...and 365 more closed issues*
 
 ---
 
@@ -251,15 +243,15 @@ Switch statements compile to arithmetic chains instead of jump tables because BR
 |----------|-------|
 | Critical | 1 |
 | Medium | 2 |
-| Low | 4 |
+| Low | 3 |
 | P4 | 3 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 10 |
+| Other | 9 |
 
 ---
 
-*Last updated: 2026-03-17 13:57*
+*Last updated: 2026-03-17 14:01*

@@ -642,7 +642,7 @@ The pointer table at 0xE32A7A actually contains **80 entries** (not just 40), co
 
 ### Remaining Questions
 
-1. **Main CPU dispatch formatting:** The function `HdaeRom_ProcessBlock` (still in .byte form) reformats the 4-byte AssswbWr entries into DMA payloads. Decoding this would reveal exactly how preset bytes map to DSP ring buffer message fields.
+1. **Main CPU dispatch formatting:** The function `HdaeRom_ProcessBlock` reformats the 4-byte AssswbWr entries into DMA payloads. Further analysis would reveal exactly how preset bytes map to DSP ring buffer message fields.
 2. **DSP hardware registers:** The exact register protocol for writing to the DSP chip at 0x130000/0x130002 requires tracing the Sub CPU's DSP parameter output functions (Phase 4).
 3. **WAVE REVERB extra parameters:** Preset 9 (WAVE REVERB 2) has non-zero B7-B8 values (18, 84). These likely control waveform modulation parameters unique to the WAVE REVERB algorithm.
 4. **EQ crossover frequencies:** The 4 big-endian 16-bit values in EQ presets need verification as frequency values (Hz). The monotonic ordering suggests crossover points for a 4-band parametric EQ.

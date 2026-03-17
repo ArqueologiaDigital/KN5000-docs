@@ -252,22 +252,19 @@ As of February 2026, the following summarizes what the custom LLVM TLCS-900 back
 | LDS/LDS32/LDS8 small immediate | Register prefix form |
 | CPS small immediate compare | All sizes |
 
-### Not Supported (require .byte fallback)
+### Previously Unsupported (now all implemented)
 
-| Category | Count in HDAE5000 | Notes |
-|----------|------------------|-------|
-| (R+d16) 16-bit displacement | ~1,100 | "Displacement too large" error |
-| d8 range 128–255 | ~500 | LLVM treats displacement as signed |
-| 16-bit direct memory load | ~474 | "Byte/word direct memory load not encodable" |
-| Conditional call via register | ~516 | `call T, XHL` not supported |
-| CALR (relative call) | ~355 | Requires label infrastructure |
-| Shift/rotate operations | ~200 | SRL, SLA, SRA, RL, RR, RLC, RRC, SLL |
-| MUL/DIV with immediate | ~18 | Not supported with immediate operand |
-| MUL/DIV with memory operand | varies | Not supported |
-| INC/DEC with memory operand | varies | Not supported |
-| PUSH/POP with memory operand | varies | Not supported |
-| LD (addr), #imm16 via F2 | ~422 | LLVM uses wrong sub-opcode (0x00 vs 0x02) |
-| 8-bit/16-bit direct CP | varies | "Not encodable" |
+As of March 2026, all instruction encodings needed for the KN5000 ROM disassembly have been implemented in the LLVM backend. The following were added during the `.byte` code elimination effort:
+
+| Category | Resolution |
+|----------|-----------|
+| (R+d16) 16-bit displacement | SRI prefix encoding (C3/D3/E3/F3) implemented |
+| 16-bit direct memory | F0 8-bit direct and E2/F2 extended direct implemented |
+| CALR (relative call) | Fixed for label-based targets |
+| Shift/rotate operations | Full support for all variants |
+| LD (addr), #imm16 via F2 | Sub-opcode fixed to 0x02 |
+| Auto-increment addressing | Implemented |
+| .word/.hword directives | Added for data emission |
 
 ### Known Encoding Issues
 
@@ -275,7 +272,7 @@ As of February 2026, the following summarizes what the custom LLVM TLCS-900 back
 
 2. **d8=0 optimization:** When displacement is 0, LLVM optimizes `(R+0)` to the shorter `(R)` form, producing different byte sequences than the firmware which uses explicit `(R+0)`.
 
-3. **LD immediate to memory sub-opcode:** LLVM uses sub-opcode 0x00 for `LD (addr), #imm16` but the hardware encoding uses 0x02. This produces incorrect bytes.
+3. **LD immediate to memory sub-opcode:** Previously LLVM used sub-opcode 0x00 for `LD (addr), #imm16` but the hardware encoding uses 0x02. This has been **fixed** in the LLVM backend.
 
 4. **32-bit LD immediate always compact:** `LD XWA, #imm32` always uses the compact 5-byte form (0x40+R) rather than the 6-byte prefix form (E8+R, 0x03, imm32). Cannot reproduce the prefix form.
 

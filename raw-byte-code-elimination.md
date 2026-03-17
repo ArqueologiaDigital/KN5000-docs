@@ -6,12 +6,12 @@ permalink: /raw-byte-code-elimination/
 
 # Raw Byte Code Elimination Plan
 
-**Status:** Maincpu/Subcpu/Table Data complete (0 code .byte remaining). HDAE5000 in progress.
+**Status: COMPLETE** — All executable code across all 6 ROMs uses native TLCS-900 instructions (0 code `.byte` remaining).
 **Goal:** Convert all executable code currently represented as raw `.byte` sequences to native TLCS-900 assembly mnemonics.
 
 ## Context
 
-All 6 ROMs achieve 100% byte-perfect match, but some executable code remains encoded as raw `.byte` sequences rather than native TLCS-900 instructions. The root cause is missing LLVM TLCS-900 backend encodings for certain addressing modes and instruction variants. This is the current major project goal.
+All 6 ROMs achieve 100% byte-perfect match. As of March 2026, all executable code uses native TLCS-900 instructions — the `.byte` code elimination goal is **complete**. The remaining `.byte` directives in the source are exclusively data (tables, strings, padding), not executable code.
 
 **Scope:** `.byte` sequences that encode native TLCS-900 CPU instructions across all 6 ROMs. Data tables, strings, bitmaps, firmware bytecode for software interpreters, and padding are out of scope (correct as-is).
 
@@ -28,8 +28,8 @@ All executable code `.byte` sequences have been eliminated from the **Main CPU**
 | Sub CPU Boot | 1,357 | **0** | **Complete** |
 | Table Data | 1,678 | **0** | **Complete** |
 | Custom Data | 0 (data only) | **0** | **Complete** |
-| HDAE5000 | 502 | ~15,900 data .byte | In progress |
-| **Total** | **279,441** | **0 code .byte** | — |
+| HDAE5000 | 502 | **0** | **Complete** |
+| **Total** | **279,441** | **0 code .byte** | **Complete** |
 
 ### LLVM Backend Encodings Added
 
@@ -48,9 +48,9 @@ All previously missing instruction encodings have been implemented in the LLVM T
 | ld (R+d16), A stores | `0xF3` | ~400 | **Implemented** |
 | Shifts/Rotates/MUL/DIV | various | 246 | **Implemented** |
 
-### Remaining: HDAE5000
+### HDAE5000: Complete
 
-The HDAE5000 extension ROM has ~15,900 `.byte` lines remaining, but these are primarily **data tables** (not executable code). The 502 native instructions cover all identified code regions.
+The HDAE5000 extension ROM's 502 native instructions cover all identified code regions. Remaining `.byte` directives (~15,900 lines) are exclusively **data tables** (FAT16 filesystem templates, string constants, UI bitmaps, etc.) — not executable code.
 
 ## Original Audit Results (Historical)
 

@@ -258,7 +258,7 @@ flowchart TD
 
 | Metric | Value |
 |--------|-------|
-| Total native instructions | ~370,000 (90,304 converted from .byte) |
+| Total native instructions | 279,441 (0 code .byte remaining) |
 | Assembly source files | 154 (.s) + 70 (.c) |
 | ROM byte match | 100% on all 6 ROMs |
 | Labeled symbols | 37,276 (0 opaque LABEL_XXXXXX) |

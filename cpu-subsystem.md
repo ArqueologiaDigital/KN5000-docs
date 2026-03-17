@@ -249,19 +249,9 @@ All 6 ROMs (Main CPU, Sub CPU boot, Sub CPU payload, Table Data, HDAE5000, Custo
 
 The ASL Macro Assembler (used historically) is archived in `archive/asl/`.
 
-### Remaining `.byte` Fallbacks
+### `.byte` Code Elimination: Complete
 
-Some addressing modes not yet supported by the LLVM backend require `.byte` encoding:
-
-| Category | Count | Notes |
-|----------|-------|-------|
-| `(R+d16)` addressing | ~970 | Register + 16-bit displacement |
-| 16-bit direct memory | ~470 | Direct memory addressing |
-| 8-bit direct memory | ~210 | Direct memory addressing |
-| F2 immediate stores | ~400 | Store immediate to memory |
-| Complex addressing | ~300 | Various compound modes |
-
-These are concentrated in the HDAE5000 ROM (~4,663 instances). All other ROMs have zero `.byte` fallbacks.
+As of March 2026, **all executable code across all 6 ROMs uses native TLCS-900 instructions** — zero `.byte` code fallbacks remain. Previously missing LLVM backend encodings (R+d16, 16-bit direct, 8-bit direct, F2 immediate stores, etc.) have all been implemented.
 
 ## Related Pages
 
