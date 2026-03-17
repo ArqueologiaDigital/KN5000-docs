@@ -1132,53 +1132,67 @@ If this lifecycle works correctly, parts should clear even without waveform ROMs
 
 ### Voice Lifecycle and Sequencer Parts (Trace Session 8)
 
-**Critical finding: With the HLE workaround removed and the DSP/tone gen fixes in place, `seq_parts` (DRAM[0x28B4]) stays at 0x0000 throughout the entire Feature Demo.** The sequencer active parts bitmask never becomes non-zero.
+**Definitive finding:** The sequencer IS started and enters "playing" state, but produces zero note events. The accompaniment engine runs with no active parts.
 
-**Previous behavior (with workaround):**
-- `seq_parts` briefly flashed to `0xFFFF` during song transitions
-- The workaround timer detected this and force-cleared it to `0x0000`
-- Demo songs cycled (timer restarted after each song)
+**Trace 8 results:**
 
-**Current behavior (workaround removed, correct hardware fixes):**
-- `seq_parts` stays `0x0000` the entire time
-- Timer counts down 15→10→9→4→0 then stays at 0 forever
-- Demo never advances to the next song
-- No new timer countdown starts
+```
+f=2267 timer=14 parts=0x0000 song=18 play=4 acc_flags=0x00 swbt=0xFF
+f=2327 timer=9  parts=0x0000 song=18 play=6 acc_flags=0x00 swbt=0xFF
+f=2387 timer=0  parts=0x0000 song=18 play=6 acc_flags=0x40 swbt=0xFF
+... (play=6, parts=0x0000, acc_flags=0x40 for the rest of the session)
+```
 
-**Analysis:**
+**Key findings:**
 
-The sequencer active parts bitmask (`seq_parts`) is set by the sequencer engine when it has active parts playing notes. It is NOT directly derived from tone gen voice status readback. The bitmask tracks which of the 16 sequencer parts have pending note events.
+- **`play` transitions from 4 (stopped) to 6 (playing)** — the sequencer IS started via `Seq_DispatcherEntry`
+- **`song=18`** — song index 18 is selected from the demo playlist
+- **`seq_parts` stays 0x0000 throughout** — no sequencer parts are activated, even though the sequencer is "playing"
+- **`acc_flags=0x40`** — bit 6 is set after the song starts (display flag in `Banner_Loop_Check`)
+- **`swbt=0xFF`** — `SwbtWr_ReinitBothBanks` completed correctly
 
-On real hardware with waveform ROMs:
-1. The demo selects a song preset
-2. `SwbtWr_ReinitBothBanks` initializes the tone gen with the preset's parameters
-3. `Seq_DispatcherEntry` starts the sequencer
-4. The accompaniment engine generates note events for active parts
-5. Note events trigger KEY ON on tone gen voices → voices play waveforms
-6. `seq_parts` reflects which parts have active notes (non-zero during playback)
-7. When the song completes, all parts finish → `seq_parts` returns to 0
-8. `FDemo_MultiGuardCheck` detects `seq_parts == 0` → demo advances
+**Root cause: The accompaniment engine produces no note events.** The sequencer is running (`play=6`) but has zero active parts (`parts=0x0000`). The firmware expects the following song lifecycle:
 
-In MAME without waveform ROMs:
-1. Steps 1-3 work correctly
-2. But the accompaniment engine may not generate note events if it depends on:
-   - Chord detection from the keyboard (no physical keyboard input in demo mode)
-   - Waveform ROM data for pattern lookup tables
-   - DSP feedback for effects processing
-   - Other hardware state that differs from real hardware
-3. Without note events, `seq_parts` stays 0
-4. The firmware sees `seq_parts == 0` immediately (no song playing)
-5. The demo timer reaches 0 but the demo system doesn't recognize song completion because it never saw a song start
+1. Song starts → `seq_parts` becomes non-zero (accompaniment parts playing notes)
+2. Song plays → parts stay active for duration
+3. Song ends → parts return to zero
+4. Demo system detects the zero→non-zero→zero transition → advances to next song
 
-**The emulation issue is upstream of the tone gen:** The accompaniment/sequencer engine isn't generating note events, likely because some hardware input or data source is missing. The tone gen's voice lifecycle is correct — it's just never exercised because no KEY ON commands arrive.
+Since `seq_parts` never becomes non-zero, the demo system never sees a song start/finish cycle. The demo stays permanently stuck with `play=6, timer=0` — a song "playing" that produces no audible or trackable output.
 
-**Investigation in progress (Trace 8):** Monitoring additional DRAM state variables during the demo:
-- `DRAM[0x8F4E]` (play state: 4=stopped, 6=playing) — does the sequencer ever enter "playing" state?
-- `DRAM[0x28A4]` (song index) — does the demo select different songs?
-- `DRAM[0x28AD]` (demo control flags) — what flags are set?
-- `DRAM[0xBD3C]` (SwbtWr init flag) — does SwbtWr complete correctly?
+```mermaid
+flowchart TD
+    DEMO["Demo selects song 18"] --> SWBT["SwbtWr_ReinitBothBanks<br/>(tone gen preset init)"]
+    SWBT --> SEQ["Seq_DispatcherEntry<br/>play_state = 6 (playing)"]
+    SEQ --> ACC{"Accompaniment engine<br/>generates note events?"}
+    ACC -- "YES (real hardware)" --> PARTS["seq_parts = non-zero<br/>(parts playing notes)"]
+    PARTS --> VOICES["KEY ON to tone gen voices<br/>waveforms playing"]
+    VOICES --> FINISH["Song ends<br/>seq_parts → 0"]
+    FINISH --> ADVANCE["Demo timer restarts<br/>next song selected"]
 
-If `play_state` never transitions from 4 (stopped) to 6 (playing), it confirms the sequencer never starts, pointing to a problem in the sequencer initialization path or its dependencies.
+    ACC -- "NO (MAME)" --> EMPTY["seq_parts stays 0x0000<br/>(no note events generated)"]
+    EMPTY --> STUCK["Demo stuck forever<br/>play=6 but nothing happening"]
+
+    style STUCK fill:#fcc,stroke:#c00,color:#800
+    style ADVANCE fill:#cfc,stroke:#0c0,color:#080
+    style EMPTY fill:#ffc,stroke:#cc0,color:#880
+```
+
+**Why the accompaniment engine produces no events:**
+
+The accompaniment engine generates note events based on:
+
+1. **Chord input** — on real hardware, the demo system internally provides chord progression data to drive accompaniment patterns (the keyboard's chord detection is bypassed in demo mode, replaced by pre-programmed chord sequences stored alongside the song data)
+2. **Pattern resolution** — accompaniment patterns in Table Data ROM define note sequences for each chord type
+3. **Sequencer timing** — pattern playback is driven by the sequencer timer
+
+If any of these inputs is missing or incorrect due to an emulation gap, the accompaniment engine has no material to work with and produces silence.
+
+**Most likely emulation issue:** The SubCPU is responsible for sequencer timing and pattern playback. The SubCPU boot ROM "NEEDS REDUMP" (potential corruption in undumped ranges 0xFE0800-0xFF7800 and 0xFF9800-0xFFF000). If the SubCPU's sequencer timer or pattern reader code is in the corrupted ROM range, it would explain why the sequencer starts but produces no events.
+
+Alternatively, the accompaniment chord data may be sent from MainCPU to SubCPU via the inter-CPU latch mechanism, and some aspect of this communication may be failing in MAME.
+
+**Next investigation:** Trace the accompaniment engine's chord input and pattern playback to determine exactly why no parts are activated despite `play=6`.
 
 ---
 
