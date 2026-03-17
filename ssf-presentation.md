@@ -700,7 +700,7 @@ flowchart TD
 ### Remaining Work
 
 - **Verify hypothesis via MAME Lua:** Read `DRAM[0x02F83C]` during state `0xE4` to confirm whether the Feature Presentation screen's `CurrentTarget` is set correctly
-- **Investigate `SwbtWr_ReinitBothBanks` blocking:** Determine why tone generator initialization takes ~16 seconds and whether this blocks the NAKA widget framework screen activation cycle
+- **`SwbtWr_ReinitBothBanks` blocking (DOCUMENTED):** The tone generator initialization system has been fully analyzed -- see [Tone Generator Initialization (SwbtWr)]({{ site.baseurl }}/swbwr-tone-init/) for the complete call graph, dispatch loop internals, and explanation of why it blocks for ~16 seconds. This blocking starves the NAKA widget framework screen activation cycle.
 - **Screen activation timing:** Determine if the NAKA framework's screen management cycle detects `DRAM[0x8D38]` state changes independently and whether the 16-second blocking window starves this detection
 
 ---

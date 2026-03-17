@@ -77,6 +77,8 @@
       url: /sequencer/
     - title: Accompaniment Engine
       url: /accompaniment-engine/
+    - title: Tone Gen Init (SwbtWr)
+      url: /swbwr-tone-init/
 
 - title: Protocols
   pages:
