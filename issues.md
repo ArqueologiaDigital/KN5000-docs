@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 400 (10 open, 390 closed)
+**Total Issues:** 400 (9 open, 390 closed)
 
 **Quick Links:** 
-[Other](#other) (10)
+[Other](#other) (9)
 
 ---
 
@@ -181,14 +181,6 @@ The Feature Demo SSF visual presentation doesn't work because event 0x1C00038 ne
 
 ---
 
-#### ⚪ Convert widget_dispatch.s large data blocks to C structs {#issue-kn5000-j60k}
-
-**ID:** `kn5000-j60k` | **Priority:** P4 | **Created:** 2026-03-17
-
-4,851 .byte lines in maincpu/ui_widgets/widget_dispatch.s. WidgetParam_SelfRef_Table (440 lines) and DisplayScript nodes (211+ lines) have repeating structured records suitable for C structs.
-
----
-
 #### ⚪ EPIC: Path to full C port of ROM firmware {#issue-kn5000-4sry}
 
 **ID:** `kn5000-4sry` | **Priority:** P4 | **Created:** 2026-03-16
@@ -252,14 +244,14 @@ Prerequisites:
 | Critical | 1 |
 | Medium | 2 |
 | Low | 5 |
-| P4 | 2 |
+| P4 | 1 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 10 |
+| Other | 9 |
 
 ---
 
-*Last updated: 2026-03-17 15:47*
+*Last updated: 2026-03-17 16:27*
