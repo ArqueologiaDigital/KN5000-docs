@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 395 (9 open, 385 closed)
+**Total Issues:** 395 (8 open, 387 closed)
 
 **Quick Links:** 
-[Other](#other) (9)
+[Other](#other) (8)
 
 ---
 
@@ -198,18 +198,12 @@ TLCS900Schedule.td exists but lacks detailed cycle counts. A professional backen
 
 ---
 
-#### ⚪ LLVM TLCS-900: Implement jump table lowering (BR_JT) {#issue-kn5000-ejyx}
-
-**ID:** `kn5000-ejyx` | **Priority:** P4 | **Created:** 2026-03-17
-
-Switch statements compile to arithmetic chains instead of jump tables because BR_JT is set to Expand. TLCS-900 supports jp (xhl) for indirect jumps. Implement custom BR_JT lowering for more efficient switch code generation.
-
----
-
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-9a0` | Maintain documentation website | 2026-03-17 |
+| `kn5000-ejyx` | LLVM TLCS-900: Implement jump table lowering (BR_JT) | 2026-03-17 |
 | `kn5000-riek` | LLVM TLCS-900: Add auto-increment addressing mode for CP | 2026-03-17 |
 | `kn5000-cy4r` | LLVM TLCS-900: Fix calr with numeric address targets | 2026-03-17 |
 | `kn5000-jd8s` | LLVM TLCS-900: Add 8-bit direct addressing mode (F0 prefix) | 2026-03-17 |
@@ -228,10 +222,8 @@ Switch statements compile to arithmetic chains instead of jump tables because BR
 | `kn5000-s4jr` | Evaluate LLVM TLCS-900 C compiler output quality for simp... | 2026-03-17 |
 | `kn5000-ur27` | Suppress ALIGNED_STRING compiler warnings (233 warnings) | 2026-03-17 |
 | `kn5000-4wd3` | Add file header comments to 36 assembly files missing them | 2026-03-17 |
-| `kn5000-o97p` | Extract 43 remaining inline data blocks from kn5000_v10_p... | 2026-03-17 |
-| `kn5000-fp95` | Maincpu ROM build broken: .org overflow in fdc_routines.s... | 2026-03-17 |
 
-*...and 365 more closed issues*
+*...and 367 more closed issues*
 
 ---
 
@@ -244,14 +236,14 @@ Switch statements compile to arithmetic chains instead of jump tables because BR
 | Critical | 1 |
 | Medium | 2 |
 | Low | 3 |
-| P4 | 3 |
+| P4 | 2 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 9 |
+| Other | 8 |
 
 ---
 
-*Last updated: 2026-03-17 14:01*
+*Last updated: 2026-03-17 14:07*
