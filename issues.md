@@ -8,7 +8,7 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 400 (9 open, 390 closed)
+**Total Issues:** 400 (9 open, 391 closed)
 
 **Quick Links:** 
 [Other](#other) (9)
@@ -210,6 +210,7 @@ Prerequisites:
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-j60k` | Convert widget_dispatch.s large data blocks to C structs | 2026-03-17 |
 | `kn5000-pq05` | Convert gui_display_struct_data.s to C struct (17 x 34-by... | 2026-03-17 |
 | `kn5000-9n3o` | Suppress _start linker warnings in ROM .ld files | 2026-03-17 |
 | `kn5000-8nkr` | LLVM TLCS-900: Add instruction scheduling model | 2026-03-17 |
@@ -229,9 +230,8 @@ Prerequisites:
 | `kn5000-ka1c` | LLVM TLCS-900: Add .word/.hword assembler directive support | 2026-03-17 |
 | `kn5000-1uiu` | Rename 458 generic .set labels (Data_XXXXXX, PadFF_, etc.... | 2026-03-17 |
 | `kn5000-noum` | LLVM TLCS-900: Override allowsMisalignedMemoryAccesses fo... | 2026-03-17 |
-| `kn5000-x1j4` | LLVM TLCS-900: Audit C code generation quality for byte-m... | 2026-03-17 |
 
-*...and 370 more closed issues*
+*...and 371 more closed issues*
 
 ---
 
@@ -254,4 +254,4 @@ Prerequisites:
 
 ---
 
-*Last updated: 2026-03-17 16:27*
+*Last updated: 2026-03-17 16:36*
