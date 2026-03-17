@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 390 (16 open, 373 closed)
+**Total Issues:** 390 (13 open, 376 closed)
 
 **Quick Links:** 
-[Other](#other) (16)
+[Other](#other) (13)
 
 ---
 
@@ -117,22 +117,6 @@ The kn5000_pr5_driver branch needs rebasing onto current upstream MAME master be
 
 ---
 
-#### ⚪ LLVM TLCS-900: Add .word/.hword assembler directive support {#issue-kn5000-ka1c}
-
-**ID:** `kn5000-ka1c` | **Priority:** Low | **Created:** 2026-03-17
-
-clang emits .word and .hword for data constants but llvm-mc TLCS-900 parser doesn't recognize them. C files with static const data tables fail to assemble.
-
----
-
-#### ⚪ LLVM TLCS-900: Add disassembler round-trip verification tests {#issue-kn5000-xpd2}
-
-**ID:** `kn5000-xpd2` | **Priority:** Low | **Created:** 2026-03-16
-
-The disassembler (TLCS900Disassembler.cpp) should be verified with round-trip tests: assemble -> disassemble -> reassemble -> compare bytes. This catches encoding/decoding mismatches. Create a test that exercises every instruction class.
-
----
-
 #### ⚪ LLVM TLCS-900: Fix calr with numeric address targets {#issue-kn5000-cy4r}
 
 **ID:** `kn5000-cy4r` | **Priority:** Low | **Created:** 2026-03-16
@@ -215,14 +199,6 @@ sepaout_config.s has 105 .byte lines of separator output configuration (layout p
 
 ---
 
-#### ⚪ Convert tonegen_param_table.s to C struct {#issue-kn5000-kkwr}
-
-**ID:** `kn5000-kkwr` | **Priority:** P4 | **Created:** 2026-03-16
-
-tonegen_param_table.s has 87 .byte lines of tone generator parameter lookup data. Convert to typed C array with named parameter fields.
-
----
-
 #### ⚪ EPIC: Path to full C port of ROM firmware {#issue-kn5000-4sry}
 
 **ID:** `kn5000-4sry` | **Priority:** P4 | **Created:** 2026-03-16
@@ -268,6 +244,9 @@ TLCS900Schedule.td exists but lacks detailed cycle counts. A professional backen
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-kkwr` | Convert tonegen_param_table.s to C struct | 2026-03-17 |
+| `kn5000-xpd2` | LLVM TLCS-900: Add disassembler round-trip verification t... | 2026-03-17 |
+| `kn5000-ka1c` | LLVM TLCS-900: Add .word/.hword assembler directive support | 2026-03-17 |
 | `kn5000-1uiu` | Rename 458 generic .set labels (Data_XXXXXX, PadFF_, etc.... | 2026-03-17 |
 | `kn5000-noum` | LLVM TLCS-900: Override allowsMisalignedMemoryAccesses fo... | 2026-03-17 |
 | `kn5000-x1j4` | LLVM TLCS-900: Audit C code generation quality for byte-m... | 2026-03-17 |
@@ -285,11 +264,8 @@ TLCS900Schedule.td exists but lacks detailed cycle counts. A professional backen
 | `kn5000-e0b6` | Convert widget_dispatch.s .byte data to C structs (4907 .... | 2026-03-17 |
 | `kn5000-hjqn` | Disassemble sndparam_routines.s .byte code blocks (616 li... | 2026-03-17 |
 | `kn5000-8qpz` | Disassemble dsp_config_sysex.s .byte code blocks (388 lines) | 2026-03-17 |
-| `kn5000-2z32` | Disassemble ui_mode_handlers.s .byte code blocks (540 lines) | 2026-03-17 |
-| `kn5000-33k0` | Disassemble ui_window_procs.s .byte code blocks (769 lines) | 2026-03-17 |
-| `kn5000-r88l` | Disassemble semenu_routines.s .byte code blocks (1599 lines) | 2026-03-17 |
 
-*...and 353 more closed issues*
+*...and 356 more closed issues*
 
 ---
 
@@ -301,15 +277,15 @@ TLCS900Schedule.td exists but lacks detailed cycle counts. A professional backen
 |----------|-------|
 | Critical | 1 |
 | Medium | 3 |
-| Low | 6 |
-| P4 | 6 |
+| Low | 4 |
+| P4 | 5 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 16 |
+| Other | 13 |
 
 ---
 
-*Last updated: 2026-03-17 11:51*
+*Last updated: 2026-03-17 12:17*
