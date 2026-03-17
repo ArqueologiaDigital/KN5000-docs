@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 386 (23 open, 362 closed)
+**Total Issues:** 388 (19 open, 366 closed)
 
 **Quick Links:** 
-[Other](#other) (23)
+[Other](#other) (19)
 
 ---
 
@@ -125,14 +125,6 @@ Test whether clang -target tlcs900 produces byte-identical output for simple C f
 
 ---
 
-#### ⚪ Extract 43 remaining inline data blocks from kn5000_v10_program.s {#issue-kn5000-o97p}
-
-**ID:** `kn5000-o97p` | **Priority:** Low | **Created:** 2026-03-16
-
-43 inline data blocks remain in the main program file (.byte, .zero, .fill, .long, .ascii, aligned_string). These should be moved to dedicated source files or C struct files following the pattern established for NAKA widgets and Voice_FactoryPresetData.
-
----
-
 #### ⚪ LLVM TLCS-900: Add disassembler round-trip verification tests {#issue-kn5000-xpd2}
 
 **ID:** `kn5000-xpd2` | **Priority:** Low | **Created:** 2026-03-16
@@ -141,35 +133,11 @@ The disassembler (TLCS900Disassembler.cpp) should be verified with round-trip te
 
 ---
 
-#### ⚪ LLVM TLCS-900: Add missing compact instruction encodings {#issue-kn5000-q5dh}
-
-**ID:** `kn5000-q5dh` | **Priority:** Low | **Created:** 2026-03-16
-
-Several compact TLCS-900 instructions are not in the backend: compact zero-load (d8 a8 = ld wa,0), compact load-1 (e8 a9 = ld xwa,1), compact dec/inc xsp (ef 6a/62), cps qiz (prevbank compact compare). These are used in .byte fallbacks in the ROM disassembly. Adding them would eliminate remaining .byte workarounds.
-
----
-
 #### ⚪ LLVM TLCS-900: Audit C code generation quality for byte-matching {#issue-kn5000-x1j4}
 
 **ID:** `kn5000-x1j4` | **Priority:** Low | **Created:** 2026-03-16
 
 Evaluate whether clang -target tlcs900 produces byte-identical output for simple C functions vs hand-written assembly. Test: utility functions (strlen, memcpy), dispatch tables, register manipulation. Document which C patterns produce matching code and which need __attribute__ hints. Critical for the C porting path.
-
----
-
-#### ⚪ LLVM TLCS-900: Fix calr with numeric address targets {#issue-kn5000-cy4r}
-
-**ID:** `kn5000-cy4r` | **Priority:** Low | **Created:** 2026-03-16
-
-calr (relative call with 16-bit offset) with numeric address targets emits absolute bytes instead of computing relative offset. Currently must use labels or .byte fallback. Fix: compute PC-relative offset at emission time.
-
----
-
-#### ⚪ LLVM TLCS-900: Increase MC test coverage (currently 8 tests) {#issue-kn5000-gyge}
-
-**ID:** `kn5000-gyge` | **Priority:** Low | **Created:** 2026-03-16
-
-Only 8 MC (Machine Code) assembly/disassembly test files exist in llvm/test/MC/TLCS900/. A professional backend needs comprehensive round-trip tests for every instruction encoding. Current CodeGen tests (50 files) test IR lowering but not assembler correctness. Need: (1) test every instruction mnemonic, (2) test all addressing modes, (3) test boundary/edge cases (max displacement, zero operands), (4) test error cases (invalid registers, out-of-range immediates).
 
 ---
 
@@ -324,6 +292,10 @@ naka_widget_descriptors.c generates 233 -Wexcess-initializers warnings from ALIG
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-o97p` | Extract 43 remaining inline data blocks from kn5000_v10_p... | 2026-03-17 |
+| `kn5000-ickl` | Merge single-byte .byte fragments with adjacent native in... | 2026-03-17 |
+| `kn5000-q5dh` | LLVM TLCS-900: Add missing compact instruction encodings | 2026-03-17 |
+| `kn5000-gyge` | LLVM TLCS-900: Increase MC test coverage (currently 8 tests) | 2026-03-17 |
 | `kn5000-v7cp` | Organize scripts/ into subdirectories (170+ scripts) | 2026-03-17 |
 | `kn5000-yclj` | Add pre-commit hook: validate LLVM version in commit message | 2026-03-17 |
 | `kn5000-2p4i` | Convert drawbar_panel_ui.s .byte data (1571 lines) | 2026-03-17 |
@@ -340,12 +312,8 @@ naka_widget_descriptors.c generates 233 -Wexcess-initializers warnings from ALIG
 | `kn5000-g7en` | Convert swi 7/nop padding in dispatch files to .fill 0xFF... | 2026-03-17 |
 | `kn5000-nr32` | Remove 4 legacy ASL->LLVM TODO comments in smf_playback.s | 2026-03-17 |
 | `kn5000-jxhw` | LLVM regression: commit d0fb231 causes 1-byte size change... | 2026-03-17 |
-| `kn5000-zvla` | Makefile: Make compare_roms.py failure halt the build | 2026-03-16 |
-| `kn5000-e44u` | Makefile: Consolidate 25 NAKA widget build rules into sin... | 2026-03-16 |
-| `kn5000-68s7` | Fix unindented .include directives in 5 assembly files | 2026-03-16 |
-| `kn5000-rxy9` | Makefile: Add error checking to subcpu ROM extraction dd ... | 2026-03-16 |
 
-*...and 342 more closed issues*
+*...and 346 more closed issues*
 
 ---
 
@@ -357,15 +325,15 @@ naka_widget_descriptors.c generates 233 -Wexcess-initializers warnings from ALIG
 |----------|-------|
 | Critical | 1 |
 | Medium | 3 |
-| Low | 10 |
+| Low | 6 |
 | P4 | 9 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 23 |
+| Other | 19 |
 
 ---
 
-*Last updated: 2026-03-17 08:45*
+*Last updated: 2026-03-17 11:15*
