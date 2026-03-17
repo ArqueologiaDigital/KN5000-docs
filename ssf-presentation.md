@@ -25,6 +25,7 @@ This page consolidates all research findings about the SSF system into a single 
 - [Known Bug: MAME SSF Never Activates](#known-bug-mame-ssf-never-activates)
 - [Investigation Progress (March 2026)](#investigation-progress-march-2026)
   - [Major Discovery: SSF Triggered by Tone Gen Events](#major-discovery-ssf-triggered-by-tone-gen-events-trace-session-5)
+  - [Callback Chain Confirmation (ROM Analysis)](#callback-chain-confirmation-rom-analysis)
 - [Interpretation](#interpretation)
 
 ---
@@ -966,6 +967,83 @@ flowchart TD
 - **Verify hypothesis via MAME Lua:** Read `DRAM[0x02F83C]` during state `0xE4` to confirm whether the Feature Presentation screen's `CurrentTarget` is set correctly
 - **`SwbtWr_ReinitBothBanks` blocking (DOCUMENTED):** The tone generator initialization system has been fully analyzed -- see [Tone Generator Initialization (SwbtWr)]({{ site.baseurl }}/swbwr-tone-init/) for the complete call graph, dispatch loop internals, and explanation of why it blocks for ~16 seconds. This blocking starves the NAKA widget framework screen activation cycle.
 - **Screen activation timing:** Determine if the NAKA framework's screen management cycle detects `DRAM[0x8D38]` state changes independently and whether the 16-second blocking window starves this detection
+
+### Callback Chain Confirmation (ROM Analysis)
+
+Direct examination of the SwbtWr callback tables in ROM confirmed the full mechanism:
+
+**Bank 2 callback table entries for events 0x10/0x11/0x12:**
+
+| Event Code | Bank 2 Callback | Points To |
+|------------|----------------|-----------|
+| 0x10 | `0xEE81C0` | `UIState_HandlerTable_05` |
+| 0x10 | `0xEE81DC` | `UIState_HandlerTable_06` |
+| 0x11 | `0xEE81DC` | `UIState_HandlerTable_06` |
+| 0x11 | `0xEE81F8` | `UIState_HandlerTable_07` |
+| 0x12 | `0xEE81F8` | `UIState_HandlerTable_07` |
+| 0x12 | `0xEE8214` | `UIState_HandlerTable_08` |
+
+Each handler table contains the same 6-function chain (from `widget_dispatch.s`):
+
+```
+UIState_ProcessKeyEvent
+UIState_UpdateControlBits
+UIState_ProcessMidiEvent
+UIState_ProcessDisplayUpdate
+BitMapOut_ByteData_RenderB
+UIState_KeyScan_Dispatch        <- SSF trigger point
+0xFFFFFFFF                       (terminator)
+```
+
+**`UIState_KeyScan_Dispatch` IS called from within SwbtWr_DispatchLoop** -- it's the last function in each handler table chain. When event code 0x10 is processed through Bank 2, the callback calls `UIState_HandlerTable_05`, which iterates through all 6 functions. At `UIState_KeyScan_Dispatch`, C080=0x10 and C07D=event_param.
+
+**Bank 1 callback table entries** (for comparison):
+
+| Event Code | Bank 1 Callback | Points To |
+|------------|----------------|-----------|
+| 0x10 | `0xEE7AC7` | `UIState_ConfigA_016` |
+| 0x11 | `0xEE7ACB` | `UIState_ConfigA_017` |
+| 0x12 | `0xEE7ACF` | `UIState_ConfigA_018` |
+
+Bank 1 callbacks are configuration functions, not handler tables. Only Bank 2 routes through UIState_KeyScan_Dispatch.
+
+**Filter match analysis:**
+
+Event 0x10 at buffer slot 13 had params `[00, 06, FF]`:
+- `stda16 49277, xwa`: A=0x00 -> C07D=0x00, W=0x06 -> C07E=0x06
+- `stda8 49280, l`: C080=0x10
+- Match value: `(C080 << 24) | (C07D << 16)` = `0x10000000`
+- Registration entry [10] filter: upper 16 bits of `0x10001AFF` = `0x1000` -> comparison value `0x10000000`
+- **These MATCH.** The filter should pass.
+
+**The mechanism should work end-to-end.** Events 0x10/0x11/0x12 are in the buffer, the Bank 2 callbacks call UIState_KeyScan_Dispatch, and the filter values match. A high-frequency trace (every frame instead of every 30 frames) is being run to verify whether C080 actually holds values 0x10/0x11/0x12 at the moment UIState_KeyScan_Dispatch executes.
+
+**Possible remaining failure points:**
+1. **SwbtWr_DispatchLoop only processes Bank 1, not Bank 2** -- if `SwbtWr_ReinitBothBanks` is interrupted or only Bank 1 runs, the handler table callbacks never fire
+2. **The handler table iteration stops before reaching UIState_KeyScan_Dispatch** -- if an earlier function in the chain (e.g., `UIState_ProcessKeyEvent`) returns early or throws an error
+3. **UIState_KeyScan_Dispatch's boot flag check fails** -- bit 7 of DRAM[0x0406] must be 1 (confirmed as 0x80 in all traces)
+4. **EventDispatch_Direct's filter comparison has a subtle difference** -- the `lds wa, 0` instruction might clear bits differently than assumed
+5. **The dispatch happens but the event goes to a widget that can't process it** -- the broadcast target resolution via CurrentTarget leads to a non-GroupBoxProc widget
+
+```mermaid
+flowchart TD
+    LOOP["SwbtWr_DispatchLoop<br/>processing event 0x10"] --> WRITE["C080 = 0x10<br/>C07D = 0x00"]
+    WRITE --> BANK2["Bank 2 callback lookup<br/>-> UIState_HandlerTable_05"]
+    BANK2 --> F1["UIState_ProcessKeyEvent"]
+    F1 --> F2["UIState_UpdateControlBits"]
+    F2 --> F3["UIState_ProcessMidiEvent"]
+    F3 --> F4["UIState_ProcessDisplayUpdate"]
+    F4 --> F5["BitMapOut_ByteData_RenderB"]
+    F5 --> F6["UIState_KeyScan_Dispatch"]
+    F6 --> GATE{"State = 0xE4?<br/>Gate = 0xFFFE"}
+    GATE -- "Yes" --> DISPATCH["EventDispatch_Direct<br/>0x1C00038<br/>match = 0x10000000"]
+    DISPATCH --> FILTER{"Entry [10] filter<br/>0x10000000?"}
+    FILTER -- "Match!" --> SSF["SSF handler fires!"]
+    FILTER -- "No match" --> DROP["Event dropped"]
+
+    style SSF fill:#cfc,stroke:#0c0,color:#080
+    style DROP fill:#fcc,stroke:#c00,color:#800
+```
 
 ---
 
