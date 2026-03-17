@@ -27,6 +27,7 @@ This page consolidates all research findings about the SSF system into a single 
   - [Major Discovery: SSF Triggered by Tone Gen Events](#major-discovery-ssf-triggered-by-tone-gen-events-trace-session-5)
   - [Callback Chain Confirmation (ROM Analysis)](#callback-chain-confirmation-rom-analysis)
 - [Refocusing on Hardware Emulation](#refocusing-on-hardware-emulation-march-2026)
+- [Voice Lifecycle and Sequencer Parts (Trace Session 8)](#voice-lifecycle-and-sequencer-parts-trace-session-8)
 - [Interpretation](#interpretation)
 
 ---
@@ -1128,6 +1129,56 @@ The correct approach is to identify what hardware behavior MAME gets wrong that 
 4. The firmware should detect the idle state and clear the corresponding sequencer part bit
 
 If this lifecycle works correctly, parts should clear even without waveform ROMs. The investigation is now focused on verifying whether the tone gen's voice status reporting accurately reflects what real hardware does, and whether any voices get "stuck" in a state that prevents the firmware from clearing their sequencer parts.
+
+### Voice Lifecycle and Sequencer Parts (Trace Session 8)
+
+**Critical finding: With the HLE workaround removed and the DSP/tone gen fixes in place, `seq_parts` (DRAM[0x28B4]) stays at 0x0000 throughout the entire Feature Demo.** The sequencer active parts bitmask never becomes non-zero.
+
+**Previous behavior (with workaround):**
+- `seq_parts` briefly flashed to `0xFFFF` during song transitions
+- The workaround timer detected this and force-cleared it to `0x0000`
+- Demo songs cycled (timer restarted after each song)
+
+**Current behavior (workaround removed, correct hardware fixes):**
+- `seq_parts` stays `0x0000` the entire time
+- Timer counts down 15→10→9→4→0 then stays at 0 forever
+- Demo never advances to the next song
+- No new timer countdown starts
+
+**Analysis:**
+
+The sequencer active parts bitmask (`seq_parts`) is set by the sequencer engine when it has active parts playing notes. It is NOT directly derived from tone gen voice status readback. The bitmask tracks which of the 16 sequencer parts have pending note events.
+
+On real hardware with waveform ROMs:
+1. The demo selects a song preset
+2. `SwbtWr_ReinitBothBanks` initializes the tone gen with the preset's parameters
+3. `Seq_DispatcherEntry` starts the sequencer
+4. The accompaniment engine generates note events for active parts
+5. Note events trigger KEY ON on tone gen voices → voices play waveforms
+6. `seq_parts` reflects which parts have active notes (non-zero during playback)
+7. When the song completes, all parts finish → `seq_parts` returns to 0
+8. `FDemo_MultiGuardCheck` detects `seq_parts == 0` → demo advances
+
+In MAME without waveform ROMs:
+1. Steps 1-3 work correctly
+2. But the accompaniment engine may not generate note events if it depends on:
+   - Chord detection from the keyboard (no physical keyboard input in demo mode)
+   - Waveform ROM data for pattern lookup tables
+   - DSP feedback for effects processing
+   - Other hardware state that differs from real hardware
+3. Without note events, `seq_parts` stays 0
+4. The firmware sees `seq_parts == 0` immediately (no song playing)
+5. The demo timer reaches 0 but the demo system doesn't recognize song completion because it never saw a song start
+
+**The emulation issue is upstream of the tone gen:** The accompaniment/sequencer engine isn't generating note events, likely because some hardware input or data source is missing. The tone gen's voice lifecycle is correct — it's just never exercised because no KEY ON commands arrive.
+
+**Investigation in progress (Trace 8):** Monitoring additional DRAM state variables during the demo:
+- `DRAM[0x8F4E]` (play state: 4=stopped, 6=playing) — does the sequencer ever enter "playing" state?
+- `DRAM[0x28A4]` (song index) — does the demo select different songs?
+- `DRAM[0x28AD]` (demo control flags) — what flags are set?
+- `DRAM[0xBD3C]` (SwbtWr init flag) — does SwbtWr complete correctly?
+
+If `play_state` never transitions from 4 (stopped) to 6 (playing), it confirms the sequencer never starts, pointing to a problem in the sequencer initialization path or its dependencies.
 
 ---
 
