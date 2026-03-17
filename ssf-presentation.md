@@ -884,6 +884,13 @@ These are tone generator parameter indices in the SwbtWr callback table. They li
 **Why it fails in MAME:**
 The SwbtWr event buffer is populated by `ToneGen_DiffScanAndUpdate`, which scans the 606-byte parameter space for changes. If events 0x10/0x11/0x12 are never generated (perhaps because missing waveform ROMs affect which tone gen parameters change, or because the DSP configuration path doesn't produce these specific event codes), the filter never matches and slides never advance.
 
+**Verification in progress (Trace Session 6):** A diagnostic script is scanning both DRAM[0xC080] (the live chain byte) and the SwbtWr event buffer at DRAM[0xBD3C] for event codes 0x10/0x11/0x12 during the Feature Demo. This will determine:
+- Whether these event codes are **ever generated** in the buffer (parameter diff produces them)
+- Whether they appear in C080 (SwbtWr_DispatchLoop processes them)
+- What the full set of event codes is that the demo actually generates
+
+If the events are never generated, the root cause is in `ToneGen_DiffScanAndUpdate` — the parameter diff between the current and new sound preset never touches the byte offsets that correspond to event codes 0x10/0x11/0x12. This could be because (a) the preset data is identical at those offsets, (b) the baseline parameter state is wrong due to missing waveform ROM data, or (c) the parameter space layout differs from what we expect.
+
 **This completely reframes the problem:** The SSF system is NOT driven by button presses or widget navigation. It is driven by **tone generator parameter changes** during song playback. The slides are synchronized to the music by being triggered when specific sound preset parameters change.
 
 ```mermaid
