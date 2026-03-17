@@ -19,6 +19,20 @@
 
     {%- include footer.html -%}
 
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+      mermaid.initialize({ startOnLoad: true });
+      // Convert Jekyll ```mermaid fenced code blocks into Mermaid-renderable divs
+      document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('pre code.language-mermaid').forEach(function(el) {
+          var div = document.createElement('div');
+          div.className = 'mermaid';
+          div.textContent = el.textContent;
+          el.parentElement.replaceWith(div);
+        });
+      });
+    </script>
+
   </body>
 
 </html>
