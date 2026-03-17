@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 345 (4 open, 340 closed)
+**Total Issues:** 386 (23 open, 362 closed)
 
 **Quick Links:** 
-[Other](#other) (4)
+[Other](#other) (23)
 
 ---
 
@@ -89,11 +89,87 @@ All subsystem pages documented, no placeholders remain.
 
 ---
 
+#### 🟡 Audit kn5000 MAME driver for upstream code style compliance {#issue-kn5000-mv8f}
+
+**ID:** `kn5000-mv8f` | **Priority:** Medium | **Created:** 2026-03-16
+
+Before PR submission: ensure BIT() macros, logmacro.h LOGMASKED() channels, no AI attribution on PR branch commits, proper MAME conventions.
+
+**Depends on:** [`kn5000-jt0b`](#issue-kn5000-jt0b)
+
+---
+
 #### 🟡 MAME: Update PR #14558 with accumulated driver fixes {#issue-kn5000-f8gw}
 
 **ID:** `kn5000-f8gw` | **Priority:** Medium | **Created:** 2026-03-10
 
 Create a new MAME upstream PR (PR5) for accumulated driver fixes on kn5000_pr5_driver branch. This includes: tone generator device (IC303 with PCM playback, pitch, pan, volume), FDC wiring and dskchg polarity fix, HDAE5000 IDE/ATA, control panel HLE improvements, DSP device stubs. Must: (1) rebase onto current MAME master, (2) squash into logical commits, (3) ensure MAME code style (BIT macros, logmacro.h), (4) NO AI attribution on PR commits, (5) create PR with feature list.
+
+**Depends on:** [`kn5000-jt0b`](#issue-kn5000-jt0b), [`kn5000-mv8f`](#issue-kn5000-mv8f)
+
+---
+
+#### 🟡 Rebase kn5000_pr5_driver branch onto current MAME master {#issue-kn5000-jt0b}
+
+**ID:** `kn5000-jt0b` | **Priority:** Medium | **Created:** 2026-03-16
+
+The kn5000_pr5_driver branch needs rebasing onto current upstream MAME master before creating PR. Check for conflicts with recent MAME changes.
+
+---
+
+#### ⚪ Evaluate LLVM TLCS-900 C compiler output quality for simple functions {#issue-kn5000-s4jr}
+
+**ID:** `kn5000-s4jr` | **Priority:** Low | **Created:** 2026-03-16
+
+Test whether clang -target tlcs900 produces byte-identical output for simple C functions vs hand-written assembly. Try: strlen, memcpy, simple dispatch tables, register manipulation. Document which patterns match and which need __attribute__ hints.
+
+---
+
+#### ⚪ Extract 43 remaining inline data blocks from kn5000_v10_program.s {#issue-kn5000-o97p}
+
+**ID:** `kn5000-o97p` | **Priority:** Low | **Created:** 2026-03-16
+
+43 inline data blocks remain in the main program file (.byte, .zero, .fill, .long, .ascii, aligned_string). These should be moved to dedicated source files or C struct files following the pattern established for NAKA widgets and Voice_FactoryPresetData.
+
+---
+
+#### ⚪ LLVM TLCS-900: Add disassembler round-trip verification tests {#issue-kn5000-xpd2}
+
+**ID:** `kn5000-xpd2` | **Priority:** Low | **Created:** 2026-03-16
+
+The disassembler (TLCS900Disassembler.cpp) should be verified with round-trip tests: assemble -> disassemble -> reassemble -> compare bytes. This catches encoding/decoding mismatches. Create a test that exercises every instruction class.
+
+---
+
+#### ⚪ LLVM TLCS-900: Add missing compact instruction encodings {#issue-kn5000-q5dh}
+
+**ID:** `kn5000-q5dh` | **Priority:** Low | **Created:** 2026-03-16
+
+Several compact TLCS-900 instructions are not in the backend: compact zero-load (d8 a8 = ld wa,0), compact load-1 (e8 a9 = ld xwa,1), compact dec/inc xsp (ef 6a/62), cps qiz (prevbank compact compare). These are used in .byte fallbacks in the ROM disassembly. Adding them would eliminate remaining .byte workarounds.
+
+---
+
+#### ⚪ LLVM TLCS-900: Audit C code generation quality for byte-matching {#issue-kn5000-x1j4}
+
+**ID:** `kn5000-x1j4` | **Priority:** Low | **Created:** 2026-03-16
+
+Evaluate whether clang -target tlcs900 produces byte-identical output for simple C functions vs hand-written assembly. Test: utility functions (strlen, memcpy), dispatch tables, register manipulation. Document which C patterns produce matching code and which need __attribute__ hints. Critical for the C porting path.
+
+---
+
+#### ⚪ LLVM TLCS-900: Fix calr with numeric address targets {#issue-kn5000-cy4r}
+
+**ID:** `kn5000-cy4r` | **Priority:** Low | **Created:** 2026-03-16
+
+calr (relative call with 16-bit offset) with numeric address targets emits absolute bytes instead of computing relative offset. Currently must use labels or .byte fallback. Fix: compute PC-relative offset at emission time.
+
+---
+
+#### ⚪ LLVM TLCS-900: Increase MC test coverage (currently 8 tests) {#issue-kn5000-gyge}
+
+**ID:** `kn5000-gyge` | **Priority:** Low | **Created:** 2026-03-16
+
+Only 8 MC (Machine Code) assembly/disassembly test files exist in llvm/test/MC/TLCS900/. A professional backend needs comprehensive round-trip tests for every instruction encoding. Current CodeGen tests (50 files) test IR lowering but not assembler correctness. Need: (1) test every instruction mnemonic, (2) test all addressing modes, (3) test boundary/edge cases (max displacement, zero operands), (4) test error cases (invalid registers, out-of-range immediates).
 
 ---
 
@@ -145,32 +221,131 @@ Production-ready emulation and homebrew support.
 
 ---
 
+#### ⚪ Trace SSF event 0x1C00038 routing path in MAME {#issue-kn5000-7c0w}
+
+**ID:** `kn5000-7c0w` | **Priority:** Low | **Created:** 2026-03-16
+
+The Feature Demo SSF visual presentation doesn't work because event 0x1C00038 never reaches GroupBoxProc_StartSSFPresentation. Add MAME logging to trace where the event gets lost in the dispatch chain.
+
+**Depends on:** [`kn5000-jbhk`](#issue-kn5000-jbhk)
+
+---
+
+#### ⚪ Add file header comments to 36 assembly files missing them {#issue-kn5000-4wd3}
+
+**ID:** `kn5000-4wd3` | **Priority:** P4 | **Created:** 2026-03-16
+
+36 of 151 .s files (24%) lack file-level header comments explaining purpose. Mostly data files and auto-generated widget descriptors. Add brief headers following the established pattern.
+
+---
+
+#### ⚪ Convert sepaout_config.s data to C structs {#issue-kn5000-q8tm}
+
+**ID:** `kn5000-q8tm` | **Priority:** P4 | **Created:** 2026-03-16
+
+sepaout_config.s has 105 .byte lines of separator output configuration (layout params, bitmask tables, format strings). Convert to C struct with named config fields.
+
+---
+
+#### ⚪ Convert sound_data_*.s files to C struct arrays {#issue-kn5000-ete6}
+
+**ID:** `kn5000-ete6` | **Priority:** P4 | **Created:** 2026-03-16
+
+7 sound data files (brass, flute, guitar, mallet, organ, sax, world) contain instrument preset parameter tables as .byte data. Convert to typed C struct arrays with named fields for each instrument parameter.
+
+---
+
+#### ⚪ Convert tonegen_param_table.s to C struct {#issue-kn5000-kkwr}
+
+**ID:** `kn5000-kkwr` | **Priority:** P4 | **Created:** 2026-03-16
+
+tonegen_param_table.s has 87 .byte lines of tone generator parameter lookup data. Convert to typed C array with named parameter fields.
+
+---
+
+#### ⚪ EPIC: Path to full C port of ROM firmware {#issue-kn5000-4sry}
+
+**ID:** `kn5000-4sry` | **Priority:** P4 | **Created:** 2026-03-16
+
+Long-term goal: port the entire KN5000 firmware from assembly to C while maintaining 100% byte-matching output. This enables:
+- Readable, maintainable firmware understanding
+- Potential recompilation for other targets
+- Professional documentation quality
+
+Phases:
+1. Convert all remaining data tables to C structs (sound_data_*.s, sepaout, etc.)
+2. Convert simple leaf functions to C (utility functions, string handlers)
+3. Convert medium-complexity routines (MIDI handlers, parameter dispatch)
+4. Convert major subsystems (sequencer engine, accompaniment engine, UI framework)
+5. Final: boot code, interrupt handlers, hardware init
+
+Each phase maintains 100% byte match via LLVM TLCS-900 backend compilation.
+
+Prerequisites:
+- All .byte code blocks disassembled to native instructions first
+- LLVM C compiler must produce identical code for each converted function
+- Regression testing on every conversion
+
+---
+
+#### ⚪ LLVM TLCS-900: Add backend documentation (README/architecture doc) {#issue-kn5000-rv4p}
+
+**ID:** `kn5000-rv4p` | **Priority:** P4 | **Created:** 2026-03-16
+
+No documentation exists for the TLCS-900 backend architecture: instruction format encoding scheme, register file layout, addressing mode implementation, custom pass descriptions (BitManipOpt, BitTestOpt, DJNZOpt, BranchShortening, FixLargeDisp, IncDecOpt, RedundantCmpElim). A professional backend needs an architecture document.
+
+---
+
+#### ⚪ LLVM TLCS-900: Add instruction scheduling model {#issue-kn5000-8nkr}
+
+**ID:** `kn5000-8nkr` | **Priority:** P4 | **Created:** 2026-03-16
+
+TLCS900Schedule.td exists but lacks detailed cycle counts. A professional backend should model: memory access latency, multiply/divide throughput, branch prediction miss cost, pipeline stalls. This enables -O2 to make better decisions when compiling C code.
+
+---
+
+#### ⚪ Rename 458 generic .set labels (Data_XXXXXX, PadFF_, etc.) to semantic names {#issue-kn5000-1uiu}
+
+**ID:** `kn5000-1uiu` | **Priority:** P4 | **Created:** 2026-03-16
+
+The LABEL_XXXXXX elimination left 458 .set aliases with auto-generated names like Data_E00800, PadFF_E3DEF1, PtrTable_E1FFB6, etc. These need analysis to determine proper semantic names based on what the data contains.
+
+---
+
+#### ⚪ Suppress ALIGNED_STRING compiler warnings (233 warnings) {#issue-kn5000-ur27}
+
+**ID:** `kn5000-ur27` | **Priority:** P4 | **Created:** 2026-03-16
+
+naka_widget_descriptors.c generates 233 -Wexcess-initializers warnings from ALIGNED_STRING macro expansion. Add #pragma to suppress, or redesign macro to avoid the warning.
+
+---
+
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
-| `kn5000-z4qg` | Improve NAKA decoded field names: replace field_NNNN with... | 2026-03-16 |
-| `kn5000-iad2` | Extract inline NAKA property descriptors and method table... | 2026-03-16 |
-| `kn5000-iv02` | Resolve remaining 560 LABEL_XXXXXX labels in maincpu | 2026-03-16 |
-| `kn5000-6o8f` | Rename proc_addr to dispatch_table_ptr in CONTAINER/MENU_... | 2026-03-16 |
-| `kn5000-tbo7` | NAKA widget C files: full struct decoding | 2026-03-16 |
-| `kn5000-v0uv` | MAME: Decode voice parameter template (ROM 0x12115, 34 by... | 2026-03-16 |
-| `kn5000-kdis` | MAME: Wire FDC Terminal Count (TC) signal from TMP94C241 ... | 2026-03-16 |
-| `kn5000-vc1b` | NAKA C files: Convert remaining raw byte arrays to structs | 2026-03-16 |
-| `kn5000-u4k7` | Add MAME screenshots to playing-games tutorial | 2026-03-16 |
-| `kn5000-bxwb` | Test floppy disk I/O in MAME | 2026-03-16 |
-| `kn5000-vpmb` | Disassembly quality audit: verify code vs data classifica... | 2026-03-16 |
-| `kn5000-hrtz` | Update project roadmap with current status | 2026-03-16 |
-| `kn5000-rtru` | Raw Byte Code Elimination: Audit all .byte sequences | 2026-03-16 |
-| `kn5000-sitw` | Write user-facing tutorial: Running games on MAME | 2026-03-16 |
-| `kn5000-7geb` | Revert bogus instruction mnemonics in data regions back t... | 2026-03-16 |
-| `kn5000-pn28` | Convert NAKA widget descriptors to C structs | 2026-03-15 |
-| `kn5000-j8pz` | Phase 4: Continue LABEL_XXXXXX semantic renaming | 2026-03-14 |
-| `kn5000-2wj1` | Rename all LABEL_ in extension_data.s to semantic names | 2026-03-14 |
-| `kn5000-3j4z` | Rename LABEL_ in performance_style_screens.s | 2026-03-14 |
-| `kn5000-zi7j` | Rename all LABEL_ in scoop_display.s to semantic names | 2026-03-14 |
+| `kn5000-v7cp` | Organize scripts/ into subdirectories (170+ scripts) | 2026-03-17 |
+| `kn5000-yclj` | Add pre-commit hook: validate LLVM version in commit message | 2026-03-17 |
+| `kn5000-2p4i` | Convert drawbar_panel_ui.s .byte data (1571 lines) | 2026-03-17 |
+| `kn5000-e0b6` | Convert widget_dispatch.s .byte data to C structs (4907 .... | 2026-03-17 |
+| `kn5000-hjqn` | Disassemble sndparam_routines.s .byte code blocks (616 li... | 2026-03-17 |
+| `kn5000-8qpz` | Disassemble dsp_config_sysex.s .byte code blocks (388 lines) | 2026-03-17 |
+| `kn5000-2z32` | Disassemble ui_mode_handlers.s .byte code blocks (540 lines) | 2026-03-17 |
+| `kn5000-33k0` | Disassemble ui_window_procs.s .byte code blocks (769 lines) | 2026-03-17 |
+| `kn5000-r88l` | Disassemble semenu_routines.s .byte code blocks (1599 lines) | 2026-03-17 |
+| `kn5000-zhot` | Disassemble note_voice_mapping.s .byte code blocks (1337 ... | 2026-03-17 |
+| `kn5000-xxtz` | Convert sound_editor_ui.s .byte data (4673 lines) | 2026-03-17 |
+| `kn5000-njrx` | Convert audio_control_engine.s MIDI handler .byte blocks ... | 2026-03-17 |
+| `kn5000-dhcw` | Auto-generate NAKA linker scripts from ELF symbol table | 2026-03-17 |
+| `kn5000-g7en` | Convert swi 7/nop padding in dispatch files to .fill 0xFF... | 2026-03-17 |
+| `kn5000-nr32` | Remove 4 legacy ASL->LLVM TODO comments in smf_playback.s | 2026-03-17 |
+| `kn5000-jxhw` | LLVM regression: commit d0fb231 causes 1-byte size change... | 2026-03-17 |
+| `kn5000-zvla` | Makefile: Make compare_roms.py failure halt the build | 2026-03-16 |
+| `kn5000-e44u` | Makefile: Consolidate 25 NAKA widget build rules into sin... | 2026-03-16 |
+| `kn5000-68s7` | Fix unindented .include directives in 5 assembly files | 2026-03-16 |
+| `kn5000-rxy9` | Makefile: Add error checking to subcpu ROM extraction dd ... | 2026-03-16 |
 
-*...and 320 more closed issues*
+*...and 342 more closed issues*
 
 ---
 
@@ -181,15 +356,16 @@ Production-ready emulation and homebrew support.
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| Medium | 1 |
-| Low | 2 |
+| Medium | 3 |
+| Low | 10 |
+| P4 | 9 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 4 |
+| Other | 23 |
 
 ---
 
-*Last updated: 2026-03-17 07:42*
+*Last updated: 2026-03-17 08:32*
