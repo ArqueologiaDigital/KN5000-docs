@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 400 (9 open, 391 closed)
+**Total Issues:** 401 (5 open, 394 closed)
 
 **Quick Links:** 
-[Other](#other) (9)
+[Other](#other) (5)
 
 ---
 
@@ -107,30 +107,6 @@ The kn5000_pr5_driver branch needs rebasing onto current upstream MAME master be
 
 ---
 
-#### ⚪ MAME: Feature Demo SSF visual presentation {#issue-kn5000-jbhk}
-
-**ID:** `kn5000-jbhk` | **Priority:** Low | **Created:** 2026-03-16
-
-The Feature Demo button sequence (DEMO → LEFT 4 → LEFT 2) plays demo songs correctly but the visual SSF presentation never renders. The FTBMP bitmaps don't appear because demo_state at DRAM 0x0251D8 stays 0x0000. Root cause is event routing — SSF event 0x1C00038 doesn't reach GroupBoxProc_StartSSFPresentation. Investigate and fix the event dispatch path.
-
----
-
-#### ⚪ MAME: Research MN89304 VGA controller and A18 banking signal {#issue-kn5000-bock}
-
-**ID:** `kn5000-bock` | **Priority:** Low | **Created:** 2026-03-17
-
-MN89304_VGA device is a stub (kn5000.cpp line 42 notes nothing is known). VGA A18 banking signal unknown (line 927). Display banking not emulated.
-
----
-
-#### ⚪ MAME: Route ATA INTRQ from HDAE5000 extension slot to CPU IRQ {#issue-kn5000-a254}
-
-**ID:** `kn5000-a254` | **Priority:** Low | **Created:** 2026-03-17
-
-ATA interrupt routing not yet implemented. HDAE5000 docs note TODO at hdae5000.md line 764. Need to wire INTRQ callback from ata_interface_device to the extension slot IRQ.
-
----
-
 #### ⚪ Phase 4 Completion: Production-ready quality {#issue-kn5000-nca}
 
 **ID:** `kn5000-nca` | **Priority:** Low | **Created:** 2026-01-31
@@ -171,16 +147,6 @@ Production-ready emulation and homebrew support.
 
 ---
 
-#### ⚪ Trace SSF event 0x1C00038 routing path in MAME {#issue-kn5000-7c0w}
-
-**ID:** `kn5000-7c0w` | **Priority:** Low | **Created:** 2026-03-16
-
-The Feature Demo SSF visual presentation doesn't work because event 0x1C00038 never reaches GroupBoxProc_StartSSFPresentation. Add MAME logging to trace where the event gets lost in the dispatch chain.
-
-**Depends on:** [`kn5000-jbhk`](#issue-kn5000-jbhk)
-
----
-
 #### ⚪ EPIC: Path to full C port of ROM firmware {#issue-kn5000-4sry}
 
 **ID:** `kn5000-4sry` | **Priority:** P4 | **Created:** 2026-03-16
@@ -210,6 +176,9 @@ Prerequisites:
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-ur11` | Document SSF (Sound Slide Film) presentation system | 2026-03-17 |
+| `kn5000-bock` | MAME: Research MN89304 VGA controller and A18 banking signal | 2026-03-17 |
+| `kn5000-a254` | MAME: Route ATA INTRQ from HDAE5000 extension slot to CPU... | 2026-03-17 |
 | `kn5000-j60k` | Convert widget_dispatch.s large data blocks to C structs | 2026-03-17 |
 | `kn5000-pq05` | Convert gui_display_struct_data.s to C struct (17 x 34-by... | 2026-03-17 |
 | `kn5000-9n3o` | Suppress _start linker warnings in ROM .ld files | 2026-03-17 |
@@ -227,11 +196,8 @@ Prerequisites:
 | `kn5000-q8tm` | Convert sepaout_config.s data to C structs | 2026-03-17 |
 | `kn5000-kkwr` | Convert tonegen_param_table.s to C struct | 2026-03-17 |
 | `kn5000-xpd2` | LLVM TLCS-900: Add disassembler round-trip verification t... | 2026-03-17 |
-| `kn5000-ka1c` | LLVM TLCS-900: Add .word/.hword assembler directive support | 2026-03-17 |
-| `kn5000-1uiu` | Rename 458 generic .set labels (Data_XXXXXX, PadFF_, etc.... | 2026-03-17 |
-| `kn5000-noum` | LLVM TLCS-900: Override allowsMisalignedMemoryAccesses fo... | 2026-03-17 |
 
-*...and 371 more closed issues*
+*...and 374 more closed issues*
 
 ---
 
@@ -243,15 +209,15 @@ Prerequisites:
 |----------|-------|
 | Critical | 1 |
 | Medium | 2 |
-| Low | 5 |
+| Low | 1 |
 | P4 | 1 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 9 |
+| Other | 5 |
 
 ---
 
-*Last updated: 2026-03-17 16:36*
+*Last updated: 2026-03-17 17:59*
