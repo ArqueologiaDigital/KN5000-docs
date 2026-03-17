@@ -830,7 +830,12 @@ Demo timer → demo system should generate synthetic key event
   → Stuck on globe
 ```
 
-The investigation now needs to trace **what firmware code writes to DRAM[0xC07D] and DRAM[0xC080]** during the demo, and what hardware behavior controls the synthetic key event values. A MAME write tap on these addresses would reveal the writer.
+The investigation now needs to trace **what firmware code writes to DRAM[0xC07D] and DRAM[0xC080]** during the demo, and what hardware behavior controls the synthetic key event values. A MAME Lua write tap script (`ssf_trace5.lua`) has been deployed to capture:
+- The PC (program counter) of every instruction that writes to C07D or C080
+- Whether chain values 0x10/0x11/0x12 ever appear in C080
+- A summary of all unique writer addresses
+
+This will identify whether the key scan data comes from the control panel serial interface (expected: control panel HLE writes button scan data) or from an internal firmware source (expected: demo system generates synthetic key events). If the demo system never writes the expected chain values, the issue is either that (a) the demo system's synthetic key generation depends on a hardware feature not yet emulated, or (b) the control panel MCU on real hardware sends different data than the HLE.
 
 ```mermaid
 flowchart TD
@@ -848,21 +853,29 @@ flowchart TD
     style MATCH fill:#cfc,stroke:#0c0,color:#080
 ```
 
-### Confirmed Root Cause Flowchart
+### Confirmed Root Cause Flowchart (Revised After Trace 4)
+
+Note: Trace 3 initially reported event 0x1C00038 as unregistered (timing issue — scan ran before registration completed). Trace 4's deeper scan corrected this: **the event IS registered but the filter params don't match the key scan data.** GroupBoxProc is genuinely absent from the object table (confirmed by 500-entry deep scan).
 
 ```mermaid
 flowchart TD
-    SCREEN["Feature Presentation<br/>screen loaded (state 0xE4)"] --> NAKA["NAKA widget hierarchy<br/>instantiated"]
-    NAKA --> CHECK{"GroupBoxProc<br/>in object table?"}
-    CHECK -- "NO (confirmed)" --> NOREG["Event 0x1C00038<br/>has no registered handler"]
-    NOREG --> NOEVT["UIState_KeyScan_Dispatch<br/>fires 0x1C00038 into void"]
-    NOEVT --> NOSSF["GroupBoxProc_StartSSFPresentation<br/>never called"]
-    NOSSF --> NOB80A["Workspace tag 0xB80A<br/>never constructed"]
-    NOB80A --> NOPARSE["SSF XML parser<br/>never starts"]
-    NOPARSE --> STUCK["Stuck on globe<br/>(FTBMP01 only)"]
+    KEYSCAN["UIState_KeyScan_Dispatch<br/>reads C07D=0x0E, C080=0xB1"] --> DISPATCH["EventDispatch_Direct<br/>event 0x1C00038, match=0xB10E"]
+    DISPATCH --> FILTER{"Filter against<br/>3 registered entries"}
+    FILTER -- "0xB10E ≠ 0x1000<br/>0xB10E ≠ 0x1100<br/>0xB10E ≠ 0x1200" --> NOMATCH["Filter fails<br/>No handler invoked"]
+    NOMATCH --> NOSSF["GroupBoxProc_StartSSFPresentation<br/>never called"]
+    NOSSF --> STUCK["Stuck on globe<br/>(FTBMP01 only)"]
 
-    CHECK -- "YES (needed)" --> REG["Event 0x1C00038<br/>registered for GroupBoxProc"]
-    REG --> SSF["SSF slides cycle<br/>through FTBMP01-06"]
+    FILTER -- "Match found<br/>(needs correct chain byte)" --> HANDLER["Event reaches<br/>registered handler"]
+    HANDLER --> B80A["Workspace tag 0xB80A<br/>constructed"]
+    B80A --> SSF["SSF parser starts<br/>slides cycle FTBMP01-06"]
+
+    QUESTION["? What should write<br/>chain=0x10/0x11/0x12<br/>to DRAM[0xC080] ?"] -.-> KEYSCAN
+
+    style NOMATCH fill:#fcc,stroke:#c00,color:#800
+    style STUCK fill:#fcc,stroke:#c00,color:#800
+    style SSF fill:#cfc,stroke:#0c0,color:#080
+    style QUESTION fill:#ffc,stroke:#cc0,color:#880
+```
 
     style NOREG fill:#fcc,stroke:#c00,color:#800
     style STUCK fill:#fcc,stroke:#c00,color:#800
