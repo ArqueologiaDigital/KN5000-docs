@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 395 (15 open, 379 closed)
+**Total Issues:** 395 (11 open, 383 closed)
 
 **Quick Links:** 
-[Other](#other) (15)
+[Other](#other) (11)
 
 ---
 
@@ -89,16 +89,6 @@ All subsystem pages documented, no placeholders remain.
 
 ---
 
-#### 🟡 Audit kn5000 MAME driver for upstream code style compliance {#issue-kn5000-mv8f}
-
-**ID:** `kn5000-mv8f` | **Priority:** Medium | **Created:** 2026-03-16
-
-Before PR submission: ensure BIT() macros, logmacro.h LOGMASKED() channels, no AI attribution on PR branch commits, proper MAME conventions.
-
-**Depends on:** [`kn5000-jt0b`](#issue-kn5000-jt0b)
-
----
-
 #### 🟡 MAME: Update PR #14558 with accumulated driver fixes {#issue-kn5000-f8gw}
 
 **ID:** `kn5000-f8gw` | **Priority:** Medium | **Created:** 2026-03-10
@@ -117,27 +107,11 @@ The kn5000_pr5_driver branch needs rebasing onto current upstream MAME master be
 
 ---
 
-#### ⚪ LLVM TLCS-900: Add 8-bit direct addressing mode (F0 prefix) {#issue-kn5000-jd8s}
-
-**ID:** `kn5000-jd8s` | **Priority:** Low | **Created:** 2026-03-17
-
-HDAE5000 has 2 .byte code sequences using F0 prefix (8-bit direct addressing): lda XBC, 0x0a and lda XBC, 0x08. Need to add F0 prefix encoding to LLVM backend.
-
----
-
 #### ⚪ LLVM TLCS-900: Add auto-increment addressing mode for CP {#issue-kn5000-riek}
 
 **ID:** `kn5000-riek` | **Priority:** Low | **Created:** 2026-03-17
 
 HDAE5000 has .byte 0xc5, 0xe0, 0x3f, 0x30 = cp (XWA+), 0x30 (auto-increment addressing). Need to add (R+) addressing mode support.
-
----
-
-#### ⚪ LLVM TLCS-900: Fix R+d16 addressing in disassembler (SRI prefix) {#issue-kn5000-205q}
-
-**ID:** `kn5000-205q` | **Priority:** Low | **Created:** 2026-03-17
-
-Round-trip tests show C3/D3/E3/F3 SRI prefix instructions (R+d16 addressing) fall through to wrong instruction in disassembler. Assembly works correctly.
 
 ---
 
@@ -232,14 +206,6 @@ Prerequisites:
 
 ---
 
-#### ⚪ LLVM TLCS-900: Add backend documentation (README/architecture doc) {#issue-kn5000-rv4p}
-
-**ID:** `kn5000-rv4p` | **Priority:** P4 | **Created:** 2026-03-16
-
-No documentation exists for the TLCS-900 backend architecture: instruction format encoding scheme, register file layout, addressing mode implementation, custom pass descriptions (BitManipOpt, BitTestOpt, DJNZOpt, BranchShortening, FixLargeDisp, IncDecOpt, RedundantCmpElim). A professional backend needs an architecture document.
-
----
-
 #### ⚪ LLVM TLCS-900: Add instruction scheduling model {#issue-kn5000-8nkr}
 
 **ID:** `kn5000-8nkr` | **Priority:** P4 | **Created:** 2026-03-16
@@ -260,6 +226,10 @@ Switch statements compile to arithmetic chains instead of jump tables because BR
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-jd8s` | LLVM TLCS-900: Add 8-bit direct addressing mode (F0 prefix) | 2026-03-17 |
+| `kn5000-205q` | LLVM TLCS-900: Fix R+d16 addressing in disassembler (SRI ... | 2026-03-17 |
+| `kn5000-rv4p` | LLVM TLCS-900: Add backend documentation (README/architec... | 2026-03-17 |
+| `kn5000-mv8f` | Audit kn5000 MAME driver for upstream code style compliance | 2026-03-17 |
 | `kn5000-h5ci` | LLVM TLCS-900: Fix D7 prevbank prefix in disassembler | 2026-03-17 |
 | `kn5000-ete6` | Convert sound_data_*.s files to C struct arrays | 2026-03-17 |
 | `kn5000-q8tm` | Convert sepaout_config.s data to C structs | 2026-03-17 |
@@ -276,12 +246,8 @@ Switch statements compile to arithmetic chains instead of jump tables because BR
 | `kn5000-fp95` | Maincpu ROM build broken: .org overflow in fdc_routines.s... | 2026-03-17 |
 | `kn5000-ickl` | Merge single-byte .byte fragments with adjacent native in... | 2026-03-17 |
 | `kn5000-q5dh` | LLVM TLCS-900: Add missing compact instruction encodings | 2026-03-17 |
-| `kn5000-gyge` | LLVM TLCS-900: Increase MC test coverage (currently 8 tests) | 2026-03-17 |
-| `kn5000-v7cp` | Organize scripts/ into subdirectories (170+ scripts) | 2026-03-17 |
-| `kn5000-yclj` | Add pre-commit hook: validate LLVM version in commit message | 2026-03-17 |
-| `kn5000-2p4i` | Convert drawbar_panel_ui.s .byte data (1571 lines) | 2026-03-17 |
 
-*...and 359 more closed issues*
+*...and 363 more closed issues*
 
 ---
 
@@ -292,16 +258,16 @@ Switch statements compile to arithmetic chains instead of jump tables because BR
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| Medium | 3 |
-| Low | 7 |
-| P4 | 4 |
+| Medium | 2 |
+| Low | 5 |
+| P4 | 3 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 15 |
+| Other | 11 |
 
 ---
 
-*Last updated: 2026-03-17 12:57*
+*Last updated: 2026-03-17 13:09*
