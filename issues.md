@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 395 (16 open, 378 closed)
+**Total Issues:** 395 (15 open, 379 closed)
 
 **Quick Links:** 
-[Other](#other) (16)
+[Other](#other) (15)
 
 ---
 
@@ -207,14 +207,6 @@ The Feature Demo SSF visual presentation doesn't work because event 0x1C00038 ne
 
 ---
 
-#### ⚪ Convert sound_data_*.s files to C struct arrays {#issue-kn5000-ete6}
-
-**ID:** `kn5000-ete6` | **Priority:** P4 | **Created:** 2026-03-16
-
-7 sound data files (brass, flute, guitar, mallet, organ, sax, world) contain instrument preset parameter tables as .byte data. Convert to typed C struct arrays with named fields for each instrument parameter.
-
----
-
 #### ⚪ EPIC: Path to full C port of ROM firmware {#issue-kn5000-4sry}
 
 **ID:** `kn5000-4sry` | **Priority:** P4 | **Created:** 2026-03-16
@@ -268,8 +260,9 @@ Switch statements compile to arithmetic chains instead of jump tables because BR
 
 | Issue | Title | Closed |
 |-------|-------|--------|
-| `kn5000-q8tm` | Convert sepaout_config.s data to C structs | 2026-03-17 |
 | `kn5000-h5ci` | LLVM TLCS-900: Fix D7 prevbank prefix in disassembler | 2026-03-17 |
+| `kn5000-ete6` | Convert sound_data_*.s files to C struct arrays | 2026-03-17 |
+| `kn5000-q8tm` | Convert sepaout_config.s data to C structs | 2026-03-17 |
 | `kn5000-kkwr` | Convert tonegen_param_table.s to C struct | 2026-03-17 |
 | `kn5000-xpd2` | LLVM TLCS-900: Add disassembler round-trip verification t... | 2026-03-17 |
 | `kn5000-ka1c` | LLVM TLCS-900: Add .word/.hword assembler directive support | 2026-03-17 |
@@ -287,9 +280,8 @@ Switch statements compile to arithmetic chains instead of jump tables because BR
 | `kn5000-v7cp` | Organize scripts/ into subdirectories (170+ scripts) | 2026-03-17 |
 | `kn5000-yclj` | Add pre-commit hook: validate LLVM version in commit message | 2026-03-17 |
 | `kn5000-2p4i` | Convert drawbar_panel_ui.s .byte data (1571 lines) | 2026-03-17 |
-| `kn5000-e0b6` | Convert widget_dispatch.s .byte data to C structs (4907 .... | 2026-03-17 |
 
-*...and 358 more closed issues*
+*...and 359 more closed issues*
 
 ---
 
@@ -302,14 +294,14 @@ Switch statements compile to arithmetic chains instead of jump tables because BR
 | Critical | 1 |
 | Medium | 3 |
 | Low | 7 |
-| P4 | 5 |
+| P4 | 4 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 16 |
+| Other | 15 |
 
 ---
 
-*Last updated: 2026-03-17 12:55*
+*Last updated: 2026-03-17 12:57*
