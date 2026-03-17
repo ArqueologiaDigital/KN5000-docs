@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 400 (12 open, 388 closed)
+**Total Issues:** 400 (10 open, 390 closed)
 
 **Quick Links:** 
-[Other](#other) (12)
+[Other](#other) (10)
 
 ---
 
@@ -181,14 +181,6 @@ The Feature Demo SSF visual presentation doesn't work because event 0x1C00038 ne
 
 ---
 
-#### ⚪ Convert gui_display_struct_data.s to C struct (17 x 34-byte records) {#issue-kn5000-pq05}
-
-**ID:** `kn5000-pq05` | **Priority:** P4 | **Created:** 2026-03-17
-
-323 .byte lines in maincpu/includes/gui_display_struct_data.s. 17 repeating 34-byte records starting with 0xa0 0x01. Fixed-size record structure ideal for packed C struct.
-
----
-
 #### ⚪ Convert widget_dispatch.s large data blocks to C structs {#issue-kn5000-j60k}
 
 **ID:** `kn5000-j60k` | **Priority:** P4 | **Created:** 2026-03-17
@@ -222,18 +214,12 @@ Prerequisites:
 
 ---
 
-#### ⚪ Suppress _start linker warnings in ROM .ld files {#issue-kn5000-9n3o}
-
-**ID:** `kn5000-9n3o` | **Priority:** P4 | **Created:** 2026-03-17
-
-All 6 ROM linker steps produce 'ld.lld: warning: cannot find entry symbol _start'. Fix by adding ENTRY() directives to the main linker scripts. Cosmetic but noisy.
-
----
-
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-pq05` | Convert gui_display_struct_data.s to C struct (17 x 34-by... | 2026-03-17 |
+| `kn5000-9n3o` | Suppress _start linker warnings in ROM .ld files | 2026-03-17 |
 | `kn5000-8nkr` | LLVM TLCS-900: Add instruction scheduling model | 2026-03-17 |
 | `kn5000-9a0` | Maintain documentation website | 2026-03-17 |
 | `kn5000-ejyx` | LLVM TLCS-900: Implement jump table lowering (BR_JT) | 2026-03-17 |
@@ -252,10 +238,8 @@ All 6 ROM linker steps produce 'ld.lld: warning: cannot find entry symbol _start
 | `kn5000-1uiu` | Rename 458 generic .set labels (Data_XXXXXX, PadFF_, etc.... | 2026-03-17 |
 | `kn5000-noum` | LLVM TLCS-900: Override allowsMisalignedMemoryAccesses fo... | 2026-03-17 |
 | `kn5000-x1j4` | LLVM TLCS-900: Audit C code generation quality for byte-m... | 2026-03-17 |
-| `kn5000-s4jr` | Evaluate LLVM TLCS-900 C compiler output quality for simp... | 2026-03-17 |
-| `kn5000-ur27` | Suppress ALIGNED_STRING compiler warnings (233 warnings) | 2026-03-17 |
 
-*...and 368 more closed issues*
+*...and 370 more closed issues*
 
 ---
 
@@ -268,14 +252,14 @@ All 6 ROM linker steps produce 'ld.lld: warning: cannot find entry symbol _start
 | Critical | 1 |
 | Medium | 2 |
 | Low | 5 |
-| P4 | 4 |
+| P4 | 2 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 12 |
+| Other | 10 |
 
 ---
 
-*Last updated: 2026-03-17 15:46*
+*Last updated: 2026-03-17 15:47*
