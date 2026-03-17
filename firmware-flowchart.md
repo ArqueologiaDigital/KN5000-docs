@@ -10,7 +10,7 @@ This page documents the complete execution flow of the KN5000 firmware, from pow
 
 ## Power-On Boot Sequence
 
-```mermaid
+<pre class="mermaid">
 flowchart TD
     RESET["RESET Vector<br/>(0xE00000)"] --> HW_INIT["Hardware Init<br/>IO ports, stack, RAM clear"]
     HW_INIT --> SELF_TEST["Self Test<br/>ROM checksum, RAM test"]
@@ -45,13 +45,13 @@ flowchart TD
     end
 
     BOOT_SCREEN --> MAIN_LOOP
-```
+</pre>
 
 ## Main Event Loop
 
 After boot, the firmware enters a cooperative multitasking loop driven by a task scheduler and event dispatch system.
 
-```mermaid
+<pre class="mermaid">
 flowchart TD
     BOOT["Boot_DisplayScreen"] --> INIT_SUBSYS["Initialize All Subsystems"]
 
@@ -75,13 +75,13 @@ flowchart TD
         TIMER_CHECK -->|No| SCHED
         TIMER_HANDLER --> SCHED
     end
-```
+</pre>
 
 ## Interrupt Service Routines
 
 The firmware uses hardware interrupts for real-time operations. ISRs feed data into ring buffers consumed by the main loop.
 
-```mermaid
+<pre class="mermaid">
 flowchart LR
     subgraph ISR ["Hardware Interrupts"]
         DMA_ISR["E1 DMA ISR<br/>Inter-CPU data transfer"]
@@ -102,11 +102,11 @@ flowchart LR
     DMA_ISR --> VOICE_BUF
     DMA_ISR --> DSP_BUF
     SERIAL_ISR --> MIDI_BUF
-```
+</pre>
 
 ## Subsystem Architecture
 
-```mermaid
+<pre class="mermaid">
 flowchart TD
     subgraph UI_LAYER ["UI Layer"]
         NAKA["NAKA Widget Framework<br/>478 widget objects, 9 type codes"]
@@ -153,13 +153,13 @@ flowchart TD
     LATCH <-->|"DMA bulk transfer"| SUB
     SUB --> TONEGEN
     SUB --> DSP
-```
+</pre>
 
 ## NAKA Widget Event Flow
 
 The UI framework uses a hierarchical event dispatch system. Events flow from hardware through the control panel to NAKA widget handlers.
 
-```mermaid
+<pre class="mermaid">
 flowchart TD
     BUTTON["Physical Button Press"] --> CPANEL_ISR["Control Panel ISR<br/>Serial packet decode"]
     CPANEL_ISR --> EVT_GEN["Generate Event ID<br/>(e.g., 0x01C00008 = DISK MENU)"]
@@ -181,11 +181,11 @@ flowchart TD
     INHERITED --> DISPATCH
     DISPATCH --> PROC["Proc Function<br/>(e.g., IvDrawbarProc)"]
     PROC --> ACTION["UI Action<br/>Sound change, screen transition"]
-```
+</pre>
 
 ## Memory Map Overview
 
-```mermaid
+<pre class="mermaid">
 flowchart LR
     subgraph ADDR_SPACE ["24-bit Address Space"]
         INT_RAM["0x000000-0x000FFF<br/>Internal RAM (4KB)<br/>CPU registers, stack"]
@@ -198,11 +198,11 @@ flowchart LR
         TABLE["0x800000-0x9FFFFF<br/>Table Data ROM (2MB)<br/>Styles, rhythms, demos"]
         PROG["0xE00000-0xFFFFFF<br/>Program ROM (2MB)<br/>Main firmware"]
     end
-```
+</pre>
 
 ## Source File Organization
 
-```mermaid
+<pre class="mermaid">
 flowchart TD
     MAIN["kn5000_v10_program.s<br/>(3,400 lines — entry point)"]
 
@@ -250,7 +250,7 @@ flowchart TD
     MAIN --> SEQ_FILES
     MAIN --> MIDI_FILES
     MAIN --> STORAGE_FILES
-```
+</pre>
 
 ---
 

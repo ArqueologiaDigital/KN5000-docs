@@ -18,6 +18,8 @@
 
 - title: Firmware
   pages:
+    - title: Architecture Flowchart
+      url: /firmware-flowchart/
     - title: Boot Sequence
       url: /boot-sequence/
     - title: SubCPU Payload Loading
