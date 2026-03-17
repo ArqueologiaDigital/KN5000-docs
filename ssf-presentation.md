@@ -751,6 +751,65 @@ This will distinguish between:
 - **(B)** GroupBoxProc registered but 0x1C00038 not associated with it (event binding problem)
 - **(C)** Both registered correctly but CurrentTarget routing bypasses them (dispatch architecture issue)
 
+### Definitive Finding: GroupBoxProc Not Registered (Trace Session 3)
+
+A third diagnostic script (`ssf_trace3.lua`) directly scanned the firmware's runtime data structures during state 0xE4 and produced a **definitive answer**:
+
+| Data Structure | Address | Result |
+|----------------|---------|--------|
+| Event registration table | `DRAM 0x02BC34` (12-byte entries) | **Event 0x1C00038 is NOT registered** for any widget |
+| Object table | `DRAM 0x027ED2` (14-byte entries, up to 1119 slots) | **GroupBoxProc (0xF9983F) is NOT present** in the first 50 entries |
+
+**This confirms root cause (A): GroupBoxProc is never loaded into the object table during Feature Presentation mode.**
+
+The NAKA widget hierarchy that includes GroupBoxProc — which is the only path capable of producing the `0xB80A` workspace tag needed to start the SSF parser — is simply never instantiated. The widget doesn't exist in the runtime data structures during state 0xE4.
+
+Additional observations from the trace:
+- Ring buffer pointers: `rb_rd=67, rb_wr=67` (empty on entry), then `rb_rd=205, rb_wr=205` (events flowing and consumed, but none are 0x1C00038)
+- The event system IS active — events are being posted and consumed — but 0x1C00038 is never among them because no widget is registered to receive it
+
+### Narrowed Investigation
+
+The question is now narrowed to: **Why doesn't the Feature Presentation screen's NAKA widget hierarchy include GroupBoxProc?**
+
+Possible explanations:
+1. **Missing screen initialization:** The NAKA widget framework loads screen-specific widget trees when transitioning between UI modes. The Feature Presentation screen (state 0xE4) may require a specific initialization sequence that isn't completing in MAME — possibly due to a hardware emulation issue (missing interrupt, timer, or I/O behavior) that prevents the screen loader from running.
+
+2. **GroupBoxProc loaded at a different time:** On real hardware, GroupBoxProc may only be registered when specific conditions are met (e.g., after the first song completes, or when a specific timer expires). The current scan window may be too early.
+
+3. **GroupBoxProc in a higher object table slot:** The initial scan only checked 50 of 1119 possible slots. A deeper scan (500 entries) plus a full-range proc address search is being run to rule this out.
+
+4. **Widget hierarchy differs between UI states:** GroupBoxProc may be registered during state 0x01 (Normal) but unregistered during state 0xE4 (Feature Presentation) if the screen transition replaces the widget tree. In that case, the Feature Presentation screen's widget data (in `naka_perf_style.c`) may simply not include a GroupBox container widget — which would mean the SSF system was designed to be triggered by a different mechanism on real hardware.
+
+A fourth diagnostic script (`ssf_trace4.lua`) is performing:
+- Full 200-entry object table dump looking for GroupBoxProc, ScreenProc, AcFdemoScreenProc, and AcPresentationControlProc
+- Complete event registration table dump (first 50 entries with event code annotations)
+- 500-entry deep scan for any proc pointer in the 0xF99xxx address range
+- CurrentTarget widget details
+
+This will provide a complete picture of what widgets ARE registered during state 0xE4 and whether GroupBoxProc exists anywhere in the system at that point.
+
+### Confirmed Root Cause Flowchart
+
+```mermaid
+flowchart TD
+    SCREEN["Feature Presentation<br/>screen loaded (state 0xE4)"] --> NAKA["NAKA widget hierarchy<br/>instantiated"]
+    NAKA --> CHECK{"GroupBoxProc<br/>in object table?"}
+    CHECK -- "NO (confirmed)" --> NOREG["Event 0x1C00038<br/>has no registered handler"]
+    NOREG --> NOEVT["UIState_KeyScan_Dispatch<br/>fires 0x1C00038 into void"]
+    NOEVT --> NOSSF["GroupBoxProc_StartSSFPresentation<br/>never called"]
+    NOSSF --> NOB80A["Workspace tag 0xB80A<br/>never constructed"]
+    NOB80A --> NOPARSE["SSF XML parser<br/>never starts"]
+    NOPARSE --> STUCK["Stuck on globe<br/>(FTBMP01 only)"]
+
+    CHECK -- "YES (needed)" --> REG["Event 0x1C00038<br/>registered for GroupBoxProc"]
+    REG --> SSF["SSF slides cycle<br/>through FTBMP01-06"]
+
+    style NOREG fill:#fcc,stroke:#c00,color:#800
+    style STUCK fill:#fcc,stroke:#c00,color:#800
+    style SSF fill:#cfc,stroke:#0c0,color:#080
+```
+
 ### DSP Ready Fix Impact
 
 The DSP1 ready signal fix (SubCPU Port H bit 0 = 1) eliminates the 8,000-iteration timeout per DSP operation. This was confirmed to reduce SubCPU processing overhead. However, the SSF slide transitions still don't work — the root cause is event routing, not timing. The DSP fix is still valuable as a correct hardware emulation improvement.
