@@ -1306,6 +1306,48 @@ flowchart TD
     style COPY fill:#cfc,stroke:#0c0,color:#080
 ```
 
+### Beat Processing Gap (Code Analysis)
+
+Further code analysis revealed the exact mechanism blocking `pending → parts`:
+
+**The copy chain:** `SeqPlay_PreparePlaybackState` (which copies `pending` to `parts`) is only called from `SeqStep_PlaybackCheckBeat` (seq_step_routines.s:2588-2592):
+
+```asm
+SeqStep_PlaybackCheckBeat:
+    bit_erpb 0xFB, 0x01        ; check bit 1 of ERP register 0xFB
+    jr z, SeqStep_PlaybackCheckPattern  ; if NOT set, skip copy
+    call SeqPlay_PreparePlaybackState   ; copies pending → parts
+```
+
+**ERP register 0xFB bit 1 is a beat boundary flag.** It must be SET by the sequencer's tempo/beat processing for the copy to execute. If beats are never generated, the flag stays clear and parts are never activated.
+
+**Call chain to reach this code:**
+```
+Main Loop → MainLoop_SequencerPhase (system_handlers.s:1245)
+  → Seq_EventProcessingTick
+  → Seq_TickWrapper
+  → SeqStep_MainTimerTick (system_handlers.s:1249)
+    → SeqStep_TimerDispatchA
+    → SeqPlay_SyncPlaybackPosition
+    → SeqStep_TimerDispatchB
+    → Seq_HandleModeTransition
+    → SeqNotify_CheckAndClearStart
+    → SeqStep_PlaybackStateMachine (seq_step_routines.s:2555)
+      → SeqStep_PlaybackDecrCount
+        → SeqStep_PlaybackCheckBeat ← HERE (bit 1 of 0xFB must be set)
+          → SeqPlay_PreparePlaybackState (copies pending → parts)
+```
+
+**The RhythmROM check is NOT the blocker** — DRAM[12919] = 0x00000000 (valid), so `Seq_DispatcherTick_Process` is NOT gated. The tick chain from `Seq_DispatcherTick` through `AccTick_Main` and `AccProcess_Entry` should execute.
+
+**Investigation in progress (Trace 11):** Monitoring the beat flag state (DRAM[1057]), INTT1 tick counter (DRAM[1475]), tempo register, playback wait counter, and sequencer data position during the Feature Demo. This will show whether:
+- The INTT1 timer interrupt is firing (tick counter advancing)
+- The tempo system is generating beats (beat flag bit 1 getting set)
+- The sequencer data position is advancing (SMF data being read)
+- The playback wait counter (DRAM[7518]) is blocking beat processing
+
+If the tick counter advances but beats are never generated, the issue is in the tempo calculation or beat boundary detection — potentially a hardware timer frequency mismatch.
+
 ---
 
 ## Interpretation
