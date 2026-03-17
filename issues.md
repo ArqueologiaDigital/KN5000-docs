@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 388 (19 open, 366 closed)
+**Total Issues:** 390 (16 open, 373 closed)
 
 **Quick Links:** 
-[Other](#other) (19)
+[Other](#other) (16)
 
 ---
 
@@ -117,11 +117,11 @@ The kn5000_pr5_driver branch needs rebasing onto current upstream MAME master be
 
 ---
 
-#### ⚪ Evaluate LLVM TLCS-900 C compiler output quality for simple functions {#issue-kn5000-s4jr}
+#### ⚪ LLVM TLCS-900: Add .word/.hword assembler directive support {#issue-kn5000-ka1c}
 
-**ID:** `kn5000-s4jr` | **Priority:** Low | **Created:** 2026-03-16
+**ID:** `kn5000-ka1c` | **Priority:** Low | **Created:** 2026-03-17
 
-Test whether clang -target tlcs900 produces byte-identical output for simple C functions vs hand-written assembly. Try: strlen, memcpy, simple dispatch tables, register manipulation. Document which patterns match and which need __attribute__ hints.
+clang emits .word and .hword for data constants but llvm-mc TLCS-900 parser doesn't recognize them. C files with static const data tables fail to assemble.
 
 ---
 
@@ -133,11 +133,11 @@ The disassembler (TLCS900Disassembler.cpp) should be verified with round-trip te
 
 ---
 
-#### ⚪ LLVM TLCS-900: Audit C code generation quality for byte-matching {#issue-kn5000-x1j4}
+#### ⚪ LLVM TLCS-900: Fix calr with numeric address targets {#issue-kn5000-cy4r}
 
-**ID:** `kn5000-x1j4` | **Priority:** Low | **Created:** 2026-03-16
+**ID:** `kn5000-cy4r` | **Priority:** Low | **Created:** 2026-03-16
 
-Evaluate whether clang -target tlcs900 produces byte-identical output for simple C functions vs hand-written assembly. Test: utility functions (strlen, memcpy), dispatch tables, register manipulation. Document which C patterns produce matching code and which need __attribute__ hints. Critical for the C porting path.
+calr (relative call with 16-bit offset) with numeric address targets emits absolute bytes instead of computing relative offset. Currently must use labels or .byte fallback. Fix: compute PC-relative offset at emission time.
 
 ---
 
@@ -196,14 +196,6 @@ Production-ready emulation and homebrew support.
 The Feature Demo SSF visual presentation doesn't work because event 0x1C00038 never reaches GroupBoxProc_StartSSFPresentation. Add MAME logging to trace where the event gets lost in the dispatch chain.
 
 **Depends on:** [`kn5000-jbhk`](#issue-kn5000-jbhk)
-
----
-
-#### ⚪ Add file header comments to 36 assembly files missing them {#issue-kn5000-4wd3}
-
-**ID:** `kn5000-4wd3` | **Priority:** P4 | **Created:** 2026-03-16
-
-36 of 151 .s files (24%) lack file-level header comments explaining purpose. Mostly data files and auto-generated widget descriptors. Add brief headers following the established pattern.
 
 ---
 
@@ -272,27 +264,18 @@ TLCS900Schedule.td exists but lacks detailed cycle counts. A professional backen
 
 ---
 
-#### ⚪ Rename 458 generic .set labels (Data_XXXXXX, PadFF_, etc.) to semantic names {#issue-kn5000-1uiu}
-
-**ID:** `kn5000-1uiu` | **Priority:** P4 | **Created:** 2026-03-16
-
-The LABEL_XXXXXX elimination left 458 .set aliases with auto-generated names like Data_E00800, PadFF_E3DEF1, PtrTable_E1FFB6, etc. These need analysis to determine proper semantic names based on what the data contains.
-
----
-
-#### ⚪ Suppress ALIGNED_STRING compiler warnings (233 warnings) {#issue-kn5000-ur27}
-
-**ID:** `kn5000-ur27` | **Priority:** P4 | **Created:** 2026-03-16
-
-naka_widget_descriptors.c generates 233 -Wexcess-initializers warnings from ALIGNED_STRING macro expansion. Add #pragma to suppress, or redesign macro to avoid the warning.
-
----
-
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-1uiu` | Rename 458 generic .set labels (Data_XXXXXX, PadFF_, etc.... | 2026-03-17 |
+| `kn5000-noum` | LLVM TLCS-900: Override allowsMisalignedMemoryAccesses fo... | 2026-03-17 |
+| `kn5000-x1j4` | LLVM TLCS-900: Audit C code generation quality for byte-m... | 2026-03-17 |
+| `kn5000-s4jr` | Evaluate LLVM TLCS-900 C compiler output quality for simp... | 2026-03-17 |
+| `kn5000-ur27` | Suppress ALIGNED_STRING compiler warnings (233 warnings) | 2026-03-17 |
+| `kn5000-4wd3` | Add file header comments to 36 assembly files missing them | 2026-03-17 |
 | `kn5000-o97p` | Extract 43 remaining inline data blocks from kn5000_v10_p... | 2026-03-17 |
+| `kn5000-fp95` | Maincpu ROM build broken: .org overflow in fdc_routines.s... | 2026-03-17 |
 | `kn5000-ickl` | Merge single-byte .byte fragments with adjacent native in... | 2026-03-17 |
 | `kn5000-q5dh` | LLVM TLCS-900: Add missing compact instruction encodings | 2026-03-17 |
 | `kn5000-gyge` | LLVM TLCS-900: Increase MC test coverage (currently 8 tests) | 2026-03-17 |
@@ -305,15 +288,8 @@ naka_widget_descriptors.c generates 233 -Wexcess-initializers warnings from ALIG
 | `kn5000-2z32` | Disassemble ui_mode_handlers.s .byte code blocks (540 lines) | 2026-03-17 |
 | `kn5000-33k0` | Disassemble ui_window_procs.s .byte code blocks (769 lines) | 2026-03-17 |
 | `kn5000-r88l` | Disassemble semenu_routines.s .byte code blocks (1599 lines) | 2026-03-17 |
-| `kn5000-zhot` | Disassemble note_voice_mapping.s .byte code blocks (1337 ... | 2026-03-17 |
-| `kn5000-xxtz` | Convert sound_editor_ui.s .byte data (4673 lines) | 2026-03-17 |
-| `kn5000-njrx` | Convert audio_control_engine.s MIDI handler .byte blocks ... | 2026-03-17 |
-| `kn5000-dhcw` | Auto-generate NAKA linker scripts from ELF symbol table | 2026-03-17 |
-| `kn5000-g7en` | Convert swi 7/nop padding in dispatch files to .fill 0xFF... | 2026-03-17 |
-| `kn5000-nr32` | Remove 4 legacy ASL->LLVM TODO comments in smf_playback.s | 2026-03-17 |
-| `kn5000-jxhw` | LLVM regression: commit d0fb231 causes 1-byte size change... | 2026-03-17 |
 
-*...and 346 more closed issues*
+*...and 353 more closed issues*
 
 ---
 
@@ -326,14 +302,14 @@ naka_widget_descriptors.c generates 233 -Wexcess-initializers warnings from ALIG
 | Critical | 1 |
 | Medium | 3 |
 | Low | 6 |
-| P4 | 9 |
+| P4 | 6 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 19 |
+| Other | 16 |
 
 ---
 
-*Last updated: 2026-03-17 11:27*
+*Last updated: 2026-03-17 11:50*
