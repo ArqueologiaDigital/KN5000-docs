@@ -789,6 +789,65 @@ A fourth diagnostic script (`ssf_trace4.lua`) is performing:
 
 This will provide a complete picture of what widgets ARE registered during state 0xE4 and whether GroupBoxProc exists anywhere in the system at that point.
 
+### Deep Scan Results (Trace Session 4)
+
+A comprehensive scan of the firmware's runtime data structures revealed a critical finding that overturns previous assumptions:
+
+**Event 0x1C00038 IS registered — but with filter params that don't match the key scan data.**
+
+| Slot | Target | Event | Param | Interpretation |
+|------|--------|-------|-------|----------------|
+| 10 | `0xFFFFFFFF` | `0x01C00038` | `0x10001AFF` | Expects chain=0x10, param=0x1A |
+| 11 | `0xFFFFFFFF` | `0x01C00038` | `0x11001DFF` | Expects chain=0x11, param=0x1D |
+| 12 | `0xFFFFFFFF` | `0x01C00038` | `0x120006FF` | Expects chain=0x12, param=0x06 |
+
+`EventDispatch_Direct` filters events by matching the upper 16 bits of XDE (`(DRAM[0xC080] << 8) | DRAM[0xC07D]`) against registered params. The actual key scan data has `C080=0xB1, C07D=0x0E` → match value `0xB10E`. **None of the three registered entries match.**
+
+The registered entries expect chain bytes `0x10`, `0x11`, `0x12` — which appear to be right-panel segment indices (segment 0, 1, 2) with a type flag. The control panel HLE sends button packets with header bytes in ranges `0x00-0x0A` (right panel) or `0xC0-0xCA` (left panel). Chain value `0xB1` doesn't match any valid button packet format (`0xB1` has bits 7:6 = `10`, which is not a valid panel code — only `00` and `11` are mapped).
+
+**Hypothesis: The firmware generates synthetic key events during the demo.** The values `0x10`, `0x11`, `0x12` in the registration params are NOT button scan values — they're internal event codes that the demo sequencer or timer handler writes to DRAM[0xC07D-0xC080] to simulate button-driven navigation. If this synthetic key generation depends on a hardware feature that isn't correctly emulated (e.g., a specific timer, interrupt, or I/O port behavior), the filter params would never match and the SSF chain would never trigger.
+
+**Additional findings from the deep scan:**
+- Object table: 200+ active entries (first 200 all populated), but NO proc pointer in the 0xF99xxx range (GroupBoxProc) found across 500 entries
+- GroupBoxProc is genuinely absent from the runtime — it's never instantiated
+- SSF workspace events `0x1C0001C` are registered (7 entries at slots 14-43), confirming the SSF system IS set up to receive workspace events
+- Widget init event `0x1C00001` is registered at slot 1
+- Mode change event `0x1C00015` is NOT in the first 50 entries
+
+### Revised Root Cause Theory
+
+The SSF failure chain is now understood at a deeper level:
+
+```
+Demo timer → demo system should generate synthetic key event
+  → writes chain/param to DRAM[0xC07D-0xC080]
+  → UIState_KeyScan_Dispatch reads key data, dispatches 0x1C00038
+  → EventDispatch_Direct filters by (C080<<8)|C07D against registered params
+  → Filter FAILS because synthetic key generation produces wrong values
+  → Event 0x1C00038 never reaches any handler
+  → GroupBoxProc_StartSSFPresentation never called
+  → SSF parser never starts
+  → Stuck on globe
+```
+
+The investigation now needs to trace **what firmware code writes to DRAM[0xC07D] and DRAM[0xC080]** during the demo, and what hardware behavior controls the synthetic key event values. A MAME write tap on these addresses would reveal the writer.
+
+```mermaid
+flowchart TD
+    KS["UIState_KeyScan_Dispatch<br/>state=0xE4, gate=0xFFFE"] --> BUILD["Build XDE from key data<br/>C080=0xB1, C07D=0x0E<br/>→ match value = 0xB10E"]
+    BUILD --> DISPATCH["EventDispatch_Direct<br/>event 0x1C00038"]
+    DISPATCH --> SCAN["Scan registration table<br/>for matching entries"]
+    SCAN --> E10{"Entry [10]<br/>param expects 0x1000?"}
+    E10 -- "0xB10E ≠ 0x1000" --> E11{"Entry [11]<br/>param expects 0x1100?"}
+    E11 -- "0xB10E ≠ 0x1100" --> E12{"Entry [12]<br/>param expects 0x1200?"}
+    E12 -- "0xB10E ≠ 0x1200" --> NOMATCH["No match found<br/>Event dropped"]
+
+    EXPECTED["Expected: demo system writes<br/>chain=0x10/0x11/0x12 to C080<br/>→ match value 0x10xx/0x11xx/0x12xx"] -.-> MATCH["Filter matches<br/>→ event reaches handler<br/>→ SSF starts"]
+
+    style NOMATCH fill:#fcc,stroke:#c00,color:#800
+    style MATCH fill:#cfc,stroke:#0c0,color:#080
+```
+
 ### Confirmed Root Cause Flowchart
 
 ```mermaid
