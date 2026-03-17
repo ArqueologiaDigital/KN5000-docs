@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 401 (5 open, 394 closed)
+**Total Issues:** 402 (6 open, 396 closed)
 
 **Quick Links:** 
-[Other](#other) (5)
+[Other](#other) (6)
 
 ---
 
@@ -86,6 +86,12 @@ All subsystem pages documented, no placeholders remain.
 2. ✅ All subsystems documented (no placeholder pages)
 3. ✅ Homebrew SDK functional (App Loader + Mines game working)
 4. ⬜ MAME driver merged upstream (PR update pending — kn5000-f8gw)
+
+---
+
+#### 🟡 MAME: Connect DSP1 ready signal to SubCPU Port H bit 0 {#issue-kn5000-n05c}
+
+**ID:** `kn5000-n05c` | **Priority:** Medium | **Created:** 2026-03-17
 
 ---
 
@@ -176,6 +182,8 @@ Prerequisites:
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-7c0w` | Trace SSF event 0x1C00038 routing path in MAME | 2026-03-17 |
+| `kn5000-jbhk` | MAME: Feature Demo SSF visual presentation | 2026-03-17 |
 | `kn5000-ur11` | Document SSF (Sound Slide Film) presentation system | 2026-03-17 |
 | `kn5000-bock` | MAME: Research MN89304 VGA controller and A18 banking signal | 2026-03-17 |
 | `kn5000-a254` | MAME: Route ATA INTRQ from HDAE5000 extension slot to CPU... | 2026-03-17 |
@@ -194,10 +202,8 @@ Prerequisites:
 | `kn5000-h5ci` | LLVM TLCS-900: Fix D7 prevbank prefix in disassembler | 2026-03-17 |
 | `kn5000-ete6` | Convert sound_data_*.s files to C struct arrays | 2026-03-17 |
 | `kn5000-q8tm` | Convert sepaout_config.s data to C structs | 2026-03-17 |
-| `kn5000-kkwr` | Convert tonegen_param_table.s to C struct | 2026-03-17 |
-| `kn5000-xpd2` | LLVM TLCS-900: Add disassembler round-trip verification t... | 2026-03-17 |
 
-*...and 374 more closed issues*
+*...and 376 more closed issues*
 
 ---
 
@@ -208,7 +214,7 @@ Prerequisites:
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| Medium | 2 |
+| Medium | 3 |
 | Low | 1 |
 | P4 | 1 |
 
@@ -216,8 +222,8 @@ Prerequisites:
 
 | Category | Count |
 |----------|-------|
-| Other | 5 |
+| Other | 6 |
 
 ---
 
-*Last updated: 2026-03-17 20:34*
+*Last updated: 2026-03-17 21:35*
