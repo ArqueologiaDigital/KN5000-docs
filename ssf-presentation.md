@@ -26,6 +26,7 @@ This page consolidates all research findings about the SSF system into a single 
 - [Investigation Progress (March 2026)](#investigation-progress-march-2026)
   - [Major Discovery: SSF Triggered by Tone Gen Events](#major-discovery-ssf-triggered-by-tone-gen-events-trace-session-5)
   - [Callback Chain Confirmation (ROM Analysis)](#callback-chain-confirmation-rom-analysis)
+- [Refocusing on Hardware Emulation](#refocusing-on-hardware-emulation-march-2026)
 - [Interpretation](#interpretation)
 
 ---
@@ -1097,6 +1098,36 @@ flowchart TD
     style SSF fill:#cfc,stroke:#0c0,color:#080
     style DROP fill:#fcc,stroke:#c00,color:#800
 ```
+
+### Refocusing on Hardware Emulation (March 2026)
+
+The previous investigation traced the firmware's event dispatch chain in detail, but was approaching the problem from the wrong angle — treating it as a firmware issue rather than an emulation issue. **The firmware is correct** (it runs on real KN5000 hardware with correct checksums). The problem must be in the MAME emulator.
+
+**HLE Workaround Removed:**
+
+The "stuck sequencer parts" workaround (commit `124e37d`) has been removed (commit `c38a312`). This workaround directly wrote to DRAM[0x10420] to clear stuck sequencer parts, bypassing the firmware's own sequencer state machine. This is a strict policy violation — all emulator code must describe actual hardware behavior, not simulate firmware behavior.
+
+**Remaining Hardware Emulation Issues:**
+
+The correct approach is to identify what hardware behavior MAME gets wrong that causes the firmware to malfunction. Known hardware emulation gaps:
+
+| Hardware | Status | Impact |
+|----------|--------|--------|
+| **Waveform ROMs IC304-IC306** | NO GOOD DUMP KNOWN (12MB missing) | Tone gen produces silence; sequencer voice completion may differ |
+| **Waveform ROM IC307** | Dumped (4MB) | Partial waveform data available |
+| **SubCPU boot ROM** | NEEDS REDUMP | Potential data corruption in undumped ranges |
+| **Tone gen device** | Simplified emulation | Voice status readback (`data_r()`) returns 0x8100/0x7E00 based on key_on and hold timer; may not accurately model real hardware state transitions |
+| **DSP1 (IC311)** | Stub (accepts writes, no processing) | Ready signal fixed (Port H bit 0); no audio effects |
+| **DSP2 (IC310)** | Not emulated | GPIO serial interface not connected |
+
+**Key question:** Why does `DRAM[0x10420]` (sequencer active parts bitmask) go to 0xFFFF and stay there? On real hardware with waveform ROMs, the sequencer runs accompaniment patterns to completion and parts clear naturally through the tone generator's voice lifecycle. In MAME:
+
+1. The firmware sends KEY ON commands to the tone gen for accompaniment voices
+2. The tone gen's `data_r()` returns 0x8100 (active) while key_on is true or hold timer is running
+3. After KEY OFF + 2-second hold timeout, `data_r()` returns 0x7E00 (idle)
+4. The firmware should detect the idle state and clear the corresponding sequencer part bit
+
+If this lifecycle works correctly, parts should clear even without waveform ROMs. The investigation is now focused on verifying whether the tone gen's voice status reporting accurately reflects what real hardware does, and whether any voices get "stuck" in a state that prevents the firmware from clearing their sequencer parts.
 
 ---
 
