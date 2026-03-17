@@ -28,6 +28,7 @@ This page consolidates all research findings about the SSF system into a single 
   - [Callback Chain Confirmation (ROM Analysis)](#callback-chain-confirmation-rom-analysis)
 - [Refocusing on Hardware Emulation](#refocusing-on-hardware-emulation-march-2026)
 - [Voice Lifecycle and Sequencer Parts (Trace Session 8)](#voice-lifecycle-and-sequencer-parts-trace-session-8)
+  - [Accompaniment Engine Analysis (Trace Session 9)](#accompaniment-engine-analysis-trace-session-9)
 - [Interpretation](#interpretation)
 
 ---
@@ -1193,6 +1194,66 @@ If any of these inputs is missing or incorrect due to an emulation gap, the acco
 Alternatively, the accompaniment chord data may be sent from MainCPU to SubCPU via the inter-CPU latch mechanism, and some aspect of this communication may be failing in MAME.
 
 **Next investigation:** Trace the accompaniment engine's chord input and pattern playback to determine exactly why no parts are activated despite `play=6`.
+
+### Accompaniment Engine Analysis (Trace Session 9)
+
+Deep analysis of the accompaniment engine revealed two critical gating mechanisms that could prevent note event generation:
+
+**Gating Check in `Seq_DispatcherTick`** (smf_event_processor.s:11207-11212):
+
+```asm
+Seq_DispatcherTick:
+    cpdi8 36150, 16      ; compare acc_mode with 16
+    jr c, Process         ; if < 16, process ticks normally
+    cpdi8 36150, 22      ; compare acc_mode with 22
+    jr ugt, Process       ; if > 22, process ticks normally
+    jr Return             ; values 16-22: SKIP ALL accompaniment processing
+```
+
+DRAM[36150] (address `0x8D36`) is the accompaniment mode register. If its value is in the range 16-22, the **entire sequencer tick is skipped**: no rhythm processing (`AccTick_Main`), no chord detection (`Rhythm_CompareAndTrigger`), no accompaniment note generation (`AccProcess_Entry`). The sequencer appears "playing" (`play_state=6`) but produces no output.
+
+**Chord Override System:**
+
+The accompaniment chord handler (`AccChord_ReadAndStoreKeys`, smf_event_processor.s:11464) reads chord data from one of two sources:
+- **Normal mode** (DRAM[8968] == 0): reads from keyboard chord state at DRAM[52958-52961] — which is **zero in MAME** (no physical keyboard input)
+- **Demo override** (DRAM[8968] != 0): reads from pre-programmed chord data at DRAM[8960-8966]
+
+DRAM[8968] is cleared to 0 during demo init. If it's never set, the accompaniment reads zero chord data from the keyboard → no chord detected → no accompaniment notes generated.
+
+**Part Activation Chain:**
+
+The sequencer parts bitmask (`seq_parts` at DRAM[10420]) is populated through a chain:
+```
+DRAM[61854] (part enable bitmask)
+  → copied to DRAM[8980] (pending parts) by SeqPlay_InitDemo_PartLoop
+  → copied to DRAM[10420] (active parts) by SeqPlay_PreparePlaybackState
+```
+
+If DRAM[61854] is zero (no parts enabled), the entire chain produces zero. `SeqPlay_PreparePlaybackState` is called from within `SeqStep_PlaybackCheckBeat`, which is itself called from the tick processing that `Seq_DispatcherTick` gates — so if the gating check blocks ticks, parts are never activated.
+
+**Investigation in progress (Trace 9):** Monitoring DRAM[36150] (acc_mode), DRAM[8968] (chord override), DRAM[61854] (part enable bitmask), and DRAM[8980] (pending parts) during the Feature Demo. If `acc_mode` is in the 16-22 range, it confirms the gating check is the direct cause of zero note events.
+
+```mermaid
+flowchart TD
+    TICK["INTT1 timer → Seq_DispatcherEntry"] --> CHECK{"DRAM[36150]<br/>acc_mode value?"}
+    CHECK -- "< 16 or > 22" --> PROCESS["Process sequencer tick"]
+    CHECK -- "16-22 (GATED)" --> SKIP["Skip ALL accompaniment<br/>No rhythm, no chords,<br/>no note events"]
+
+    PROCESS --> RHYTHM["AccTick_Main<br/>Rhythm processing"]
+    RHYTHM --> CHORD{"DRAM[8968]<br/>chord override?"}
+    CHORD -- "!= 0 (demo)" --> DEMO_CHORD["Read demo chords<br/>from DRAM[8960-8966]"]
+    CHORD -- "== 0 (normal)" --> KBD_CHORD["Read keyboard chords<br/>from DRAM[52958-52961]"]
+    KBD_CHORD --> ZERO["Zero in MAME<br/>(no keyboard input)"]
+    ZERO --> NO_NOTES["No chord → no accompaniment<br/>seq_parts stays 0"]
+    DEMO_CHORD --> NOTES["Chord data available<br/>→ accompaniment plays<br/>→ seq_parts non-zero"]
+
+    SKIP --> STUCK["seq_parts stays 0<br/>Demo stuck forever"]
+
+    style SKIP fill:#fcc,stroke:#c00,color:#800
+    style STUCK fill:#fcc,stroke:#c00,color:#800
+    style ZERO fill:#ffc,stroke:#cc0,color:#880
+    style NOTES fill:#cfc,stroke:#0c0,color:#080
+```
 
 ---
 
