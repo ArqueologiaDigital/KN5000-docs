@@ -1398,6 +1398,52 @@ A targeted trace (trace12) is monitoring: DRAM[48442] (stored BPM), TREG5 (hardw
 
 If the gate bit is set, it would be a firmware state issue caused by incorrect hardware emulation somewhere upstream. If the gate is clear but TREG5 is still 0, the hardware timer register write may not be working correctly in MAME.
 
+### Trace 12 Results and Timer Hardware Analysis
+
+Trace 12 confirmed the tempo system IS working at the firmware level:
+
+```
+Initial: bpm=0x0078(120) treg5=0x0000 subcpu_tempo=0x0078 gate=0x00(bit2=0)
+After song starts: bpm=0x005A(90) treg5=0x0000 subcpu_tempo=0x005A gate=0x10(bit2=0)
+```
+
+**Key findings:**
+- **BPM IS set correctly:** Transitions from 120 (default) to 90 (song tempo)
+- **SubCPU tempo data IS present:** `0xFC62` contains valid BPM values
+- **Gate check passes:** bit 2 of DRAM[64848] is clear throughout
+- **TREG5 reads as 0x0000** — BUT this is a **write-only hardware register**. The TMP94C241 memory map has `map(0x000092, 0x000093).w(treg_16_w<TREG5>)` — no read handler. The Lua script reads 0 because the register is not readable via the memory bus, NOT because it wasn't written.
+
+**The firmware writes TREG5 correctly.** The `stda16 146, xde` instruction at audio_control_engine.s:7427 writes the computed timer period. The CPU core's `treg_16_w<TREG5>` handler stores it to `m_treg_16[TREG5]`.
+
+### CPU Core Timer Investigation
+
+The TMP94C241 CPU core's 16-bit timer implementation (tmp94c241.cpp) has a critical gap:
+
+**Timer 4/5 runs when:** `BIT(m_t16run, 0)` is set (T16RUN register at address 0x9E, bit 0)
+
+**Timer 4/5 clock source:** determined by `m_t4mod & 3` (T4MOD register at address 0x98, bits 1:0):
+
+| T4MOD bits 1:0 | Clock Source | Implementation Status |
+|-----------------|-------------|----------------------|
+| 0 | **TIA** (external timer input pin) | **NOT IMPLEMENTED** (case 0 in `update_timer_count` is empty) |
+| 1 | T1 prescaler (fc/2) | Implemented |
+| 2 | T4 prescaler (fc/8) | Implemented |
+| 3 | T16 prescaler (fc/32) | Implemented |
+
+The `update_timer_count` lambda (tmp94c241.cpp line 1354-1374) has:
+```cpp
+case 0:
+/* Not yet implemented.
+    - For the 8 bit timers: TIO, TO0TRG, invalid and TO2TRG
+    - For all 16 bit timers: TIA
+*/
+break;  // ← DOES NOTHING
+```
+
+**If the firmware configures Timer 4/5 with clock source 0 (TIA), the timer will never tick** because the external input is not connected and the `case 0` handler does nothing. This would explain the entire failure chain: no timer ticks → no beats → no parts activation → no song lifecycle → demo stuck.
+
+A targeted trace is checking T4MOD to determine if the firmware uses TIA as the clock source for the sequencer beat timer.
+
 ---
 
 ## Interpretation
