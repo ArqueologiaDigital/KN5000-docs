@@ -962,11 +962,64 @@ flowchart TD
     style FORWARD fill:#cfc,stroke:#0c0,color:#080
 ```
 
-### Remaining Work
+### Root Cause Fully Traced (March 2026)
 
-- **Verify hypothesis via MAME Lua:** Read `DRAM[0x02F83C]` during state `0xE4` to confirm whether the Feature Presentation screen's `CurrentTarget` is set correctly
-- **`SwbtWr_ReinitBothBanks` blocking (DOCUMENTED):** The tone generator initialization system has been fully analyzed -- see [Tone Generator Initialization (SwbtWr)]({{ site.baseurl }}/swbwr-tone-init/) for the complete call graph, dispatch loop internals, and explanation of why it blocks for ~16 seconds. This blocking starves the NAKA widget framework screen activation cycle.
-- **Screen activation timing:** Determine if the NAKA framework's screen management cycle detects `DRAM[0x8D38]` state changes independently and whether the 16-second blocking window starves this detection
+The complete failure chain has been identified through 7 diagnostic trace sessions and ROM analysis:
+
+**The event IS generated correctly:**
+1. SwbtWr_DispatchLoop processes event code 0x10 from the tone gen parameter buffer
+2. Bank 2 callback chain calls `UIState_HandlerTable_05` → `UIState_KeyScan_Dispatch`
+3. At this moment, C080=0x10, C07D=0x00 — filter would match registration entry [10]
+4. `UIState_KeyScan_Dispatch` dispatches event 0x1C00038 via `EventDispatch_Direct`
+
+**But the dispatch is ASYNCHRONOUS:**
+5. `EventDispatch_Direct` finds the ring buffer empty (during SwbtWr, Phase 5 hasn't run)
+6. It calls `MainSendEvent_Prologue` → **`ApPostEvent`** — which POSTS the event to the ring buffer
+7. The event sits in the ring buffer while SwbtWr continues processing hundreds more events
+8. C080 is overwritten by subsequent event codes
+
+**When the event is finally consumed, the target is wrong:**
+9. SwbtWr_ReinitBothBanks eventually completes
+10. Main loop reaches Phase 5 (`MainTitle_PrepareAndDispatch`)
+11. `MainDispatchEvent` → `GetEvent` dequeues event 0x1C00038 from the ring buffer
+12. `GetEvent` sees target=0xFFFFFFFF (broadcast), calls `GetCurrentTarget()` → reads DRAM[0x02F83C]
+13. **CurrentTarget = 0x00E4000A** — a widget whose proc chain does NOT include GroupBoxProc
+14. Event 0x1C00038 reaches the wrong handler → SSF never starts
+
+**Why CurrentTarget 0x00E4000A doesn't include GroupBoxProc:**
+The Feature Presentation screen's NAKA widget hierarchy (defined in `naka_perf_style.c`) uses `AcFdemoScreenProc` (type 0x69) as its screen handler, not the standard `ScreenProc` that includes `Screen_ForwardToGroupBox`. The `AcFdemoScreenProc` handles demo-specific events but does not forward generic key events (0x1C00038) through GroupBoxProc's handler chain.
+
+**On real hardware, this likely works because:**
+The control panel MCU generates button press events with header bytes in the 0x10-0x12 range (type 2 headers) directly during user interaction. These are processed synchronously by the widget framework during Phase 5 while CurrentTarget may point to a different widget (e.g., during screen initialization when ScreenProc IS the CurrentTarget). The timing window where GroupBoxProc is reachable via CurrentTarget is narrow and only occurs during specific screen transitions — not during steady-state demo operation.
+
+Alternatively, the SSF presentation may require actual user button presses on real hardware to advance slides — it was designed as an interactive demonstration, not a fully automated slideshow. The Feature Demo auto-plays songs but expects the presenter to manually advance slides by pressing soft buttons.
+
+```mermaid
+flowchart TD
+    subgraph SWBWR["SwbtWr_DispatchLoop (Bank 2)"]
+        E10["Event 0x10 processed"] --> C080W["C080 = 0x10, C07D = 0x00"]
+        C080W --> CB["Callback: UIState_HandlerTable_05"]
+        CB --> KSD["UIState_KeyScan_Dispatch<br/>(C080=0x10, state=0xE4, gate=0xFFFE)"]
+        KSD --> EDD["EventDispatch_Direct<br/>event 0x1C00038, broadcast"]
+        EDD --> RBCHECK{"Ring buffer<br/>empty?"}
+        RBCHECK -- "Yes (during SwbtWr)" --> POST["ApPostEvent<br/>→ posts to ring buffer"]
+        POST --> CONTINUE["SwbtWr continues<br/>C080 overwritten by<br/>subsequent events"]
+    end
+
+    subgraph PHASE5["Phase 5: Main Loop Widget Dispatch"]
+        DEQUEUE["MainDispatchEvent<br/>dequeues 0x1C00038"] --> RESOLVE["GetEvent:<br/>target=0xFFFFFFFF<br/>→ GetCurrentTarget()"]
+        RESOLVE --> CT["CurrentTarget =<br/>0x00E4000A"]
+        CT --> WRONG{"Widget 0x00E4000A<br/>has GroupBoxProc<br/>in proc chain?"}
+        WRONG -- "NO" --> FAIL["Event reaches<br/>wrong handler<br/>SSF never starts"]
+        WRONG -- "YES (needed)" --> WORK["GroupBoxProc<br/>→ StartSSFPresentation<br/>→ slides cycle"]
+    end
+
+    CONTINUE --> DEQUEUE
+
+    style FAIL fill:#fcc,stroke:#c00,color:#800
+    style WORK fill:#cfc,stroke:#0c0,color:#080
+    style POST fill:#ffc,stroke:#cc0,color:#880
+```
 
 ### Callback Chain Confirmation (ROM Analysis)
 
