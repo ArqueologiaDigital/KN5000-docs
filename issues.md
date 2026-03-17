@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 395 (8 open, 387 closed)
+**Total Issues:** 400 (12 open, 388 closed)
 
 **Quick Links:** 
-[Other](#other) (8)
+[Other](#other) (12)
 
 ---
 
@@ -115,6 +115,22 @@ The Feature Demo button sequence (DEMO → LEFT 4 → LEFT 2) plays demo songs c
 
 ---
 
+#### ⚪ MAME: Research MN89304 VGA controller and A18 banking signal {#issue-kn5000-bock}
+
+**ID:** `kn5000-bock` | **Priority:** Low | **Created:** 2026-03-17
+
+MN89304_VGA device is a stub (kn5000.cpp line 42 notes nothing is known). VGA A18 banking signal unknown (line 927). Display banking not emulated.
+
+---
+
+#### ⚪ MAME: Route ATA INTRQ from HDAE5000 extension slot to CPU IRQ {#issue-kn5000-a254}
+
+**ID:** `kn5000-a254` | **Priority:** Low | **Created:** 2026-03-17
+
+ATA interrupt routing not yet implemented. HDAE5000 docs note TODO at hdae5000.md line 764. Need to wire INTRQ callback from ata_interface_device to the extension slot IRQ.
+
+---
+
 #### ⚪ Phase 4 Completion: Production-ready quality {#issue-kn5000-nca}
 
 **ID:** `kn5000-nca` | **Priority:** Low | **Created:** 2026-01-31
@@ -165,6 +181,22 @@ The Feature Demo SSF visual presentation doesn't work because event 0x1C00038 ne
 
 ---
 
+#### ⚪ Convert gui_display_struct_data.s to C struct (17 x 34-byte records) {#issue-kn5000-pq05}
+
+**ID:** `kn5000-pq05` | **Priority:** P4 | **Created:** 2026-03-17
+
+323 .byte lines in maincpu/includes/gui_display_struct_data.s. 17 repeating 34-byte records starting with 0xa0 0x01. Fixed-size record structure ideal for packed C struct.
+
+---
+
+#### ⚪ Convert widget_dispatch.s large data blocks to C structs {#issue-kn5000-j60k}
+
+**ID:** `kn5000-j60k` | **Priority:** P4 | **Created:** 2026-03-17
+
+4,851 .byte lines in maincpu/ui_widgets/widget_dispatch.s. WidgetParam_SelfRef_Table (440 lines) and DisplayScript nodes (211+ lines) have repeating structured records suitable for C structs.
+
+---
+
 #### ⚪ EPIC: Path to full C port of ROM firmware {#issue-kn5000-4sry}
 
 **ID:** `kn5000-4sry` | **Priority:** P4 | **Created:** 2026-03-16
@@ -190,11 +222,11 @@ Prerequisites:
 
 ---
 
-#### ⚪ LLVM TLCS-900: Add instruction scheduling model {#issue-kn5000-8nkr}
+#### ⚪ Suppress _start linker warnings in ROM .ld files {#issue-kn5000-9n3o}
 
-**ID:** `kn5000-8nkr` | **Priority:** P4 | **Created:** 2026-03-16
+**ID:** `kn5000-9n3o` | **Priority:** P4 | **Created:** 2026-03-17
 
-TLCS900Schedule.td exists but lacks detailed cycle counts. A professional backend should model: memory access latency, multiply/divide throughput, branch prediction miss cost, pipeline stalls. This enables -O2 to make better decisions when compiling C code.
+All 6 ROM linker steps produce 'ld.lld: warning: cannot find entry symbol _start'. Fix by adding ENTRY() directives to the main linker scripts. Cosmetic but noisy.
 
 ---
 
@@ -202,6 +234,7 @@ TLCS900Schedule.td exists but lacks detailed cycle counts. A professional backen
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-8nkr` | LLVM TLCS-900: Add instruction scheduling model | 2026-03-17 |
 | `kn5000-9a0` | Maintain documentation website | 2026-03-17 |
 | `kn5000-ejyx` | LLVM TLCS-900: Implement jump table lowering (BR_JT) | 2026-03-17 |
 | `kn5000-riek` | LLVM TLCS-900: Add auto-increment addressing mode for CP | 2026-03-17 |
@@ -221,9 +254,8 @@ TLCS900Schedule.td exists but lacks detailed cycle counts. A professional backen
 | `kn5000-x1j4` | LLVM TLCS-900: Audit C code generation quality for byte-m... | 2026-03-17 |
 | `kn5000-s4jr` | Evaluate LLVM TLCS-900 C compiler output quality for simp... | 2026-03-17 |
 | `kn5000-ur27` | Suppress ALIGNED_STRING compiler warnings (233 warnings) | 2026-03-17 |
-| `kn5000-4wd3` | Add file header comments to 36 assembly files missing them | 2026-03-17 |
 
-*...and 367 more closed issues*
+*...and 368 more closed issues*
 
 ---
 
@@ -235,15 +267,15 @@ TLCS900Schedule.td exists but lacks detailed cycle counts. A professional backen
 |----------|-------|
 | Critical | 1 |
 | Medium | 2 |
-| Low | 3 |
-| P4 | 2 |
+| Low | 5 |
+| P4 | 4 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 8 |
+| Other | 12 |
 
 ---
 
-*Last updated: 2026-03-17 14:07*
+*Last updated: 2026-03-17 15:46*
