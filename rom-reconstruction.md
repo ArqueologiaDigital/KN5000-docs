@@ -79,7 +79,7 @@ Reference disassembly files (`.unidasm`) are generated with MAME's `unidasm` too
 
 ## Assembler
 
-The project uses a **custom LLVM backend** (`llvm-mc -triple=tlcs900`) for assembly. All 279,798 instructions are encoded natively — no workaround macros needed.
+The project uses a **custom LLVM backend** (`llvm-mc -triple=tlcs900`) for assembly. All ~370,000 instructions are encoded natively — no workaround macros needed.
 
 **Build Process:**
 1. `llvm-mc` assembles `.s` files to ELF object files
@@ -91,9 +91,9 @@ The project uses a **custom LLVM backend** (`llvm-mc -triple=tlcs900`) for assem
 
 ## Milestone: 100% Byte-Matching ROMs
 
-As of March 2026, **all six ROMs** rebuild with 100% byte accuracy using LLVM assembly (279,798 native instructions, 0 workaround macros):
+As of March 2026, **all six ROMs** rebuild with 100% byte accuracy using LLVM assembly (~370,000 native instructions, 0 workaround macros):
 
-- **Main CPU** (2MB) - Complete disassembly with symbolic labels (240,014 instructions)
+- **Main CPU** (2MB) - Complete disassembly with symbolic labels (~330,000 instructions (90K .byte converted to native))
 - **Sub CPU Payload** (192KB) - Full protocol implementation (35,747 instructions)
 - **Sub CPU Boot** (128KB) - Boot ROM with VGA initialization (1,357 instructions)
 - **Table Data** (2MB) - Feature demo, wallpapers, icons, bootloader (1,678 instructions)
@@ -508,7 +508,7 @@ python compare_roms.py # Verify against originals
 
 ### March 2026: Complete LABEL_XXXXXX Elimination
 
-**All address-based labels replaced with semantic names across the entire ROM set.** Every `LABEL_XXXXXX` placeholder (e.g., `LABEL_F873ED`) has been analyzed and renamed to a meaningful, descriptive name reflecting its purpose (e.g., `FileIO_ValidateWithExtHeader`, `SeqByteBlock_DispatchJumpTable`). This represents the completion of a major project goal:
+**All address-based labels replaced with semantic names across the entire ROM set.** Every `LABEL_XXXXXX` placeholder (e.g., `FileIO_ValidateWithExtHeader`) has been analyzed and renamed to a meaningful, descriptive name reflecting its purpose (e.g., `FileIO_ValidateWithExtHeader`, `SeqByteBlock_DispatchJumpTable`). This represents the completion of a major project goal:
 
 - **~10,000 labels renamed** across 94+ source files in maincpu alone
 - **0 LABEL_XXXXXX remaining** in any ROM directory (maincpu, subcpu, hdae5000, table_data, custom_data)
