@@ -1348,6 +1348,56 @@ Main Loop → MainLoop_SequencerPhase (system_handlers.s:1245)
 
 If the tick counter advances but beats are never generated, the issue is in the tempo calculation or beat boundary detection — potentially a hardware timer frequency mismatch.
 
+### Tempo Register Discovery (Trace Session 11)
+
+Trace 11 revealed the **direct cause** of beat processing failure:
+
+```
+f=2284 parts=0x0000 pending=0xFFFF play=6 wait=0 beat_flags=0x00 tick=0 mode=0 tempo=0x0000 seqpos=0x00000000
+f=2344 parts=0x0000 pending=0xFFFF play=6 wait=0 beat_flags=0x06 tick=0 mode=1 tempo=0x0000 seqpos=0x00000000
+f=2374 parts=0x0000 pending=0xFFFF play=6 wait=0 beat_flags=0x00 tick=1 mode=3 tempo=0x0000 seqpos=0x00000000
+... (tempo=0x0000, seqpos=0x00000000 forever)
+```
+
+**Two critical findings:**
+
+1. **`tempo=0x0000` ALWAYS** — the sequencer tempo register never receives a value. Without tempo, no beat clock ticks are generated, the beat flag (ERP 0xFB bit 1) is never set, and `SeqPlay_PreparePlaybackState` is never called.
+
+2. **`seqpos=0x00000000` ALWAYS** — no SMF sequencer data position is set. No song data is being read or processed.
+
+**The complete failure chain:**
+```
+tempo = 0
+→ no beat clock ticks generated
+→ ERP 0xFB bit 1 never set
+→ SeqStep_PlaybackCheckBeat skips SeqPlay_PreparePlaybackState
+→ pending (0xFFFF) never copied to parts
+→ parts stays 0x0000
+→ firmware doesn't track song lifecycle
+→ demo never advances
+→ SSF slides never triggered
+```
+
+### SeqTimer_UpdateTempoReg Analysis
+
+The tempo is set by `SeqTimer_UpdateTempoReg` (audio_control_engine.s:7386), which:
+
+1. **Gate check** (line 7387): `bitda 2, 64848` — if bit 2 of DRAM[64848] (address `0xFD50`) is SET, returns immediately WITHOUT updating tempo
+2. **Read SubCPU tempo** (line 7394-7395): loads 16-bit value from `0xFC62` (= `0xFC5A + 8`), which is shared DRAM written by the SubCPU
+3. **Mask and clamp** (lines 7396-7405): `AND 0x1FF` (9-bit range 0-511), then clamp to 40-300 BPM. Values below 40 are clamped to default **120 BPM (0x78)**
+4. **Compute timer value** (lines 7408-7418): `80,000,000 / (tempo × 64)` for normal mode, stored to hardware timer register TREG5 (address 0x0092)
+5. **Write TREG5** (line 7427): `stda16 146, xde` — writes the computed timer period to the TMP94C241's Timer Register 5
+
+**Two possible failure points:**
+
+1. **The gate at DRAM[64848] bit 2** — if this bit is set during the Feature Demo, `SeqTimer_UpdateTempoReg` returns immediately and never writes TREG5. This would explain tempo=0 despite the function being called.
+
+2. **The SubCPU tempo source at 0xFC62** — even if the gate passes, the tempo value from the SubCPU might be 0. However, the clamping logic would catch this and default to 120 BPM.
+
+A targeted trace (trace12) is monitoring: DRAM[48442] (stored BPM), TREG5 (hardware timer at 0x0092), SubCPU tempo at 0xFC62, and the gate byte at DRAM[64848] (0xFD50) bit 2.
+
+If the gate bit is set, it would be a firmware state issue caused by incorrect hardware emulation somewhere upstream. If the gate is clear but TREG5 is still 0, the hardware timer register write may not be working correctly in MAME.
+
 ---
 
 ## Interpretation
