@@ -24,6 +24,7 @@ This page consolidates all research findings about the SSF system into a single 
 - [Key Routines](#key-routines)
 - [Known Bug: MAME SSF Never Activates](#known-bug-mame-ssf-never-activates)
 - [Investigation Progress (March 2026)](#investigation-progress-march-2026)
+  - [Major Discovery: SSF Triggered by Tone Gen Events](#major-discovery-ssf-triggered-by-tone-gen-events-trace-session-5)
 - [Interpretation](#interpretation)
 
 ---
@@ -851,6 +852,56 @@ flowchart TD
 
     style NOMATCH fill:#fcc,stroke:#c00,color:#800
     style MATCH fill:#cfc,stroke:#0c0,color:#080
+```
+
+### Major Discovery: SSF Triggered by Tone Gen Events (Trace Session 5)
+
+The write tap investigation revealed that **DRAM[0xC080] (the "chain byte") is written by `SwbtWr_DispatchLoop`** at `dsp_config_sysex.s:902`:
+
+```asm
+SwbtWr_DispatchLoop:
+    ld l, (xiy)           ; Load event code from buffer
+    stda8 49280, l        ; Write to C080 (chain byte)
+    ...
+    stda16 49277, xwa     ; Write event params to C07D-C07E
+    stda8 49279, c        ; Write to C07F
+```
+
+This means **the SSF event registration entries (0x10, 0x11, 0x12) are SwbtWr tone generator parameter event codes**, NOT button scan values or control panel data!
+
+**The SSF slide transition mechanism is:**
+1. SwbtWr processes tone gen parameter events during song initialization/playback
+2. Each event code is written to DRAM[0xC080] before the callback fires
+3. Event params are written to DRAM[0xC07D-0xC07F]
+4. After the callback, `UIState_KeyScan_Dispatch` is called (from the handler table)
+5. For state 0xE4 (gate=0xFFFE unconditional), event 0x1C00038 is dispatched
+6. `EventDispatch_Direct` matches `(C080<<8)|C07D` against registered params
+7. If the SwbtWr event code matches 0x10, 0x11, or 0x12, the SSF handler fires
+
+**What events 0x10/0x11/0x12 represent:**
+These are tone generator parameter indices in the SwbtWr callback table. They likely correspond to specific sound parameters (voice selection, preset change, or DSP configuration) that signal a song transition or section change — the natural trigger for advancing to the next slide.
+
+**Why it fails in MAME:**
+The SwbtWr event buffer is populated by `ToneGen_DiffScanAndUpdate`, which scans the 606-byte parameter space for changes. If events 0x10/0x11/0x12 are never generated (perhaps because missing waveform ROMs affect which tone gen parameters change, or because the DSP configuration path doesn't produce these specific event codes), the filter never matches and slides never advance.
+
+**This completely reframes the problem:** The SSF system is NOT driven by button presses or widget navigation. It is driven by **tone generator parameter changes** during song playback. The slides are synchronized to the music by being triggered when specific sound preset parameters change.
+
+```mermaid
+flowchart TD
+    SONG["Song playback starts"] --> DIFF["ToneGen_DiffScanAndUpdate<br/>scans 606-byte parameter space"]
+    DIFF --> BUFFER["Fill SwbtWr event buffer<br/>(~450 events per preset change)"]
+    BUFFER --> LOOP["SwbtWr_DispatchLoop<br/>processes events sequentially"]
+    LOOP --> WRITE["Write event code to C080<br/>Write params to C07D-C07F"]
+    WRITE --> CALLBACK["Execute callback<br/>(tone gen register writes)"]
+    CALLBACK --> HANDLER["UIState_KeyScan_Dispatch called<br/>(from handler table chain)"]
+    HANDLER --> GATE{"State 0xE4?<br/>Gate = 0xFFFE"}
+    GATE -- "Yes" --> DISPATCH["EventDispatch_Direct<br/>event 0x1C00038"]
+    DISPATCH --> FILTER{"Event code matches<br/>0x10, 0x11, or 0x12?"}
+    FILTER -- "Yes" --> SSF["SSF handler fires<br/>→ advance to next slide"]
+    FILTER -- "No (MAME)" --> DROP["Event filtered out<br/>slides don't advance"]
+
+    style DROP fill:#fcc,stroke:#c00,color:#800
+    style SSF fill:#cfc,stroke:#0c0,color:#080
 ```
 
 ### Confirmed Root Cause Flowchart (Revised After Trace 4)
