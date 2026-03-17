@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 390 (13 open, 376 closed)
+**Total Issues:** 395 (16 open, 378 closed)
 
 **Quick Links:** 
-[Other](#other) (13)
+[Other](#other) (16)
 
 ---
 
@@ -117,6 +117,30 @@ The kn5000_pr5_driver branch needs rebasing onto current upstream MAME master be
 
 ---
 
+#### ⚪ LLVM TLCS-900: Add 8-bit direct addressing mode (F0 prefix) {#issue-kn5000-jd8s}
+
+**ID:** `kn5000-jd8s` | **Priority:** Low | **Created:** 2026-03-17
+
+HDAE5000 has 2 .byte code sequences using F0 prefix (8-bit direct addressing): lda XBC, 0x0a and lda XBC, 0x08. Need to add F0 prefix encoding to LLVM backend.
+
+---
+
+#### ⚪ LLVM TLCS-900: Add auto-increment addressing mode for CP {#issue-kn5000-riek}
+
+**ID:** `kn5000-riek` | **Priority:** Low | **Created:** 2026-03-17
+
+HDAE5000 has .byte 0xc5, 0xe0, 0x3f, 0x30 = cp (XWA+), 0x30 (auto-increment addressing). Need to add (R+) addressing mode support.
+
+---
+
+#### ⚪ LLVM TLCS-900: Fix R+d16 addressing in disassembler (SRI prefix) {#issue-kn5000-205q}
+
+**ID:** `kn5000-205q` | **Priority:** Low | **Created:** 2026-03-17
+
+Round-trip tests show C3/D3/E3/F3 SRI prefix instructions (R+d16 addressing) fall through to wrong instruction in disassembler. Assembly works correctly.
+
+---
+
 #### ⚪ LLVM TLCS-900: Fix calr with numeric address targets {#issue-kn5000-cy4r}
 
 **ID:** `kn5000-cy4r` | **Priority:** Low | **Created:** 2026-03-16
@@ -183,14 +207,6 @@ The Feature Demo SSF visual presentation doesn't work because event 0x1C00038 ne
 
 ---
 
-#### ⚪ Convert sepaout_config.s data to C structs {#issue-kn5000-q8tm}
-
-**ID:** `kn5000-q8tm` | **Priority:** P4 | **Created:** 2026-03-16
-
-sepaout_config.s has 105 .byte lines of separator output configuration (layout params, bitmask tables, format strings). Convert to C struct with named config fields.
-
----
-
 #### ⚪ Convert sound_data_*.s files to C struct arrays {#issue-kn5000-ete6}
 
 **ID:** `kn5000-ete6` | **Priority:** P4 | **Created:** 2026-03-16
@@ -240,10 +256,20 @@ TLCS900Schedule.td exists but lacks detailed cycle counts. A professional backen
 
 ---
 
+#### ⚪ LLVM TLCS-900: Implement jump table lowering (BR_JT) {#issue-kn5000-ejyx}
+
+**ID:** `kn5000-ejyx` | **Priority:** P4 | **Created:** 2026-03-17
+
+Switch statements compile to arithmetic chains instead of jump tables because BR_JT is set to Expand. TLCS-900 supports jp (xhl) for indirect jumps. Implement custom BR_JT lowering for more efficient switch code generation.
+
+---
+
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-q8tm` | Convert sepaout_config.s data to C structs | 2026-03-17 |
+| `kn5000-h5ci` | LLVM TLCS-900: Fix D7 prevbank prefix in disassembler | 2026-03-17 |
 | `kn5000-kkwr` | Convert tonegen_param_table.s to C struct | 2026-03-17 |
 | `kn5000-xpd2` | LLVM TLCS-900: Add disassembler round-trip verification t... | 2026-03-17 |
 | `kn5000-ka1c` | LLVM TLCS-900: Add .word/.hword assembler directive support | 2026-03-17 |
@@ -262,10 +288,8 @@ TLCS900Schedule.td exists but lacks detailed cycle counts. A professional backen
 | `kn5000-yclj` | Add pre-commit hook: validate LLVM version in commit message | 2026-03-17 |
 | `kn5000-2p4i` | Convert drawbar_panel_ui.s .byte data (1571 lines) | 2026-03-17 |
 | `kn5000-e0b6` | Convert widget_dispatch.s .byte data to C structs (4907 .... | 2026-03-17 |
-| `kn5000-hjqn` | Disassemble sndparam_routines.s .byte code blocks (616 li... | 2026-03-17 |
-| `kn5000-8qpz` | Disassemble dsp_config_sysex.s .byte code blocks (388 lines) | 2026-03-17 |
 
-*...and 356 more closed issues*
+*...and 358 more closed issues*
 
 ---
 
@@ -277,15 +301,15 @@ TLCS900Schedule.td exists but lacks detailed cycle counts. A professional backen
 |----------|-------|
 | Critical | 1 |
 | Medium | 3 |
-| Low | 4 |
+| Low | 7 |
 | P4 | 5 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 13 |
+| Other | 16 |
 
 ---
 
-*Last updated: 2026-03-17 12:17*
+*Last updated: 2026-03-17 12:55*
