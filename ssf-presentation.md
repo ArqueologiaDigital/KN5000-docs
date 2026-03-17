@@ -23,6 +23,7 @@ This page consolidates all research findings about the SSF system into a single 
 - [Key DRAM State Variables](#key-dram-state-variables)
 - [Key Routines](#key-routines)
 - [Known Bug: MAME SSF Never Activates](#known-bug-mame-ssf-never-activates)
+- [Investigation Progress (March 2026)](#investigation-progress-march-2026)
 - [Interpretation](#interpretation)
 
 ---
@@ -554,7 +555,7 @@ When the timer reaches 10, song playback begins:
 
 ## Known Bug: MAME SSF Never Activates
 
-**Status (March 2026):** The SSF visual presentation (FTBMP bitmap rendering) does not trigger in MAME. The demo timer and song cycling work, but no slides are ever displayed.
+**Status (March 2026):** The SSF visual presentation (FTBMP bitmap rendering) does not trigger in MAME. The demo timer and song cycling work, but no slides are ever displayed. The tone generator hold timer bug has been fixed (voices no longer get stuck active when waveform ROMs are missing), which resolved 12 of 16 sequencer parts clearing naturally. A workaround timer handles the remaining 4 stuck accompaniment parts. The primary remaining blocker is the event routing issue -- see [Investigation Progress (March 2026)](#investigation-progress-march-2026).
 
 ### Symptom Chain
 
@@ -615,7 +616,7 @@ Two independent issues contribute to the failure:
 
 1. **Widget hierarchy not registered for state 0xE4:** `GroupBoxProc` may not be in the active widget chain when the UI is in state `0xE4`. Without user input in MAME's automated test run, the event buffer at `0xBD3C` drains after boot and `UIState_KeyScan_Dispatch` is never invoked again post-boot. The logic would work correctly with actual button input -- table entry[1] for `0x8D38=0x01` contains a valid match at index [79] for chain `0x70`, param `0x02`.
 
-2. **Sequencer parts never complete:** `DRAM[0x10420] = 0xFFFF` (all 16 sequencer parts marked active) blocks `FDemo_MultiGuardCheck`. Without waveform ROMs providing actual PCM data, the tone generator cannot complete note playback, so sequencer parts never transition to idle. This prevents the demo from advancing to the next slide even if SSF were active.
+2. **Sequencer parts never complete (PARTIALLY FIXED):** `DRAM[0x10420] = 0xFFFF` (all 16 sequencer parts marked active) blocks `FDemo_MultiGuardCheck`. The tone generator hold timer bug has been fixed -- voices no longer get stuck active when waveform ROMs are missing, allowing 12 of 16 parts to clear naturally. However, 4 accompaniment parts (bits 1, 3, 6, 10 = `0x044A`) remain stuck because they never enter playing state without waveform data. A 1-second workaround timer detects this deadlock condition and force-clears the remaining parts.
 
 ### Previously Investigated and Ruled Out
 
@@ -644,6 +645,63 @@ The gate table at ROM address `0xE01F80` is a 256-entry array of pointers to sta
 | State 0xE4 entry | -- | `{0xFFFE}` -- **unconditional** (all keys pass) | 0xE4 (Feature Presentation) |
 
 The unconditional `0xFFFE` marker for state `0xE4` confirms that any key press in the Feature Presentation sub-menu should trigger SSF -- the gate is wide open. The failure in MAME is not due to gating, but due to no key events being generated.
+
+---
+
+## Investigation Progress (March 2026)
+
+### Tone Generator Hold Timer Fix
+
+Voices were getting stuck in the "active" state when waveform ROMs are missing because `hold_counter` and `release_counter` were never decremented -- the `sound_stream_update` loop skipped them via `continue` when `wave_length == 0`. The fix ensures the hold timer runs regardless of `wave_length`, so voices properly time out even without waveform data.
+
+**Results:**
+
+- 12 of 16 sequencer parts now clear naturally after the hold timer expires
+- 4 accompaniment parts (bits 1, 3, 6, 10 = `0x044A`) remain stuck because they never enter playing state without waveform data -- the tone generator never receives a KEY ON for these parts, so there is no hold timer to expire
+- A 1-second workaround timer was added that detects the deadlock condition (UI state `0xE4`, demo timer at 0, active parts unchanged across 3+ checks) and force-clears `DRAM[0x10420]`
+
+### Event Routing Deep Analysis
+
+The full dispatch chain for event `0x1C00038` was traced through the firmware:
+
+1. **`UIState_KeyScan_Dispatch`** dispatches event `0x1C00038` -- this works correctly when invoked
+2. **`EventDispatch_Direct`** posts the event to the ring buffer at `DRAM[0x02BC34]` -- this works correctly
+3. **`GetEvent`** dequeues from the ring buffer -- **for broadcast events (target = `0xFFFFFFFF`), it replaces the target with `GetCurrentTarget()`, which reads `DRAM[0x02F83C]`**
+4. **`EventHandler_ObjectDispatch`** looks up the resolved target in the object table and calls the proc handler chain
+5. If `CurrentTarget`'s proc chain includes `ScreenProc`, the event flows through `Screen_ForwardToGroupBox` to `GroupBoxProc`, and SSF starts
+6. **If `CurrentTarget` does NOT include this chain, event `0x1C00038` goes to the wrong widget handler and SSF never starts**
+
+**Key discovery:** `CurrentTarget` at `DRAM[0x02F83C]` is set by `SetCurrentTarget` during screen initialization (event `0x1C00001`). The Feature Presentation screen (`AcFdemoScreenProc`, type `0x69`) must receive event `0x1C00001` to become the `CurrentTarget`.
+
+**Root cause hypothesis:** `SeqState_TransitionMode` only writes the state byte to `DRAM[0x8D38]` -- it does NOT send event `0x1C00001` to the screen widget. The NAKA widget framework's screen management cycle must independently detect the state change and activate the screen. This cycle may be starved because `SwbtWr_ReinitBothBanks` blocks for ~16 seconds during tone generator initialization.
+
+### Broadcast Event Resolution Flowchart
+
+```mermaid
+flowchart TD
+    EVT["Event 0x1C00038<br/>(broadcast, target=0xFFFFFFFF)"] --> POST["ApPostEvent<br/>posts to ring buffer"]
+    POST --> GET["GetEvent dequeues entry"]
+    GET --> BCAST{"target ==<br/>0xFFFFFFFF?"}
+    BCAST -- "Yes" --> RESOLVE["GetCurrentTarget()<br/>read DRAM[0x02F83C]"]
+    BCAST -- "No" --> DIRECT["Use specified target"]
+    RESOLVE --> LOOKUP["EventHandler_ObjectDispatch<br/>lookup in object table"]
+    DIRECT --> LOOKUP
+    LOOKUP --> CHAIN{"CurrentTarget's<br/>proc chain includes<br/>ScreenProc?"}
+    CHAIN -- "Yes" --> FWD["Screen_ForwardToGroupBox"]
+    CHAIN -- "No" --> WRONG["Event goes to<br/>wrong widget handler"]
+    FWD --> GBP["GroupBoxProc<br/>receives 0x1C00038"]
+    GBP --> SSF["GroupBoxProc_StartSSFPresentation<br/>SSF visuals start"]
+
+    SET["Screen receives<br/>event 0x1C00001"] --> INIT["Screen_Init_RegisterChild"]
+    INIT --> SETCT["SetCurrentTarget<br/>writes DRAM[0x02F83C]"]
+    SETCT -.-> RESOLVE
+```
+
+### Remaining Work
+
+- **Verify hypothesis via MAME Lua:** Read `DRAM[0x02F83C]` during state `0xE4` to confirm whether the Feature Presentation screen's `CurrentTarget` is set correctly
+- **Investigate `SwbtWr_ReinitBothBanks` blocking:** Determine why tone generator initialization takes ~16 seconds and whether this blocks the NAKA widget framework screen activation cycle
+- **Screen activation timing:** Determine if the NAKA framework's screen management cycle detects `DRAM[0x8D38]` state changes independently and whether the 16-second blocking window starves this detection
 
 ---
 
