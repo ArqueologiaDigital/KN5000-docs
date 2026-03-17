@@ -697,6 +697,10 @@ flowchart TD
     SETCT -.-> RESOLVE
 ```
 
+### DSP Status Polling Bug
+
+The SubCPU's DSP ready signal (Port H bit 0) was not connected in MAME, causing every DSP operation to spin through 8,000 timeout iterations. This dramatically inflated the SwbtWr blocking time. See [Tone Generator Initialization — DSP Status Polling Bug](/swbwr-tone-init/#dsp-status-polling-bug-march-2026-discovery) for the full analysis.
+
 ### Remaining Work
 
 - **Verify hypothesis via MAME Lua:** Read `DRAM[0x02F83C]` during state `0xE4` to confirm whether the Feature Presentation screen's `CurrentTarget` is set correctly

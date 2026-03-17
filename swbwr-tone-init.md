@@ -19,6 +19,7 @@ This page documents the full initialization call graph, the event buffer system,
 - [Event Buffer System](#event-buffer-system)
 - [Dispatch Loop Detail](#dispatch-loop-detail)
 - [Why It Takes ~16 Seconds](#why-it-takes-16-seconds)
+- [DSP Status Polling Bug (March 2026 Discovery)](#dsp-status-polling-bug-march-2026-discovery)
 - [Impact on NAKA Widget Framework](#impact-on-naka-widget-framework)
 - [Flowcharts](#flowcharts)
 - [Key Source Files](#key-source-files)
@@ -144,6 +145,63 @@ At 16 MHz CPU clock, the per-event overhead of 40 stack operations plus an indir
 
 ```
 ~900 events x ~18ms/event = ~16.2 seconds
+```
+
+---
+
+## DSP Status Polling Bug (March 2026 Discovery)
+
+A significant contributor to the ~16-second blocking time was identified in the SubCPU's DSP communication layer.
+
+### The Bug
+
+SubCPU Port H bit 0 is not connected in MAME. The firmware's `DSP_Read_Status` routine (SubCPU address `0x0383F7`) reads PH.0 to determine whether DSP1 (IC310, MN19413) is ready to accept a command. Since the MAME Port H read callback returns 0 for all bits, the DSP always appears "busy."
+
+### Impact
+
+`DSP_Send_Command` and `DSP_Send_Data` both poll `DSP_Read_Status` in a tight loop with a timeout counter of `0x1F40` (8,000 iterations). Every DSP write operation spins through all 8,000 iterations before giving up and proceeding. Bank 2 — which handles DSP effects configuration (reverb, chorus, EQ, compressor) — triggers many DSP writes, each hitting the full timeout. This dramatically inflates the total blocking time.
+
+### Firmware Code
+
+The status-checking routine on the SubCPU:
+
+```asm
+DSP_Read_Status:
+    calr DSP_Nop
+    set_dd8 0, 0x44      ; Set bit 0 of PH latch (direction/output)
+    ldcf_dd8 0, 0x44     ; Load carry from PH bit 0 (read external pin)
+    scc8 c, l            ; L = 1 if ready (carry set), 0 if busy
+    extz hl
+    ret
+```
+
+### TMP94C241 Port Read Behavior
+
+The TMP94C241's port read logic is: `(latch & dir) | (external & ~dir)`. With `dir=0` (input mode, the default after reset) and `external=0` (no callback bound in MAME), PH.0 is always read as 0 — the DSP perpetually appears busy.
+
+### The Fix
+
+Connect the SubCPU's Port H read callback to return `0x01` (DSP ready), matching real hardware behavior where the DSP chip asserts its ready line after accepting a command. This is a one-line change in the MAME driver.
+
+### Expected Impact
+
+Eliminates thousands of wasted timeout iterations per `SwbtWr_ReinitBothBanks` call, dramatically reducing the ~16-second blocking time. Each DSP write that previously burned 8,000 loop cycles will complete in a single iteration.
+
+### DSP Polling Flowchart
+
+```mermaid
+flowchart TD
+    CMD["DSP_Send_Command<br/>(SubCPU)"] --> POLL["Poll DSP_Read_Status<br/>counter = 0x1F40 (8000)"]
+    POLL --> READ["Read PH.0"]
+    READ --> CHECK{"PH.0 == 1?<br/>(DSP ready)"}
+    CHECK -- "Yes" --> SEND["Send command to DSP1<br/>via 0x130000/0x130002"]
+    CHECK -- "No (MAME: always)" --> DEC["counter--"]
+    DEC --> TIMEOUT{"counter == 0?"}
+    TIMEOUT -- "No" --> READ
+    TIMEOUT -- "Yes" --> FAIL["Return error code 1<br/>(8000 iterations wasted)"]
+
+    style FAIL fill:#fcc,stroke:#c00,color:#800
+    style CHECK fill:#ffc,stroke:#cc0
 ```
 
 ---
