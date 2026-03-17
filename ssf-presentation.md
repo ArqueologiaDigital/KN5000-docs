@@ -701,6 +701,77 @@ flowchart TD
 
 The SubCPU's DSP ready signal (Port H bit 0) was not connected in MAME, causing every DSP operation to spin through 8,000 timeout iterations. This dramatically inflated the SwbtWr blocking time. See [Tone Generator Initialization — DSP Status Polling Bug](/swbwr-tone-init/#dsp-status-polling-bug-march-2026-discovery) for the full analysis.
 
+### Lua Diagnostic Trace Results
+
+Two diagnostic sessions confirmed:
+
+**Session 1 (ssf_diagnostic.lua):**
+- Boot state: ui_state=0x01, current_target=0x00010018, all clean
+- Demo Menu: current_target changes to 0x00E00000
+- Feature Presentation entry: current_target = 0x00E40002
+- During state 0xE4, CurrentTarget cycles between three widget IDs:
+  - `0x00E40002` — appears during timer countdown phases
+  - `0x00E40000` — appears briefly at timer=10 and timer=0
+  - `0x00E4000A` — appears during song playback (stabilizes here)
+- Demo timer cycles correctly: 15→10→...→0, songs advance
+- `seq_parts` briefly flashes 0xFFFF then clears (workaround timer working)
+- **`ssf_flag` at 0x0251D8 stays 0x0000 throughout** — SSF parser never starts
+- The Technics globe (FTBMP01) renders as the static screen background for state 0xE4, but never transitions to other slides
+
+**Session 2 (ssf_trace2.lua) — Key Scan Data:**
+- **DRAM key scan bytes are NOT zero during state 0xE4:**
+  - `C07D=0x09, C07E=0x00, C07F=0x02, C080=0xAA` (initial)
+  - Stabilizes to `C07D=0x0E, C07E=0x00, C07F=0x40, C080=0xB1`
+- This means the control panel MCU IS sending data via serial
+- `UIState_KeyScan_Dispatch` should be reading this data and dispatching event 0x1C00038 (gate for state 0xE4 is 0xFFFE unconditional)
+- **Event 0x1C00038 is likely being dispatched** — but it's broadcast (target=0xFFFFFFFF), redirected to CurrentTarget by GetEvent
+- CurrentTarget stabilizes at `0x00E4000A` — this widget's proc chain does NOT route through GroupBoxProc
+
+### CurrentTarget Widget ID Pattern
+
+The CurrentTarget values follow a pattern: `0x00SS00II` where SS = UI state byte and II = widget index. During state 0xE4:
+
+| CurrentTarget | Interpretation | When Active |
+|---------------|---------------|-------------|
+| `0x00E40000` | Widget 0 in state 0xE4 | Brief — at timer=10 and timer=0 |
+| `0x00E40002` | Widget 2 in state 0xE4 | During timer countdown |
+| `0x00E4000A` | Widget 10 in state 0xE4 | During/after song playback (dominant) |
+
+None of these widgets forward event 0x1C00038 through ScreenProc → Screen_ForwardToGroupBox → GroupBoxProc.
+
+### Updated Hypothesis
+
+The investigation now points to a **widget registration issue**: GroupBoxProc may not be in the object table at all during state 0xE4, or event 0x1C00038 may not be registered for it. A third diagnostic script (ssf_trace3.lua) is scanning the event registration table at DRAM 0x02BC34 and the object table at DRAM 0x027ED2 to determine:
+- Is event 0x1C00038 registered for any widget?
+- Is GroupBoxProc (address 0xF9983F) present in the object table?
+- What widgets ARE registered for 0x1C00038?
+
+This will distinguish between:
+- **(A)** GroupBoxProc never registered (widget hierarchy init problem — possible hardware emulation issue)
+- **(B)** GroupBoxProc registered but 0x1C00038 not associated with it (event binding problem)
+- **(C)** Both registered correctly but CurrentTarget routing bypasses them (dispatch architecture issue)
+
+### DSP Ready Fix Impact
+
+The DSP1 ready signal fix (SubCPU Port H bit 0 = 1) eliminates the 8,000-iteration timeout per DSP operation. This was confirmed to reduce SubCPU processing overhead. However, the SSF slide transitions still don't work — the root cause is event routing, not timing. The DSP fix is still valuable as a correct hardware emulation improvement.
+
+### CurrentTarget Resolution During State 0xE4
+
+```mermaid
+flowchart TD
+    KS["UIState_KeyScan_Dispatch<br/>keys=[0E,00,40,B1]"] --> GATE{"Gate for state 0xE4?"}
+    GATE -- "0xFFFE (unconditional)" --> DISPATCH["Dispatch event 0x1C00038<br/>XDE=0xB10E4000<br/>target=0xFFFFFFFF (broadcast)"]
+    DISPATCH --> GETEVT["GetEvent dequeues"]
+    GETEVT --> RESOLVE["GetCurrentTarget()<br/>→ 0x00E4000A"]
+    RESOLVE --> OBJLOOKUP["Object table lookup<br/>widget 0x00E4000A"]
+    OBJLOOKUP --> PROCCHAIN{"Proc chain includes<br/>GroupBoxProc?"}
+    PROCCHAIN -- "NO (current state)" --> NOFORWARD["Event handled by<br/>wrong widget<br/>SSF never starts"]
+    PROCCHAIN -- "YES (needed)" --> FORWARD["Screen_ForwardToGroupBox<br/>→ GroupBoxProc<br/>→ SSF starts"]
+
+    style NOFORWARD fill:#fcc,stroke:#c00,color:#800
+    style FORWARD fill:#cfc,stroke:#0c0,color:#080
+```
+
 ### Remaining Work
 
 - **Verify hypothesis via MAME Lua:** Read `DRAM[0x02F83C]` during state `0xE4` to confirm whether the Feature Presentation screen's `CurrentTarget` is set correctly
