@@ -1497,6 +1497,35 @@ f=2494 acc=0x5C61 cnt=23649 bpm=90 play=6 parts=0x0000 pending=0xFFFF  ← parts
 2. **Song preset lookup failure** — song index 18 may reference data that requires SubCPU cooperation to load
 3. **Missing hardware response** — the song loading path may depend on a hardware acknowledgment that never arrives
 
+### Song Data Loading Analysis (Deep Research)
+
+Comprehensive analysis of the demo song loading path revealed the data IS loaded correctly:
+
+**Demo song loading path (different from normal SMF playback):**
+1. Song preset table at `0x9C4000` in Table Data ROM holds 19 pointers (indices 0-18)
+2. Each pointer references an LZSS-compressed block prefixed with `SLIDE4K`
+3. `SLIDE_Parse_Header` decompresses from ROM to DRAM at `0x69800`
+4. The sequencer reads from the paged buffer at `0x69800`, NOT through the SMF parser
+5. `seqpos=0x00000000` is **expected behavior** for demo mode — it uses a completely separate data path
+
+**Song preset 18:** Points to ROM `0x8E0000`, decompresses to 0x9500 (38,144) bytes — the largest of all 19 presets.
+
+**Why parts clear instantly:** All 16 parts briefly activate (`parts=0xFFFF` at frame 2434) then immediately hit end-of-track event byte `0x82`, clearing back to `0x0000`. The decompressed sequence data for each part either starts with or quickly reaches end-of-track.
+
+**Critical firmware behavior in Feature Presentation mode:**
+
+```asm
+Demo_SelectEntry_StartPlayback:
+    cpdi8 36152, 228    ; check if Feature Presentation mode (0xE4)
+    ret z               ; ← RETURNS early WITHOUT calling SeqInit_PostDispatchEvent!
+```
+
+In Feature Presentation mode (state 0xE4 = 228), `Demo_SelectEntry_StartPlayback` returns early without calling `SeqInit_PostDispatchEvent`. This may leave per-part sequencer data pointers uninitialized, causing all parts to immediately read end-of-track.
+
+**Song data loading is entirely MainCPU-driven** — no SubCPU dependency, no floppy I/O, no SMF file parsing. The Table Data ROM is correctly mapped in MAME. The SLIDE decompression produces valid output.
+
+**Investigation continuing:** Dumping the decompressed SLIDE data to analyze whether tracks are genuinely empty (firmware design) or being misinterpreted due to incorrect page index setup.
+
 ---
 
 ## Interpretation
