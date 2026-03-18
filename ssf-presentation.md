@@ -1636,6 +1636,44 @@ After two overcorrections (too short → too long → back to too long), the cur
 - Hold timer after KEY OFF reduced from 2 seconds to **100ms** (4800 samples at 48kHz) — just enough for the firmware to poll voice status a few times before the voice deactivates
 - Note duration is controlled entirely by the firmware's sequencer (KEY ON → KEY OFF timing from song data), NOT by the tone gen device
 
+### Investigation Paused — Summary of Findings (March 18, 2026)
+
+The SSF investigation is paused to address driver stability concerns. Here is a complete summary of confirmed findings, remaining uncertainties, and next steps.
+
+**Confirmed (high confidence):**
+1. The SSF event chain is fully mapped: SwbtWr Bank 2 callbacks → UIState_HandlerTable → UIState_KeyScan_Dispatch → event 0x1C00038 → EventDispatch_Direct → ApPostEvent (async)
+2. The event registration table HAS entries for 0x1C00038 (slots 10-12) with filter params 0x10/0x11/0x12
+3. The SwbtWr event buffer DOES contain events 0x10/0x11/0x12 during demo init
+4. The firmware's sequencer IS started (play=6) and timer IS working (INTT1 accumulator advances, beat_flags set)
+5. `SeqPlay_PreparePlaybackState` DOES copy pending→parts (0xFFFF appears briefly)
+6. `Voice_GetPresetFieldWord` reads 0x0000 from ALL demo presets at offset +0x1E, zeroing DRAM[61854] at each bar boundary
+7. `SeqReassign_OrPartBits` (sequencer_engine.s:6385) ORs active voice bits back into DRAM[10420]/8980/8982 — this is the mechanism that sustains parts on real hardware
+8. The DSP1 ready signal was missing (Port H bit 0) — fixed, eliminating 8,000-iteration timeout per DSP operation
+9. `DemoMode_Initialize` does NOT set DRAM[61854] to 0xFFEC as expected — instead 0xFFFF comes from the sequencer init path
+
+**Partially confirmed (medium confidence):**
+1. The sequencer probably IS processing note events from the decompressed SLIDE preset data — earlier "sequencing broken" hypothesis was based on weak evidence (seqpos=0 is normal for demo mode)
+2. Voice timing is the primary remaining issue — voices without waveform ROM data need realistic lifecycle timing for the firmware's part tracking to work
+3. The auto KEY-OFF mechanism isn't needed if the firmware sends KEY OFF correctly
+
+**Uncertain (needs more investigation):**
+1. Does the firmware actually send KEY OFF events to voices during demo playback? No direct evidence either way.
+2. Why does DRAM[61854] go to 0xFFFF (not 0xFFEC)? The DemoMode_Initialize hardcoded value may not execute for state 0xE4.
+3. What is the correct voice lifecycle when waveform ROM data is missing? The tone gen chip's internal behavior for this case is unknown.
+4. Is the entire voice looping approach correct, or should voices play through once and auto-release?
+5. Is there CPU performance overhead from the tone gen voice processing that affects display rendering?
+
+**Remaining concerns about driver stability:**
+- The splash screen animation during boot may have regressed
+- Spurious MSP screen activation suggests a control panel or event dispatch issue
+- Multiple speculative changes on the driver branch may be interfering with each other
+
+**To resume investigation:**
+1. Start from a clean, stable driver branch
+2. Verify basic functionality first (boot splash, control panel, no spurious screens)
+3. Then apply ONLY the DSP ready fix and test Feature Demo behavior
+4. Incrementally add voice timing improvements with testing at each step
+
 ---
 
 ## Interpretation
