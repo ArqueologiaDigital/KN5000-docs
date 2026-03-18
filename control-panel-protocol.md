@@ -89,12 +89,27 @@ Byte 0: Command/Address byte
 Byte 1: Data/Parameter byte
 ```
 
-The high 3 bits of the command byte (bits 7-5) select the target panel:
+The command byte encodes both target panel and command type:
+
+```
+Command byte: [ Panel[7:5] | Type[4:0] ]
+```
+
+**Panel selection (bits 7-5):**
 
 | Bits 7-5 | Binary | Target |
 |----------|--------|--------|
-| 0-3 | `000`-`011` | Left panel (CPL) |
-| 4-7 | `100`-`111` | Right panel (CPR) |
+| 001 | `0x20-0x3F` | Left panel (CPL) |
+| 111 | `0xC0-0xFF` | Right panel (CPR) |
+
+**Command type (bits 4-0):**
+
+| Type | Bits 4-0 | Left | Right | Purpose |
+|------|----------|------|-------|---------|
+| 0 | `00000` | 0x20 | 0xE0 | Basic query (ping, poll segment, status) |
+| 2 | `00010` | — | 0xE2 | Analog register query (encoder/ADC values) |
+| 3 | `00011` | — | 0xE3 | Extended read (button state + status) |
+| 5 | `00101` | 0x25 | — | Data mode (bulk button state request) |
 
 ### Complete Command Reference
 
@@ -112,19 +127,20 @@ The high 3 bits of the command byte (bits 7-5) select the target panel:
 
 | Command | Bytes | Purpose | Expected Response |
 |---------|-------|---------|-------------------|
-| `20 00` | Ping left panel | Communication test | Any response = OK |
-| `20 0B` | Poll left buttons | Read button segment 0x0B | Button state packet |
-| `20 10` | Query left panel | Read status/sync | Sync packet |
-| `E0 00` | Ping right panel | Communication test | Any response = OK |
-| `E2 04` | Query right panel | Read specific register | Data packet |
-| `E2 11` | Query right panel | Read specific register | Data packet |
-| `E3 10` | Query right extended | Extended read | Multi-byte packet |
+| `20 00` | Ping left panel | Communication test (type 0) | Sync packet |
+| `20 0B` | Poll left buttons | Read button segment 0x0B (type 0) | Button state packet |
+| `20 10` | Query left panel | Read status/sync (type 0) | Button state packet |
+| `25 01` | Left data mode | Bulk button state request (type 5) | Button state packets |
+| `E0 00` | Ping right panel | Communication test (type 0) | Sync packet |
+| `E0 13` | Poll right panel | Steady-state segment 3 poll (type 0) | Button state packet |
+| `E2 04` | Query analog registers | Read analog controller values (type 2) | Type 2 encoder packet |
+| `E2 11` | Query analog registers | Read analog controller values (type 2) | Type 2 encoder packet |
+| `E3 10` | Extended right read | Button state + status (type 3) | Button state packet |
 
 #### Data Commands
 
 | Command | Bytes | Purpose |
 |---------|-------|---------|
-| `25 01` | Left panel data | Set/request data mode |
 | `2B 00` | Init state array (left) | Initialize button state (22-byte multi-segment response) |
 | `EB 00` | Init state array (right) | Initialize button state (22-byte multi-segment response) |
 
@@ -1170,13 +1186,9 @@ The serial channel switches between rates during operation:
 Both handlers are dispatched from CPanel_UpdateLEDs via a 4-entry jump table at 0xFC4B8D.
 After transferring data, both jump back to CPanel_UpdateLEDs to check for more pending events.
 
-### Remaining Undisassembled Routines
+### ~~Remaining Undisassembled Routines~~ (RESOLVED)
 
-| Address | Size | Context |
-|---------|------|---------|
-| 0xFC4C34 | 23 bytes | Called from LED handlers; processes event byte and increments event read pointer |
-
-Note: ToneGen_IncrementWrap128 is in the main program file (not cpanel_routines.s). Encoder handlers (0xFC6C80-0xFC6E41) have been fully disassembled.
+All control panel routines have been fully disassembled. The routine at 0xFC4C34 is `ToneGen_IncrementWrap128` in `audio/tonegen_fileio_handlers.s` — a circular queue pointer increment/wrap utility (wraps at 128) used by the LED packet handlers. Encoder handlers (0xFC6C80-0xFC6E41) have also been fully disassembled.
 
 ## 9. Configuration Switches
 
