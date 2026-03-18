@@ -102,24 +102,32 @@ Selected when DRAM[36148] == 20 (alternate system mode). Entry 25 uses params `[
 
 ### Approach
 
-The data wheel is implemented as two keyboard inputs mapped to segment 0x0B of the control panel HLE:
+The data wheel is implemented as an `IPT_DIAL` input with an interactive rotating knob in the layout. The HLE converts dial position deltas into segment 0x0B button packets delivered via INTA — matching the real hardware mechanism.
 
-- **`]` key** → bit 7 set → clockwise (increment)
-- **`[` key** → bit 6 set → counterclockwise (decrement)
+### Input
 
-### HLE Changes
+- **Mouse:** Click and drag the knob in the layout to rotate
+- **Keyboard:** Default MAME dial keys (left/right arrow or as configured)
+- **Input type:** `IPT_DIAL` with sensitivity 25, key delta 5
 
-1. **Input port:** `DATA_WHEEL` ioport with bits 7 (CW) and 6 (CCW)
-2. **Segment 0x0B handling:** `read_data_wheel_state()` reads the ioport, returns bits 7-6
-3. **Boot query:** `20 0B` command returns data wheel state via `send_data_wheel_packet()`
-4. **Button scan timer:** Includes data wheel in periodic scan (~143 Hz), sends INTA-triggered packets on change
-5. **Debounce:** 2-scan confirmation (14ms) before reporting change, matching button debounce
+### HLE Mechanism
+
+1. **Delta detection:** Button scan timer (~143 Hz) reads `IPT_DIAL` position, computes delta from previous position
+2. **Direction latch:** Delta > 0 → `m_encoder_latch = 0x80` (CW bit 7); delta < 0 → `m_encoder_latch = 0x40` (CCW bit 6)
+3. **Packet delivery:** Sends segment 0x0B button packet (header `0x0B`, no panel flag) via INTA with the latched direction bits
+4. **Idle transition:** When encoder stops moving, sends `0x00` (neutral) so firmware sees transition back to idle state `0x0C`
+5. **Boot query:** `20 0B` command returns current latch value via `read_status_register()`
+
+### Layout
+
+The layout includes a Lua script that rotates the encoder finger grip based on the `ENCODER` port value. The finger circle orbits the knob center through a full 360 degrees, providing visual feedback of the dial position.
 
 ### Files Modified
 
-- `kn5000.cpp` — DATA_WHEEL ioport definition, wiring to cpanel device
-- `kn5000_cpanel.h` — Data wheel port pointer, state tracking members
-- `kn5000_cpanel.cpp` — read_data_wheel_state(), send_data_wheel_packet(), button_scan_callback extension
+- `kn5000.cpp` — `ENCODER` ioport (`IPT_DIAL`), debug write tap on DRAM[0xC07D], wiring to cpanel device
+- `kn5000_cpanel.h` — Encoder port pointer, `m_encoder_prev`/`m_encoder_latch` state tracking
+- `kn5000_cpanel.cpp` — `read_status_register()`, segment 0x0B INTA delivery in button scan, segment 0x0B handling in command dispatch
+- `kn5000.lay` — Interactive knob element with `inputraw="yes"`, Lua `set_bounds_callback` for rotating finger
 
 ### Branch
 
@@ -134,7 +142,7 @@ The data wheel is implemented as two keyboard inputs mapped to segment 0x0B of t
 - [ ] Dump encoder scan table (DRAM 0x8E78) via MAME debugger after boot
 - [ ] Verify CPanel_InitButtonState runs in steady state
 - [ ] Set watchpoint on 0x8E78 and test data wheel interaction
-- [ ] Confirm SwbtWr type 0x21 appears at DRAM[0xC07D] when pressing `[` or `]`
+- [ ] Confirm SwbtWr type 0x21 appears at DRAM[0xC07D] when rotating the data wheel
 - [ ] Confirm tempo/program value changes on LCD
 
 ### Debugger Commands
