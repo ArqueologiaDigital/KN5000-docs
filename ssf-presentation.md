@@ -1466,6 +1466,37 @@ T4MOD=0x05 (clock_source=1 T1) T16RUN=0x81(timer4_running=1) TREG4=0x0000 TREG5=
 
 The issue may be that INTTR5 fires correctly but the firmware's INTTR5 handler doesn't advance the beat state because of a dependency on another hardware feature (e.g., the tone gen, DSP, or SubCPU state).
 
+### Timer IS Working — Song Data Missing (Trace Result)
+
+The timer trace produced a breakthrough finding:
+
+```
+f=2374 acc=0x57D6 cnt=22486 bpm=90 play=6 parts=0x0000 pending=0xFFFF  ← song starts
+f=2434 acc=0x5A1B cnt=23067 bpm=90 play=6 parts=0xFFFF pending=0xFFFF  ← PARTS ACTIVATED!
+f=2494 acc=0x5C61 cnt=23649 bpm=90 play=6 parts=0x0000 pending=0xFFFF  ← parts cleared
+```
+
+**The timer IS working.** The INTT1 accumulator advances steadily (~582 per second). The beat processing DID copy `pending` to `parts` — `parts=0xFFFF` at frame 2434. But one second later, parts reverted to 0x0000.
+
+**The song completes almost instantly** because there is no SMF sequencer data loaded. From trace 11, `seqpos=0x00000000` throughout — the sequencer data position never advances from 0. Without song data, the sequencer has nothing to play:
+1. Timer fires → beat processing copies pending→parts (0xFFFF)
+2. Sequencer tries to read song data at position 0
+3. No data → sequencer marks song complete
+4. Parts cleared back to 0x0000
+5. Entire cycle takes ~1 second
+
+**What this means for the SSF investigation:**
+- Timer hardware: ✅ working correctly
+- Beat generation: ✅ working correctly
+- `pending → parts` copy: ✅ working correctly
+- Tone gen voice lifecycle: ✅ working correctly (parts cleared naturally)
+- Song data loading: ❌ **BROKEN** — no SMF data loaded for song preset 18
+
+**The root cause is now narrowed to the song data loading path.** The firmware should load SMF data from the Table Data ROM into DRAM for the sequencer to read, but the data position stays at 0. This could be caused by:
+1. **SubCPU boot ROM corruption** (NEEDS REDUMP) — if the SubCPU is responsible for loading song data, corrupted code in the undumped ROM ranges could prevent loading
+2. **Song preset lookup failure** — song index 18 may reference data that requires SubCPU cooperation to load
+3. **Missing hardware response** — the song loading path may depend on a hardware acknowledgment that never arrives
+
 ---
 
 ## Interpretation
