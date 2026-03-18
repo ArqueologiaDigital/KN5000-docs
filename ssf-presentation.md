@@ -1576,7 +1576,27 @@ Analysis of the demo initialization path revealed: `DemoMode_Initialize` (file_d
 
 But `SeqTimer_BarReturn` runs at every bar boundary, calling `Voice_GetPresetFieldWord` which reads 0x0000 from the preset and OVERWRITES `DRAM[61854] = 0`. On real hardware, voices play waveforms long enough for note events to keep parts alive past this overwrite. In MAME without waveform ROMs, voices complete instantly, and the bar boundary kills parts before any notes sustain.
 
-A Lua trace is checking whether 0xFFEC appears in DRAM[61854] and how quickly it gets zeroed.
+### DRAM[61854] Trace Result
+
+The Lua trace confirmed the timing:
+
+```
+f=1800 DRAM[61854]=0x0000 ui=0x01       ← boot (normal mode)
+f=3382 DRAM[61854]=0xFFFF ui=0xE4       ← ALL 16 PARTS activated
+f=3438 DRAM[61854]=0x0000 ui=0xE4       ← ZEROED within 56 frames (~0.9 seconds)
+```
+
+**0xFFEC never appeared** — the hardcoded value from `DemoMode_Initialize` is either not reached or immediately overwritten. Instead, 0xFFFF (all parts) comes from `SeqPlay_PreparePlaybackState` copying DRAM[8980]. It survives for only ~0.9 seconds before `SeqTimer_BarReturn` zeroes it.
+
+### Tone Gen Voice Timing Fix (March 2026)
+
+The investigation revealed a **tone generator emulation issue**: when waveform data was in the missing IC304-IC306 ROM range, `resolve_waveform` set `wave_length = 0`, making voices effectively duration-less. The voice was "active" but had no concept of how long it should play. This caused voices to produce no timing advancement, so the firmware's sequencer could not track voice activity.
+
+**The real hardware behavior:** The tone gen chip (TC183C230002) tracks voice timing from its internal waveform parameter index, independent of whether the actual PCM samples are available. The chip knows the waveform length, loop points, and envelope parameters from the index table. A voice stays "active" for its natural duration based on these parameters.
+
+**The fix (commit `c1216e9`):** The tone gen device now reads waveform length from IC307's index table for ALL voices, including those referencing missing ROMs. The `sound_stream_update` loop advances voice position based on pitch and loops at the waveform boundary, producing silence but maintaining correct timing. The firmware sees voices as active for their natural duration, allowing sequencer parts to remain stable across bar boundaries.
+
+**Expected impact:** Voices now sustain for their correct waveform duration instead of completing instantly. Parts should survive past the first bar boundary, allowing the sequencer to process notes and the demo to advance through songs. If this fixes the part lifecycle, the entire SSF chain (SwbtWr events → UIState_KeyScan_Dispatch → 0x1C00038 → GroupBoxProc → SSF parser → FTBMP slides) should activate.
 
 ---
 
