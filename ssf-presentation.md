@@ -1570,6 +1570,14 @@ The investigation has identified the exact mechanism causing all sequencer parts
 
 **The uninvestigated function `Demo_ProcessRecordEntry`** is the most likely mechanism that makes the demo work on real hardware. It processes a chain of records embedded in the decompressed preset data and may write the correct parts bitmask as a side effect.
 
+### DemoMode_Initialize Hardcodes Parts (Critical Discovery)
+
+Analysis of the demo initialization path revealed: `DemoMode_Initialize` (file_demo_proc.s:588) **hardcodes `DRAM[61854] = 0xFFEC`** (13 of 16 parts active), independent of the preset's 0x0000 at offset +0x1E.
+
+But `SeqTimer_BarReturn` runs at every bar boundary, calling `Voice_GetPresetFieldWord` which reads 0x0000 from the preset and OVERWRITES `DRAM[61854] = 0`. On real hardware, voices play waveforms long enough for note events to keep parts alive past this overwrite. In MAME without waveform ROMs, voices complete instantly, and the bar boundary kills parts before any notes sustain.
+
+A Lua trace is checking whether 0xFFEC appears in DRAM[61854] and how quickly it gets zeroed.
+
 ---
 
 ## Interpretation
