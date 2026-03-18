@@ -1590,13 +1590,19 @@ f=3438 DRAM[61854]=0x0000 ui=0xE4       ← ZEROED within 56 frames (~0.9 second
 
 ### Tone Gen Voice Timing Fix (March 2026)
 
-The investigation revealed a **tone generator emulation issue**: when waveform data was in the missing IC304-IC306 ROM range, `resolve_waveform` set `wave_length = 0`, making voices effectively duration-less. The voice was "active" but had no concept of how long it should play. This caused voices to produce no timing advancement, so the firmware's sequencer could not track voice activity.
+The investigation revealed a **tone generator emulation issue**: when waveform data was in the missing IC304-IC306 ROM range, `resolve_waveform` set `wave_length = 0`, making voices effectively duration-less. The voice was "active" but had no concept of how long it should play. This caused voices to deactivate instantly after KEY ON, so the firmware's sequencer part tracking saw parts collapse to 0 within one beat cycle.
 
-**The real hardware behavior:** The tone gen chip (TC183C230002) tracks voice timing from its internal waveform parameter index, independent of whether the actual PCM samples are available. The chip knows the waveform length, loop points, and envelope parameters from the index table. A voice stays "active" for its natural duration based on these parameters.
+**Corrected understanding:** The earlier hypothesis that "the sequencer isn't processing notes" was based on weak evidence. `seqpos=0x00000000` is expected for demo mode (uses paged buffers, not SMF parser). The sequencer tick processing WAS running (acc_mode passes, RhythmROM passes, beat_flags appeared). Note events were likely being generated and KEY ON commands were reaching the tone gen — but voices with `wave_length=0` reported idle instantly, making it LOOK like no notes were sent. The issue was voice timing, not sequencer processing.
 
-**The fix (commit `c1216e9`):** The tone gen device now reads waveform length from IC307's index table for ALL voices, including those referencing missing ROMs. The `sound_stream_update` loop advances voice position based on pitch and loops at the waveform boundary, producing silence but maintaining correct timing. The firmware sees voices as active for their natural duration, allowing sequencer parts to remain stable across bar boundaries.
+**The real hardware behavior:** The tone gen chip (TC183C230002) tracks voice timing from its internal waveform parameter index, independent of whether the actual PCM samples are available. A voice stays "active" for its natural waveform duration based on these parameters, even when the ROM chip containing the audio data is not present.
 
-**Expected impact:** Voices now sustain for their correct waveform duration instead of completing instantly. Parts should survive past the first bar boundary, allowing the sequencer to process notes and the demo to advance through songs. If this fixes the part lifecycle, the entire SSF chain (SwbtWr events → UIState_KeyScan_Dispatch → 0x1C00038 → GroupBoxProc → SSF parser → FTBMP slides) should activate.
+**The fix (commit `07e6a8e`):** The tone gen device now:
+1. Reads waveform length from IC307's index table for ALL voices, including those in missing ROM ranges
+2. Advances voice position based on pitch, tracking timing correctly
+3. For voices without actual PCM data: plays through the waveform length once, then auto-transitions to KEY OFF with release (50ms) + hold (2 seconds), then deactivates
+4. For voices WITH PCM data (IC307): loops normally while key is held
+
+**Expected lifecycle:** Voice is active for waveform_duration + ~2 second hold, then deactivates. Parts survive long enough for the sequencer to process the note lifecycle, then clear naturally so the demo can advance.
 
 ---
 
