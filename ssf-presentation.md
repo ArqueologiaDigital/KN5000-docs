@@ -1526,6 +1526,30 @@ In Feature Presentation mode (state 0xE4 = 228), `Demo_SelectEntry_StartPlayback
 
 **Investigation continuing:** Dumping the decompressed SLIDE data to analyze whether tracks are genuinely empty (firmware design) or being misinterpreted due to incorrect page index setup.
 
+### Demo Preset Data Analysis
+
+All 19 demo song presets were decompressed from SLIDE4K format and analyzed. The decompressed files are in the roms-disasm source tree at `table_data/includes/demo_presets/demo_preset_00.bin` through `demo_preset_18.bin`.
+
+**Key finding: Active parts bitmask is 0x0000 in ALL presets.**
+
+| Preset | Compressed Size | Decompressed Size | Parts Bitmask (offset +0x1E) | 0x82 Count |
+|--------|----------------|-------------------|------------------------------|------------|
+| 0 | ~12KB | 23,575 bytes | **0x0000** | 11 |
+| 18 | ~17KB | 32,910 bytes | **0x0000** | 26 |
+| All others | varies | varies | **0x0000** | varies |
+
+The `Voice_GetPresetFieldWord` function reads the active parts bitmask from offset +0x1E in the decompressed preset data. Since this is 0x0000 for ALL presets, the firmware doesn't rely on this field for demo part activation.
+
+**This means parts are activated by a DIFFERENT mechanism:**
+- `DRAM[61854]` (part_enable) starts at 0x0000 (from preset data)
+- Later transitions to 0xFFFF (from `SeqPlay_InitDemo_PartLoop` or sequencer init)
+- The 0xFFFF comes from the sequencer initialization path, not from preset data
+- Parts activation depends on the sequencer's own initialization, not on the preset's active parts field
+
+**Preset 18 has more 0x82 (end-of-track) markers** (26 vs 11 for preset 0), which could mean more parts hit end-of-track sooner. But since all presets have parts=0x0000 at offset +0x1E, the activation mechanism is identical for all presets.
+
+**Remaining question:** If both presets 0 and 18 have the same parts bitmask (0x0000), and the sequencer init provides 0xFFFF for both, why does preset 0 work on real hardware (playing a full song) while preset 18 also presumably works? The answer is likely that ALL presets produce the same behavior in MAME — parts briefly go to 0xFFFF then immediately clear. The investigation previously only tracked preset 18 because the demo always starts with song index 18. On real hardware with waveform ROMs, the song data would drive actual note events that sustain the parts.
+
 ---
 
 ## Interpretation
@@ -1558,4 +1582,4 @@ The infrastructure was built (XML parser, event system, tag vocabulary, `EXEC` c
 
 ---
 
-*Last updated: March 17, 2026*
+*Last updated: March 18, 2026*
