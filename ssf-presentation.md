@@ -1444,6 +1444,28 @@ break;  // ← DOES NOTHING
 
 A targeted trace is checking T4MOD to determine if the firmware uses TIA as the clock source for the sequencer beat timer.
 
+### T4MOD Configuration (Trace Result)
+
+The T4MOD trace confirmed Timer 4/5 is correctly configured:
+
+```
+T4MOD=0x05 (clock_source=1 T1) T16RUN=0x81(timer4_running=1) TREG4=0x0000 TREG5=0x0000
+```
+
+- **Clock source = 1 (T1 prescaler)** — this IS implemented in the CPU core (not TIA)
+- **T16RUN = 0x81** — Timer 4 is running (bit 0=1) and prescaler is active (bit 7=1)
+- **TREG4/TREG5 read as 0** — these are write-only registers (no read handler in the memory map), so Lua sees 0 even if the values were correctly written by the firmware
+
+**The TIA hypothesis was wrong.** The timer uses T1 prescaler (fc/8, meaning at 16 MHz the timer ticks at 2 MHz). With the firmware's computed TREG5 value of ~10416 (for 90 BPM), the INTTR5 interrupt should fire at ~192 Hz.
+
+**But beats are still not generated.** The timer hardware appears correctly configured, yet the sequencer beat processing never activates `pending → parts`. The investigation continues by checking:
+
+1. **Is INTT1 actually firing?** The firmware's INTT1 handler increments a timer accumulator at DRAM[0x0409]. If this value advances during the demo, the timer interrupt IS working.
+2. **Is INTTR5 firing?** Timer 4 matching TREG5 should trigger INTTR5 (vector 0x64). The firmware's INTTR5 handler should advance the beat counter.
+3. **Is there a disconnect between the timer hardware working and the firmware's beat processing reading it?** The beat flag (ERP 0xFB bit 1) must be set by some part of the timer/interrupt chain.
+
+The issue may be that INTTR5 fires correctly but the firmware's INTTR5 handler doesn't advance the beat state because of a dependency on another hardware feature (e.g., the tone gen, DSP, or SubCPU state).
+
 ---
 
 ## Interpretation
