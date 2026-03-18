@@ -1602,7 +1602,39 @@ The investigation revealed a **tone generator emulation issue**: when waveform d
 3. For voices without actual PCM data: plays through the waveform length once, then auto-transitions to KEY OFF with release (50ms) + hold (2 seconds), then deactivates
 4. For voices WITH PCM data (IC307): loops normally while key is held
 
-**Expected lifecycle:** Voice is active for waveform_duration + ~2 second hold, then deactivates. Parts survive long enough for the sequencer to process the note lifecycle, then clear naturally so the demo can advance.
+**Expected lifecycle:** Voice loops while key is held (sustain), deactivates after firmware sends KEY OFF + short release (50ms) + short hold (100ms).
+
+### SeqReassign_OrPartBits Discovery
+
+Code analysis revealed the mechanism that keeps parts alive on real hardware despite `Voice_GetPresetFieldWord` zeroing DRAM[61854]:
+
+```asm
+SeqReassign_OrPartBits:          ; sequencer_engine.s:6385
+    orddm16 8982, xde           ; OR part bit into channel running mask
+    orddm16 10420, xde          ; OR part bit into active parts
+    orddm16 8980, xde           ; OR part bit into pending parts
+```
+
+During voice reassignment, the sequencer ORs the active part's bit BACK into all three bitmasks. This overrides the zeroing from `Voice_GetPresetFieldWord`. The cycle on real hardware:
+
+1. `SeqTimer_BarReturn` zeros DRAM[61854] (reads 0x0000 from preset)
+2. `SeqModeTransit_DemoPath` zeros DRAM[8980]
+3. But the sequencer's note processing reassigns voices → `SeqReassign_OrPartBits` ORs bits back
+4. Parts stay alive as long as voices are being reassigned (i.e., notes are playing)
+
+**This requires voices to sustain long enough** for the sequencer to complete its tick processing and reassign voices. If voices deactivate before reassignment, the OR never happens and parts collapse.
+
+### Corrected Understanding
+
+The earlier hypothesis that "sequencing is broken" was wrong. The sequencer WAS processing notes — the evidence (`seqpos=0, parts clearing quickly`) was misinterpreted. `seqpos=0` is normal for demo mode. Parts cleared because voices deactivated instantly (`wave_length=0`), not because notes weren't generated. The sequencer sends KEY ON and KEY OFF at the correct times from the song data. The tone gen just needs to sustain correctly between those commands.
+
+### Voice Timing Fix — Iteration 3 (commit `d8d6eec`)
+
+After two overcorrections (too short → too long → back to too long), the current approach:
+- Voices WITH PCM data (IC307): loop while key held, normal behavior
+- Voices WITHOUT PCM data (missing IC304-306): **loop while key held** (sustain until firmware sends KEY OFF), producing silence but maintaining correct timing from the chip's perspective
+- Hold timer after KEY OFF reduced from 2 seconds to **100ms** (4800 samples at 48kHz) — just enough for the firmware to poll voice status a few times before the voice deactivates
+- Note duration is controlled entirely by the firmware's sequencer (KEY ON → KEY OFF timing from song data), NOT by the tone gen device
 
 ---
 
