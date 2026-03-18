@@ -1550,6 +1550,26 @@ The `Voice_GetPresetFieldWord` function reads the active parts bitmask from offs
 
 **Remaining question:** If both presets 0 and 18 have the same parts bitmask (0x0000), and the sequencer init provides 0xFFFF for both, why does preset 0 work on real hardware (playing a full song) while preset 18 also presumably works? The answer is likely that ALL presets produce the same behavior in MAME — parts briefly go to 0xFFFF then immediately clear. The investigation previously only tracked preset 18 because the demo always starts with song index 18. On real hardware with waveform ROMs, the song data would drive actual note events that sustain the parts.
 
+### Root Cause: Voice_GetPresetFieldWord Returns Zero (Confirmed)
+
+The investigation has identified the exact mechanism causing all sequencer parts to clear:
+
+**Three kill mechanisms converge:**
+
+1. **`SeqTimer_BarReturn`** (sequencer_engine.s:20032) — at every bar boundary, calls `Voice_GetPresetFieldWord` which reads offset +0x1E of the decompressed preset. Since this is always 0x0000, it sets `DRAM[61854] = 0`, disabling all parts.
+
+2. **`SeqModeTransit_DemoPath`** (sequencer_engine.s:11047) — during mode transitions, reads the same 0x0000 value and stores it to `DRAM[8980]`. When `SeqPlay_PreparePlaybackState` runs, it copies 0 to `DRAM[10420]`.
+
+3. **Out-of-bounds block reads** — for preset 18, parts 3/4/5/9 have block indices that point beyond the decompressed buffer (32,910 bytes), causing reads from uninitialized DRAM that may contain 0x82 (end-of-track).
+
+**On real hardware, the demo works because:**
+- `DRAM[61854]` retains residual state from normal keyboard operation
+- `Demo_ProcessRecordEntry` processes a "record chain" in the preset data that likely initializes the bitmask correctly during setup
+- The 0x0000 at offset +0x1E may be a sentinel meaning "derive parts from ext data" rather than "no parts active"
+- The first bar boundary hasn't occurred yet when the sequencer starts, so residual state persists long enough for the record chain to establish correct state
+
+**The uninvestigated function `Demo_ProcessRecordEntry`** is the most likely mechanism that makes the demo work on real hardware. It processes a chain of records embedded in the decompressed preset data and may write the correct parts bitmask as a side effect.
+
 ---
 
 ## Interpretation
