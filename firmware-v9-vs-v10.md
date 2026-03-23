@@ -21,7 +21,7 @@ The largest change is a complete rewrite of the `SendPartDataBlock` family of fu
 - **v9:** 2,906 bytes — uses a compact loop-based approach with shared parameter load routines
 - **v10:** 2,920 bytes — restructured with explicit per-field copy sequences and additional validation
 
-The v10 version adds **14 bytes** of net code growth, which shifts all subsequent code addresses by +14. This single change accounts for the vast majority of the 13,517 byte differences: the remaining ~12,500 bytes are **pointer adjustments** cascading through the ROM to reflect the new addresses.
+The v10 version adds **14 bytes** of net code growth. Because both source trees use symbolic label references for function calls and data pointers, this address shift is invisible in the source diff — the linker resolves all labels automatically.
 
 ### 2. Updated HDAE5000 Extension Data Handler
 
@@ -31,7 +31,7 @@ The `HdaeRom_DataHandler` and `HdaeRom_DataDispatch` routines — which manage c
 
 The `TmFlash_WriteRoutine` and `PostTmSave`/`PostTmLoad` functions received minor adjustments to their internal branch targets and parameter passing, likely to accommodate the SendPartDataBlock restructuring.
 
-### 4. Debug Utility Code Relocation
+### 4. Debug Utility Code Changes
 
 The `Debug_UartHelpers` and `ROM_PaddingFF` routines at the very end of the ROM (just before the interrupt vector table) contain different code between versions. The debug UART serial output helpers were adjusted — possibly reflecting changes to the debug console protocol or baud rate configuration.
 
@@ -47,7 +47,7 @@ One NAKA widget descriptor field changed: `naka_style_bitmaps.c` field `field_07
 
 - **Boot sequence**: Identical initialization, self-test, and hardware setup.
 - **UI framework**: All NAKA widget descriptors, screen layouts, and event handlers are identical (except the one bitmap field above).
-- **MIDI subsystem**: Core MIDI dispatch, SysEx handling, and serial I/O are unchanged — only address operands were adjusted.
+- **MIDI subsystem**: Core MIDI dispatch, SysEx handling, and serial I/O are unchanged.
 - **Sequencer engine**: Song playback, SMF processing, and accompaniment are the same.
 - **Display/VGA subsystem**: Graphics primitives, text rendering, and scoop display code are unchanged.
 - **Floppy disk controller**: FDC routines are identical.
@@ -60,19 +60,22 @@ One NAKA widget descriptor field changed: `naka_style_bitmaps.c` field `field_07
 
 ### Files Modified
 
-37 source files differ between v9 and v10. Of these, only **4 files** contain genuine code/data changes. The remaining **33 files** contain only mechanical address operand adjustments caused by the 14-byte code growth.
+20 source files differ between v9 and v10. The majority of changes are in a single file (`audio/note_voice_mapping.s`) which contains the rewritten SendPartDataBlock region.
 
 | Category | Files | Changed Lines | Description |
 |----------|-------|--------------|-------------|
-| Genuine code changes | 4 | ~1,500 | Actual different code/data |
-| Address adjustments | 33 | ~800 | Pointer operands shifted by ±14 |
-| **Total** | **37** | **~2,300** | |
+| SendPartDataBlock rewrite | 1 | +1,223/−233 | Core protocol change |
+| Address operand adjustments | 15 | ~200 | Residual `.byte`-encoded address values |
+| Other genuine changes | 4 | ~10 | Version byte, widget data, padding |
+| **Total** | **20** | **+1,329/−339** | |
 
-### Genuine Code Changes (4 files)
+*Note: `call` and `jp` instructions use symbolic labels in both v9 and v10 source, so the 14-byte address shift is invisible in the diff. Only `.byte`-encoded address values in data tables still show numeric adjustments.*
+
+### Genuine Code Changes
 
 #### `audio/note_voice_mapping.s` — SubCPU Data Transfer Rewrite
 
-This is the dominant change. The `SendPartDataBlock` region (addresses `0xFEF99E`–`0xFF04F8`) was substantially rewritten between v9 and v10.
+This is the dominant change (17 diff hunks, +1,223/−233 lines). The `SendPartDataBlock` region (addresses `0xFEF99E`–`0xFF04F8`) was substantially rewritten between v9 and v10.
 
 **Functions affected:**
 
@@ -80,7 +83,7 @@ This is the dominant change. The `SendPartDataBlock` region (addresses `0xFEF99E
 |----------|---------|----------|--------|
 | `SendPartDataBlock_DoGetError` | 11 bytes | 22 bytes | Expanded error checking |
 | `SendPartDataBlock_Data` | 1,612 bytes | 1,612 bytes | Restructured field copy |
-| `SendPartDataBlock_Data2` through `Data5` | ~280 bytes | ~290 bytes | Parameter tables updated |
+| `SendPartDataBlock_Data2`–`Data5` | ~280 bytes | ~290 bytes | Parameter tables updated |
 | `SendPartDataBlock_InitVal4`–`InitVal9` | ~180 bytes | ~180 bytes | Minor adjustments |
 | `HdaeRom_DataHandler` | 34 bytes | 34 bytes | Protocol changes |
 | `HdaeRom_DataDispatch` | 470 bytes | 480 bytes | Dispatch table restructured |
@@ -90,11 +93,11 @@ This is the dominant change. The `SendPartDataBlock` region (addresses `0xFEF99E
 
 In v10, the `SendPartDataBlock_Data` function was restructured from a compact loop-based approach to explicit per-field memory copies. This may reflect a bug fix or compatibility improvement in how voice parameters are transferred to the SubCPU's tone generator registers.
 
-Also in this file: `TmFlashWrite_Block1` and `TmFlash_WriteRoutine` had relative branch displacements adjusted by +3, and several instruction operands updated to reflect the new layout of the SendPartDataBlock region.
+Also in this file: `TmFlashWrite_Block1` and `TmFlash_WriteRoutine` had relative branch displacements adjusted, and several instruction operands updated to reflect the new layout of the SendPartDataBlock region.
 
 #### `audio/audio_cmd_encoder.s` — Fill Padding Adjustment
 
-A single address operand (`lda_24`) was adjusted, and the fill padding between the AudioCmd code block and the end-of-ROM debug functions changed from 12,710 bytes (v9) to 12,696 bytes (v10), absorbing the 14-byte code growth.
+The fill padding between the AudioCmd code block and the end-of-ROM debug functions changed from 12,710 bytes (v9) to 12,696 bytes (v10), absorbing the 14-byte code growth. One `lda_24` address operand also adjusted.
 
 #### `boot/rom_end_structure.s` — Version Byte
 
@@ -104,59 +107,54 @@ The firmware version byte at `0xFFFFE8` changed from `0x09` to `0x0A`.
 
 Field `field_0772` changed from `0x0549` to `0x054A` — a minor data correction in a style bitmap widget descriptor.
 
-### Mechanical Address Adjustments (33 files)
+### Residual Address Adjustments (15 files)
 
-Due to the 14-byte code growth in the SendPartDataBlock region, every function and data pointer referencing an address above `0xFF04F8` shifted by +14. Similarly, addresses pointing into the rewritten region shifted by +11 (reflecting the internal layout change).
+Despite symbolic `call`/`jp` references, some address values remain as raw bytes in `.byte`-encoded data tables (jump dispatch tables, MIDI parameter tables, etc.). These tables contain 3-byte little-endian address values embedded in `.byte` directives, which cannot use symbolic labels.
 
-These adjustments appear in:
+**Files with `.byte` address adjustments:**
 
-- **`call`/`calr`/`jrl`/`jr` instructions** with raw numeric operands (380+ adjustments)
-- **`.byte` data tables** containing 3-byte LE addresses (90+ adjustments)
-- **`.long` pointer tables** referencing shifted symbols (6 adjustments using `(LABEL + offset)` syntax)
-- **C linker script** symbol addresses (not directly visible in the diff — resolved at compile time)
+| File | Hunks | Description |
+|------|-------|-------------|
+| `ui/drawbar_panel_ui.s` | 9 | Drawbar panel jump tables |
+| `file_io/single_load.s` | 14 | File load dispatch tables |
+| `midi/computer_interface_pcg.s` | 1 | PCG transfer address table |
+| `audio/audio_control_engine.s` | 6 | Audio control dispatch |
+| `ui_widgets/widget_dispatch.s` | 6 | Widget handler address table |
+| `demo/file_demo_proc.s` | 5 | Demo procedure addresses |
+| `midi/midi_dispatch_handlers.s` | 4 | MIDI handler table |
+| `midi/midipkt_routines.s` | 4 | MIDI packet addresses |
+| `audio/dsp_config_sysex.s` | 3 | DSP config addresses |
+| `sequencer/seq_audio_mode.s` | 1 | Sequencer audio mode table |
+| `storage/flash_floppy_handlers.s` | 3 | Flash handler addresses |
+| `audio/tonegen_fileio_handlers.s` | 2 | Tone generator file I/O |
+| `factory_test/test_data.s` | 1 | Test routine addresses |
+| `ui/ui_control_panel.s` | 2 | Control panel dispatch |
+| `ui/ui_mode_handlers.s` | 1 | UI mode dispatch |
 
-**Subsystem breakdown of address adjustments:**
-
-| Subsystem | Files | Adjustments | Description |
-|-----------|-------|-------------|-------------|
-| `ui/` | 7 | 138 | Drawbar panel, mode handlers, widget defs, window procs |
-| `midi/` | 7 | 81 | Dispatch handlers, AC listeners, PCG, SysEx |
-| `sequencer/` | 5 | 70 | Event playback, SMF processor, sequencer UI |
-| `demo/` | 3 | 55 | Demo text, file demo proc |
-| `display/` | 2 | 28 | Scoop display, graphics/text VGA |
-| `audio/` | 5 | 15 | Control engine, sound editor, various |
-| `storage/` | 1 | 14 | Flash/floppy handlers |
-| `ui_widgets/` | 1 | 6 | Widget dispatch table |
-| `factory_test/` | 1 | 2 | Test data |
-| `file_io/` | 1 | 1 | Misc UI |
-| `boot/` | 1 | 0 | (version byte only) |
-
-### Data Flow: How 14 Bytes Cascade Through 13,517 Changes
-
-The following diagram illustrates how a single 14-byte code addition creates thousands of byte differences:
+### Binary Layout: How 14 Bytes Propagate
 
 ```
 v9 ROM Layout:
   0xE00000 ─────────────────────── 0xFEF99E ──────── 0xFF04F2 ──── 0xFFFFFF
-  │ Identical code (15.6 MB)     │ SendPartData    │ Post-region │
+  │ Identical code               │ SendPartData    │ Post-region │
   │                               │ (2,906 bytes)   │ code        │
-  │                               │                 │             │
 
 v10 ROM Layout:
   0xE00000 ─────────────────────── 0xFEF99E ──────── 0xFF0506 ──── 0xFFFFFF
-  │ Identical code (15.6 MB)     │ SendPartData    │ Post-region │
+  │ Identical code               │ SendPartData    │ Post-region │
   │                               │ (2,920 bytes)   │ code        │
   │                               │ [+14 bytes]     │ [shifted]   │
 
-Cascade effect:
-  1. SendPartData grows by 14 bytes          →  2,920 bytes genuine changes
-  2. All addresses after 0xFF04F8 shift +14  →  ~380 call/jp operands
-  3. Jump table entries shift +14            →  ~90 .byte address patterns
-  4. Label references shift +14              →  ~6 .long adjustments
-  5. Fill padding shrinks by 14              →  12,696 vs 12,710
-  6. IVT/debug code stays at fixed end       →  Same addresses
-                                                ────────────────────
-                                        Total:  13,517 byte differences
+Source-level impact:
+  1. SendPartData rewrite                  →  1,456 lines changed (genuine)
+  2. call/jp to symbolic labels            →  invisible (linker resolves)
+  3. .byte jump table address values       →  ~200 lines (15 files)
+  4. Fill padding adjustment               →  1 line (12,710 → 12,696)
+  5. Version byte                          →  1 line (0x09 → 0x0A)
+  6. Widget data correction                →  1 line
+                                              ────────────────────
+                               Source diff:   +1,329 / −339 lines
+                               Binary diff:   13,517 bytes (0.64%)
 ```
 
 ### Interpretation
