@@ -60,14 +60,14 @@ One NAKA widget descriptor field changed: `naka_style_bitmaps.c` field `field_07
 
 ### Files Modified
 
-20 source files differ between v9 and v10. The majority of changes are in a single file (`audio/note_voice_mapping.s`) which contains the rewritten SendPartDataBlock region.
+17 source files differ between v9 and v10. Both versions use fully disassembled native instructions (no raw `.byte` code blocks), symbolic label references for `call`/`jp`/`lda_24`, and normalized lowercase hex — so the diff shows only genuine firmware changes.
 
 | Category | Files | Changed Lines | Description |
 |----------|-------|--------------|-------------|
-| SendPartDataBlock rewrite | 1 | +1,223/−233 | Core protocol change |
-| Address operand adjustments | 14 | ~80 | Residual `.byte`-encoded address values |
-| Other genuine changes | 5 | ~10 | Version byte, widget data, padding, debug code |
-| **Total** | **20** | **+1,313/−323** | |
+| SendPartDataBlock rewrite | 1 | ~60 | Core protocol change (instruction-level diff) |
+| Address operand adjustments | 12 | ~80 | Residual `.byte`-encoded address values in data tables |
+| Other genuine changes | 4 | ~10 | Version byte, widget data, padding, debug code |
+| **Total** | **17** | **+152/−149** | |
 
 *Note: `call`, `jp`, and `lda_24` instructions use symbolic labels in both v9 and v10 source, so the 14-byte address shift is invisible in the diff. Only `.byte`-encoded address values in data tables still show numeric adjustments.*
 
@@ -75,7 +75,7 @@ One NAKA widget descriptor field changed: `naka_style_bitmaps.c` field `field_07
 
 #### `audio/note_voice_mapping.s` — SubCPU Data Transfer Rewrite
 
-This is the dominant change (17 diff hunks, +1,223/−233 lines). The `SendPartDataBlock` region (addresses `0xFEF99E`–`0xFF04F8`) was substantially rewritten between v9 and v10.
+This is the dominant change. The `SendPartDataBlock` region (addresses `0xFEF99E`–`0xFF04F8`) was substantially rewritten between v9 and v10. Both versions are fully disassembled to native instructions, so the diff shows the actual instruction-level differences.
 
 **Functions affected:**
 
@@ -147,12 +147,12 @@ v10 ROM Layout:
 Source-level impact:
   1. SendPartData rewrite                  →  1,456 lines changed (genuine)
   2. call/jp/lda_24 to symbolic labels      →  invisible (linker resolves)
-  3. .byte jump table address values       →  ~80 lines (14 files)
+  3. .byte jump table address values       →  ~80 lines (12 files)
   4. Fill padding adjustment               →  1 line (12,710 → 12,696)
   5. Version byte                          →  1 line (0x09 → 0x0A)
   6. Widget data correction                →  1 line
                                               ────────────────────
-                               Source diff:   +1,313 / −323 lines
+                               Source diff:   +152 / −149 lines
                                Binary diff:   13,517 bytes (0.64%)
 ```
 
