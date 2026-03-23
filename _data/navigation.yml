@@ -42,6 +42,8 @@
           url: /firmware-update-display/
         - title: System Update Discs
           url: /system-update-discs/
+    - title: Firmware v9 vs v10
+      url: /firmware-v9-vs-v10/
     - title: Test Modes
       url: /test-modes/
 
