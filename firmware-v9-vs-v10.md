@@ -65,11 +65,11 @@ One NAKA widget descriptor field changed: `naka_style_bitmaps.c` field `field_07
 | Category | Files | Changed Lines | Description |
 |----------|-------|--------------|-------------|
 | SendPartDataBlock rewrite | 1 | +1,223/−233 | Core protocol change |
-| Address operand adjustments | 15 | ~200 | Residual `.byte`-encoded address values |
-| Other genuine changes | 4 | ~10 | Version byte, widget data, padding |
-| **Total** | **20** | **+1,329/−339** | |
+| Address operand adjustments | 14 | ~80 | Residual `.byte`-encoded address values |
+| Other genuine changes | 5 | ~10 | Version byte, widget data, padding, debug code |
+| **Total** | **20** | **+1,313/−323** | |
 
-*Note: `call` and `jp` instructions use symbolic labels in both v9 and v10 source, so the 14-byte address shift is invisible in the diff. Only `.byte`-encoded address values in data tables still show numeric adjustments.*
+*Note: `call`, `jp`, and `lda_24` instructions use symbolic labels in both v9 and v10 source, so the 14-byte address shift is invisible in the diff. Only `.byte`-encoded address values in data tables still show numeric adjustments.*
 
 ### Genuine Code Changes
 
@@ -97,7 +97,7 @@ Also in this file: `TmFlashWrite_Block1` and `TmFlash_WriteRoutine` had relative
 
 #### `audio/audio_cmd_encoder.s` — Fill Padding Adjustment
 
-The fill padding between the AudioCmd code block and the end-of-ROM debug functions changed from 12,710 bytes (v9) to 12,696 bytes (v10), absorbing the 14-byte code growth. One `lda_24` address operand also adjusted.
+The fill padding between the AudioCmd code block and the end-of-ROM debug functions changed from 12,710 bytes (v9) to 12,696 bytes (v10), absorbing the 14-byte code growth.
 
 #### `boot/rom_end_structure.s` — Version Byte
 
@@ -107,20 +107,19 @@ The firmware version byte at `0xFFFFE8` changed from `0x09` to `0x0A`.
 
 Field `field_0772` changed from `0x0549` to `0x054A` — a minor data correction in a style bitmap widget descriptor.
 
-### Residual Address Adjustments (15 files)
+### Residual Address Adjustments (14 files)
 
-Despite symbolic `call`/`jp` references, some address values remain as raw bytes in `.byte`-encoded data tables (jump dispatch tables, MIDI parameter tables, etc.). These tables contain 3-byte little-endian address values embedded in `.byte` directives, which cannot use symbolic labels.
+Despite symbolic `call`/`jp`/`lda_24` references, some address values remain as raw bytes in `.byte`-encoded data tables (jump dispatch tables, MIDI parameter tables, etc.). These tables contain 3-byte little-endian address values embedded in `.byte` directives, which cannot use symbolic labels.
 
 **Files with `.byte` address adjustments:**
 
 | File | Hunks | Description |
 |------|-------|-------------|
 | `ui/drawbar_panel_ui.s` | 9 | Drawbar panel jump tables |
-| `file_io/single_load.s` | 14 | File load dispatch tables |
 | `midi/computer_interface_pcg.s` | 1 | PCG transfer address table |
-| `audio/audio_control_engine.s` | 6 | Audio control dispatch |
-| `ui_widgets/widget_dispatch.s` | 6 | Widget handler address table |
 | `demo/file_demo_proc.s` | 5 | Demo procedure addresses |
+| `audio/audio_control_engine.s` | 4 | Audio control dispatch |
+| `ui_widgets/widget_dispatch.s` | 6 | Widget handler address table |
 | `midi/midi_dispatch_handlers.s` | 4 | MIDI handler table |
 | `midi/midipkt_routines.s` | 4 | MIDI packet addresses |
 | `audio/dsp_config_sysex.s` | 3 | DSP config addresses |
@@ -147,13 +146,13 @@ v10 ROM Layout:
 
 Source-level impact:
   1. SendPartData rewrite                  →  1,456 lines changed (genuine)
-  2. call/jp to symbolic labels            →  invisible (linker resolves)
-  3. .byte jump table address values       →  ~200 lines (15 files)
+  2. call/jp/lda_24 to symbolic labels      →  invisible (linker resolves)
+  3. .byte jump table address values       →  ~80 lines (14 files)
   4. Fill padding adjustment               →  1 line (12,710 → 12,696)
   5. Version byte                          →  1 line (0x09 → 0x0A)
   6. Widget data correction                →  1 line
                                               ────────────────────
-                               Source diff:   +1,329 / −339 lines
+                               Source diff:   +1,313 / −323 lines
                                Binary diff:   13,517 bytes (0.64%)
 ```
 
