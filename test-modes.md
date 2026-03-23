@@ -6,13 +6,27 @@ permalink: /test-modes/
 
 # KN5000 Test & Service Modes
 
-The KN5000 has a comprehensive built-in diagnostic system designed for factory and field service use. There are three categories of test/service modes:
+The KN5000 has a comprehensive built-in diagnostic system designed for factory and field service use. There are four categories of test/service modes:
 
 1. **Power-on self-test** — automatic hardware checks at every boot (with checking device)
 2. **Control panel button combos** — special modes activated by holding specific panel buttons during power-on
 3. **Keybed service modes** — diagnostic tests activated by holding specific piano keys during power-on
+4. **HAMA factory diagnostics** — floppy disk and hard disk extension tests (internal Matsushita codename "HAMA")
 
 > **Reference:** Service Manual EMID971655, pages I-17 through I-21.
+
+## MAME Emulation Support
+
+All test modes can potentially be activated in MAME:
+
+| Mode | MAME Status | How to Activate |
+|------|------------|-----------------|
+| Power-on self-test | Working | Toggle "Main CPU Checking Device" or "Sub CPU Checking Device" DIP switches in Machine Configuration |
+| Button combos | Working | Assign keyboard keys to panel buttons via Tab → Input (This Machine), hold during boot |
+| Keybed service modes | Untested | Requires keybed input during boot — depends on tone generator device's key scan timing |
+| HAMA factory diagnostics | Untraced | Activation path from UI not yet determined (see [HAMA section](#hama-factory-diagnostics-codename-hama) below) |
+
+---
 
 ## Power-On Self-Test
 
@@ -242,26 +256,133 @@ Even with a properly functioning drive, occasional "NG" results may occur. If fr
 
 ---
 
+## HAMA Factory Diagnostics (Codename "HAMA")
+
+The HAMA subsystem is an internal Matsushita factory diagnostic system for testing floppy disk I/O and hard disk extension (HDAE5000) hardware. "HAMA" is the developer codename preserved in the ROM's factory test string table alongside other original symbol names (`assswb_op`, `sendCOMM`, etc.).
+
+### Registration
+
+`InitializeHama` (at `0xF1E2FE`) is called unconditionally during boot from the UI initialization sequence (`ui/ui_widget_defs.s`). It registers:
+
+- **12 NAKA widget object tables** for the test UI system (file browsers, dialog buttons, diagnostic counters)
+- **2 diagnostic titles** in the firmware's title system:
+
+| Title | String Address | Widget Table | Description |
+|-------|---------------|--------------|-------------|
+| `TT_HDDEXT` | `0xE1FD18` | `0x7F` | FDD / Hard Disk Extension test |
+| `TT_EXTAPR` | `0xE1FD22` | `0xFC` | Extension APR test |
+
+Both titles use `TestTitleFunc` (`0xF1E396`) as their lifecycle callback.
+
+### TestTitleFunc Event Handler
+
+When a HAMA title becomes active, `TestTitleFunc` processes two event types:
+
+**Event `0x1C00007` — Title lifecycle** (xde parameter):
+
+| xde | Action |
+|-----|--------|
+| 0 | Title created — initialize test UI |
+| 1 | Title destroyed — send cleanup event + kill timer |
+| 2 | Title activated — display test counters + set 0.5s auto-refresh timer |
+| 3 | Title inactivated — run directory listing |
+| 4–5 | Interrupt / interrupt return — re-register HAMA title entries |
+| 6 | TBIOS test — list directory (alternate entry) |
+
+**Event `0x1C00013` — User button actions** (xde parameter):
+
+| xde | Action |
+|-----|--------|
+| 2 | STOP FDD TEST |
+| 3 | START FDD TEST LOOP — calls `FDLoadSaveTest` |
+| 4 | DIR — display floppy directory listing |
+| 5–6 | Debug test functions |
+
+### FDD SAVE/LOAD Test (FDLoadSaveTest)
+
+The core diagnostic test (`0xF1E5B0`):
+
+1. Allocates a 2 KB buffer
+2. Fills it with a counting pattern (`0x000`–`0x3FF`, 2 bytes each)
+3. Opens file `A:IMMUNITY.TST` via `FileOpen`
+4. Writes the buffer via `FileWrite`
+5. Closes and reopens the file
+6. Reads back via `FileRead`
+7. Compares read-back data against original pattern byte-by-byte
+8. Reports OK/NG via `FDTest_PrintDiag` debug output
+
+The test dialog displays three DIAGLIST widgets showing TOTAL, OK, and NG counters.
+
+### HAMA Function Reference Table
+
+The factory test string table in `test_data.s` lists the original Matsushita debug symbol names for functions tested by the diagnostic system:
+
+| Original Symbol | Semantic Name | Address | Purpose |
+|----------------|---------------|---------|---------|
+| `sendCOMM` | `sendCOMM` | `0xEF32F4` | Chunked SubCPU data transfer |
+| `assswb_op` | `SwbtWr_ReinitBothBanks` | `0xEF14D8` | Reinitialize both tone gen banks |
+| `assswb_out` | `SwbtWr_ReinitOutputBank` | `0xEF14F3` | Reinitialize output tone gen bank |
+| `SwbtWr` | `SwbtWr` | — | Sound Write Bank Table Writer root |
+| `AddswbWr` | `AddswbWr` | — | Add sound write bank entry |
+| `AssswbWr` | `AssswbWr` | — | Assign sound write bank entry |
+| `ChangePalette` | `ChangePalette` | — | LCD palette change |
+| `free_X` | `free_X` | — | Memory free |
+| `malloc_X` | `malloc_X` | — | Memory allocate |
+| `SetGlobalError` | `SetGlobalError` | — | Set global error flag |
+
+These strings are displayed on the diagnostic LCD during hardware validation, providing factory technicians with the original source code function names for debugging.
+
+### Activation Path (Partially Traced)
+
+The HAMA titles (`TT_HDDEXT`, `TT_EXTAPR`) are registered in the firmware's title system during every boot. However, the **exact user-facing navigation path to select these titles has not been fully traced**.
+
+What we know:
+- The titles are registered unconditionally (no checking device required)
+- They appear in the normal title system managed by the widget framework
+- The title system transitions via event `0x1C00001`
+- `WidgetParam_TestMode_Entry` (`0xEDBA44`) is at position 2 in the `Naka_SubDispatch_B_Table`
+
+What we don't know:
+- The specific button sequence, menu path, or keybed combination that navigates to these titles
+- Whether they are accessible through the normal UI or only through an undiscovered hidden mode
+- The relationship (if any) between the keybed service modes (Tests 7–8) and the HAMA title system
+
+> **Investigation needed:** The title selection mechanism in `GetTitleNow` and the screen group dispatch system need further analysis to determine how `TT_HDDEXT` / `TT_EXTAPR` become the active title. This may involve tracing the widget event dispatch chain from the keybed Test 7/8 activation path.
+
+### Source Files
+
+| File | Purpose |
+|------|---------|
+| `factory_test/test_init.s` | `InitializeHama` — title & widget registration, `TestTitleFunc` lifecycle handler |
+| `factory_test/test_data.s` | HAMA function reference table, UI configuration data, `HamaList` widget descriptors |
+| `factory_test/fd_test_code.s` | `FDLoadSaveTest` — floppy disk test execution, `HamaListProc` event handler |
+| `factory_test/fd_test_data.s` | NAKA widget descriptors for test dialog, title strings `TT_HDDEXT` / `TT_EXTAPR` |
+
+---
+
 ## Code Locations Summary
 
 | Routine | Address | File | Purpose |
 |---------|---------|------|---------|
-| `MainCPU_self_test_routines` | `0xFB729E` | `kn5000_v10_program.s:323242` | Power-on self-test dispatcher |
-| `Report_test_result_by_blinking_LED` | `0xFB72EA` | `kn5000_v10_program.s:323277` | LED blink result reporter |
-| `Test_DRAM_IC10_and_IC9` | `0xFB7348` | `kn5000_v10_program.s:323345` | DRAM test (write patterns) |
-| `Test_SRAM_IC21` | `0xFB7400` | `kn5000_v10_program.s:323426` | SRAM test |
-| `CPanel_ScanButtons` | `0xFC3EE5` | `cpanel_routines.s:61` | Boot-time button scan |
-| `CPanel_CheckSpecialCombos` | `0xFC4173` | `cpanel_routines.s:373` | Button combo detection |
-| `TestTitleFunc` | `0xF1E396` | `kn5000_v10_program.s:127914` | Test title display routine |
-| `FDLoadSaveTest` | `0xF1E5B0` | `kn5000_v10_program.s:128017` | Floppy disk SAVE/LOAD test |
-| `TEST2FUNC` | `0xFB7D99` | `kn5000_v10_program.s:324399` | Panel switch & LED test handler |
-| `TEST3FUNC` | `0xFB7DA6` | `kn5000_v10_program.s:324419` | Wave ROM test handler (part) |
-| `TEST4FUNC` | `0xFB7DDA` | `kn5000_v10_program.s:324439` | CPR/CPL MCU test handler |
-| `TEST6FUNC` | `0xFB7E0E` | `kn5000_v10_program.s:324459` | Wave ROM test handler (part) |
-| `Boot_HandleComboDisplay` | `0xEF07A2` | `kn5000_v10_program.s:89288` | Boot combo handler (LED version display) |
-| `Boot_HandleFactoryReset` | `0xEF07F3` | `kn5000_v10_program.s:89329` | Boot combo handler (factory reset) |
-| `Get_Firmware_Version` | `0xFFFEE5` | `kn5000_v10_program.s:399800` | Returns firmware version byte |
-| `FIRMWARE_VERSION` | `0xFFFFE8` | `kn5000_v10_program.s:399878` | Version byte (0x0A = v10) |
+| `MainCPU_self_test_routines` | `0xFB729E` | `boot/system_handlers.s` | Power-on self-test dispatcher |
+| `Report_test_result_by_blinking_LED` | `0xFB72EA` | `boot/system_handlers.s` | LED blink result reporter |
+| `Test_DRAM_IC10_and_IC9` | `0xFB7348` | `boot/system_handlers.s` | DRAM test (write patterns) |
+| `Test_SRAM_IC21` | `0xFB7400` | `boot/system_handlers.s` | SRAM test |
+| `CPanel_ScanButtons` | `0xFC3EE5` | `ui/cpanel_routines.s` | Boot-time button scan |
+| `CPanel_CheckSpecialCombos` | `0xFC4173` | `ui/cpanel_routines.s` | Button combo detection |
+| `InitializeHama` | `0xF1E2FE` | `factory_test/test_init.s` | HAMA subsystem registration |
+| `TestTitleFunc` | `0xF1E396` | `factory_test/test_init.s` | Test title lifecycle handler |
+| `FDLoadSaveTest` | `0xF1E5B0` | `factory_test/fd_test_code.s` | Floppy disk SAVE/LOAD test |
+| `HamaListProc` | `0xF1E8C0` | `factory_test/fd_test_code.s` | File browser event handler |
+| `TEST2FUNC` | `0xFB7D99` | `boot/system_handlers.s` | Panel switch & LED test handler |
+| `TEST3FUNC` | `0xFB7DA6` | `boot/system_handlers.s` | Wave ROM test handler (part) |
+| `TEST4FUNC` | `0xFB7DDA` | `boot/system_handlers.s` | CPR/CPL MCU test handler |
+| `TEST6FUNC` | `0xFB7E0E` | `boot/system_handlers.s` | Wave ROM test handler (part) |
+| `Boot_HandleComboDisplay` | `0xEF07A2` | `kn5000_v10_program.s` | Boot combo handler (LED version) |
+| `Boot_HandleFactoryReset` | `0xEF07F3` | `kn5000_v10_program.s` | Boot combo handler (factory reset) |
+| `WidgetParam_TestMode_Entry` | `0xEDBA44` | `ui_widgets/widget_dispatch.s` | Test mode widget entry |
+| `Get_Firmware_Version` | `0xFFFEE5` | `kn5000_v10_program.s` | Returns firmware version byte |
+| `FIRMWARE_VERSION` | `0xFFFFE8` | `boot/rom_end_structure.s` | Version byte (0x0A = v10) |
 
 ---
 
