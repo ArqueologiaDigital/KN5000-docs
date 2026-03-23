@@ -335,29 +335,134 @@ The test dialog displays three DIAGLIST widgets showing TOTAL, OK, and NG counte
 
 ### Memory Dump Tool (DbMemoryDumpProc)
 
-The HAMA diagnostic system includes a built-in **memory hex viewer** (`DbMemoryDumpProc` at `ui/ui_widget_defs.s:6878`). This is a complete debugging tool for inspecting arbitrary memory addresses.
+The HAMA diagnostic system includes a built-in **interactive memory hex viewer** — a complete debugging tool for inspecting arbitrary memory addresses across the KN5000's entire 24-bit address space.
 
-**Display format:** Each row shows an address, 8 bytes of hex data, and their ASCII interpretation (non-printable characters shown as `.`).
+**Implementation:** `DbMemoryDumpProc` in `ui/ui_widget_defs.s:6878` (263 lines of TLCS-900 assembly). Widget descriptor at `FDTest_Label_MemoryDump` in `factory_test/fd_test_data.s:157`.
 
-**Controls:**
-- **Address input** — enter a target address to inspect
-- **UP/DOWN** — scroll through memory (0x80 bytes per step)
-- **Confirm** — read and display the selected address range
-- Address range: full 24-bit space (`0x000000`–`0xFFFFFF`)
+#### Display Format
 
-**Events handled by `DbMemoryDumpProc`:**
+The viewer renders a classic hex dump display with **16 rows of 8 bytes each** (128 bytes per page):
 
-| Event | Action |
-|-------|--------|
-| `0x1C00007` | Activate — initialize and show the memory viewer window |
-| `0x1C0000D` | Paint — render memory contents with box borders |
-| `0x1C0000E` | Select — navigation input (UP/DOWN scrolling) |
-| `0x1C0000F` | Confirm — read memory at the entered address |
-| `0x1C00002` | Close — exit the memory viewer |
+```
+XXYYYY  XX XX XX XX XX XX XX XX  ........
+```
 
-**Activation:** The memory dump widget is part of the "DEBUG SCREEN for HD-AE" layout within the HAMA test system. It is accessed by entering HAMA test mode (hold **B3 + B4** during power-on), then selecting one of the Debug Test buttons (xde=5 or xde=6 in the `TestTitleFunc` action dispatch).
+Each row contains three columns:
+1. **Address** — formatted as `%02X%04X` (bank byte + 16-bit offset, e.g., `0E F000`)
+2. **Hex data** — 8 bytes formatted as `%02X %02X %02X %02X %02X %02X %02X %02X`
+3. **ASCII interpretation** — the same 8 bytes shown as printable characters, with any byte below `0x20` (space) replaced by `.` (period, `0x2E`)
 
-**Implementation:** `DbMemoryDumpProc` in `ui/ui_widget_defs.s:6878`. The widget descriptor is at `FDTest_Label_MemoryDump` in `factory_test/fd_test_data.s:157`.
+The display is rendered inside a double-bordered design box (`DrawDesignBox` with styles `0xC5` outer / `0xC6` inner), with 5-pixel inset margins on all sides.
+
+#### Address Navigation
+
+The viewer supports **per-nibble address navigation** using 6 step sizes corresponding to each hex digit of the 24-bit address:
+
+| Input | Step Size | Navigates |
+|-------|-----------|-----------|
+| xde=2 | `0x100000` (1 MB) | Top nibble — selects memory bank (ROM, DRAM, I/O, etc.) |
+| xde=3 | `0x010000` (64 KB) | Second nibble — coarse offset within bank |
+| xde=4 | `0x001000` (4 KB) | Third nibble — page-level navigation |
+| xde=5 | `0x000100` (256 B) | Fourth nibble — fine navigation |
+| xde=6 | `0x000010` (16 B) | Fifth nibble — two-row steps |
+| xde=7 | `0x000001` (1 B) | Least significant nibble — single-byte precision |
+| xde=16 | `0x000080` (128 B) | **Page step** — advances exactly one screenful |
+
+Direction is determined by bit 7 of the WA register: if set, the step is **subtracted** (scroll up); if clear, it is **added** (scroll down). After each navigation, the address is **clamped to 24 bits** (`AND 0xFFFFFF`) to prevent wrap-around, then the display is refreshed.
+
+This per-nibble scheme means a Matsushita technician could quickly jump to any memory region: step xde=2 to select the major region (e.g., `0xE00000` for Program ROM, `0x200000` for DRAM), then refine with smaller steps.
+
+#### Rendering Pipeline
+
+When the Confirm event (`0x1C0000F`) fires, the viewer:
+
+1. Retrieves the view instance via `GetViewInstance`
+2. Reads the widget's bounding rectangle and insets it by 5 pixels
+3. Enters a **16-iteration row loop** (rows 0–15):
+   - Computes the row's vertical position (9-pixel row height)
+   - Copies 8 bytes from the target memory address into a local buffer via `Mem_Copy`
+   - Renders the **address column** using printf-style formatting (`%02X%04X`, via `Audio_SendCommand` which doubles as the firmware's string formatter) and `DrawString`
+   - Renders the **hex column** (`%02X` × 8) at a 0x30-pixel horizontal offset
+   - **Sanitizes** the 8 bytes for ASCII display: loops through each byte, replacing any value < `0x20` with `0x2E` (period), then null-terminates the string
+   - Renders the **ASCII column** at a 0x96-pixel horizontal offset (= 0x30 + 0x66)
+4. Returns success
+
+The entire rendering is immediate-mode: each Confirm event redraws all 16 rows from scratch.
+
+#### Event Handler
+
+| Event | Handler | Action |
+|-------|---------|--------|
+| `0x1C00007` | `DbMemDump_OK` | **Navigation dispatch** — receives button presses, looks up step size from the 6-entry offset table at `0xEAA6FA`, adjusts the current address, clamps to 24 bits, triggers redraw via Confirm event |
+| `0x1C0000F` | `DbMemDump_Confirm` | **Render** — reads 128 bytes from the current address and renders the full hex dump display |
+| `0x1C0000E` | `DbMemDump_Select` | **Auto-repeat** — forwards to Confirm, then sets a periodic timer (`SetApTimer` at 120 ticks) for continuous scrolling while a button is held |
+| `0x1C0000D` | `DbMemDump_Paint` | **Background paint** — draws the double-bordered box frame, then triggers a Select event to fill the hex content |
+| `0x1C00002` | `DbMemDump_Close` | **Cleanup** — delegates to `ViewableProc` for standard widget teardown |
+
+#### Accessible Memory Regions
+
+Because the tool reads directly from the CPU's address bus, it can inspect **any** memory-mapped region:
+
+| Address Range | Contents |
+|--------------|----------|
+| `0x000000`–`0x000FFF` | Internal CPU RAM (stack, variables, interrupt vectors) |
+| `0x001000`–`0x0FFFFF` | SFR registers, I/O ports, timer/serial config |
+| `0x100000`–`0x15FFFF` | Tone generator / DSP hardware registers |
+| `0x1A0000`–`0x1DFFFF` | Video RAM (LCD framebuffer, 320×240 8bpp) |
+| `0x1E0000`–`0x1FFFFF` | SRAM (battery-backed user settings) |
+| `0x200000`–`0x27FFFF` | Extension DRAM (work memory, sequencer data) |
+| `0x280000`–`0x2FFFFF` | HDAE5000 extension ROM (if installed) |
+| `0x800000`–`0x9FFFFF` | Table Data ROM (fonts, presets, demo songs) |
+| `0xE00000`–`0xFFFFFF` | Program ROM (main CPU firmware) |
+
+This makes the tool invaluable for inspecting live hardware state, verifying ROM contents, watching variable changes, and debugging I/O register configurations.
+
+#### Activation
+
+The memory dump widget is part of the "DEBUG SCREEN for HD-AE" layout within the HAMA test system. Access path:
+
+1. Hold **B3 + B4** during power-on → enters HAMA test mode (TT_EXTAPR)
+2. Select one of the Debug Test buttons (xde=5 or xde=6 in the `TestTitleFunc` action dispatch)
+3. The debug screen layout includes the MEMORY DUMP widget alongside CONSOLE output and navigation controls
+
+#### Why Did Matsushita Include This?
+
+The presence of a full interactive memory viewer in shipping firmware (not just a debug build) reveals several things about the KN5000's development and support lifecycle:
+
+**1. Field Service Diagnostics**
+
+The KN5000 was a professional-grade instrument sold to working musicians, music schools, and churches worldwide. When a unit failed in the field, a Matsushita/Technics service technician needed to diagnose the problem without returning the unit to the factory. The memory dump tool allows a technician to:
+
+- **Verify ROM integrity** by reading back Program ROM, Table Data ROM, and Custom Data ROM contents and comparing against known-good checksums
+- **Check SRAM battery backup** by inspecting the battery-backed SRAM region (`0x1E0000`+) to determine if user settings have been corrupted by a dying backup battery — a common failure mode in 1990s keyboard instruments
+- **Inspect live I/O state** by reading tone generator registers (`0x100000`+), VGA controller registers, FDC status, and UART configurations to identify communication failures between subsystems
+- **Diagnose DRAM failures** by reading the extension DRAM region and checking for stuck bits or addressing failures that the power-on self-test (which only tests basic patterns) might miss
+
+**2. Factory Production Line Testing**
+
+During manufacturing at the Hamamatsu factory, each unit would pass through a quality control station where a technician (using the checking device on CN11/CN12) would run the full test suite. The memory dump provides a catch-all diagnostic when the automated tests pass but the unit still exhibits anomalous behavior. A technician could:
+
+- Compare DRAM initialization patterns against a reference unit
+- Verify that Flash ROM programming completed correctly by reading back the firmware
+- Check that the tone generator's waveform ROM mapping is correct by reading IC303/IC304-307 register states
+- Inspect the SubCPU's shared memory region to verify inter-CPU communication
+
+**3. Firmware Development and Debugging**
+
+The tool's per-nibble navigation scheme (with step sizes from 1 byte to 1 MB) is clearly designed by firmware engineers for their own use during development. The Matsushita engineers working on KN5000 firmware updates (v5 through v10, spanning 1997–1999) would have used this tool to:
+
+- **Watch variable changes in real time** by navigating to DRAM work areas and observing how the firmware's state machines respond to user input
+- **Debug inter-CPU protocol issues** by inspecting the shared memory mailbox regions used for Main CPU ↔ SubCPU communication
+- **Verify NAKA widget descriptor integrity** by reading the widget tables in DRAM and confirming that `RegisterObjectTable` copied them correctly from ROM
+- **Test the HDAE5000 extension** (hence "DEBUG SCREEN for HD-AE" in the label) by reading the extension ROM region to verify that the hard disk expansion board's firmware is accessible
+
+**4. Cost-Effective Debug Infrastructure**
+
+Including the tool in the shipping ROM (rather than maintaining a separate debug build) saved Matsushita from needing to manage two firmware images. The tool costs only ~263 lines of code (~600 bytes of ROM) and is completely hidden from normal users — it requires a specific keybed combination (B3+B4) during power-on that no user would accidentally trigger. This is the same engineering philosophy seen in many Japanese consumer electronics of the era: ship the debug tools, hide them behind obscure key combinations, and let service technicians discover them through the service manual.
+
+**5. The "HAMA" Codename Connection**
+
+The memory dump tool lives inside the "HAMA" diagnostic subsystem. "HAMA" is likely an abbreviation of **Hamamatsu** — the city where Matsushita's musical instrument division was headquartered and where the KN5000 was designed and manufactured. Embedding the factory's name as a codename in the diagnostic system is a common practice in Japanese engineering culture, connecting the diagnostic tools to the physical factory where they would be most frequently used.
 
 ### HAMA Function Reference Table
 
