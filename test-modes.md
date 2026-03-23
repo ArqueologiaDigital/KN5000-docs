@@ -24,7 +24,7 @@ All test modes can potentially be activated in MAME:
 | Power-on self-test | Working | Toggle "Main CPU Checking Device" or "Sub CPU Checking Device" DIP switches in Machine Configuration |
 | Button combos | Working | Assign keyboard keys to panel buttons via Tab → Input (This Machine), hold during boot |
 | Keybed service modes | Untested | Requires keybed input during boot — depends on tone generator device's key scan timing |
-| HAMA factory diagnostics | Untraced | Activation path from UI not yet determined (see [HAMA section](#hama-factory-diagnostics-codename-hama) below) |
+| HAMA factory diagnostics | Via keybed | Hold B3+B4 during power-on (same as Test 8). Requires tone gen keybed scan during boot |
 
 ---
 
@@ -165,11 +165,31 @@ These diagnostic tests are activated by holding specific pairs of piano keys whi
 | 7 | FDC IC Test | A3 + A4 | Tests Floppy Disk Controller IC (IC208) |
 | 8 | Floppy Disk SAVE/LOAD Test | B3 + B4 | Tests actual floppy disk read/write |
 
-### Key Detection
+### Key Detection (Fully Traced)
 
-The keyboard is scanned by the Tone Generator IC303 (TC183C230002), which performs hardware key matrix scanning. During boot, after the tone generator is initialized, the firmware reads key states from IC303's scan registers. If specific key pairs are detected, the firmware enters the corresponding test mode instead of the normal UI.
+After the SubCPU payload is transferred and verified, the firmware calls `SelfTest_FirmwareVersionCheck` (`0xFB76D8` in `ui/ui_mode_handlers.s`). This routine:
 
-> **Note:** The exact key detection code path during boot has not yet been fully traced in the disassembly. The test mode implementations themselves have been identified (see below).
+1. Sends an inter-CPU command (`0xF002`) to the SubCPU to read the tone generator's keybed scan registers
+2. Waits for the SubCPU response (polls bit 7 at address 1568)
+3. Reads 8 bytes of key scan data from address 36196 (the keybed state buffer)
+4. Counts the total number of pressed keys using a population count (`SelfTest_PopCount`)
+5. If exactly **2 keys** are pressed, checks which specific key bits are set
+6. Posts `UI_PostModeChangeEvent` with the appropriate mode code
+
+**Mode code dispatch:**
+
+| Key Bits | Mode Code | Event Data | Test Mode |
+|----------|-----------|------------|-----------|
+| byte[3] bit 2 + byte[4] bit 6 | `0xF5` | `0x1A000F5` | Test 3: LCD Panel |
+| byte[3] bit 4 + byte[5] bit 0 | `0xF6` | `0x1A000F6` | Test 4: CPR/CPL MCU |
+| byte[3] bit 5 + byte[5] bit 1 | `0xF7` | `0x1A000F7` | Test 5: Panel Switch & LED |
+| byte[3] bit 7 + byte[5] bit 3 | `0xF8` | `0x1A000F8` | Test 6: Wave ROM |
+| byte[4] bit 1 + byte[5] bit 5 | `0xF9` | `0x1A000F9` | Test 7: FDC IC |
+| byte[4] bit 3 + byte[5] bit 7 | `0xFC` | `0x1A000FC` | Test 8: FDD SAVE/LOAD (HAMA) |
+
+`UI_PostModeChangeEvent` sends event `0x1C00015` with the mode code in the low byte, which triggers a screen group transition to the corresponding test mode UI.
+
+> **MAME note:** For keybed tests to work in MAME, the tone generator device must respond to the inter-CPU key scan command during boot. The keybed queue in `kn5000_tonegen_device` would need to report held keys at this early stage.
 
 ### Test 3: LCD Panel Test (G3 + G4)
 
@@ -332,22 +352,29 @@ The factory test string table in `test_data.s` lists the original Matsushita deb
 
 These strings are displayed on the diagnostic LCD during hardware validation, providing factory technicians with the original source code function names for debugging.
 
-### Activation Path (Partially Traced)
+### Activation Path (Traced)
 
-The HAMA titles (`TT_HDDEXT`, `TT_EXTAPR`) are registered in the firmware's title system during every boot. However, the **exact user-facing navigation path to select these titles has not been fully traced**.
+The HAMA titles are activated through the **keybed service mode system**:
 
-What we know:
-- The titles are registered unconditionally (no checking device required)
-- They appear in the normal title system managed by the widget framework
-- The title system transitions via event `0x1C00001`
-- `WidgetParam_TestMode_Entry` (`0xEDBA44`) is at position 2 in the `Naka_SubDispatch_B_Table`
+**Test 8 (B3 + B4) → TT_EXTAPR (mode 0xFC):**
+Holding keys B3 and B4 during power-on causes `SelfTest_FirmwareVersionCheck` to post mode code `0xFC` via `UI_PostModeChangeEvent`. This matches the widget table ID `0xFC` used when registering `TT_EXTAPR`, activating the full HAMA diagnostic screen with FDD SAVE/LOAD test, directory listing, and debug functions.
 
-What we don't know:
-- The specific button sequence, menu path, or keybed combination that navigates to these titles
-- Whether they are accessible through the normal UI or only through an undiscovered hidden mode
-- The relationship (if any) between the keybed service modes (Tests 7–8) and the HAMA title system
+**TT_HDDEXT (widget table 0x7F):**
+The `TT_HDDEXT` title (Hard Disk Extension test) is registered with widget table `0x7F`, which does not correspond to any direct keybed mode code. It is likely accessible from **within** the TT_EXTAPR test screen — the `TestTitleFunc` lifecycle handler processes interrupt/resume events (xde=4-5) that call `RegHamaTitle1/2_Entry`, which may switch between the two HAMA titles. This allows a technician to enter the diagnostic system via Test 8 (B3+B4) and then navigate to the HDD extension test using on-screen buttons.
 
-> **Investigation needed:** The title selection mechanism in `GetTitleNow` and the screen group dispatch system need further analysis to determine how `TT_HDDEXT` / `TT_EXTAPR` become the active title. This may involve tracing the widget event dispatch chain from the keybed Test 7/8 activation path.
+**Complete activation chain:**
+```
+Power on while holding B3 + B4
+  → Boot sequence runs normally
+  → SelfTest_FirmwareVersionCheck reads keybed via SubCPU
+  → Detects 2 keys: byte[4] bit 3 + byte[5] bit 7
+  → Posts UI_PostModeChangeEvent(0xFC)
+  → Event 0x1C00015 with data 0x1A000FC
+  → Title system activates TT_EXTAPR (widget table 0xFC)
+  → TestTitleFunc receives lifecycle event 0x1C00007 (activate)
+  → HAMA diagnostic screen displayed
+  → User can START/STOP FDD test, browse files, run debug tests
+```
 
 ### Source Files
 
