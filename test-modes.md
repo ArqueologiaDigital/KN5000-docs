@@ -381,7 +381,7 @@ When the Confirm event (`0x1C0000F`) fires, the viewer:
 3. Enters a **16-iteration row loop** (rows 0–15):
    - Computes the row's vertical position (9-pixel row height)
    - Copies 8 bytes from the target memory address into a local buffer via `Mem_Copy`
-   - Renders the **address column** using printf-style formatting (`%02X%04X`, via `Audio_SendCommand` which doubles as the firmware's string formatter) and `DrawString`
+   - Renders the **address column** using `Sprintf_Locked` (`%02X%04X` format) and `DrawString`
    - Renders the **hex column** (`%02X` × 8) at a 0x30-pixel horizontal offset
    - **Sanitizes** the 8 bytes for ASCII display: loops through each byte, replacing any value < `0x20` with `0x2E` (period), then null-terminates the string
    - Renders the **ASCII column** at a 0x96-pixel horizontal offset (= 0x30 + 0x66)
