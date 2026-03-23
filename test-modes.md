@@ -333,6 +333,32 @@ The core diagnostic test (`0xF1E5B0`):
 
 The test dialog displays three DIAGLIST widgets showing TOTAL, OK, and NG counters.
 
+### Memory Dump Tool (DbMemoryDumpProc)
+
+The HAMA diagnostic system includes a built-in **memory hex viewer** (`DbMemoryDumpProc` at `ui/ui_widget_defs.s:6878`). This is a complete debugging tool for inspecting arbitrary memory addresses.
+
+**Display format:** Each row shows an address, 8 bytes of hex data, and their ASCII interpretation (non-printable characters shown as `.`).
+
+**Controls:**
+- **Address input** — enter a target address to inspect
+- **UP/DOWN** — scroll through memory (0x80 bytes per step)
+- **Confirm** — read and display the selected address range
+- Address range: full 24-bit space (`0x000000`–`0xFFFFFF`)
+
+**Events handled by `DbMemoryDumpProc`:**
+
+| Event | Action |
+|-------|--------|
+| `0x1C00007` | Activate — initialize and show the memory viewer window |
+| `0x1C0000D` | Paint — render memory contents with box borders |
+| `0x1C0000E` | Select — navigation input (UP/DOWN scrolling) |
+| `0x1C0000F` | Confirm — read memory at the entered address |
+| `0x1C00002` | Close — exit the memory viewer |
+
+**Activation:** The memory dump widget is part of the "DEBUG SCREEN for HD-AE" layout within the HAMA test system. It is accessed by entering HAMA test mode (hold **B3 + B4** during power-on), then selecting one of the Debug Test buttons (xde=5 or xde=6 in the `TestTitleFunc` action dispatch).
+
+**Implementation:** `DbMemoryDumpProc` in `ui/ui_widget_defs.s:6878`. The widget descriptor is at `FDTest_Label_MemoryDump` in `factory_test/fd_test_data.s:157`.
+
 ### HAMA Function Reference Table
 
 The factory test string table in `test_data.s` lists the original Matsushita debug symbol names for functions tested by the diagnostic system:
