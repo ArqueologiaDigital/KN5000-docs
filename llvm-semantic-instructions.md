@@ -6,31 +6,62 @@ permalink: /llvm-semantic-instructions/
 
 # LLVM TLCS-900 Backend: Semantic Instruction Migration
 
-The LLVM TLCS-900 backend currently uses 118 custom "wrapper" mnemonics (12,369 instances across the ROM disassembly) that encode raw addressing mode bytes instead of using standard TLCS-900 assembly syntax. This page tracks the work to replace them with proper semantic instructions.
+The LLVM TLCS-900 backend originally used 118 custom "wrapper" mnemonics encoding raw addressing mode bytes. This page tracks the ongoing work to replace them with proper semantic instructions.
 
-**Beads issue:** `kn5000-5m2t`
+**Beads issues:** `kn5000-7ubb` (Phase 2), `kn5000-1hqd` (Phase 3), `kn5000-xcuk` (Phase 4), `kn5000-0vbs` (Phase 5)
 
 ## Why This Matters
 
 Wrapper mnemonics like `st_dri3b L, 0xfd, 0xb8, 0x01` are unreadable. The same instruction in standard TLCS-900 syntax is `lda xsp, (xsp+440)` — immediately clear that it's deallocating 440 bytes of stack frame. Semantic mnemonics make the disassembly comprehensible and cross-version diffs meaningful.
 
-## Migration Phases
+## Progress Summary
 
-### Phase 1: Simple Renames (~1,060 instances)
+| Phase | Description | Instances | Status |
+|-------|-------------|-----------|--------|
+| Phase 1 | Mnemonic renames (81 mnemonics) | 53,603 | **Complete** |
+| Phase 1b | Parenthesized direct addresses | 61,436 | **Complete** |
+| Phase 2 | 24-bit addressing semantics | ~1,700 | In progress |
+| Phase 3 | Extended register pair modes | ~3,300 | Planned |
+| Phase 4 | SRI/DRI indirect modes | ~3,500 | Planned |
+| Phase 5 | Miscellaneous | ~700 | Planned |
 
-| Current | Semantic | Count | Status |
-|---------|----------|-------|--------|
-| `push_sr` | `push sr` | 163 | Pending |
-| `pop_sr` | `pop sr` | 162 | Pending |
-| `ld8_24 reg, addr` | `ld reg, (addr24)` | 421 | Pending |
-| `st8_24 addr, reg` | `ld (addr24), reg` | 117 | Pending |
-| `sti8_24 addr, imm` | `ld (addr24), imm8` | 395 | Pending |
+## Completed Work
 
-These require changes to:
-- `TLCS900InstrInfo.td` — mnemonic strings
-- `TLCS900AsmParser` — accept new syntax
-- `TLCS900Disassembler.cpp` — emit new syntax
-- All `.s` source files in both v9 and v10
+### Phase 1: Mnemonic Renames (Complete — March 2026)
+
+81 wrapper mnemonics renamed to semantic forms across 53,603 instruction instances:
+
+| Old | New | Category |
+|-----|-----|----------|
+| `push_sr` | `push sr` | Status register push/pop |
+| `pop_sr` | `pop sr` | |
+| `ld8_24` | `ldb_da` | Direct address loads |
+| `st8_24` | `stb_da` | Direct address stores |
+| `sti8_24` | `stib_da` | Direct address immediate stores |
+| `ldto_berp` | `stb_erp` | Extended register pair |
+| `ldfr_berp` | `ldb_erp` | |
+| `st_dri3b` | `stb_dri` | Displacement register indirect |
+| ... | ... | (81 total) |
+
+### Phase 1b: Parenthesized Direct Address Syntax (Complete — March 2026)
+
+Added `directaddr` operand class to LLVM backend. All 61,436 direct address operands across 155 `.s` files now use parenthesized syntax:
+
+| Before | After |
+|--------|-------|
+| `ldb_da a, 0xe12345` | `ldb_da a, (0xe12345)` |
+| `stw_da 0xe12345, wa` | `stw_da (0xe12345), wa` |
+| `cpw_da 0x3ef50, 0` | `cpw_da (0x3ef50), 0` |
+| `incdi8_24 1, 0xcee5` | `incdi8_24 1, (0xcee5)` |
+| `bitda_24 3, 0xe12345` | `bitda_24 3, (0xe12345)` |
+
+Changes:
+- `TLCS900InstrInfo.td` — 167 instruction definitions updated to use `directaddr` operand class
+- `TLCS900AsmParser.cpp` — Added `parseDirectAddrOperand()` for `(expr)` syntax
+- `TLCS900InstPrinter.cpp` — Added `printDirectAddr()` to wrap output in parentheses
+- Both old (bare) and new (parenthesized) syntax accepted for backward compatibility
+
+## Remaining Phases
 
 ### Phase 2: 24-bit Addressing Mode Semantics (~1,700 instances)
 
