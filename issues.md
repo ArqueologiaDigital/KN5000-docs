@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 402 (6 open, 396 closed)
+**Total Issues:** 422 (20 open, 401 closed)
 
 **Quick Links:** 
-[Other](#other) (6)
+[Other](#other) (20)
 
 ---
 
@@ -89,9 +89,65 @@ All subsystem pages documented, no placeholders remain.
 
 ---
 
-#### 🟡 MAME: Connect DSP1 ready signal to SubCPU Port H bit 0 {#issue-kn5000-n05c}
+#### 🟡 Data wheel (Program encoder) delivery mechanism unsolved {#issue-kn5000-wa40}
 
-**ID:** `kn5000-n05c` | **Priority:** Medium | **Created:** 2026-03-17
+**ID:** `kn5000-wa40` | **Priority:** Medium | **Created:** 2026-03-18
+
+The steady-state mechanism for how the data wheel (jog dial) rotation reaches the firmware UI is not yet understood. Boot-time detection via segment 0x0B works but only runs during init. The Type 2 encoder system handles analog controllers only. The UI event chain requires SwbtWr type 0x21 at DRAM[0xC07D] → CtrlPanel_HandleSerialPort → event 0x1C0001F, but nothing produces type 0x21 during normal operation. Research branches: kn5000_research_encoder, kn5000_research_encoder_v2. Full documentation in control-panel-protocol.md Data Wheel section. Next step: MAME debugger execution trace while pressing UP/DOWN LCD buttons to find the event code path for value changes.
+
+---
+
+#### 🟡 Dump encoder scan table (0x8E78) via MAME debugger {#issue-kn5000-bey1}
+
+**ID:** `kn5000-bey1` | **Priority:** Medium | **Created:** 2026-03-18
+
+After boot completes, dump DRAM 0x8E78 region in MAME debugger: d 0x8E78,0x30. Shows what encoder entries are active. Requires human interaction with MAME debugger.
+
+---
+
+#### 🟡 LLVM semantic instruction migration Phase 2: 24-bit addressing {#issue-kn5000-7ubb}
+
+**ID:** `kn5000-7ubb` | **Priority:** Medium | **Created:** 2026-03-25
+
+Replace ~1,700 wrapper mnemonics for 24-bit addressing modes (ld16_24, ld32_24, st16_24, st32_24, sti16_24, cpi8_24, cpdi16_24) with semantic TLCS-900 syntax. Requires changes to TLCS900InstrInfo.td, AsmParser, Disassembler, and all .s files.
+
+---
+
+#### 🟡 LLVM semantic instruction migration Phase 3: Extended register pair modes {#issue-kn5000-1hqd}
+
+**ID:** `kn5000-1hqd` | **Priority:** Medium | **Created:** 2026-03-25
+
+Replace ~3,300 wrapper mnemonics for extended register pair modes (ldto_berp, ldfr_berp, ldto_werp, ldfr_werp, ldi_berp, ldi_werp, push/pop_werp, cpi_berp/werp, inc1_berp/werp, cp_werp). Requires LLVM backend changes.
+
+**Depends on:** [`kn5000-7ubb`](#issue-kn5000-7ubb)
+
+---
+
+#### 🟡 LLVM semantic instruction migration Phase 4: SRI/DRI indirect modes {#issue-kn5000-xcuk}
+
+**ID:** `kn5000-xcuk` | **Priority:** Medium | **Created:** 2026-03-25
+
+Replace ~3,500 wrapper mnemonics for SRI/DRI indirect addressing modes (st_dri3b/w/l, ld_srib3/sriw3, lda_dri3, lda_dpi, ld_spib, jp_dri, stib_dri/dpi, stiw_dri, bit_dri). Largest phase. Requires LLVM backend changes.
+
+**Depends on:** [`kn5000-1hqd`](#issue-kn5000-1hqd)
+
+---
+
+#### 🟡 LLVM semantic instruction migration Phase 5: Miscellaneous {#issue-kn5000-0vbs}
+
+**ID:** `kn5000-0vbs` | **Priority:** Medium | **Created:** 2026-03-25
+
+Replace ~700 remaining wrapper mnemonics (ld_srib/sriw, mrid2, ldada/ldda8/stda8, addm32_24/addmi16). Final cleanup phase.
+
+**Depends on:** [`kn5000-xcuk`](#issue-kn5000-xcuk)
+
+---
+
+#### 🟡 MAME PR5 rebase on upstream/master {#issue-kn5000-fc48}
+
+**ID:** `kn5000-fc48` | **Priority:** Medium | **Created:** 2026-03-25
+
+Rebase kn5000_pr5_driver_v2 branch on latest upstream/master from mamedev/mame. Verify splash screen, control panel, and boot sequence still work after rebase.
 
 ---
 
@@ -110,6 +166,46 @@ Create a new MAME upstream PR (PR5) for accumulated driver fixes on kn5000_pr5_d
 **ID:** `kn5000-jt0b` | **Priority:** Medium | **Created:** 2026-03-16
 
 The kn5000_pr5_driver branch needs rebasing onto current upstream MAME master before creating PR. Check for conflicts with recent MAME changes.
+
+---
+
+#### 🟡 Set watchpoint on encoder state area 0x8E78 {#issue-kn5000-s2wv}
+
+**ID:** `kn5000-s2wv` | **Priority:** Medium | **Created:** 2026-03-18
+
+In MAME debugger: wpset 8e78,30,w then interact with emulator. See what writes to encoder scan table and from which PC addresses. Requires human interaction.
+
+---
+
+#### 🟡 Test encoder ID candidates with MAME debugger watchpoint on 0xC07D {#issue-kn5000-o1k9}
+
+**ID:** `kn5000-o1k9` | **Priority:** Medium | **Created:** 2026-03-18
+
+After identifying candidate encoder IDs from ROM table analysis, modify HLE to send Type 2 packets with those IDs. Test with MAME debugger watchpoint on 0xC07D for SwbtWr type 0x21. Requires human interaction.
+
+---
+
+#### 🟡 Verify CPanel_InitButtonState runs in steady state {#issue-kn5000-4tgy}
+
+**ID:** `kn5000-4tgy` | **Priority:** Medium | **Created:** 2026-03-18
+
+Set breakpoint on CPanel_InitButtonState in MAME debugger and wait 30+ seconds. If it never triggers, the 4th-cycle counter is broken and button/encoder state never refreshes after boot. Requires human interaction.
+
+---
+
+#### ⚪ MAME keybed test mode activation {#issue-kn5000-gvcz}
+
+**ID:** `kn5000-gvcz` | **Priority:** Low | **Created:** 2026-03-25
+
+Implement keybed service test mode activation in MAME. Requires HLE for checking devices MCU responses to B3+B4 combo and mode codes 0xF5-0xFC.
+
+---
+
+#### ⚪ NAKA widget bytecode reverse engineering {#issue-kn5000-xz6f}
+
+**ID:** `kn5000-xz6f` | **Priority:** Low | **Created:** 2026-03-25
+
+Deep analysis of NAKA widget bytecode interpreter. 28 files, ~80K lines, ~9015 labels defining UI widget hierarchies. Continue semantic label renaming and document bytecode opcodes.
 
 ---
 
@@ -153,6 +249,14 @@ Production-ready emulation and homebrew support.
 
 ---
 
+#### ⚪ v141 subcpu disassembly (29% diff from v142) {#issue-kn5000-q8nv}
+
+**ID:** `kn5000-q8nv` | **Priority:** Low | **Created:** 2026-03-25
+
+Create v141/subcpu source tree. 56,018 bytes differ (29.2% of 192KB). Significant effort required - many code changes between versions.
+
+---
+
 #### ⚪ EPIC: Path to full C port of ROM firmware {#issue-kn5000-4sry}
 
 **ID:** `kn5000-4sry` | **Priority:** P4 | **Created:** 2026-03-16
@@ -178,10 +282,33 @@ Prerequisites:
 
 ---
 
+#### ⚪ Remaining firmware versions (v7, v6, v5) disassembly {#issue-kn5000-2kwt}
+
+**ID:** `kn5000-2kwt` | **Priority:** P4 | **Created:** 2026-03-25
+
+Create source trees for older firmware versions v7, v6, v5. Deferred until v9 and v141 are stable. Diff sizes unknown - need ROM dumps.
+
+---
+
+#### ⚪ v8 maincpu disassembly (1 byte diff from v9) {#issue-kn5000-5vpa}
+
+**ID:** `kn5000-5vpa` | **Priority:** P4 | **Created:** 2026-03-25
+
+v8 firmware differs from v9 by only 1 byte (version number). Create v8/maincpu source tree. Trivial once v9 is complete.
+
+**Depends on:** [`kn5000-q8nv`](#issue-kn5000-q8nv)
+
+---
+
 ## Recently Closed
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-5m2t` | LLVM TLCS-900 backend: add semantic instruction definitio... | 2026-03-25 |
+| `kn5000-5p9k` | Replace unresolved ROM hex addresses with positional .set... | 2026-03-24 |
+| `kn5000-eu8c` | Replace hex ROM addresses with symbolic labels in disasse... | 2026-03-24 |
+| `kn5000-mpyg` | Multi-version ROM disassembly: restructure for v9+v141 | 2026-03-23 |
+| `kn5000-n05c` | MAME: Connect DSP1 ready signal to SubCPU Port H bit 0 | 2026-03-17 |
 | `kn5000-7c0w` | Trace SSF event 0x1C00038 routing path in MAME | 2026-03-17 |
 | `kn5000-jbhk` | MAME: Feature Demo SSF visual presentation | 2026-03-17 |
 | `kn5000-ur11` | Document SSF (Sound Slide Film) presentation system | 2026-03-17 |
@@ -197,13 +324,8 @@ Prerequisites:
 | `kn5000-cy4r` | LLVM TLCS-900: Fix calr with numeric address targets | 2026-03-17 |
 | `kn5000-jd8s` | LLVM TLCS-900: Add 8-bit direct addressing mode (F0 prefix) | 2026-03-17 |
 | `kn5000-205q` | LLVM TLCS-900: Fix R+d16 addressing in disassembler (SRI ... | 2026-03-17 |
-| `kn5000-rv4p` | LLVM TLCS-900: Add backend documentation (README/architec... | 2026-03-17 |
-| `kn5000-mv8f` | Audit kn5000 MAME driver for upstream code style compliance | 2026-03-17 |
-| `kn5000-h5ci` | LLVM TLCS-900: Fix D7 prevbank prefix in disassembler | 2026-03-17 |
-| `kn5000-ete6` | Convert sound_data_*.s files to C struct arrays | 2026-03-17 |
-| `kn5000-q8tm` | Convert sepaout_config.s data to C structs | 2026-03-17 |
 
-*...and 376 more closed issues*
+*...and 381 more closed issues*
 
 ---
 
@@ -214,16 +336,16 @@ Prerequisites:
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| Medium | 3 |
-| Low | 1 |
-| P4 | 1 |
+| Medium | 12 |
+| Low | 4 |
+| P4 | 3 |
 
 ### By Category
 
 | Category | Count |
 |----------|-------|
-| Other | 6 |
+| Other | 20 |
 
 ---
 
-*Last updated: 2026-03-17 21:35*
+*Last updated: 2026-03-25 10:05*
