@@ -60,14 +60,14 @@ One NAKA widget descriptor field changed: `naka_style_bitmaps.c` field `field_07
 
 ### Files Modified
 
-9 source files differ between v9 and v10. Both versions use fully disassembled native instructions (no raw `.byte` code blocks), symbolic label references for `call`/`jp`/`lda_24`, and normalized lowercase hex — so the diff shows only genuine firmware changes. The diff has been systematically minimized from 5,388 lines (initial raw comparison) to just **231 lines** across 9 files.
+10 source files differ between v9 and v10. Both versions use fully disassembled native instructions (no raw `.byte` code blocks), symbolic label references for `call`/`jp`/`lda_24`, parenthesized direct address operands, and normalized lowercase hex — so the diff shows only genuine firmware changes. The diff has been systematically minimized from 5,388 lines (initial raw comparison) to just **106 lines** across 10 files.
 
 | Category | Files | Changed Lines | Description |
 |----------|-------|--------------|-------------|
 | SendPartDataBlock / HDAE rewrite | 1 | ~30 | Core protocol change (instruction-level diff) |
 | Symbolic pointer fixes | 3 | ~10 | `.long (label + 14)` → `.long label` (offset eliminated) |
-| Other genuine changes | 5 | ~8 | Version byte, widget data, padding, label resolution, byte opcode |
-| **Total** | **9** | **+27/−21** | **231 lines total diff** |
+| Other genuine changes | 6 | ~11 | Version byte, widget data, padding, label resolution, byte opcode |
+| **Total** | **10** | **+28/−23** | **106 lines total diff** |
 
 *Note: `call`, `jp`, and `lda_24` instructions use symbolic labels in both v9 and v10 source, so the 14-byte address shift is invisible in the diff. The remaining `.long (label + N)` offsets have been resolved to direct `.long label` references by adjusting label placement to point to the correct v10 addresses.*
 
@@ -148,13 +148,14 @@ Source-level impact (after systematic diff minimization):
   7. Symbolic label resolution              →  1 line (sound_editor_ui.s)
   8. Byte opcode differences               →  ~3 lines
                                               ────────────────────
-                               Source diff:   +27 / −21 lines (231 total)
+                               Source diff:   +28 / −23 lines (106 total)
                                Binary diff:   13,517 bytes (0.64%)
 
   Diff reduction history:
     Initial raw comparison:                5,388 lines
     After symbolic call/jp/lda_24:         ~300 lines
-    After pointer offset elimination:        231 lines (current)
+    After pointer offset elimination:        231 lines
+    After parenthesized direct addr:        106 lines (current)
 ```
 
 ### Interpretation
