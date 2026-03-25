@@ -60,16 +60,16 @@ One NAKA widget descriptor field changed: `naka_style_bitmaps.c` field `field_07
 
 ### Files Modified
 
-17 source files differ between v9 and v10. Both versions use fully disassembled native instructions (no raw `.byte` code blocks), symbolic label references for `call`/`jp`/`lda_24`, and normalized lowercase hex — so the diff shows only genuine firmware changes.
+9 source files differ between v9 and v10. Both versions use fully disassembled native instructions (no raw `.byte` code blocks), symbolic label references for `call`/`jp`/`lda_24`, and normalized lowercase hex — so the diff shows only genuine firmware changes. The diff has been systematically minimized from 5,388 lines (initial raw comparison) to just **231 lines** across 9 files.
 
 | Category | Files | Changed Lines | Description |
 |----------|-------|--------------|-------------|
-| SendPartDataBlock rewrite | 1 | ~60 | Core protocol change (instruction-level diff) |
-| Address operand adjustments | 12 | ~80 | Residual `.byte`-encoded address values in data tables |
-| Other genuine changes | 4 | ~10 | Version byte, widget data, padding, debug code |
-| **Total** | **17** | **+152/−149** | |
+| SendPartDataBlock / HDAE rewrite | 1 | ~30 | Core protocol change (instruction-level diff) |
+| Symbolic pointer fixes | 3 | ~10 | `.long (label + 14)` → `.long label` (offset eliminated) |
+| Other genuine changes | 5 | ~8 | Version byte, widget data, padding, label resolution, byte opcode |
+| **Total** | **9** | **+27/−21** | **231 lines total diff** |
 
-*Note: `call`, `jp`, and `lda_24` instructions use symbolic labels in both v9 and v10 source, so the 14-byte address shift is invisible in the diff. Only `.byte`-encoded address values in data tables still show numeric adjustments.*
+*Note: `call`, `jp`, and `lda_24` instructions use symbolic labels in both v9 and v10 source, so the 14-byte address shift is invisible in the diff. The remaining `.long (label + N)` offsets have been resolved to direct `.long label` references by adjusting label placement to point to the correct v10 addresses.*
 
 ### Genuine Code Changes
 
@@ -95,40 +95,34 @@ In v10, the `SendPartDataBlock_Data` function was restructured from a compact lo
 
 Also in this file: `TmFlashWrite_Block1` and `TmFlash_WriteRoutine` had relative branch displacements adjusted, and several instruction operands updated to reflect the new layout of the SendPartDataBlock region.
 
-#### `audio/audio_cmd_encoder.s` — Fill Padding Adjustment
+#### `audio/sprintf_core.s` — Fill Padding Adjustment
 
-The fill padding between the AudioCmd code block and the end-of-ROM debug functions changed from 12,710 bytes (v9) to 12,696 bytes (v10), absorbing the 14-byte code growth.
+The fill padding between the sprintf code block and the interrupt vector table changed from 12,710 bytes (v9) to 12,696 bytes (v10), absorbing the 14-byte code growth.
 
 #### `boot/rom_end_structure.s` — Version Byte
 
 The firmware version byte at `0xFFFFE8` changed from `0x09` to `0x0A`.
 
+#### `audio/sound_editor_ui.s` — Symbolic Label Resolution
+
+A raw address literal `0xff182c` was resolved to its symbolic label `Sprintf_Octal_ZeroFill_0x7`. This is a genuine address difference caused by the 14-byte shift — the v10 label points to the correct location.
+
 #### `ui_widgets/naka_style_bitmaps.c` — Widget Data Correction
 
 Field `field_0772` changed from `0x0549` to `0x054A` — a minor data correction in a style bitmap widget descriptor.
 
-### Residual Address Adjustments (14 files)
+### Remaining Symbolic Pointer Adjustments (4 files)
 
-Despite symbolic `call`/`jp`/`lda_24` references, some address values remain as raw bytes in `.byte`-encoded data tables (jump dispatch tables, MIDI parameter tables, etc.). These tables contain 3-byte little-endian address values embedded in `.byte` directives, which cannot use symbolic labels.
-
-**Files with `.byte` address adjustments:**
+Most address-bearing `.long` references have been resolved to direct symbolic labels, eliminating the `+ 14` offsets that previously appeared throughout the diff. The remaining differences in pointer-bearing files are:
 
 | File | Hunks | Description |
 |------|-------|-------------|
-| `ui/drawbar_panel_ui.s` | 9 | Drawbar panel jump tables |
-| `midi/computer_interface_pcg.s` | 1 | PCG transfer address table |
-| `demo/file_demo_proc.s` | 5 | Demo procedure addresses |
-| `audio/audio_control_engine.s` | 4 | Audio control dispatch |
-| `ui_widgets/widget_dispatch.s` | 6 | Widget handler address table |
-| `midi/midi_dispatch_handlers.s` | 4 | MIDI handler table |
-| `midi/midipkt_routines.s` | 4 | MIDI packet addresses |
-| `audio/dsp_config_sysex.s` | 3 | DSP config addresses |
-| `sequencer/seq_audio_mode.s` | 1 | Sequencer audio mode table |
-| `storage/flash_floppy_handlers.s` | 3 | Flash handler addresses |
-| `audio/tonegen_fileio_handlers.s` | 2 | Tone generator file I/O |
-| `factory_test/test_data.s` | 1 | Test routine addresses |
-| `ui/ui_control_panel.s` | 2 | Control panel dispatch |
-| `ui/ui_mode_handlers.s` | 1 | UI mode dispatch |
+| `sequencer/smf_event_processor.s` | 1 | `.long (Sprintf_FillToVectors + 14)` → `.long Sprintf_FillToVectors` |
+| `storage/flash_floppy_handlers.s` | 2 | `.long (TmFlashWrite_Block2/3 + 14)` → `.long TmFlashWrite_Block2/3` |
+| `ui_widgets/widget_dispatch.s` | 4 | `.long (SendPartDataBlock_Data2/3 + 11)` → `.long SendPartDataBlock_Data2/3` |
+| `demo/file_demo_proc.s` | 1 | Single `.byte` opcode change |
+
+These represent genuine firmware differences — the v10 label positions were adjusted so the labels point directly to the correct addresses without offset arithmetic.
 
 ### Binary Layout: How 14 Bytes Propagate
 
@@ -144,16 +138,23 @@ v10 ROM Layout:
   │                               │ (2,920 bytes)   │ code        │
   │                               │ [+14 bytes]     │ [shifted]   │
 
-Source-level impact:
-  1. SendPartData rewrite                  →  1,456 lines changed (genuine)
+Source-level impact (after systematic diff minimization):
+  1. SendPartData / HDAE rewrite            →  ~30 lines (genuine code changes)
   2. call/jp/lda_24 to symbolic labels      →  invisible (linker resolves)
-  3. .byte jump table address values       →  ~80 lines (12 files)
+  3. .long pointer offset elimination       →  ~10 lines (4 files, +14/+11 offsets removed)
   4. Fill padding adjustment               →  1 line (12,710 → 12,696)
-  5. Version byte                          →  1 line (0x09 → 0x0A)
+  5. Version byte + comment                →  2 lines (0x09 → 0x0A)
   6. Widget data correction                →  1 line
+  7. Symbolic label resolution              →  1 line (sound_editor_ui.s)
+  8. Byte opcode differences               →  ~3 lines
                                               ────────────────────
-                               Source diff:   +152 / −149 lines
+                               Source diff:   +27 / −21 lines (231 total)
                                Binary diff:   13,517 bytes (0.64%)
+
+  Diff reduction history:
+    Initial raw comparison:                5,388 lines
+    After symbolic call/jp/lda_24:         ~300 lines
+    After pointer offset elimination:        231 lines (current)
 ```
 
 ### Interpretation
