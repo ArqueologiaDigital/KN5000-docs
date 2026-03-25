@@ -56,114 +56,109 @@ One NAKA widget descriptor field changed: `naka_style_bitmaps.c` field `field_07
 
 ---
 
-## Detailed Change Report
+## The Engineering Story
 
-### Files Modified
+The v9-to-v10 firmware update tells a clear story when read at the instruction level. Matsushita's engineers made **one targeted fix** in the SubCPU voice parameter transfer system, and the rest of the ROM differences are mechanical consequences of that fix.
 
-10 source files differ between v9 and v10. Both versions use fully disassembled native instructions (no raw `.byte` code blocks), symbolic label references for `call`/`jp`/`lda_24`, parenthesized direct address operands, and normalized lowercase hex — so the diff shows only genuine firmware changes. The diff has been systematically minimized from 5,388 lines (initial raw comparison) to just **106 lines** across 10 files.
+### The Bug: Silent Failures in SubCPU Communication
 
-| Category | Files | Changed Lines | Description |
-|----------|-------|--------------|-------------|
-| SendPartDataBlock / HDAE rewrite | 1 | ~30 | Core protocol change (instruction-level diff) |
-| Symbolic pointer fixes | 3 | ~10 | `.long (label + 14)` → `.long label` (offset eliminated) |
-| Other genuine changes | 6 | ~11 | Version byte, widget data, padding, label resolution, byte opcode |
-| **Total** | **10** | **+28/−23** | **106 lines total diff** |
+The root cause is in `SendPartDataBlock_DoGetError` -- the function called when the main CPU needs to verify that a data block transfer to the SubCPU completed successfully.
 
-*Note: `call`, `jp`, and `lda_24` instructions use symbolic labels in both v9 and v10 source, so the 14-byte address shift is invisible in the diff. The remaining `.long (label + N)` offsets have been resolved to direct `.long label` references by adjusting label placement to point to the correct v10 addresses.*
-
-### Genuine Code Changes
-
-#### `audio/note_voice_mapping.s` — SubCPU Data Transfer Rewrite
-
-This is the dominant change. The `SendPartDataBlock` region (addresses `0xFEF99E`–`0xFF04F8`) was substantially rewritten between v9 and v10. Both versions are fully disassembled to native instructions, so the diff shows the actual instruction-level differences.
-
-**Functions affected:**
-
-| Function | v9 Size | v10 Size | Change |
-|----------|---------|----------|--------|
-| `SendPartDataBlock_DoGetError` | 11 bytes | 22 bytes | Expanded error checking |
-| `SendPartDataBlock_Data` | 1,612 bytes | 1,612 bytes | Restructured field copy |
-| `SendPartDataBlock_Data2`–`Data5` | ~280 bytes | ~290 bytes | Parameter tables updated |
-| `SendPartDataBlock_InitVal4`–`InitVal9` | ~180 bytes | ~180 bytes | Minor adjustments |
-| `HdaeRom_DataHandler` | 34 bytes | 34 bytes | Protocol changes |
-| `HdaeRom_DataDispatch` | 470 bytes | 480 bytes | Dispatch table restructured |
-| `HdaeRom_AltHandler/AltDispatch` | ~90 bytes | ~90 bytes | Adjusted |
-| `PostTmLoad`/`PostTmSave` | ~80 bytes | ~80 bytes | Adjusted |
-| **Total region** | **2,906 bytes** | **2,920 bytes** | **+14 bytes** |
-
-In v10, the `SendPartDataBlock_Data` function was restructured from a compact loop-based approach to explicit per-field memory copies. This may reflect a bug fix or compatibility improvement in how voice parameters are transferred to the SubCPU's tone generator registers.
-
-Also in this file: `TmFlashWrite_Block1` and `TmFlash_WriteRoutine` had relative branch displacements adjusted, and several instruction operands updated to reflect the new layout of the SendPartDataBlock region.
-
-#### `audio/sprintf_core.s` — Fill Padding Adjustment
-
-The fill padding between the sprintf code block and the interrupt vector table changed from 12,710 bytes (v9) to 12,696 bytes (v10), absorbing the 14-byte code growth.
-
-#### `boot/rom_end_structure.s` — Version Byte
-
-The firmware version byte at `0xFFFFE8` changed from `0x09` to `0x0A`.
-
-#### `audio/sound_editor_ui.s` — Symbolic Label Resolution
-
-A raw address literal `0xff182c` was resolved to its symbolic label `Sprintf_Octal_ZeroFill_0x7`. This is a genuine address difference caused by the 14-byte shift — the v10 label points to the correct location.
-
-#### `ui_widgets/naka_style_bitmaps.c` — Widget Data Correction
-
-Field `field_0772` changed from `0x0549` to `0x054A` — a minor data correction in a style bitmap widget descriptor.
-
-### Remaining Symbolic Pointer Adjustments (4 files)
-
-Most address-bearing `.long` references have been resolved to direct symbolic labels, eliminating the `+ 14` offsets that previously appeared throughout the diff. The remaining differences in pointer-bearing files are:
-
-| File | Hunks | Description |
-|------|-------|-------------|
-| `sequencer/smf_event_processor.s` | 1 | `.long (Sprintf_FillToVectors + 14)` → `.long Sprintf_FillToVectors` |
-| `storage/flash_floppy_handlers.s` | 2 | `.long (TmFlashWrite_Block2/3 + 14)` → `.long TmFlashWrite_Block2/3` |
-| `ui_widgets/widget_dispatch.s` | 4 | `.long (SendPartDataBlock_Data2/3 + 11)` → `.long SendPartDataBlock_Data2/3` |
-| `demo/file_demo_proc.s` | 1 | Single `.byte` opcode change |
-
-These represent genuine firmware differences — the v10 label positions were adjusted so the labels point directly to the correct addresses without offset arithmetic.
-
-### Binary Layout: How 14 Bytes Propagate
-
-```
-v9 ROM Layout:
-  0xE00000 ─────────────────────── 0xFEF99E ──────── 0xFF04F2 ──── 0xFFFFFF
-  │ Identical code               │ SendPartData    │ Post-region │
-  │                               │ (2,906 bytes)   │ code        │
-
-v10 ROM Layout:
-  0xE00000 ─────────────────────── 0xFEF99E ──────── 0xFF0506 ──── 0xFFFFFF
-  │ Identical code               │ SendPartData    │ Post-region │
-  │                               │ (2,920 bytes)   │ code        │
-  │                               │ [+14 bytes]     │ [shifted]   │
-
-Source-level impact (after systematic diff minimization):
-  1. SendPartData / HDAE rewrite            →  ~30 lines (genuine code changes)
-  2. call/jp/lda_24 to symbolic labels      →  invisible (linker resolves)
-  3. .long pointer offset elimination       →  ~10 lines (4 files, +14/+11 offsets removed)
-  4. Fill padding adjustment               →  1 line (12,710 → 12,696)
-  5. Version byte + comment                →  2 lines (0x09 → 0x0A)
-  6. Widget data correction                →  1 line
-  7. Symbolic label resolution              →  1 line (sound_editor_ui.s)
-  8. Byte opcode differences               →  ~3 lines
-                                              ────────────────────
-                               Source diff:   +28 / −23 lines (106 total)
-                               Binary diff:   13,517 bytes (0.64%)
-
-  Diff reduction history:
-    Initial raw comparison:                5,388 lines
-    After symbolic call/jp/lda_24:         ~300 lines
-    After pointer offset elimination:        231 lines
-    After parenthesized direct addr:        106 lines (current)
+**v9 (broken):**
+```asm
+SendPartDataBlock_DoGetError:
+    ldw  wa, 0xff        ; load "error" response
+    ldw  bc, 0xff
+    jp   COMM_BuildAndSendPacket   ; tail-call: send and return
 ```
 
-### Interpretation
+**v10 (fixed):**
+```asm
+SendPartDataBlock_DoGetError:
+    call SubCPU_Payload_GetErrorFlag   ; actually check for errors
+    cp   hl, 0xffff                    ; was there an error?
+    ret  nz                            ; if yes, abort early
+    ldw  wa, 0xff
+    ldw  bc, 0xff
+    call COMM_BuildAndSendPacket       ; changed from jp to call
+    ret                                ; explicit return
+```
 
-The v9→v10 update appears to be a **targeted bug fix or protocol improvement** in the SubCPU voice parameter transfer system. The rewrite of `SendPartDataBlock_Data` from a loop-based to an explicit-copy approach suggests one of:
+In v9, `DoGetError` was **not checking for errors at all**. It blindly sent a "success" packet regardless of whether the SubCPU payload transfer actually succeeded. The v10 fix adds a call to `SubCPU_Payload_GetErrorFlag`, checks the return value, and aborts early if an error occurred. This grew the function from 10 bytes to 21 bytes (**+11 bytes**).
 
-1. **A timing-sensitive bug fix** — the loop-based approach in v9 may have caused race conditions with the SubCPU's tone generator during rapid voice changes.
-2. **A parameter format change** — v10 may transfer additional fields or handle edge cases differently.
-3. **A compatibility fix** — the HDAE5000 extension data handler was also restructured, suggesting the fix relates to save/restore operations with the hard disk expansion.
+### The Second Fix: Return Value Corruption
 
-The conservative nature of the change (only touching one subsystem, with 99.36% of the ROM identical) is consistent with a late-stage maintenance release fixing a specific customer-reported issue.
+A second change in the same region fixes return value handling:
+
+**v9:**
+```asm
+    jrl  SendPartDataBlock_SetWord7   ; tail-jump (doesn't return here)
+```
+
+**v10:**
+```asm
+    calr SendPartDataBlock_SetWord7   ; call (returns here)
+    lds  hl, 0                        ; clear return value to "success"
+    ret                               ; explicit return
+```
+
+In v9, this was a tail-jump -- control flow never returned. In v10, it became a proper call followed by clearing `hl` to zero (indicating success) before returning. This suggests the v9 version could leave stale data in `hl` that callers would misinterpret as an error code. This added **+3 bytes**.
+
+**Total intentional code growth: 11 + 3 = 14 bytes.**
+
+### The Cascade: How 14 Bytes Become 13,517
+
+The KN5000's 2MB ROM has no relocatable linking at runtime -- all addresses are hardcoded. When 14 bytes of code were inserted in the middle of `note_voice_mapping.s`, every absolute address pointing to code *after* that insertion point shifted. This cascade explains every other difference in the diff:
+
+| Consequence | Files | Diff Lines | Explanation |
+|-------------|-------|------------|-------------|
+| `.long` pointers shifted +14 | 2 | 6 | Data tables in `smf_event_processor.s` and `flash_floppy_handlers.s` contain 32-bit pointers to functions that moved |
+| `.long` pointers shifted +11 | 1 | 8 | `widget_dispatch.s` NAKA descriptors point to `SendPartDataBlock_Data2/Data3`, which are *inside* the modified region -- they shifted by 11 (only past the first fix, not both) |
+| `pushw` callback address shifted | 1 | 4 | `Sprintf_OutputCallback` address split across two `pushw` instructions |
+| Fill padding absorbed the growth | 1 | 2 | `Sprintf_FillToVectors` shrank from 12,710 to 12,696 bytes of 0xFF padding |
+| Version byte | 1 | 2 | `0x09` -> `0x0A` at address `0xFFFFE8` |
+
+### Unrelated Single-Byte Fixes
+
+Five single-byte differences appear to be opportunistic fixes made during the same release cycle, unrelated to the SubCPU error-handling bug:
+
+1. **Widget bitmap parameter** (`naka_style_bitmaps.c`): `field_0772` changed from `0x0549` to `0x054A` (+1). Likely a cosmetic UI fix -- an off-by-one in a display size or position for a style bitmap widget.
+
+2. **Data table prefix** (`demo/file_demo_proc.s`): byte `0xe5` changed to `0xf3`. In a bytecode/data table region surrounded by `swi` instructions, this changed a table entry from one addressing mode prefix to another.
+
+3. **32-bit constant** (`note_voice_mapping.s`): `0xe91e376f` changed to `0xe61e376f`. The high byte changed from `0xe9` to `0xe6` in a constant loaded during `TmFlashWrite_Block1_Entry` -- a flash memory write configuration value.
+
+4. **Invalid opcode fix** (`note_voice_mapping.s`): `.byte 0xed` (not a valid TLCS-900 opcode) changed to `swi 3` (`0xfb`). Located in a jump table, this was likely a corrupted table entry in v9 that was corrected in v10.
+
+5. **Register correction** (`note_voice_mapping.s`): `cp (xhl+8), sp` changed to `cp (xbc+8), xsp`. The base register changed from XHL to XBC -- a bug fix where v9 was comparing against the wrong register pair.
+
+### Conclusion
+
+**The v9-to-v10 update was a targeted reliability fix.** The SubCPU data transfer system in v9 had a silent failure mode: when the SubCPU reported a payload error, the main CPU ignored it and sent a "success" response anyway. This could cause the tone generator to operate with corrupted voice parameters -- resulting in wrong sounds, missing notes, or audio glitches that would be difficult to reproduce and diagnose.
+
+The fix was surgical: add 14 bytes of error checking code, fix a return value corruption path, and let the existing 0xFF padding absorb the growth. The additional single-byte changes suggest the engineers also addressed a few minor bugs discovered during the same testing cycle.
+
+The 7-month gap between releases (January to August 1999) is consistent with a field-reported issue that required careful investigation and regression testing before deployment.
+
+## Source Diff Statistics
+
+**95 lines** across 9 files (+ 2 entry point renames). Systematically minimized from 5,388 lines through symbolic references, parenthesized operands, and normalized formatting.
+
+| Category | Files | Lines | Description |
+|----------|-------|-------|-------------|
+| SubCPU error handling fix | 1 | ~15 | The core bug fix (+14 bytes) |
+| Address cascade (`.long + N`) | 3 | ~14 | Pointer adjustments from code growth |
+| Callback address shift | 1 | 4 | `Sprintf_OutputCallback` pushw values |
+| Padding absorption | 1 | 2 | Fill size 12,710 -> 12,696 |
+| Version byte | 1 | 2 | `0x09` -> `0x0A` |
+| Unrelated single-byte fixes | 2 | ~6 | Constants, opcodes, registers |
+| **Total** | **9** | **95** | |
+
+```
+Diff reduction history:
+  Initial raw comparison:                5,388 lines
+  After symbolic call/jp/lda_24:         ~300 lines
+  After pointer offset elimination:        231 lines
+  After parenthesized direct addr:        106 lines
+  After symbolic calr + formatting:         95 lines (current)
+```
