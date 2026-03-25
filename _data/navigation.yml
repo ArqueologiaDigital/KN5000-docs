@@ -131,6 +131,8 @@
       url: /llvm-semantic-instructions/
     - title: TLCS-900 Instruction Encoding
       url: /tlcs900-instruction-encoding/
+    - title: Cross-Version Diff Guidebook
+      url: /cross-version-diff-guidebook/
     - title: Flash Programming
       url: /flash-programming/
 
