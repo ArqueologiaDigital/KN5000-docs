@@ -127,6 +127,8 @@
       url: /floppy-security-analysis/
     - title: LZSS Compression
       url: /lzss-compression/
+    - title: LLVM Semantic Instructions
+      url: /llvm-semantic-instructions/
     - title: TLCS-900 Instruction Encoding
       url: /tlcs900-instruction-encoding/
     - title: Flash Programming
