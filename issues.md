@@ -8,10 +8,10 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
-**Total Issues:** 422 (20 open, 401 closed)
+**Total Issues:** 424 (21 open, 402 closed)
 
 **Quick Links:** 
-[Other](#other) (20)
+[Other](#other) (21)
 
 ---
 
@@ -105,6 +105,12 @@ After boot completes, dump DRAM 0x8E78 region in MAME debugger: d 0x8E78,0x30. S
 
 ---
 
+#### 🟡 Fix remaining 1,290 v7 maincpu diffs (99.94% → 100%) {#issue-kn5000-aqwj}
+
+**ID:** `kn5000-aqwj` | **Priority:** Medium | **Created:** 2026-03-26
+
+---
+
 #### 🟡 LLVM semantic instruction migration Phase 2: 24-bit addressing {#issue-kn5000-7ubb}
 
 **ID:** `kn5000-7ubb` | **Priority:** Medium | **Created:** 2026-03-25
@@ -161,14 +167,6 @@ Create a new MAME upstream PR (PR5) for accumulated driver fixes on kn5000_pr5_d
 
 ---
 
-#### 🟡 Rebase kn5000_pr5_driver branch onto current MAME master {#issue-kn5000-jt0b}
-
-**ID:** `kn5000-jt0b` | **Priority:** Medium | **Created:** 2026-03-16
-
-The kn5000_pr5_driver branch needs rebasing onto current upstream MAME master before creating PR. Check for conflicts with recent MAME changes.
-
----
-
 #### 🟡 Set watchpoint on encoder state area 0x8E78 {#issue-kn5000-s2wv}
 
 **ID:** `kn5000-s2wv` | **Priority:** Medium | **Created:** 2026-03-18
@@ -190,6 +188,14 @@ After identifying candidate encoder IDs from ROM table analysis, modify HLE to s
 **ID:** `kn5000-4tgy` | **Priority:** Medium | **Created:** 2026-03-18
 
 Set breakpoint on CPanel_InitButtonState in MAME debugger and wait 30+ seconds. If it never triggers, the 4th-cycle counter is broken and button/encoder state never refreshes after boot. Requires human interaction.
+
+---
+
+#### 🟡 v7: Eliminate code blob (v7_postshift_blob.bin) {#issue-kn5000-6yp4}
+
+**ID:** `kn5000-6yp4` | **Priority:** Medium | **Created:** 2026-03-25
+
+The 1.1MB binary blob replaces 43 .include files. Analysis shows 93% of the code section is identical content at shifted positions. The shifts are caused by embedded data blocks that changed size between v7 and v9. Need to: (1) identify each shift transition in the code section, (2) extract v7-specific data blocks at each transition, (3) restore .include directives with v7 data blocks. NOT fundamentally different code — just shifted by varying amounts due to data size changes.
 
 ---
 
@@ -304,6 +310,7 @@ v8 firmware differs from v9 by only 1 byte (version number). Create v8/maincpu s
 
 | Issue | Title | Closed |
 |-------|-------|--------|
+| `kn5000-jt0b` | Rebase kn5000_pr5_driver branch onto current MAME master | 2026-03-25 |
 | `kn5000-5m2t` | LLVM TLCS-900 backend: add semantic instruction definitio... | 2026-03-25 |
 | `kn5000-5p9k` | Replace unresolved ROM hex addresses with positional .set... | 2026-03-24 |
 | `kn5000-eu8c` | Replace hex ROM addresses with symbolic labels in disasse... | 2026-03-24 |
@@ -323,9 +330,8 @@ v8 firmware differs from v9 by only 1 byte (version number). Create v8/maincpu s
 | `kn5000-riek` | LLVM TLCS-900: Add auto-increment addressing mode for CP | 2026-03-17 |
 | `kn5000-cy4r` | LLVM TLCS-900: Fix calr with numeric address targets | 2026-03-17 |
 | `kn5000-jd8s` | LLVM TLCS-900: Add 8-bit direct addressing mode (F0 prefix) | 2026-03-17 |
-| `kn5000-205q` | LLVM TLCS-900: Fix R+d16 addressing in disassembler (SRI ... | 2026-03-17 |
 
-*...and 381 more closed issues*
+*...and 382 more closed issues*
 
 ---
 
@@ -336,7 +342,7 @@ v8 firmware differs from v9 by only 1 byte (version number). Create v8/maincpu s
 | Priority | Count |
 |----------|-------|
 | Critical | 1 |
-| Medium | 12 |
+| Medium | 13 |
 | Low | 4 |
 | P4 | 3 |
 
@@ -344,8 +350,8 @@ v8 firmware differs from v9 by only 1 byte (version number). Create v8/maincpu s
 
 | Category | Count |
 |----------|-------|
-| Other | 20 |
+| Other | 21 |
 
 ---
 
-*Last updated: 2026-03-25 10:05*
+*Last updated: 2026-03-27 01:03*
