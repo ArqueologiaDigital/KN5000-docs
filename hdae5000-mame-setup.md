@@ -113,6 +113,8 @@ LEFT side:     RIGHT side:
  0  2  4  6  8
 ```
 
+![HD FORMAT instructions from the HD-AE5000 owner's manual]({{ site.baseurl }}/assets/images/hdae5000-hd-format-manual.png)
+
 This creates the custom HDAE5000 filesystem (FSB/FGB/FEB structures) on the disk.
 
 Alternatively, the original HD-TechManager5000 PC software could format the disk via the parallel port interface (command 0x17).
