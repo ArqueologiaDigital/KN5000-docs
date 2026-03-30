@@ -36,8 +36,8 @@ PR 2 (EI/RETI shadow) ──┘
 
 ## PR 1: TLCS-900/H --- LDC Control Register Mapping for TMP94C241 DMA Registers {#pr1}
 
-<div style="background: #fff3cd; border: 3px solid #ffc107; border-radius: 8px; padding: 16px; margin: 16px 0; font-size: 1.1em;">
-<strong>&#9888;&#65039; REVIEW STATUS:</strong> All PRs on this page were drafted with AI assistance (Claude). <strong>PRs 1&ndash;3 have been fully reviewed</strong> by the author (Felipe Sanches) and submitted upstream. PRs 4&ndash;5 are still under human review and may be tweaked before submission.
+<div style="background: #d4edda; border: 3px solid #28a745; border-radius: 8px; padding: 16px; margin: 16px 0; font-size: 1.1em;">
+<strong>&#10003; STATUS (March 2026):</strong> All 5 PRs have been <strong>merged upstream</strong>. See the <a href="{{ site.baseurl }}/mame-branch-review/">Branch Review &amp; Roadmap</a> page for upcoming PR candidates (PR 6+).
 </div>
 
 **Upstream PR:** [mamedev/mame#14970](https://github.com/mamedev/mame/pull/14970) (merged)
@@ -153,7 +153,7 @@ Toshiba TLCS-900/H Programming Manual, Section 8.2: "After the EI instruction or
 
 ## PR 3: TMP94C241 --- DMA Subsystem (HDMA + DMAR) and Port Read Fix {#pr3}
 
-**Upstream PR:** [mamedev/mame#15003](https://github.com/mamedev/mame/pull/15003) (open)
+**Upstream PR:** [mamedev/mame#15003](https://github.com/mamedev/mame/pull/15003) (merged)
 
 **Branch:** [`kn5000_pr3_dma_and_port`](https://github.com/felipesanches/mame/tree/kn5000_pr3_dma_and_port)
 
@@ -202,6 +202,8 @@ TMP94C241F Data Sheet:
 ---
 
 ## PR 4: TMP94C241 --- Serial Port Sub-Device {#pr4}
+
+**Upstream PR:** [mamedev/mame#15015](https://github.com/mamedev/mame/pull/15015) (merged)
 
 **Branch:** [`kn5000_pr4_serial`](https://github.com/felipesanches/mame/tree/kn5000_pr4_serial)
 
@@ -252,6 +254,8 @@ TMP94C241F Data Sheet:
 ---
 
 ## PR 5: KN5000 Driver --- Control Panel HLE, SubCPU Payload Transfer, Keybed HLE {#pr5}
+
+**Upstream PR:** [mamedev/mame#15143](https://github.com/mamedev/mame/pull/15143) (merged)
 
 **Branch:** [`kn5000_pr5_driver`](https://github.com/felipesanches/mame/tree/kn5000_pr5_driver)
 
