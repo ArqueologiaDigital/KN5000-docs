@@ -244,7 +244,7 @@ The protocol requires **PS/2 bidirectional mode** (also called "byte mode"), **n
 
 The ppkn50.dll sets bit 5 before every receive operation and clears it before every send operation. A PC with only unidirectional SPP (no PS/2 bidirectional support) will **not** work --- data reads will return the output latch value instead of the HDAE5000's data.
 
-**MAME emulation note:** MAME's `pc_lpt_device` already supports bidirectional data reads via `data_r()` which reads from the centronics input buffer. Control register bit 5 is stored but not explicitly gated --- `data_r()` always returns peripheral-driven data ANDed with the output latch (pull-up behavior), so bidirectional mode works without additional changes.
+**MAME emulation note:** MAME's `pc_lpt_device` required a fix to support PS/2 bidirectional mode. The original `data_r()` implementation always returned `m_data & peripheral_data` (SPP pull-up behavior), which masks out peripheral data bits wherever the output latch has zeros. For example, after sending byte 0x01 and switching to input mode, only bit 0 of the peripheral's response would be visible. The fix (March 2026, branch `kn5000_research_techmanager`) checks the inverted control bit 5 and returns pure peripheral data when bidirectional mode is active.
 
 ### Physical Interface
 
