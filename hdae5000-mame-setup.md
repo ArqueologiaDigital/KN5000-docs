@@ -104,8 +104,14 @@ With a blank (all-zeros) disk image, the drive responds to ATA commands but the 
 The HD-AE5000 firmware has a built-in format function accessible from the disk menu (**HD FORMAT**). To use it:
 
 1. **Write protection must be OFF** (the HD FORMAT icon is grayed out when write-protected)
-2. The firmware prompts for a **safety code**: enter **0 5 0 3 5 4** using the UP/DOWN data wheel
-3. Confirm to begin formatting
+2. The firmware prompts for a **6-digit safety code**: **0 5 0 3 5 4**
+3. Enter the code using the **soft buttons along the LCD edges**, which act as a numeric keypad:
+
+```
+LEFT side:     RIGHT side:
+ 1  3  5  7  9
+ 0  2  4  6  8
+```
 
 This creates the custom HDAE5000 filesystem (FSB/FGB/FEB structures) on the disk.
 
