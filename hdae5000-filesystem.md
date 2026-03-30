@@ -437,6 +437,72 @@ Note: Byte 1, bit 6 is explicitly unused (skipped in the dispatch logic).
 
 Beyond FSB transfer, the parallel port can also send/receive file data and support custom ROM data transfer. This interface enables the Technics SX-KN5000 to exchange files with a PC via the HD-TechManager5000 Windows software.
 
+## On-Disk Layout (from Formatted 1GB Disk Image)
+
+Analysis of an actual formatted HDAE5000 disk image reveals the precise sector layout. The disk is divided into three zones: a superblock, a file data area, and a directory area at the end.
+
+### Superblock (Sector 0)
+
+The first sector contains the filesystem signature and metadata:
+
+```
+Offset  Size  Contents
+------  ----  --------
+0x00    4     Signature: 0x55AA55AA (little-endian)
+0x04    4     Magic: 0xF3F2F1F4 (LE; firmware loads as 0xF4F1F2F3)
+0x08    32    Author: "Technics Software section    M. Kitajima"
+0x30    8     ROM version: "2.33J"
+0x48    8     Disk format version: "2.21"
+0x60    24    Model: "TECHNICS KN5000"
+0x78    8     Config flags: 01 01 01 01 01 01 FF FF
+0x80    384   Reserved (zeros)
+```
+
+The firmware validates the superblock by checking the signature (`0xAA55AA55`) and magic (`0xF4F1F2F3`) as 32-bit register values.
+
+### File Data Area (Sectors 1 -- 0xF402)
+
+Sectors 1 through 0xF402 (62,466 sectors = **30.5 MB**) are available for storing file data. On a freshly formatted disk, these sectors are all zeros.
+
+### Directory Area (Sectors 0xF403 -- 0x10805)
+
+The directory area occupies the **end** of the addressable disk space, organized as:
+
+| Sectors | Size | Purpose |
+|---------|------|---------|
+| 0xF403 -- 0xF41F | 29 sectors (14,848 bytes) | Name block (file/group names) |
+| 0xF420 -- 0xF5FF | 509 sectors | Unused gap |
+| 0xF600 -- 0xF61F | 32 sectors (16,384 bytes) | Directory block 1 |
+| 0xF800 -- 0xF81F | 32 sectors (16,384 bytes) | Directory block 2 |
+| 0xFA00 -- 0xFA1F | 32 sectors (16,384 bytes) | Directory block 3 |
+| 0xFC00 -- 0xFC1F | 32 sectors (16,384 bytes) | Directory block 4 |
+| 0xFE00 -- 0xFE1F | 32 sectors (16,384 bytes) | Directory block 5 |
+| 0x10000 -- 0x1001F | 32 sectors (16,384 bytes) | Directory block 6 |
+| 0x10200 -- 0x1021F | 32 sectors (16,384 bytes) | Directory block 7 |
+| 0x10400 -- 0x1041F | 32 sectors (16,384 bytes) | Directory block 8 |
+| 0x10600 -- 0x1061F | 32 sectors (16,384 bytes) | Directory block 9 |
+| 0x10800 -- 0x10805 | 6 sectors (3,072 bytes) | Directory block 10 (partial) |
+
+Directory blocks are spaced at **0x200-sector intervals** (256 KB apart) starting from sector 0xF600.
+
+### 76-Byte Directory Record
+
+Each directory block contains packed 76-byte records:
+
+```
+Offset  Size  Contents
+------  ----  --------
+0x00    26    Name field (26 ASCII chars, space-padded 0x20)
+0x1A    10    Metadata (sector references, flags; 0x00 = empty)
+0x24    40    Allocation data (sector bitmap/chain; 0xFF = free)
+```
+
+On a freshly formatted disk, all entries are empty: 26 spaces + 10 zeros + 40 `0xFF` bytes. The total directory space (~165 KB across all blocks) can hold approximately **2,176 entry slots**.
+
+### Observed Data: "RONCO"
+
+In the analyzed disk image, the string **"RONCO"** was found at sector 0x10600 offset +0x0782 (disk byte offset 0x020C0782). This appears to be a file group or partition name stored in the last full directory block, indicating this disk was previously used on a real KN5000.
+
 ## Analysis Status
 
 All key filesystem routines have been **fully disassembled** to native TLCS-900 assembly. The on-disk FSB format has been largely reconstructed:
