@@ -97,7 +97,19 @@ This is the expected behavior. After dismissing the error, the KN5000 boots norm
 
 ### What Happens With a Blank Disk
 
-With a blank (all-zeros) disk image, the drive responds to ATA commands but the filesystem is not initialized. The firmware will detect the drive but report an FSB error. The original HD-TechManager5000 PC software would format the disk via the parallel port.
+With a blank (all-zeros) disk image, the drive responds to ATA commands but the filesystem is not initialized. The firmware will detect the drive but report an FSB error.
+
+### Formatting the Hard Disk
+
+The HD-AE5000 firmware has a built-in format function accessible from the disk menu (**HD FORMAT**). To use it:
+
+1. **Write protection must be OFF** (the HD FORMAT icon is grayed out when write-protected)
+2. The firmware prompts for a **safety code**: enter **0 5 0 3 5 4** using the UP/DOWN data wheel
+3. Confirm to begin formatting
+
+This creates the custom HDAE5000 filesystem (FSB/FGB/FEB structures) on the disk.
+
+Alternatively, the original HD-TechManager5000 PC software could format the disk via the parallel port interface (command 0x17).
 
 ## ATA Interface Details
 
