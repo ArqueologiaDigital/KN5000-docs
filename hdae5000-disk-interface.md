@@ -229,20 +229,50 @@ The HD-TechManager5000 Windows software (ppkn50.dll) communicates with the HDAE5
 
 ### Parallel Port Mode: PS/2 Bidirectional
 
-The protocol requires **PS/2 bidirectional mode** (also called "byte mode"), **not** EPP or ECP. Evidence from ppkn50.dll disassembly:
+The protocol requires **PS/2 bidirectional mode** (also called "byte mode"), **not** SPP nibble mode, EPP, or ECP.
 
-- Only standard SPP registers are used: base+0 (0x378), base+1 (0x379), base+2 (0x37A). No EPP-specific ports (base+3, base+4) are accessed.
-- The receive-byte routine sets `ctrl |= 0xA1` before reading data. The value 0xA1 = 0x80 \| 0x20 \| 0x01 --- **bit 5 (0x20) is the bidirectional direction bit** that switches the data port from output to input on PS/2-compatible parallel ports.
-- All handshaking is software-driven (strobe/busy polling), not hardware-handshaked as in EPP.
+#### Why not SPP nibble mode?
 
-**Direction switching:**
+On a pure unidirectional SPP port, the standard way to receive data from a peripheral is **nibble mode**: the peripheral puts 4 bits on the status lines (base+1, bits 3--7), the PC reads them, then the peripheral sends the other 4 bits --- two reads per byte through the status port.
+
+The ppkn50.dll does **not** use nibble mode. The receive-byte function (at address `0x10001360` in ppkn50.dll) reads data from `base+0` (the data port) via a single `in (%dx), %al` instruction at address `0x1000142A`, after setting control bit 5 to switch the data bus direction. There is no status-port bit shifting, no two-nibble reassembly --- it's a direct 8-bit read from the data port.
+
+#### Why not EPP or ECP?
+
+EPP adds hardware-handshaked registers at base+3 (address) and base+4 (data). ECP adds DMA and FIFO registers. The ppkn50.dll **never accesses** any port beyond base+0, base+1, and base+2. All handshaking is software-driven (strobe/busy polling).
+
+#### Evidence from ppkn50.dll binary
+
+The send-byte and receive-byte functions explicitly switch the data port direction via control register bit 5:
+
+**Send byte** (ppkn50.dll address `0x100011E0`):
+```asm
+100011f0:  ec              in     (%dx),%al      ; read control (base+2)
+100011f1:  24 5e           and    $0x5e,%al      ; clear bit 5 (output mode) + bit 0 + bit 7
+100011f3:  ee              out    %al,(%dx)      ; write control
+100011f8:  8a 45 0c        mov    0xc(%ebp),%al  ; load data byte
+100011fb:  ee              out    %al,(%dx)      ; write to data port (base+0)
+```
+
+**Receive byte** (ppkn50.dll address `0x10001360`):
+```asm
+10001372:  ec              in     (%dx),%al      ; read control (base+2)
+10001373:  0c a1           or     $0xa1,%al      ; set bit 5 (input mode) + bit 0 + bit 7
+10001375:  ee              out    %al,(%dx)      ; write control
+    ; ... poll status bit 7, wait for data ready ...
+1000142a:  ec              in     (%dx),%al      ; read data port (base+0)
+```
+
+The `AND $0x5E` clears bit 5 (switch to output), the `OR $0xA1` sets bit 5 (switch to input). This is the defining characteristic of PS/2 bidirectional mode. A pure SPP port ignores bit 5, and reading base+0 returns the output latch --- which would corrupt received data.
+
+**Direction switching summary:**
 
 | Control bit 5 | Data port (base+0) | Operation |
 |---------------|-------------------|-----------|
 | 0 (cleared) | Output | PC writes data to HDAE5000 |
 | 1 (set) | Input | PC reads data from HDAE5000 |
 
-The ppkn50.dll sets bit 5 before every receive operation and clears it before every send operation. A PC with only unidirectional SPP (no PS/2 bidirectional support) will **not** work --- data reads will return the output latch value instead of the HDAE5000's data.
+**Compatibility:** A PC with only unidirectional SPP (no PS/2 bidirectional support) will **not** work with TechManager5000 --- data reads will return the output latch value instead of the HDAE5000's data. The PC must have at least a PS/2-compatible parallel port (standard on PCs from 1987 onwards).
 
 **MAME emulation note:** MAME's `pc_lpt_device` required a fix to support PS/2 bidirectional mode. The original `data_r()` implementation always returned `m_data & peripheral_data` (SPP pull-up behavior), which masks out peripheral data bits wherever the output latch has zeros. For example, after sending byte 0x01 and switching to input mode, only bit 0 of the peripheral's response would be visible. The fix (March 2026, branch `kn5000_research_techmanager`) checks the inverted control bit 5 and returns pure peripheral data when bidirectional mode is active.
 
