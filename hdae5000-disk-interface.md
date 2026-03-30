@@ -227,15 +227,34 @@ The PC parallel port (PPORT) protocol includes these disk-related commands:
 
 The HD-TechManager5000 Windows software (ppkn50.dll) communicates with the HDAE5000 using a bidirectional parallel port protocol. This section documents the low-level handshaking derived from disassembly of ppkn50.dll.
 
+### Parallel Port Mode: PS/2 Bidirectional
+
+The protocol requires **PS/2 bidirectional mode** (also called "byte mode"), **not** EPP or ECP. Evidence from ppkn50.dll disassembly:
+
+- Only standard SPP registers are used: base+0 (0x378), base+1 (0x379), base+2 (0x37A). No EPP-specific ports (base+3, base+4) are accessed.
+- The receive-byte routine sets `ctrl |= 0xA1` before reading data. The value 0xA1 = 0x80 \| 0x20 \| 0x01 --- **bit 5 (0x20) is the bidirectional direction bit** that switches the data port from output to input on PS/2-compatible parallel ports.
+- All handshaking is software-driven (strobe/busy polling), not hardware-handshaked as in EPP.
+
+**Direction switching:**
+
+| Control bit 5 | Data port (base+0) | Operation |
+|---------------|-------------------|-----------|
+| 0 (cleared) | Output | PC writes data to HDAE5000 |
+| 1 (set) | Input | PC reads data from HDAE5000 |
+
+The ppkn50.dll sets bit 5 before every receive operation and clears it before every send operation. A PC with only unidirectional SPP (no PS/2 bidirectional support) will **not** work --- data reads will return the output latch value instead of the HDAE5000's data.
+
+**MAME emulation note:** MAME's `pc_lpt_device` already supports bidirectional data reads via `data_r()` which reads from the centronics input buffer. Control register bit 5 is stored but not explicitly gated --- `data_r()` always returns peripheral-driven data ANDed with the output latch (pull-up behavior), so bidirectional mode works without additional changes.
+
 ### Physical Interface
 
-**PC Parallel Port (Standard SPP):**
+**PC Parallel Port (PS/2 Bidirectional):**
 
 | Port Address | Register | Direction | Function |
 |--------------|----------|-----------|----------|
-| base+0 (0x378) | Data | Bidirectional | 8-bit data byte |
+| base+0 (0x378) | Data | Bidirectional | 8-bit data byte (direction controlled by ctrl bit 5) |
 | base+1 (0x379) | Status | Input | Status signals from HDAE5000 |
-| base+2 (0x37A) | Control | Output | Control signals to HDAE5000 |
+| base+2 (0x37A) | Control | Output | Control signals to HDAE5000 (bit 5 = direction) |
 
 **HDAE5000 PPI (Intel 8255 at 0x160000):**
 
