@@ -47,7 +47,7 @@ Two separate MAME processes communicate over a TCP socket on localhost:
 ┌──────────────────────────────────────────────────────────────┐
 │  MAME instance 1 (PC emulation)                              │
 │  ┌────────────────────┐    emulated LPT    ┌───────────────┐ │
-│  │ Windows 98 + HD-   │ ◄────────────────► │ Emulated      │ │
+│  │ Windows 95 + HD-   │ ◄────────────────► │ Emulated      │ │
 │  │ TechManager5000    │   I/O port 0x378   │ parallel port │ │
 │  │ (unmodified)       │                    │ hardware      │ │
 │  └────────────────────┘                    └───────┬───────┘ │
@@ -65,14 +65,14 @@ Two separate MAME processes communicate over a TCP socket on localhost:
 ### How it works
 
 1. **MAME (KN5000)** runs the keyboard emulation with HDAE5000. The PPI device is bridged to a TCP socket listener.
-2. **MAME (PC)** runs a Windows 98 PC driver (e.g., `pcipc`) with TechManager5000 installed on its emulated hard disk. The PC's emulated LPT parallel port connects to the KN5000 MAME instance via TCP.
+2. **MAME (PC)** runs a Windows 95 PC driver (e.g., `pcipc`) with TechManager5000 installed on its emulated hard disk. The PC's emulated LPT parallel port connects to the KN5000 MAME instance via TCP.
 3. `ppkn50.dll` executes `in`/`out` instructions to the PC's LPT port --- which is real (emulated) hardware from its perspective. The emulated LPT hardware relays the signals to the KN5000's PPI over TCP.
 
 ### Implementation needed
 
 - **KN5000 side**: Socket-based PPI bridge device (exposes Port A/B/C over TCP)
 - **PC side**: Socket-based external connection for MAME's centronics/LPT device
-- **PC disk image**: Windows 98 installation + TechManager5000
+- **PC disk image**: Windows 95 installation + TechManager5000
 
 ### Open questions
 
