@@ -115,7 +115,7 @@ Changes:
 
 ## Architecture
 
-The LLVM TLCS-900 backend lives at `/mnt/shared/llvm-project/llvm/lib/Target/TLCS900/`.
+The LLVM TLCS-900 backend lives at `/home/fsanches/compartilhado/llvm-project/llvm/lib/Target/TLCS900/`.
 
 **Key files:**
 - `TLCS900InstrFormats.td` — 79 instruction format class definitions
@@ -142,7 +142,7 @@ The LLVM TLCS-900 backend lives at `/mnt/shared/llvm-project/llvm/lib/Target/TLC
 1. **Define new instruction in `.td`** with semantic mnemonic and proper operand types
 2. **Add encoding case** in `MCCodeEmitter.cpp` (or reuse existing format)
 3. **Add decoding case** in `TLCS900Disassembler.cpp` to emit semantic mnemonic
-4. **Build LLVM:** `ninja -C /mnt/shared/llvm-project/build llc llvm-mc`
+4. **Build LLVM:** `ninja -C /home/fsanches/compartilhado/llvm-project/build llc llvm-mc`
 5. **Update all `.s` files** in both v9 and v10 (Python script with binary I/O)
 6. **Rebuild ROMs:** verify 100% byte-match
 7. **Run LLVM tests:** `build/bin/llvm-lit llvm/test/CodeGen/TLCS900/`
