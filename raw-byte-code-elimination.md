@@ -135,7 +135,7 @@ Newly disassembled code may reveal previously unidentified jump tables or call t
 1. Full `make clean && make all` + `compare_roms.py` (100% byte match on all 6 ROMs)
 2. Run `scripts/sync_docs_labels.py --apply` to update any new labels on the website
 3. Update `rom-reconstruction.md` with the milestone
-4. Update issue tracker (`bd close` completed issues)
+4. Update issue tracker — edit `kn5000_project/.beads/issues.jsonl` by hand to mark completed issues closed. Do **not** run `bd close` against `kn5000_project` (see `FSanches/beads-usage-policy.md`).
 
 ## Ordering & Priorities
 
