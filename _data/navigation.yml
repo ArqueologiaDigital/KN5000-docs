@@ -19,6 +19,8 @@
       url: /kn7000-event-system/
     - title: Display Subsystem
       url: /kn7000-display-subsystem/
+    - title: Storage & File System
+      url: /kn7000-storage-subsystem/
     - title: Image Gallery
       url: /kn7000-image-gallery/
     - title: Sound & Style Names
