@@ -41,7 +41,7 @@ KN7000 path *shorter* in several places:
 | Decode the LZSS system-update discs | ✅ [`.SLD` decoded](/kn7000-system-update-discs/), both images extracted & checksum-verified | — |
 | Split the Table Data ROM into assets | ✅ [84-segment directory decoded](/kn7000-firmware/); `table_extract.py`; **293 raw UI bitmaps in true colour** (palette @ prog `0x32573C`, `table_bitmaps.py`); **[1,454 sound + 931 style names](/kn7000-sound-names/)** (`table_names.py`/`style_names.py`) | decode the `TCMP`/`TPAD`/"Technics Pads"/"Technics Rhythms" preset-data chunks; sub-tables 1 & 3 |
 | Extract embedded images | ✅ [169-image gallery](/kn7000-image-gallery/) | decode any remaining raw/proprietary graphics |
-| Buildable disassembly → **100% byte-perfect** ROM rebuild | 🟡 skeleton builds byte-exact; almost all still raw `.incbin` | the big one — progressively disassemble MN10300 code (see below) |
+| Buildable disassembly → **100% byte-perfect** ROM rebuild | 🟡 byte-exact; `src/program.s` now organised by the 443 recovered functions (per-function `.incbin_range` blocks) + the display palette lifted into typed `.long` source | progressively convert the raw blocks to real MN10300 instructions |
 | Name functions from symbol tables | ✅ **444 functions named** from the firmware's own MILK-toolkit reflection tables (same names as the KN5000); `kn7000.sym` / `src/symbols.inc` | extend with the `MT_`/class descriptor tables |
 
 ## Firmware & CPU
