@@ -226,7 +226,7 @@ points to sub-tables of `{width, height, pixel_ptr}` records; the pixel data is
 raw 4/8bpp palette indices. Extract them with `table_bitmaps.py`.
 
 These are rendered in their **true display colours**, using the 256-entry
-`0x00RRGGBB` palette found in the **program ROM at file `0x32573C`** (a 16-colour
+`0x00BBGGRR` palette found in the **program ROM at file `0x32573C`** (a 16-colour
 VGA-style base). The 8bpp icons make heavy use of palette index `0xF7` — the
 KN5000's transparent index — another echo of the shared codebase.
 

@@ -58,14 +58,38 @@ Primitive drawing is provided too: `DrawLine`/`DrawLineEx`, `DrawBox`,
 
 ## The palette (CLUT)
 
-Indices are resolved through a **256-entry colour look-up table of `0x00RRGGBB`
-words**, stored in the program image at file **`0x32573C`** (a 16-colour
-VGA-style base extended to 256). It is the first data structure the
-[disassembly project](/kn7000-firmware/) lifted from raw bytes into typed
-source. At runtime the palette is manipulated through `SetPaletteRGB`
+Indices are resolved through a **256-entry colour look-up table**, stored in the
+program image at file **`0x32573C`**. Each entry is a 32-bit **`0x00BBGGRR`**
+(BGR-order) word — proven by the named colour constants below (`CL_Red` = index
+`0xF9` = stored `0x000000FF`, i.e. the *low* byte is red). It is the first data
+structure the [disassembly project](/kn7000-firmware/) lifted from raw bytes into
+typed source. At runtime the palette is manipulated through `SetPaletteRGB`
 (`0x4842D9F1`), `GetPaletteRGB` (`0x4842DB23`) and `GetPaletteRGB4`
 (`0x4842DB30`); `ConvPaletteMono4` (`0x4842DC88`) derives the 2-bit-panel
 greyscale ramp from it.
+
+### Named colours
+
+The firmware refers to palette entries by name through a `CL_*` constant table
+(recovered by `tools/gen_constants.py`). The base is a **VGA-16 layout** — the
+eight dark colours at indices `0x00`–`0x07` and the eight bright ones at
+`0xF8`–`0xFF`:
+
+| Index | Name | | Index | Name |
+|-------|------|-|-------|------|
+| `0x00` | `CL_Black` | | `0xF8` | `CL_Gray` |
+| `0x01` | `CL_Maroon` | | `0xF9` | `CL_Red` |
+| `0x02` | `CL_Green` | | `0xFA` | `CL_Lime` |
+| `0x03` | `CL_Olive` | | `0xFB` | `CL_Yellow` |
+| `0x04` | `CL_Navy` | | `0xFC` | `CL_Blue` |
+| `0x05` | `CL_Purple` | | `0xFD` | `CL_Fuchsia` |
+| `0x06` | `CL_Teal` | | `0xFE` | `CL_Aqua` |
+| `0x07` | `CL_Silver` | | `0xFF` | `CL_White` |
+
+On top of that sit **semantic UI colours** — `CL_TitleBar`, `CL_IconBack`,
+`CL_Text`, `CL_Selected`, `CL_PageBack`, `CL_EditSw` (`0x17`–`0x1C`), the
+sound-expansion accents `CL_SoundExp1`–`4`, and crucially **`CL_Transparent =
+0xF7`**, which names the transparent index the `SP` sprite blitters skip.
 
 ## Fonts and text
 
