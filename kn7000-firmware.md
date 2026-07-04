@@ -121,15 +121,40 @@ This mirrors the KN5000 approach, whose
 [ROM reconstruction](/rom-reconstruction/) reached 100% byte-perfect matches on
 all six ROMs.
 
-### 444 functions named by reusing KN5000 knowledge
+### 1,892 functions named by reusing KN5000 knowledge
 
 The disassembly gets a large head start from the
 [shared codebase](/technics-shared-codebase/): the KN7000 embeds the same "MILK"
-UI-toolkit **runtime reflection tables** the KN5000 does — two index-parallel
-arrays (code pointers at file `0x3270AC`, name pointers at `0x3277A0`) that the
-firmware's `MT_GetProcedure`-style lookup uses. Parsing them recovers **444 named
-functions** — `SleepMainTask`, `DispatchEvent`, `RegisterObjectTable`, and the
-whole `Ac*`/`Vw*`/`Ps*`/`Iv*` widget window-procedure set, i.e. the **same names
-documented for the KN5000**. Every recovered entry was checked to begin with an
-MN10300 function prologue. These become the named anchors for the ongoing
+UI-toolkit **runtime reflection tables** the KN5000 does — code-pointer arrays
+each followed by an index-parallel name-pointer array, used by the firmware's
+`MT_GetProcedure`-style lookup. There are **~114 such tables** (one per
+widget/handler group), and parsing them all recovers **1,892 named functions** —
+`SleepMainTask`, `DispatchEvent`, and the whole `Ac*`/`Vw*`/`Ps*`/`Iv*`/`Tt*`
+widget window-procedure set (490 `*Proc` + 312 `*Func` handlers), i.e. the **same
+names documented for the KN5000**. These become the named anchors for the
 instruction-level disassembly.
+
+### Readable, re-assemblable source
+
+With a purpose-built MN10300 encoder (99.9% round-trip) wired into
+the assembler, named functions are converted from raw bytes into real MN10300
+source that still rebuilds byte-for-byte. Call targets are resolved to labels —
+recovered names where known, else a synthetic `func_<ADDR>` for the internal
+helpers — so the reconstruction reads like ordinary source. For example the
+object-visibility accessor `SetVisible`:
+
+```
+SetVisible:                      # CPU 0x4842D406
+    add     -0xc, sp
+    call    GetLinkView, 0, 0    # fetch the linked view object
+    movhu   (0xc, a0), d1        # load its flag word
+    clr     d0
+    btst    0x01, d1             # test the "visible" bit
+    bne     0x4842d419
+    mov     1, d0
+    ret     0, 0xc
+```
+
+66 functions (the task/event and display/object framework clusters) are
+converted this way so far; growing the set converts more, always holding the
+100% byte-match invariant.
