@@ -48,7 +48,7 @@ KN7000 path *shorter* in several places:
 
 | KN5000 | KN7000 status | Notes |
 |--------|---------------|-------|
-| [Memory map](/memory-map/) | 🟡 [top-level map known](/kn7000/) (program `0x48400000`, table `0x48000000`, RAM `0x50000000`, I/O ranges) | fill in individual I/O registers |
+| [Memory map](/memory-map/) | 🟡 [top-level map known](/kn7000/); **112 individual I/O registers recovered** across 5 banks (timers, GPIO, LCD block, dual tone generators) — see the [I/O register map](/kn7000/#io-register-map-from-firmware-analysis) | assign each bank to its peripheral device |
 | [Boot sequence](/boot-sequence/) | 🟡 boot header + reset vectors disassembled | trace init once more code is named |
 | [CPU subsystem](/cpu-subsystem/) doc | ⬜ | document the MN10300/AM33 core, its I/O, and the panel sub-CPUs (CPL/CPC/CPR/CPSD) |
 | Reset vector / version block | 🔒 lives in an **undumped internal boot ROM** at `0x4C000000` / top-of-flash `0x7FFFxx` | needs a hardware dump or an exploit (as the KN5000 sub-CPU boot ROM did) |
