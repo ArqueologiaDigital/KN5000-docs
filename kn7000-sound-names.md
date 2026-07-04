@@ -2479,3 +2479,42 @@ Jazz De Paris<br>
 Tonewheel Twist<br>
 Spinning Jive<br>
 </div>
+
+## Sound Arranger PAD presets  
+
+The **120 built-in PAD phrase presets** (`Technics Pads` table
+segment). Each is a named MIDI phrase triggered by the assignable pad buttons —
+decoded by `pad_names.py` (see the extraction repo's `FORMAT.md` §3.3).  
+
+- `Voice Welcome` · `Church Bells` · `Birdsong` · `Waves`
+- `Cosmic Maj` · `Cosmic Min` · `8 Beat Strum` · `16 Beat Strum`
+- `Pop EP` · `Pop Synth` · `Pop Synth Maj` · `Pop Synth Min`
+- `Funk Gtr Strum` · `Mute Gtr Single` · `Mute Gtr Strum` · `Folk Gtr Strum`
+- `Folk Guitar Maj` · `Folk Guitar Min` · `Rock Piano` · `Funk 16 Guitar`
+- `R&R Guitar` · `Rock Gtr Strum` · `R&Roll Sax Maj` · `R&RollGuitar Min`
+- `Dance Loop 1` · `Dance Loop 2` · `Dance Loop 3` · `Dance Loop 4`
+- `DanceStrings Maj` · `Dance Synth Min` · `Funk Bass` · `Stand Up Brass`
+- `Funk Guitar Riff` · `Funk Gtr Rhythm` · `Funk Organ Maj` · `Funk Synth Min`
+- `Bongo Loop` · `Conga Loop` · `Bossa Guitar` · `Rhumba Guitar`
+- `BeguinePiano Maj` · `BeguinePiano Min` · `Samba Loop Low` · `Samba Loop High`
+- `Latin Guitar` · `Salsa Piano` · `Salsa Brass Maj` · `Salsa Brass Min`
+- `12/8 Arpeggio` · `Pop Ballad Piano` · `Fifties Vocals` · `Dreamy Ballad`
+- `EP Ballad Maj` · `EP Ballad Min` · `4/4 Arpeggio` · `Angel Ballad`
+- `Ballad Backing` · `Crescendo` · `Sax Ballad Maj` · `Sax Ballad Min`
+- `Movie Scene` · `Timpani Roll` · `Arpeggio 1` · `Arpeggio 2`
+- `Show Piano Maj` · `Show Piano Min` · `Jazz Flautist` · `Big Band Break`
+- `Big Band Reeds` · `Brass Lip Gliss` · `Section Solo Maj` · `Section Solo Min`
+- `Jazz Guitar Shot` · `Jazz Piano` · `Jazz Gtr Rhythm` · `Jazz Voices`
+- `Jazz Piano Maj` · `Scat Singer Min` · `Marching Brass` · `Polonaise Piano`
+- `Folk Clarinet` · `Bellow Shake` · `TradClarinet Maj` · `TradClarinet Min`
+- `Piano March` · `Military Fanfare` · `Bugle Call` · `Italian Players`
+- `MarchingBand Maj` · `MarchingBand Min` · `Country Guitar` · `Country Steel`
+- `Country Ballad` · `Country Folk` · `CountryPiano Maj` · `CountryPiano Min`
+- `Country 12 Strum` · `Finger Style Gtr` · `Bluegrass Banjo` · `Banjo Strum`
+- `Fiddle Solo Maj` · `Banjo Solo Min` · `Gospel Duet` · `Baptist Piano`
+- `Spiritual Piano` · `Gospel Groove` · `Gospel Blues Maj` · `Gospel Blues Min`
+- `Waltz Arpeggio` · `Waltz Backing` · `Gentle Waltz` · `Waltz Backing`
+- `ClassicWaltz Maj` · `ClassicWaltz Min` · `Swing 3/4 Strum` · `Swing 3/4 Piano`
+- `Country Waltz` · `Gospel Waltz` · `Swingy Waltz Maj` · `Swingy Waltz Min`
+
+**Pad bank / slot names** (`TPAD` segment): *Compile Bank 2*, *User Bank 1*, *User Bank 2*, *User Bank 3*, *Voice Loop*, *Voice Drum 1*, *Voice Drum 2*, *Voice Scat*, *Whistle Maj*, *Whistle Min*, *Piano Minuet*, *BaroqueInterlude*, *Grandiose*, *Pizz Ending*, *ClassicInterlude*, *Tom Flam 1*, *Tom Flam 2*, *Tom Flam 3*, *Tom Flam 4*, *Four Chord Trick*, *12 Bar In Minor*.
