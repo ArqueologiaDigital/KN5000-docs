@@ -1,0 +1,87 @@
+---
+layout: page
+title: KN7000 Sequencer
+permalink: /kn7000-sequencer/
+---
+
+# KN7000 Sequencer
+
+The KN7000's on-board **sequencer** records and plays back songs — both the
+player's own performance and **Standard MIDI Files** — with a note/step editor,
+karaoke-style lyrics, and the ability to turn a recorded sequence into a Composer
+style or a Pad phrase. Like the rest of the UI it runs on the MILK toolkit, so it
+is decoded here from `kn7000_program.rom` through its **event namespace** and its
+**`MT_` engine API**, both recovered from the firmware's reflection tables. It sits
+between the [storage](/kn7000-storage-subsystem/) layer (which loads/saves the
+`.MID` files) and the tone generators that play the notes.
+
+## Engine API
+
+The sequencer engine is reached through a dedicated block of `MT_*` calls (the
+MILK `MT_GetProcedure` dispatch — table at program `0x355764`). They split into
+**transport/query** and **rendering** groups:
+
+| Call | Purpose |
+|------|---------|
+| `MT_Seq_PlayRequest` | start playback of the current song |
+| `MT_Seq_ChangeColor` | recolour the display during playback |
+| `MT_GetCurSongName` | current song title |
+| `MT_GetComporserName` | current Composer (style) name |
+| `MT_GetLyricsSongName` / `MT_GetLyricsMusic` / `MT_GetLyricsLyrics` | lyrics data for karaoke display |
+| `MT_GetDiskFileName` / `MT_GetDiskFileNo` | the file being loaded/saved |
+| `MT_GetInternalData` | the in-RAM song buffer |
+
+The **note/step editor** is served by a family of drawing primitives:
+`MT_DrawNote` (`_0`/`_1` variants), `MT_DrawHilightNote`, `MT_DrawCursor`,
+`MT_DrawMeas_NE` / `MT_DrawMeas_SR` (measure rulers), `MT_DrawSoundName` /
+`MT_DrawSoundCursor`, and the step-edit set `MT_StepDataDraw`,
+`MT_StepDrawCursor`, `MT_StepDrawStrData`, `MT_StepDrawMMMData` — i.e. both a
+piano-roll ("note") view and a numeric step-list view, ending each frame with
+`MT_SeqDrawEnd`.
+
+## Event namespace
+
+The sequencer screen has its own `EV_*` event block (name table at program
+`0x35570C`), separate from the global [UI events](/kn7000-event-system/):
+
+* **transport** — `EV_PlayStartIni`, `EV_PlayRequest`, `EV_GetEvent`
+* **display** — `EV_SEQ_DRAW`, `EV_ALLCLEAR`, `EV_ALLDRAW`, `EV_RENEW`,
+  `EV_REVERSE`, `EV_UPDATE_SCREEN`, `EV_SCROLLUP`, `EV_ChangeColor`,
+  `EV_CURSONGNAME`
+* **write / commit** — `EV_SONGWRITE`, `EV_COMPORSERWRITE`,
+  `EV_LYRICSMUSICWRITE`, `EV_LYRICSLYRICSWRITE`
+* **transpose** — `EV_SEQ_TRAS_RESET`, `EV_SEQ_TRAS_UPDATE`, `EV_SEQ_TRAS_OK_WIN`
+* **file** — `EV_DISKFILENAME`, `EV_DISKFILENO`
+
+## Record / play controls
+
+The recorder and transport are driven by the screen handlers (all recovered by
+name): track selection `SeqTrackSel`, measure navigation `SeqMeasUpDown`,
+**easy record** `SeqEasyRecOk`, **cycle (loop) record** `SeqCycRecTglFunc` /
+`SeqPlayCycleTgl` / `SeqCycClrSwFunc`, the **metronome** toggle
+`SeqRecMetTglFunc`, and stop `SeqRecStopExec`. Lyrics display is handled by
+`SeqLyricsShowHide` / `SeqLyricsSong` and set up by the AP-task helper
+`AppSEQ_InitSmfLyrics` — confirming the sequencer engine runs in the **AP task**
+(see [Tasks & Scheduler](/kn7000-task-scheduler/)) while its screen runs in the
+main task.
+
+## Standard MIDI Files and conversions
+
+Songs interchange as **SMF** (`.MID`) through the storage layer:
+`SmfLoadAsFunc` / `SmfSaveAsFunc` / `SmfPlayAsFunc`, naming/rename via
+`SmfFileNaming` / `SmfFileRename`, and song-slot mapping
+`SmfSeqToSongNumFunc` / `SmfSeqFromSongNumFunc`. A recorded sequence can also be
+**converted in place** into other engines' data — `SeqToCmpCopyGrid` /
+`Seq2CmpCpEditFunc` copy it into a **Composer** style, and `SeqToPadCopyGrid` /
+`Seq2PadCpEditFunc` copy it into a **[Pad](/kn7000-sound-names/#sound-arranger-pad-presets)**
+phrase — which is why the pad presets are themselves stored as MIDI event
+streams.
+
+## Relationship to the KN5000
+
+The sequencer concept, the `MT_Seq_*`/`EV_*` naming and the SMF interchange are
+**shared with the KN5000** ([Shared Codebase Map](/technics-shared-codebase/));
+the [Sequencer](/sequencer/) and [Accompaniment engine](/accompaniment-engine/)
+KN5000 pages are the conceptual companions. The concrete KN7000 specifics
+observed here are the addresses of the engine API and event tables and the
+Seq→Composer / Seq→Pad conversion paths.
