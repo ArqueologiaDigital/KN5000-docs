@@ -56,6 +56,7 @@ and understanding its system-update disks and firmware images.
 | [KN7000 Overview]({{ site.baseurl }}/kn7000/) | Hardware summary, MN10300 CPU, memory map, project status |
 | [KN7000 System Update Discs]({{ site.baseurl }}/kn7000-system-update-discs/) | `.SLD` container format, LZSS decompression, `.INF` checksums, extraction tool |
 | [KN7000 Firmware Images]({{ site.baseurl }}/kn7000-firmware/) | Program & table flash layout, version numbers, string/hardware inventory, byte-exact disassembly project |
+| [KN7000 Image Gallery]({{ site.baseurl }}/kn7000-image-gallery/) | 169 images extracted from the firmware (demo slideshows, product photos, digital-drawbar UI graphics) |
 | [Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/) | Cross-model code/data reuse between KN5000 and KN7000 |
 
 ---
