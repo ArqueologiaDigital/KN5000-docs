@@ -225,9 +225,10 @@ reached through a pointer hierarchy: a master directory at table file `0x200`
 points to sub-tables of `{width, height, pixel_ptr}` records; the pixel data is
 raw 4/8bpp palette indices. Extract them with `table_bitmaps.py`.
 
-The exact display palette lives in palette RAM / the program ROM and is not yet
-known, so these are rendered **grayscale by palette index** — the shapes are
-exact, the colours are placeholders.
+These are rendered in their **true display colours**, using the 256-entry
+`0x00RRGGBB` palette found in the **program ROM at file `0x32573C`** (a 16-colour
+VGA-style base). The 8bpp icons make heavy use of palette index `0xF7` — the
+KN5000's transparent index — another echo of the shared codebase.
 
 **Sound & category icons** — 53 variable-size 8bpp bitmaps (sub-table 0):
 instrument glyphs, category labels (including the Japanese `音楽` = "music"), and
