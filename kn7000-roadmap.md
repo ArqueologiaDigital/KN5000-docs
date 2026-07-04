@@ -63,7 +63,7 @@ so they are the best starting point for each KN7000 equivalent:
 
 | KN5000 subsystem | KN7000 status | Notes |
 |------------------|---------------|-------|
-| [UI Framework](/ui-framework/) / [widget types](/ui-widget-types/) | 🟡 **518 `*Proc` window-procedures + 353 `*Func` handlers named**; the **[Event & Dispatch System](/kn7000-event-system/) is now documented** from the disassembly (60 `EV_*` codes, object table @`0x5000757C`, main/AP tasks, the Post/Send/Dispatch API) | port the remaining KN5000 widget docs; the `MT_` method-selector table |
+| [UI Framework](/ui-framework/) / [widget types](/ui-widget-types/) | 🟡 **518 `*Proc` window-procedures + 353 `*Func` handlers named**; the runtime core is documented from the disassembly — [Event & Dispatch](/kn7000-event-system/) (60 `EV_*` codes, object table @`0x5000757C`) and [Tasks & Scheduler](/kn7000-task-scheduler/) (main/AP tasks, sleep/wake message API) | port the remaining KN5000 widget docs; the `MT_` method-selector table |
 | [Audio subsystem](/audio-subsystem/) / [tone generator](/tone-generator/) | ⬜ | **dual** tone generators (IC203/204 + IC207/208) — new vs the KN5000 |
 | [Display subsystem](/display-subsystem/) | 🟡 **[documented](/kn7000-display-subsystem/)** from the disassembly: panel-type detection (colour / 2-bit), per-depth bitmap blitters (4/16/256), CLUT @`0x32573C`, font table, LCD I/O `0x34000000` + framebuffer `0x90000000` | trace the exact pixel path to V-RAM |
 | [Keybed scanning](/keybed-scanning/) | ⬜ | |
