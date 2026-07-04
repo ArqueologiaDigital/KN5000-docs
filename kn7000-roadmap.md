@@ -76,7 +76,7 @@ so they are the best starting point for each KN7000 equivalent:
 | KN5000 | KN7000 status | Notes |
 |--------|---------------|-------|
 | [MAME driver](/mame-pull-requests/) ([PR #14558](https://github.com/mamedev/mame/pull/14558)) | 🟡 **draft started** in the `kn7000_mame` overlay repo: machine driver (memory map, ROM regions, LCD placeholder) + the beginnings of an **MN10300 execution core** (device scaffold + first instruction batch) | not yet build-tested; grow the instruction set, then boot |
-| MN10300 CPU core | 🟡 **~99.94% of real instructions implemented** (single-byte group, all common prefixed groups `F0`-`F4`/`F8`/`FA`/`FC`/`FE`, `movm`, and the `setlb`/`Lcc` loop cache); length decoder validated (656k instructions, 0 mismatches); `movm` register mask resolved empirically | build-test, interrupts/exceptions, timing; remaining 0.06% = unused `udf*` coprocessor ops + rare `lra` |
+| MN10300 CPU core | 🟡 **~99.94% of real instructions implemented**; **semantics validated by a Python interpreter that runs 3.06 M real boot instructions coherently**; length decoder validated (656k, 0 mismatches); `movm` mask resolved empirically | build-test the C++ core, interrupts/exceptions, timing |
 | Peripheral HLE (panel, TG, FDC, display) | ⬜ | reuse KN5000 HLE patterns where the shared design allows |
 
 ## Homebrew & higher-level work
