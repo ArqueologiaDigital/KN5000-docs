@@ -42,7 +42,7 @@ KN7000 path *shorter* in several places:
 | Split the Table Data ROM into assets | ✅ [84-segment directory decoded](/kn7000-firmware/); `table_extract.py` | classify the 27 non-image data chunks (`TCMP`, `TPAD`, …) |
 | Extract embedded images | ✅ [169-image gallery](/kn7000-image-gallery/) | decode any remaining raw/proprietary graphics |
 | Buildable disassembly → **100% byte-perfect** ROM rebuild | 🟡 skeleton builds byte-exact; almost all still raw `.incbin` | the big one — progressively disassemble MN10300 code (see below) |
-| Name functions from symbol tables | 🟡 KN7000 embeds the same `MT_`/`*Proc` symbol tables; RE of the name↔address tables underway | emit a symbol file for the disassembly |
+| Name functions from symbol tables | ✅ **444 functions named** from the firmware's own MILK-toolkit reflection tables (same names as the KN5000); `kn7000.sym` / `src/symbols.inc` | extend with the `MT_`/class descriptor tables |
 
 ## Firmware & CPU
 
@@ -90,9 +90,9 @@ so they are the best starting point for each KN7000 equivalent:
 
 ## Suggested order of work
 
-1. **Symbol map** — finish RE of the KN7000 name↔address tables and emit a symbol
-   file. This multiplies the value of every later disassembly hour and directly
-   reuses KN5000 framework knowledge.
+1. **Symbol map** — ✅ largely done: 444 functions recovered and named from the
+   firmware's reflection tables, directly reusing KN5000 framework knowledge.
+   Remaining: fold in the `MT_` API and class-descriptor tables.
 2. **Real assembler** — build a GNU binutils `mn10300` toolchain so the
    disassembly can use a standard `as`/`ld` (with `kn7asm.py` as the zero-dependency
    fallback), and to unblock homebrew.

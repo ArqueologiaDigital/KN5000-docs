@@ -106,3 +106,16 @@ every step. Disassembly listings are generated with MAME's `unidasm`
 This mirrors the KN5000 approach, whose
 [ROM reconstruction](/rom-reconstruction/) reached 100% byte-perfect matches on
 all six ROMs.
+
+### 444 functions named by reusing KN5000 knowledge
+
+The disassembly gets a large head start from the
+[shared codebase](/technics-shared-codebase/): the KN7000 embeds the same "MILK"
+UI-toolkit **runtime reflection tables** the KN5000 does — two index-parallel
+arrays (code pointers at file `0x3270AC`, name pointers at `0x3277A0`) that the
+firmware's `MT_GetProcedure`-style lookup uses. Parsing them recovers **444 named
+functions** — `SleepMainTask`, `DispatchEvent`, `RegisterObjectTable`, and the
+whole `Ac*`/`Vw*`/`Ps*`/`Iv*` widget window-procedure set, i.e. the **same names
+documented for the KN5000**. Every recovered entry was checked to begin with an
+MN10300 function prologue. These become the named anchors for the ongoing
+instruction-level disassembly.
