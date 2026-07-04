@@ -1,0 +1,107 @@
+---
+layout: page
+title: KN7000 Roadmap
+permalink: /kn7000-roadmap/
+---
+
+# KN7000 Roadmap — porting the KN5000 effort
+
+This page is a thorough plan of what was accomplished for the
+[KN5000](/system-overview/) and how each piece maps onto the
+[KN7000](/kn7000/). It exists to guide the KN7000 work and to make the scope of
+the preservation project explicit.
+
+**The overarching advantage:** the two firmwares are
+[two re-targets of one source tree](/technics-shared-codebase/), so a great deal
+of KN5000 *understanding* transfers even though no machine code does. **The
+overarching obstacle:** the KN7000's Panasonic **MN10300** CPU replaces the
+KN5000's Toshiba TLCS-900, so every tool in the low-level chain (disassembler,
+assembler, emulator core, compiler) must target a different ISA.
+
+Legend: ✅ done · 🟡 in progress / partial · ⬜ not started · 🔒 blocked on an
+undumped ROM or missing hardware.
+
+## Toolchain — a key difference from the KN5000
+
+For the KN5000 the team had to **build tooling from scratch** for an obscure CPU.
+For the MN10300 much of that already exists upstream, which should make the
+KN7000 path *shorter* in several places:
+
+| Tool | KN5000 (TLCS-900) | KN7000 (MN10300) |
+|------|-------------------|-------------------|
+| Disassembler | MAME TLCS-900 dasm | ✅ MAME `unidasm -arch mn10300` already works |
+| Assembler | — (LLVM emitted objects) | ⬜ **GNU binutils has an upstream `mn10300` target** — building it gives a real `as`/`ld` to replace/augment the project's `kn7asm.py` |
+| C/C++ compiler | 🛠️ custom [LLVM TLCS-900 backend](/rom-reconstruction/) built from scratch (279k instructions) | ⬜ **GCC has an upstream `mn10300`/`am33` backend** — homebrew C could reuse it instead of a new backend |
+| Emulator CPU core | ✅ MAME TMP94C241F core written | ⬜ MAME has an mn10300 **disassembler only** — an **execution core must be written** (the dasm is a head start) |
+
+## Extraction & ROM reconstruction
+
+| KN5000 accomplishment | KN7000 status | What remains |
+|-----------------------|---------------|--------------|
+| Decode the LZSS system-update discs | ✅ [`.SLD` decoded](/kn7000-system-update-discs/), both images extracted & checksum-verified | — |
+| Split the Table Data ROM into assets | ✅ [84-segment directory decoded](/kn7000-firmware/); `table_extract.py` | classify the 27 non-image data chunks (`TCMP`, `TPAD`, …) |
+| Extract embedded images | ✅ [169-image gallery](/kn7000-image-gallery/) | decode any remaining raw/proprietary graphics |
+| Buildable disassembly → **100% byte-perfect** ROM rebuild | 🟡 skeleton builds byte-exact; almost all still raw `.incbin` | the big one — progressively disassemble MN10300 code (see below) |
+| Name functions from symbol tables | 🟡 KN7000 embeds the same `MT_`/`*Proc` symbol tables; RE of the name↔address tables underway | emit a symbol file for the disassembly |
+
+## Firmware & CPU
+
+| KN5000 | KN7000 status | Notes |
+|--------|---------------|-------|
+| [Memory map](/memory-map/) | 🟡 [top-level map known](/kn7000/) (program `0x48400000`, table `0x48000000`, RAM `0x50000000`, I/O ranges) | fill in individual I/O registers |
+| [Boot sequence](/boot-sequence/) | 🟡 boot header + reset vectors disassembled | trace init once more code is named |
+| [CPU subsystem](/cpu-subsystem/) doc | ⬜ | document the MN10300/AM33 core, its I/O, and the panel sub-CPUs (CPL/CPC/CPR/CPSD) |
+| Reset vector / version block | 🔒 lives in an **undumped internal boot ROM** at `0x4C000000` / top-of-flash `0x7FFFxx` | needs a hardware dump or an exploit (as the KN5000 sub-CPU boot ROM did) |
+| [Test modes](/test-modes/) | 🟡 service-test strings + IC map recovered | document each test screen |
+| [Firmware update procedure](/firmware-update-procedure/) & validation | 🟡 container + `.INF` checksums understood | trace the on-device flash-write path |
+
+## Subsystems (transfer via the shared framework)
+
+The KN5000 subsystem docs describe the **same MILK UI toolkit** the KN7000 uses,
+so they are the best starting point for each KN7000 equivalent:
+
+| KN5000 subsystem | KN7000 status | Notes |
+|------------------|---------------|-------|
+| [UI Framework](/ui-framework/) / [widget types](/ui-widget-types/) | 🟡 187 identical `*Proc` handlers, 216 identical `MT_` APIs confirmed | port the KN5000 widget docs; resolve the KN7000 class table |
+| [Audio subsystem](/audio-subsystem/) / [tone generator](/tone-generator/) | ⬜ | **dual** tone generators (IC203/204 + IC207/208) — new vs the KN5000 |
+| [Display subsystem](/display-subsystem/) | ⬜ | LCD V-RAM IC104; likely a different controller |
+| [Keybed scanning](/keybed-scanning/) | ⬜ | |
+| [MIDI subsystem](/midi-subsystem/) | ⬜ | |
+| [Sequencer](/sequencer/) / [accompaniment engine](/accompaniment-engine/) | ⬜ | style/rhythm taxonomy partially shared |
+| [Storage / FDC](/fdc-subsystem/) | ⬜ | adds an **SD-card slot** and USB *Song Manager* (new) |
+| [Control panel protocol](/control-panel-protocol/) | ⬜ | four panel sub-CPUs vs the KN5000's arrangement |
+
+## Emulation (MAME)
+
+| KN5000 | KN7000 status | Notes |
+|--------|---------------|-------|
+| [MAME driver](/mame-pull-requests/) ([PR #14558](https://github.com/mamedev/mame/pull/14558)) | ⬜ | needs an **MN10300 execution core** first (only the disassembler exists in MAME today) |
+| Peripheral HLE (panel, TG, FDC, display) | ⬜ | reuse KN5000 HLE patterns where the shared design allows |
+
+## Homebrew & higher-level work
+
+| KN5000 | KN7000 status | Notes |
+|--------|---------------|-------|
+| [Homebrew SDK / app loader](/hdae5000-homebrew/) | ⬜ | a GCC `mn10300` toolchain could shortcut this |
+| [Feature-demo / SSF presentation system](/feature-demo/) | 🟡 demo slideshows extracted as JPEGs; `<SLIDESHOW>` markup seen | decode the demo/presentation scripting |
+| [Another World VM](/another-world-vm/) style homebrew port | ⬜ | long-term, once a toolchain + emulator exist |
+| [Service manual](/) PDF | 🔒 | source a KN7000 service manual for board/IC/pinout ground truth |
+| [Cross-version diffs](/cross-version-diff-guidebook/) | 🔒 | only one KN7000 program version (v16 / internal 941) is in hand; more releases needed |
+
+## Suggested order of work
+
+1. **Symbol map** — finish RE of the KN7000 name↔address tables and emit a symbol
+   file. This multiplies the value of every later disassembly hour and directly
+   reuses KN5000 framework knowledge.
+2. **Real assembler** — build a GNU binutils `mn10300` toolchain so the
+   disassembly can use a standard `as`/`ld` (with `kn7asm.py` as the zero-dependency
+   fallback), and to unblock homebrew.
+3. **Grow the disassembly** — convert `.incbin` regions to named MN10300 code and
+   typed data, holding the 100% byte-match invariant, starting from the named
+   framework entry points.
+4. **MN10300 MAME core** — write the execution core (the disassembler is the
+   starting point) to enable an emulation driver.
+5. **Subsystem docs** — port the KN5000 subsystem pages, adapting for the dual tone
+   generators, SD/USB storage, and panel sub-CPUs.
+6. **Chase the undumped ROMs** — the boot ROM at `0x4C000000` and the picture flash
+   at `0x57800000` will eventually need a hardware dump.

@@ -58,6 +58,7 @@ and understanding its system-update disks and firmware images.
 | [KN7000 Firmware Images]({{ site.baseurl }}/kn7000-firmware/) | Program & table flash layout, version numbers, string/hardware inventory, byte-exact disassembly project |
 | [KN7000 Image Gallery]({{ site.baseurl }}/kn7000-image-gallery/) | 169 images extracted from the firmware (demo slideshows, product photos, digital-drawbar UI graphics) |
 | [Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/) | Cross-model code/data reuse between KN5000 and KN7000 |
+| [Roadmap (vs KN5000)]({{ site.baseurl }}/kn7000-roadmap/) | What was done for the KN5000 and how each piece maps onto the KN7000 |
 
 ---
 
