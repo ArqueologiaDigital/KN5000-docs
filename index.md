@@ -4,15 +4,35 @@ title: Home
 ---
 
 ![Technics KN5000]({{ "/assets/images/hero-banner.jpg" | relative_url }}){: .hero-banner }
-<small style="display: block; text-align: center; margin-top: -1rem; margin-bottom: 1rem; color: #666;">Photo: [Sound On Sound](https://www.soundonsound.com/reviews/technics-kn5000) (March 1998)</small>
+<small style="display: block; text-align: center; margin-top: -1rem; margin-bottom: 1rem; color: #666;">Technics KN5000. Photo: [Sound On Sound](https://www.soundonsound.com/reviews/technics-kn5000) (March 1998)</small>
 
-# Technics KN5000 Documentation
+# Technics Keyboards — Reverse Engineering & Preservation
 
-Welcome to the comprehensive technical documentation for the Technics KN5000 music keyboard. This site documents the internal architecture, firmware, and protocols of this 1997-era professional arranger keyboard.
+Welcome to the technical documentation for the reverse engineering and digital
+preservation of **Technics musical keyboards**. Our long-term goal is to preserve
+the history of these instruments — their internal architecture, firmware, and
+protocols — as the physical hardware becomes scarce.
 
 > **A Digital Archaeology Project**
 >
-> This project preserves technical knowledge of the KN5000 through detailed reverse engineering. As physical hardware becomes scarce, accurate documentation ensures these instruments remain accessible for emulation, repair, and homebrew development.
+> This project preserves technical knowledge of Technics keyboards through
+> detailed reverse engineering. As physical hardware becomes scarce, accurate
+> documentation ensures these instruments remain accessible for emulation,
+> repair, and homebrew development.
+
+## The Instruments
+
+| Keyboard | Year | Main CPU | Documentation |
+|----------|------|----------|---------------|
+| **[Technics SX-KN5000](#technics-kn5000)** | 1997 | Toshiba TLCS-900/H2 (TMP94C241F) | Extensive — 6 ROMs reconstructed 100% byte-perfect, MAME driver, homebrew SDK |
+| **[Technics SX-KN7000]({{ site.baseurl }}/kn7000/)** | 2002 | Panasonic MN10300/AM33 | Early research — update-disk extraction and firmware analysis underway |
+
+The two flagship arrangers documented here use **different CPU architectures**,
+yet clearly descend from a **shared source codebase**: the same update-disk
+container format, UI framework symbol conventions, resource tables and message
+text recur across both. See the
+[Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/) for where
+things match.
 
 ## Project Goals
 
@@ -23,15 +43,36 @@ Welcome to the comprehensive technical documentation for the Technics KN5000 mus
 | **Homebrew Development** | Enable custom software development for the hardware |
 | **Compiler Development** | LLVM backend for TLCS-900/H2, enabling C/C++ development |
 
-## Start Here
+---
 
-**New to the project?** Begin with the [System Overview]({{ site.baseurl }}/system-overview/) to understand how all the components work together.
+## Technics KN7000
+
+The **[Technics SX-KN7000]({{ site.baseurl }}/kn7000/)** (2002) is the successor
+to the KN5000. Research here is at an early stage, focused so far on extracting
+and understanding its system-update disks and firmware images.
+
+| Page | Description |
+|------|-------------|
+| [KN7000 Overview]({{ site.baseurl }}/kn7000/) | Hardware summary, MN10300 CPU, memory map, project status |
+| [KN7000 System Update Discs]({{ site.baseurl }}/kn7000-system-update-discs/) | `.SLD` container format, LZSS decompression, `.INF` checksums, extraction tool |
+| [KN7000 Firmware Images]({{ site.baseurl }}/kn7000-firmware/) | Program & table flash layout, version numbers, string/hardware inventory, byte-exact disassembly project |
+| [Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/) | Cross-model code/data reuse between KN5000 and KN7000 |
+
+---
+
+## Technics KN5000
+
+The **Technics SX-KN5000** (1997) is the most thoroughly documented instrument on
+this site: a 1997-era professional arranger keyboard whose firmware, protocols
+and hardware have been reverse engineered in depth.
+
+**New to the KN5000?** Begin with the [System Overview]({{ site.baseurl }}/system-overview/) to understand how all the components work together.
 
 <div style="text-align: center; margin: 2rem 0;">
 <a href="{{ site.baseurl }}/system-overview/" style="background: #0366d6; color: white; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: 4px; font-weight: bold;">View System Overview</a>
 </div>
 
-## Documentation by Topic
+## KN5000 Documentation by Topic
 
 ### Hardware & Memory
 
@@ -167,4 +208,4 @@ A [homebrew SDK]({{ site.baseurl }}/hdae5000-homebrew/) is available for writing
 
 This documentation is developed with AI assistance from [Claude Code](https://claude.ai/code). All content is verified against actual hardware behavior and service documentation. Contributions and corrections are welcome via GitHub issues.
 
-We believe preserving technical knowledge of instruments like the KN5000 is essential for cultural heritage. If you find errors or have additions, please contribute.
+We believe preserving technical knowledge of instruments like the Technics KN5000 and KN7000 is essential for cultural heritage. Our long-term goal is to preserve the history of Technics musical keyboards as a whole. If you find errors or have additions, please contribute.

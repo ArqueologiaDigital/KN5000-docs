@@ -5,7 +5,18 @@
     - title: System Overview
       url: /system-overview/
 
-- title: Hardware
+- title: Technics KN7000
+  pages:
+    - title: KN7000 Overview
+      url: /kn7000/
+    - title: System Update Discs
+      url: /kn7000-system-update-discs/
+    - title: Firmware Images
+      url: /kn7000-firmware/
+    - title: Shared Codebase Map
+      url: /technics-shared-codebase/
+
+- title: KN5000 · Hardware
   pages:
     - title: Hardware Architecture
       url: /hardware-architecture/
@@ -16,7 +27,7 @@
     - title: Display Subsystem
       url: /display-subsystem/
 
-- title: Firmware
+- title: KN5000 · Firmware
   pages:
     - title: Architecture Flowchart
       url: /firmware-flowchart/
@@ -47,7 +58,7 @@
     - title: Test Modes
       url: /test-modes/
 
-- title: Subsystems
+- title: KN5000 · Subsystems
   pages:
     - title: Audio Subsystem
       url: /audio-subsystem/
@@ -82,7 +93,7 @@
     - title: Tone Gen Init (SwbtWr)
       url: /swbwr-tone-init/
 
-- title: Protocols
+- title: KN5000 · Protocols
   pages:
     - title: Control Panel Protocol
       url: /control-panel-protocol/
@@ -95,7 +106,7 @@
     - title: Serial Firmware Compat
       url: /serial-firmware-compatibility/
 
-- title: HDAE5000
+- title: KN5000 · HDAE5000
   pages:
     - title: HDAE5000 Overview
       url: /hdae5000/
@@ -104,7 +115,7 @@
     - title: Filesystem
       url: /hdae5000-filesystem/
 
-- title: Homebrew
+- title: KN5000 · Homebrew
   pages:
     - title: Homebrew Development
       url: /hdae5000-homebrew/
@@ -115,7 +126,7 @@
     - title: Another World VM
       url: /another-world-vm/
 
-- title: Analysis
+- title: KN5000 · Analysis
   pages:
     - title: Dispatch Tables
       url: /dispatch-tables/
@@ -136,7 +147,7 @@
     - title: Flash Programming
       url: /flash-programming/
 
-- title: Resources
+- title: KN5000 · Resources
   pages:
     - title: Image Gallery
       url: /image-gallery/
@@ -153,7 +164,7 @@
     - title: Issues
       url: /issues/
 
-- title: Research Logs
+- title: KN5000 · Research Logs
   pages:
     - title: Feature Demo Investigation
       url: /feature-demo-investigation-2026-03-09/
