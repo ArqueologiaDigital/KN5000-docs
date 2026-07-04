@@ -68,7 +68,7 @@ so they are the best starting point for each KN7000 equivalent:
 | [Display subsystem](/display-subsystem/) | 🟡 **[documented](/kn7000-display-subsystem/)** from the disassembly: panel-type detection (colour / 2-bit), per-depth bitmap blitters (4/16/256), CLUT @`0x32573C`, font table, LCD I/O `0x34000000` + framebuffer `0x90000000` | trace the exact pixel path to V-RAM |
 | [Keybed scanning](/keybed-scanning/) | ⬜ | |
 | [MIDI subsystem](/midi-subsystem/) | ⬜ | |
-| [Sequencer](/sequencer/) / [accompaniment engine](/accompaniment-engine/) | ⬜ | style/rhythm taxonomy partially shared |
+| [Sequencer](/sequencer/) / [accompaniment engine](/accompaniment-engine/) | 🟡 **[sequencer documented](/kn7000-sequencer/)**: `MT_Seq_*` engine API, `EV_SEQ_*` events, record/play + SMF, Seq→Composer/Pad copy | accompaniment/style engine still ⬜; style/rhythm taxonomy partially shared |
 | [Storage / FDC](/fdc-subsystem/) | 🟡 **[documented](/kn7000-storage-subsystem/)**: three media (floppy FAT12/16, SD card, USB Song Manager) via the shared `Fmm*` File Management Mode; file types `.MID`/`.CST`/Composer/Playlist/…; rich `Sdc*` handler set | trace the SD/FDC media I/O drivers |
 | [Control panel protocol](/control-panel-protocol/) | ⬜ | four panel sub-CPUs vs the KN5000's arrangement |
 
