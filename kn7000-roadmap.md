@@ -30,7 +30,7 @@ KN7000 path *shorter* in several places:
 | Tool | KN5000 (TLCS-900) | KN7000 (MN10300) |
 |------|-------------------|-------------------|
 | Disassembler | MAME TLCS-900 dasm | ✅ MAME `unidasm -arch mn10300` already works |
-| Assembler | — (LLVM emitted objects) | ⬜ **GNU binutils has an upstream `mn10300` target** — building it gives a real `as`/`ld` to replace/augment the project's `kn7asm.py` |
+| Assembler | — (LLVM emitted objects) | 🟡 a **purpose-built MN10300 encoder** (`tools/mn10300_asm.py`) round-trips **94.8%** of the ROM's instructions byte-exactly; GNU binutils also has an upstream `mn10300` target for a full `as`/`ld` |
 | C/C++ compiler | 🛠️ custom [LLVM TLCS-900 backend](/rom-reconstruction/) built from scratch (279k instructions) | ⬜ **GCC has an upstream `mn10300`/`am33` backend** — homebrew C could reuse it instead of a new backend |
 | Emulator CPU core | ✅ MAME TMP94C241F core written | ⬜ MAME has an mn10300 **disassembler only** — an **execution core must be written** (the dasm is a head start) |
 
