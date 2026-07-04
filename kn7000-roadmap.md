@@ -63,7 +63,7 @@ so they are the best starting point for each KN7000 equivalent:
 
 | KN5000 subsystem | KN7000 status | Notes |
 |------------------|---------------|-------|
-| [UI Framework](/ui-framework/) / [widget types](/ui-widget-types/) | 🟡 **490 `*Proc` window-procedures + 312 `*Func` handlers now named with addresses** (from ~114 reflection tables); 419 `MT_` API strings present | port the KN5000 widget docs; the `MT_` method-selector table |
+| [UI Framework](/ui-framework/) / [widget types](/ui-widget-types/) | 🟡 **490 `*Proc` window-procedures + 312 `*Func` handlers named**; the **[Event & Dispatch System](/kn7000-event-system/) is now documented** from the disassembly (60 `EV_*` codes, object table @`0x5000757C`, main/AP tasks, the Post/Send/Dispatch API) | port the remaining KN5000 widget docs; the `MT_` method-selector table |
 | [Audio subsystem](/audio-subsystem/) / [tone generator](/tone-generator/) | ⬜ | **dual** tone generators (IC203/204 + IC207/208) — new vs the KN5000 |
 | [Display subsystem](/display-subsystem/) | ⬜ | LCD V-RAM IC104; likely a different controller |
 | [Keybed scanning](/keybed-scanning/) | ⬜ | |
