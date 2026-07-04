@@ -69,7 +69,7 @@ so they are the best starting point for each KN7000 equivalent:
 | [Keybed scanning](/keybed-scanning/) | ⬜ | |
 | [MIDI subsystem](/midi-subsystem/) | ⬜ | |
 | [Sequencer](/sequencer/) / [accompaniment engine](/accompaniment-engine/) | ⬜ | style/rhythm taxonomy partially shared |
-| [Storage / FDC](/fdc-subsystem/) | ⬜ | adds an **SD-card slot** and USB *Song Manager* (new) |
+| [Storage / FDC](/fdc-subsystem/) | 🟡 **[documented](/kn7000-storage-subsystem/)**: three media (floppy FAT12/16, SD card, USB Song Manager) via the shared `Fmm*` File Management Mode; file types `.MID`/`.CST`/Composer/Playlist/…; rich `Sdc*` handler set | trace the SD/FDC media I/O drivers |
 | [Control panel protocol](/control-panel-protocol/) | ⬜ | four panel sub-CPUs vs the KN5000's arrangement |
 
 ## Emulation (MAME)
