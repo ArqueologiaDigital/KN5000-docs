@@ -1,10 +1,10 @@
 ---
 layout: page
-title: KN7000 Sound Names
+title: KN7000 Sound & Style Names
 permalink: /kn7000-sound-names/
 ---
 
-# KN7000 Built-in Sound Inventory
+# KN7000 Built-in Sound & Style Inventory
 
 The complete list of the KN7000's built-in voice names, extracted from the table
 ROM with `table_names.py`. The instrument stores each sound as a variable-length
@@ -1535,4 +1535,947 @@ SLENDRO<br>
 PELOG<br>
 PIANO<br>
 ORCH<br>
+</div>
+
+
+---
+
+# Style / Music-Stylist Names
+
+The arranger's **931 accompaniment-style / Music-Stylist names**, extracted
+from the program ROM with `style_names.py` (fixed 17-byte records: a 16-char
+space-padded name + NUL).
+
+<div style="columns:3;column-gap:1.5rem;font-size:0.85rem;">
+Mersey Ballad<br>
+Pacific Pop<br>
+Spiritual Pop<br>
+Pop Imagination<br>
+60s Soul<br>
+Folk Rock<br>
+UK Piano Legend<br>
+Straight 8 Beat<br>
+Dance Superstar<br>
+Detroit Ballad<br>
+EZ 16 Beat<br>
+Chart 16<br>
+Studio Pop<br>
+King's Rock<br>
+Let's Rock<br>
+Rock Status<br>
+Leroy's Band<br>
+Cool Old Rock<br>
+Blues Alley<br>
+Heavy Shuffle<br>
+Easy Rock<br>
+Pop Girls<br>
+90s Top Ten<br>
+90s Rock & Roll<br>
+Pop Shuffle<br>
+Rock Gig<br>
+Jazzy Grooves<br>
+Pop Love Song<br>
+Blues For Ray<br>
+Twisters<br>
+Ageless 8 Beat<br>
+Evergreen 16<br>
+Chart Reggae<br>
+Piano Blues<br>
+West Coast Funk<br>
+Funky Town<br>
+Euro Pop/Rock<br>
+Soft Rock<br>
+Poet Rock<br>
+Uptown Swing<br>
+Hip & Smooth<br>
+Ageless 16 Beat<br>
+Pop16<br>
+Slow Feelings<br>
+Groovy 90s<br>
+Yuppie Beat<br>
+Pop Ballad Boys<br>
+Dreamy Ballad<br>
+Fifties Smooch<br>
+Daydreams<br>
+Slow & Easy<br>
+Pop Piano Star<br>
+Candlelight Fox<br>
+Hollywood Charm<br>
+Ballad Producer<br>
+Slow Oldies<br>
+Golden Oldie<br>
+Easy Swing Pop<br>
+Cool Waltz<br>
+Smiling 70s<br>
+70s Detroit Pop<br>
+Soulful Organ<br>
+Soul Club<br>
+Pop Soul<br>
+Sweet Soul<br>
+Cool & Groovy<br>
+Soul Groove<br>
+70s Revival<br>
+Sunday Morning<br>
+Pop Spiritual<br>
+Modern Spirit<br>
+Funky R&B<br>
+Soul Jazz<br>
+Waltzing Church<br>
+Morning Blues<br>
+Soulfood To Go<br>
+Funk 4 Experts<br>
+70s Funk<br>
+90s Boy Groups<br>
+Electric World<br>
+Barbie's Home<br>
+Drumming Beats<br>
+Hip Dance<br>
+Dreamland<br>
+Believe This<br>
+London Subway<br>
+Hip Stuff<br>
+Golden Dancing<br>
+Street Dance<br>
+Retro Disco<br>
+Dance Latin<br>
+The Big Hit<br>
+Steamy Funk<br>
+Hip Club Mixes<br>
+Latino Pop<br>
+Smooth Latin<br>
+Latin Party<br>
+Uptown Cha Cha<br>
+Special Latin<br>
+Jazz Latin<br>
+Acoustic Bossa<br>
+Samba Holiday<br>
+Ballroom Samba<br>
+Amigo Beats<br>
+Latin Tango<br>
+Mexicana<br>
+Dance Lambada<br>
+Greek Dance<br>
+Scottish Dance<br>
+Cumbia Band<br>
+Cut Time Bossa<br>
+Talempong World<br>
+Romantic Waltz<br>
+Dangdut Special<br>
+Indonesian Folk<br>
+Radio Bossa<br>
+Bossa Guitars<br>
+Big Band Stomp<br>
+Swing Counting<br>
+Big Band Dance<br>
+Big Band Smooch<br>
+Moonlight Band<br>
+Late Night Jazz<br>
+12 Bar Blues<br>
+Cocktail Jazz<br>
+Scatty Singers<br>
+The Swing Era<br>
+Bourbon Street<br>
+I Got The Blues<br>
+Casino Show<br>
+Lounge Act<br>
+Tower Of Jazz<br>
+West Coast Jazz<br>
+Sweet & Swingy<br>
+80s Jazz Band<br>
+Hotelbar Jazz<br>
+Jazz Club Jam<br>
+Jazz Accordion<br>
+Dinner Dance<br>
+Swinging Bert<br>
+Ribbon Foxtrot<br>
+60s Foxtrot<br>
+Ballroom Dance<br>
+Slow Waltzing<br>
+Fast Ballroom<br>
+Euro Tango<br>
+Vienna Ballroom<br>
+Breakfast Waltz<br>
+Modern Musical<br>
+Show Tunes<br>
+Show Overture<br>
+Starry Eyed<br>
+Rags to Jazz<br>
+Vegas Cabaret<br>
+Music Hall Joe<br>
+Ballroom Waltz<br>
+Strict Tempo<br>
+Marching Band<br>
+Stadium Events<br>
+OktoberFest<br>
+Mountain Music<br>
+Zillertal<br>
+Parisian Dance<br>
+Bier Hall<br>
+French Chanson<br>
+Vienna Dance<br>
+Island Dreams<br>
+Waikiki Dance<br>
+Gypsy Party<br>
+Italian Night<br>
+Ceilidh Band<br>
+Modern Folk<br>
+Ballermann<br>
+Party R&B<br>
+Party Shuffle<br>
+Party On!<br>
+Summer Fun<br>
+German Holiday<br>
+The Last Band<br>
+Samba Nights<br>
+Organ Party<br>
+Party Pop Organ<br>
+Accordion Party<br>
+Barn Dance<br>
+Nashville Blues<br>
+Country Hit<br>
+70s Folk<br>
+Foxtrot Country<br>
+Southern Waltz<br>
+Bluegrass City<br>
+Country Dance<br>
+Tonewheel Jazz<br>
+Organ A-Go-Go<br>
+Organ Bossanova<br>
+Latin Holiday<br>
+Rock & Pop<br>
+Easy Listening<br>
+Soul & Gospel<br>
+Dance Pop<br>
+Latin & World<br>
+Jazz & Swing<br>
+Show & Ballroom<br>
+Trad & Folk<br>
+Party Music<br>
+Country<br>
+Organ Stylist<br>
+Disco Hustling<br>
+Love's Disco<br>
+Orchestra Fever<br>
+70s Production<br>
+Honky Tonk Rock<br>
+60s Shades<br>
+Superstar Solo<br>
+Brass Rock<br>
+Weeping Guitar<br>
+Malibu Guitar<br>
+Surfing Voices<br>
+Beach Bars<br>
+Love Song Harp<br>
+Close Vocals<br>
+Suitcase Ballad<br>
+Radio Orchestra<br>
+Bottleneck Pop<br>
+Pop Praises<br>
+Most Fab Lead<br>
+My Sweet Keys<br>
+Karen's Keys<br>
+Rock Wurly<br>
+Festival Axe<br>
+Pale Overdrive<br>
+Shades Of Rock<br>
+Soul Brass&Wood<br>
+True Brit<br>
+Grand Platforms<br>
+70s Glitter<br>
+Pinball Organ<br>
+DX Beat<br>
+Simply Guitar<br>
+Napoli Nights<br>
+8 Beat Spin<br>
+8 Beat Defender<br>
+Smooth Sax<br>
+Symphonic Beat<br>
+Reed It Right<br>
+Sweet Folk<br>
+Smoochy Brass<br>
+Pop Swing Angle<br>
+Retro Pop Keys<br>
+Swing Wah Wah<br>
+Pop Jam Brass<br>
+Stevie's Grand<br>
+Wonder Guitars<br>
+Boy Group Swing<br>
+Easy Fretting<br>
+Sweet Muzak<br>
+80s Movie Sax<br>
+Benson Groove<br>
+16 Instrumental<br>
+Pop Standards<br>
+Back To The 80s<br>
+Muzak Ballad<br>
+Pops Orchestra<br>
+Synth Hook<br>
+Pop Song EP<br>
+Pop Song Solo<br>
+Hip Guitar<br>
+Pop Vocalist<br>
+90s meet 60s<br>
+Boy Band Ballad<br>
+B3 and Roll<br>
+Bill's Guitar<br>
+50s Rotor<br>
+Brass Comets<br>
+Rock Around It<br>
+Shaking Tubes<br>
+Diner Voices<br>
+Shuffle Sax<br>
+Hard Keys<br>
+Organ Rock<br>
+Metal Lead<br>
+Analog Hardcore<br>
+Piano Shuffle<br>
+Boogie Keys<br>
+60s Sax Solo<br>
+I Got The Blues<br>
+Blues Grand<br>
+Blue Organ<br>
+Chicago Sax<br>
+Heavy Wheels<br>
+Shuffle King<br>
+Fat Rock Organ<br>
+R&Roll Click<br>
+Piano Groove<br>
+70s Reed Chorus<br>
+Sweet Rock Keys<br>
+Strumin' Nails<br>
+Girls Suitcases<br>
+Synthy Gals<br>
+Girls' Keys<br>
+Hip Sine<br>
+Pop E.Grand<br>
+Yuppie Brass<br>
+90s Hit Pop<br>
+Bop Click<br>
+Wurly 90s Rock<br>
+Spinning Rock<br>
+Teeny Pad<br>
+Latino Bones<br>
+Gloria's Keys<br>
+Big Salsa Bars<br>
+Miami Falls<br>
+Jazzy SwingRock<br>
+88 Poly Keys<br>
+Synthy Swing<br>
+Smooth Horns<br>
+Stage Rock Band<br>
+Club Piano Band<br>
+Rolling Wheels<br>
+Everybody Rock!<br>
+Fusion Keys<br>
+Roads to Pop<br>
+Uptown Brass<br>
+Wide Section<br>
+Sweet Balladeer<br>
+Summer Love<br>
+Piano Dreams<br>
+Ballad Anglais<br>
+Boys & Girls<br>
+LA Ballad<br>
+Orchestral Love<br>
+Ballad Chorus<br>
+R&B Wah Wah<br>
+Blues B3<br>
+All Saxed Up<br>
+Screamin' R&B3<br>
+Softly Driven<br>
+Spin The Ballad<br>
+Ballad Reeding<br>
+Dr Bob's Ballad<br>
+Echoes Of Piano<br>
+Soul Wheels<br>
+Soul Cresecendo<br>
+Full Bars Soul<br>
+Diner Harmonica<br>
+Bobby Socks Sax<br>
+Teddy Boy Tabs<br>
+Doo Wap Ballad<br>
+Touch Me<br>
+Only Love<br>
+Classic Dream<br>
+Morning Comes<br>
+Stadium Grand<br>
+80s Synth Lines<br>
+88 Echoes<br>
+Fostered Grand<br>
+Sax Lament<br>
+St Elmos Horns<br>
+Ray's Ballad<br>
+50s Sax Duet<br>
+Smooth Jazz EP<br>
+Soul Combo<br>
+Late Night Soul<br>
+Soul Section<br>
+Clayderpop<br>
+Jazz Jam Duet<br>
+Nat's Piano<br>
+Django's Jazz<br>
+Lionel's Jazz<br>
+Scat Singers<br>
+Benson Jazzing<br>
+Unlimited Jazz<br>
+Benny Woodman<br>
+Swinging Saxes<br>
+Up Tempo Reeds<br>
+Swing Crescendo<br>
+Lush Big Band<br>
+Baritone Miller<br>
+Smooth and Saxy<br>
+Set'em up Joe<br>
+Jazz Club Toots<br>
+6 String Boogie<br>
+Boogie Dominoes<br>
+Boogie 335<br>
+Boogie Brothers<br>
+Village Sax<br>
+Sheer Jazz<br>
+Flugel Bros<br>
+Jazz Voices<br>
+Funked Up Bars<br>
+Bob's Bap Boys<br>
+Acapella Funk<br>
+Cool Weirdness<br>
+Frank's Ballad<br>
+Liquorice Jazz<br>
+Dixieland Piano<br>
+Dixie Slide<br>
+Bad B3 Blues<br>
+Hot Metal Blues<br>
+Blues Tabs<br>
+Blues Harpist<br>
+Gentle Keys<br>
+Bert's Band<br>
+Smooth Vocals<br>
+Safari Swing<br>
+Wonderlights<br>
+String Fox<br>
+Foxy Big Band<br>
+Smooth Fox<br>
+Ballroom Mutes<br>
+Paul & His Band<br>
+The Fox Goes On<br>
+Bert's Bone<br>
+Teatime Brass<br>
+Foxy Singers<br>
+The Fox Band<br>
+Quick Brass<br>
+Sequin Dance<br>
+Glitter Vibes<br>
+Ballroom Reedle<br>
+Singing Twist<br>
+Do It Again<br>
+60s Dance Band<br>
+Last Twist<br>
+Latin Harmonica<br>
+Vibes Nights<br>
+Dance Orchestra<br>
+Pan Heaven<br>
+Muchos Pianos<br>
+Latin Teatime<br>
+Beguine Trumpet<br>
+Latino Brass<br>
+Samba Drawbars<br>
+Brazzy Party<br>
+Rio Section<br>
+Get it 3/4<br>
+Simple 3/4 Orch<br>
+3/4 Organ Star<br>
+Walzin' Reeds<br>
+Simple Slow 3<br>
+Grand Charm<br>
+Waltz Sax Man<br>
+Slow Voices<br>
+Fast Band<br>
+Up Beat Alto<br>
+Jive Me Home<br>
+Almost R&Roll<br>
+Spanish Feel<br>
+Tango Player<br>
+Euro Tenors<br>
+French Tango<br>
+Vienna Pianist<br>
+New Strauss<br>
+Classic Duets<br>
+Wiener Ensemble<br>
+Jazzy Cha Cha<br>
+Cha Cha Keys<br>
+Ballroom Latin<br>
+Brass For Two<br>
+Paso Espanol<br>
+Latin Two Step<br>
+String Doble<br>
+Espana Spice<br>
+Nebula Reeds<br>
+To Boldly Play<br>
+Movie Adventure<br>
+Octostringy<br>
+Dr Guitar<br>
+Only Play Twice<br>
+String Finger<br>
+Animated Beauty<br>
+Dizzy Knee Time<br>
+Orchestral Tale<br>
+Orchestral Jazz<br>
+Sax Garland<br>
+Harry J's Swing<br>
+Cocktail Waltz<br>
+Waltz Serenade<br>
+Movie Strings<br>
+Blue Eyes Flute<br>
+Unison Riddle<br>
+Swing Pickin'<br>
+Crooner Brass<br>
+Sunset Anglais<br>
+Olympic Love<br>
+Ballad Stack<br>
+Storyteller<br>
+String Horner<br>
+One Whistle<br>
+Orchestral One<br>
+Show Reeds<br>
+Final Curtain<br>
+Curtain Up!<br>
+Centre Stage<br>
+Orchestra Pizz<br>
+The Final Bow<br>
+Sax Club Style<br>
+Floor Show Bone<br>
+Shadow Voices<br>
+Trad Jazz Duo<br>
+Waller Piano<br>
+Dixie Bari<br>
+Jelly Roll Rag<br>
+8 Beat Keys<br>
+B3 Basics<br>
+Many Keys on 8<br>
+Love And Lost<br>
+Majorca Party<br>
+Spanish Sun<br>
+Non Stop Party<br>
+Suit Rhythm<br>
+Jazzy R&B Pop<br>
+Up Funk Tenor<br>
+R&B Horns<br>
+Early Keys<br>
+50s Organ Hits<br>
+Lucky Saxes<br>
+Rollin'BigBand<br>
+Famous Trumpets<br>
+Modern Party<br>
+Accordion Fun<br>
+Party Up Late<br>
+Straight Grand<br>
+Clicksteen<br>
+Simple 16 Vibes<br>
+Happy 16 Sound<br>
+Sleeping Late<br>
+Sunshine Party<br>
+Ibiza Feeling<br>
+Paloma Dance<br>
+German Tabs<br>
+Happy Hour Pad<br>
+Party Glam<br>
+Beer and Bells<br>
+Toot's Ballad<br>
+Slow RadioOrch.<br>
+Alto Ballad<br>
+Organ Oldies<br>
+St Angelo<br>
+Sunny Island<br>
+Red Sunset<br>
+Barbados Nights<br>
+Party Flautist<br>
+Brass At Last<br>
+Happy Singer<br>
+The Party Band<br>
+Brazil Strings<br>
+Samba Section<br>
+Mallet Nights<br>
+Beguine To Spin<br>
+Latin Eminents<br>
+Ethel's Samba<br>
+Tico Drawbars<br>
+Samba Heritage<br>
+Euro Samba<br>
+Buzzy Beat<br>
+Feel The Beat<br>
+Solo Floor<br>
+Dance Master<br>
+Kent's Home<br>
+Spanish Dance<br>
+Beats Of London<br>
+Sequencers End<br>
+Beat Doctor<br>
+Nutty Organ<br>
+Mr Wurly<br>
+Funky Guitar<br>
+Hip Hop Band<br>
+Mini Dream<br>
+Key Echoes<br>
+Dream Floor<br>
+House of Parp<br>
+House Building<br>
+Houseman<br>
+House Bridge<br>
+Not Too Funky<br>
+London Drums<br>
+Take Me Down<br>
+Acid Floor<br>
+Garage Party<br>
+Saturday Night<br>
+Gimme Five<br>
+NY Street Talk<br>
+Rap It Up<br>
+Turn The Wheel<br>
+Disco Flutes<br>
+String Hustling<br>
+Seventies Synth<br>
+Flares Heaven<br>
+Spanish Disco<br>
+1-2-3 Dance<br>
+90s Latin<br>
+Line Up Dance<br>
+Macadancer<br>
+Caribbean Drive<br>
+Dance Island<br>
+Bemused Rastas<br>
+Beach Band<br>
+Analog Reggae<br>
+Barbados Brass<br>
+Soul To Synth<br>
+Soul Pop Guitar<br>
+Pop Drawbars<br>
+Funky Soul Pop<br>
+Higher Reeds<br>
+Shining Soul<br>
+Sweetest Solos<br>
+Soulful Tines<br>
+Cool&Jazzy Tabs<br>
+Hot & Cool<br>
+LA Horn Section<br>
+Suitcase Soul<br>
+Soul Organist<br>
+Soulful Tenor<br>
+Soul B3<br>
+Vocal Groove<br>
+Smooth Groovin'<br>
+LA Synth Swing<br>
+Gospel Duet<br>
+Sing Praises<br>
+Glory To Him<br>
+Revival Brass<br>
+Gospel Groove<br>
+Grand Joy<br>
+Gospel Standard<br>
+Gospel Brass<br>
+Holy Big Band<br>
+Revival Choir<br>
+I Want To Be 3<br>
+Raise The Roof<br>
+Spiritual Tabs<br>
+Sunday Service<br>
+Grand Worship<br>
+Brassy Worship<br>
+Soft Funk<br>
+Funky Boy<br>
+Just Be Funkful<br>
+R&B Case<br>
+Steamy Soul<br>
+Funk Tubes<br>
+Groovy Buzz<br>
+Fusion Leader<br>
+Synth Funk<br>
+Funky Stuff<br>
+Fusion Falls<br>
+Cool Club Piano<br>
+Soul Smith<br>
+Funky Club Solo<br>
+R&B Fusion Band<br>
+Muted Blues<br>
+Scattin' Blues<br>
+Fluted Blues<br>
+R&B Groove<br>
+Mr LA Guitar<br>
+Tine Grooves<br>
+Funky Pop<br>
+Pacific Jazz<br>
+Soul Piano Man<br>
+Wheels Plus 88<br>
+Soul & Pepper<br>
+Soul Finale<br>
+Analog Fusion<br>
+Crusin' Jazz<br>
+Fusion Fretting<br>
+LA Flautist<br>
+The Right Way<br>
+Take My Hand<br>
+Gospel Flair<br>
+Holy Family<br>
+Country Roads<br>
+Nashville Rock<br>
+Southern 88<br>
+Yee Harp<br>
+Hippie Guitar<br>
+Folk Strumming<br>
+Folk Singers<br>
+Cajun Beats<br>
+Nickleodeon<br>
+Highway To Hell<br>
+Hillbilly Steel<br>
+New Hoedown<br>
+Colonel's March<br>
+March Past<br>
+Military Band<br>
+March Finale!<br>
+River March<br>
+Marching Duet<br>
+Brass And Reeds<br>
+Top Brass<br>
+Boehmen<br>
+Trill<br>
+Let's Drink<br>
+Wiesn Finale<br>
+Muckel Polka<br>
+Zither Polka<br>
+Alpine Style<br>
+Bavaria Home<br>
+Sweet Waltzing<br>
+Wunderbar Waltz<br>
+Come Waltzing<br>
+Holiday Waltz<br>
+Swingy Groove<br>
+Mellow Swing<br>
+EP Waltz<br>
+Swingy Horn<br>
+Swingy Romance<br>
+Stage Player<br>
+Toots & Penny<br>
+Groovy Bones<br>
+French Singers<br>
+Romantic Paris<br>
+Art De Triumphe<br>
+Alpine Horn<br>
+Prost<br>
+Sweet Bavaria<br>
+King Ludwig<br>
+Chanson Reeds<br>
+Grand Waltz<br>
+Full Orchestra<br>
+Antonio's Piano<br>
+Breathy Bossa<br>
+Bossa Flautist<br>
+Symphonic Latin<br>
+Cuban Serenade<br>
+Cuban Dance<br>
+Beach Rhumba<br>
+Cherry Rhumba<br>
+Bolero Francais<br>
+Dreamy Latin<br>
+Bolero Band<br>
+Bolero Saxes<br>
+Carmen's Keys<br>
+Cha Cha Brass<br>
+Sao Paulo Tabs<br>
+Samba Blocks<br>
+Carioca Tremolo<br>
+Flat Spin Latin<br>
+Brazil Flute<br>
+Disco Brasilia<br>
+Street Samba<br>
+Hot Sauce Flute<br>
+Havana Brass<br>
+Son Amigos<br>
+Miami Heat<br>
+Octave Tango<br>
+Tango Accordion<br>
+Tango Passion<br>
+Tango Unison<br>
+Paradise Voices<br>
+Hawaii Vacation<br>
+Waikiki Vibes<br>
+Maui Flutes<br>
+Hula Dance<br>
+Aloha<br>
+Island Vocals<br>
+Island Shuffle<br>
+Jango's Frets<br>
+Gypsy Soloist<br>
+Festival Day<br>
+Almost A Break<br>
+Dance Perpetuum<br>
+Spider Dance<br>
+Italian Zest<br>
+Dublin Dance<br>
+Emerald Band<br>
+Eire Accordion<br>
+Blarney Players<br>
+Lambada Night<br>
+Heatwave Dance<br>
+Holiday Party<br>
+Dance Together<br>
+Jamaica Lead<br>
+Rasta Wheels<br>
+Dance Of Zorba<br>
+Sirtaki Horns<br>
+Plate Dance<br>
+Phil The Fluter<br>
+Glasgow Dance<br>
+Caber Duet<br>
+Nessie's Flute<br>
+Mexico Twin<br>
+Cumbia Brass<br>
+Cumbia Duet<br>
+Jalapeno Band<br>
+Cool Sung Bossa<br>
+Organ Bossa<br>
+BGM Latin Band<br>
+Bossa Blocks<br>
+Talempong<br>
+Galombang<br>
+Minangkabau<br>
+Padang Beat<br>
+Venetian Love<br>
+Party In Napoli<br>
+Sardinia Reed<br>
+Full Romance<br>
+Dangdut Solo<br>
+Dangdut Duet<br>
+Dangdut Voice<br>
+Keroncong Flute<br>
+Indonesian Duet<br>
+Pacific Strings<br>
+Asian Gold<br>
+Reedy Dreams<br>
+Muzakly Correct<br>
+Flower Section<br>
+Mellow 6String<br>
+Paul's Organ<br>
+70s Remix Solo<br>
+Liverpol Wheels<br>
+Country Dreamer<br>
+Folk Goes On<br>
+Push & Pull It!<br>
+Sliding Folk<br>
+Smokin' Grand<br>
+Muted Bluesman<br>
+Gangster Solo<br>
+Alto Jam<br>
+Play and Scat<br>
+Funkmaster<br>
+Retro Funk<br>
+City Horns<br>
+Funky Finale<br>
+Smooth Soprano<br>
+Calm Tines<br>
+Just Laid Back<br>
+Out There Solo<br>
+Chill Out EP<br>
+Cool Tabs<br>
+Groovy Mood<br>
+Party Tabs<br>
+Ham & Party<br>
+Tab Polonaise<br>
+Mom & Dad Dance<br>
+60s Click<br>
+CarnabyStreet<br>
+Museums Rotor<br>
+Busy Wheels<br>
+Padded Strings<br>
+Gentle Grand<br>
+Relaxed Organ<br>
+Slow and Shiny<br>
+Brasilia Bars<br>
+Carnaval Chops<br>
+Samba On Keys<br>
+German Mood<br>
+Bavaria Party<br>
+Super Accordion<br>
+Glam Party<br>
+Electric Groove<br>
+Hit The Keys<br>
+Blown Away<br>
+My Funk Session<br>
+Bar Organist<br>
+Muted Clubsound<br>
+Scatty Jam<br>
+Rock Roads<br>
+Pop Rock Leader<br>
+Synth Rock<br>
+Blown Popbeat<br>
+Simply Piano<br>
+Smooth Pick Up<br>
+Chrystal Beats<br>
+Romantic Harp<br>
+Slow Rotor<br>
+Slow Pop Orch<br>
+Hip Suitcase<br>
+Groovin Frets<br>
+Cool Keys<br>
+Cool Synthy<br>
+Smooth Scat<br>
+Analog Swing<br>
+Hip Brassmix<br>
+Old Soprano Pop<br>
+LA EP<br>
+Straight Bells<br>
+Gentle Hero<br>
+Flugel Popband<br>
+16 Tubes<br>
+Pop Gtr Finale<br>
+Grand 16<br>
+Slow Organ Pop<br>
+Fat Tubes<br>
+Ballad Glances<br>
+Smooth Tpt Pop<br>
+16 Pop Keys<br>
+Uptown Sax Solo<br>
+Stylish Trumpet<br>
+Jazzy Pop<br>
+Smooth Organ<br>
+Hip Lead<br>
+B3 in Flares<br>
+Rhythm & Blows<br>
+Pop R&B Brass<br>
+Cool 70s Blast<br>
+Foxtrot Holiday<br>
+By Far Feasible<br>
+Spanish Tabs<br>
+Eminently Latin<br>
+Grand Theatrics<br>
+Crawford Tibias<br>
+Empress Dance<br>
+Tower Tibias<br>
+Cotillion Swing<br>
+Drawbar Flutes<br>
+Drawbar Trumpet<br>
+Drawbar Theatre<br>
+Drawbar Strings<br>
+B3 Smouldering<br>
+B3 Smokin'<br>
+B3 Cooking<br>
+B3 Screamin'<br>
+Eminent Tango<br>
+Brazilian Cool<br>
+Combo Bossa<br>
+Sax A Go Go<br>
+Radio Pops<br>
+Solidly 70s<br>
+Hit Parade Orch<br>
+Bossa By Toots<br>
+Cocktail Bossa<br>
+Openly Hawaiian<br>
+Hawaiian Tabs<br>
+Reed My Tabs<br>
+Up & Away Tabs<br>
+Wear Zee Organ<br>
+Squeeze Jam<br>
+Artful Jazzer<br>
+Hot Club Jazz<br>
+Jazz De Paris<br>
+Tonewheel Twist<br>
+Spinning Jive<br>
 </div>
