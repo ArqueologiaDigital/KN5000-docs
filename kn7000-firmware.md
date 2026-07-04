@@ -121,16 +121,16 @@ This mirrors the KN5000 approach, whose
 [ROM reconstruction](/rom-reconstruction/) reached 100% byte-perfect matches on
 all six ROMs.
 
-### 1,892 functions named by reusing KN5000 knowledge
+### 2,302 functions named by reusing KN5000 knowledge
 
 The disassembly gets a large head start from the
 [shared codebase](/technics-shared-codebase/): the KN7000 embeds the same "MILK"
 UI-toolkit **runtime reflection tables** the KN5000 does — code-pointer arrays
 each followed by an index-parallel name-pointer array, used by the firmware's
 `MT_GetProcedure`-style lookup. There are **~114 such tables** (one per
-widget/handler group), and parsing them all recovers **1,892 named functions** —
+widget/handler group), and parsing them all recovers **2,302 named functions** —
 `SleepMainTask`, `DispatchEvent`, and the whole `Ac*`/`Vw*`/`Ps*`/`Iv*`/`Tt*`
-widget window-procedure set (490 `*Proc` + 312 `*Func` handlers), i.e. the **same
+widget window-procedure set (518 `*Proc` + 353 `*Func` handlers), i.e. the **same
 names documented for the KN5000**. These become the named anchors for the
 instruction-level disassembly.
 

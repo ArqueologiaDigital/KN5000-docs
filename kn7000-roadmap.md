@@ -41,8 +41,8 @@ KN7000 path *shorter* in several places:
 | Decode the LZSS system-update discs | ✅ [`.SLD` decoded](/kn7000-system-update-discs/), both images extracted & checksum-verified | — |
 | Split the Table Data ROM into assets | ✅ [84-segment directory decoded](/kn7000-firmware/); `table_extract.py`; **293 raw UI bitmaps in true colour** (palette @ prog `0x32573C`, `table_bitmaps.py`); **[1,454 sound + 931 style names](/kn7000-sound-names/)** (`table_names.py`/`style_names.py`); **[120 PAD phrase presets](/kn7000-sound-names/#sound-arranger-pad-presets)** decoded as 0xF5-delimited MIDI phrases (`pad_names.py`) | decode the `TCMP`/"Technics Rhythms" style/rhythm pattern data; sub-tables 1 & 3 |
 | Extract embedded images | ✅ [169-image gallery](/kn7000-image-gallery/) | decode any remaining raw/proprietary graphics |
-| Buildable disassembly → **100% byte-perfect** ROM rebuild | 🟡 byte-exact; organised by the **1,892 functions**; **66 functions converted to real re-assemblable MN10300 assembly**, with call targets resolved to labels (recovered names, else synthetic `func_<ADDR>` — 140/181 call sites named) so the source reads normally | grow the `CONVERT` set to more subsystems |
-| Name functions from symbol tables | ✅ **1,892 functions named** from the firmware's own MILK-toolkit reflection tables — all ~114 widget/handler tables discovered generically (490 `*Proc` + 312 `*Func`, same names as the KN5000); `kn7000.sym` / `src/symbols.inc` | fold in the `MT_` method-selector table (241 entries; selectors, not code) |
+| Buildable disassembly → **100% byte-perfect** ROM rebuild | 🟡 byte-exact; organised by the **2,302 functions**; **66 functions converted to real re-assemblable MN10300 assembly**, with call targets resolved to labels (recovered names, else synthetic `func_<ADDR>` — 140/181 call sites named) so the source reads normally | grow the `CONVERT` set to more subsystems |
+| Name functions from symbol tables | ✅ **2,302 functions named** from the firmware's own MILK-toolkit reflection tables — all ~114 widget/handler tables discovered generically (518 `*Proc` + 353 `*Func`, same names as the KN5000); `kn7000.sym` / `src/symbols.inc` | fold in the `MT_` method-selector table (241 entries; selectors, not code) |
 
 ## Firmware & CPU
 
@@ -63,7 +63,7 @@ so they are the best starting point for each KN7000 equivalent:
 
 | KN5000 subsystem | KN7000 status | Notes |
 |------------------|---------------|-------|
-| [UI Framework](/ui-framework/) / [widget types](/ui-widget-types/) | 🟡 **490 `*Proc` window-procedures + 312 `*Func` handlers named**; the **[Event & Dispatch System](/kn7000-event-system/) is now documented** from the disassembly (60 `EV_*` codes, object table @`0x5000757C`, main/AP tasks, the Post/Send/Dispatch API) | port the remaining KN5000 widget docs; the `MT_` method-selector table |
+| [UI Framework](/ui-framework/) / [widget types](/ui-widget-types/) | 🟡 **518 `*Proc` window-procedures + 353 `*Func` handlers named**; the **[Event & Dispatch System](/kn7000-event-system/) is now documented** from the disassembly (60 `EV_*` codes, object table @`0x5000757C`, main/AP tasks, the Post/Send/Dispatch API) | port the remaining KN5000 widget docs; the `MT_` method-selector table |
 | [Audio subsystem](/audio-subsystem/) / [tone generator](/tone-generator/) | ⬜ | **dual** tone generators (IC203/204 + IC207/208) — new vs the KN5000 |
 | [Display subsystem](/display-subsystem/) | ⬜ | LCD V-RAM IC104; likely a different controller |
 | [Keybed scanning](/keybed-scanning/) | ⬜ | |
@@ -92,7 +92,7 @@ so they are the best starting point for each KN7000 equivalent:
 
 ## Suggested order of work
 
-1. **Symbol map** — ✅ largely done: **1,892 functions** recovered and named from
+1. **Symbol map** — ✅ largely done: **2,302 functions** recovered and named from
    the firmware's ~114 reflection tables, directly reusing KN5000 framework
    knowledge. Remaining: the `MT_` method-selector table (selectors, not code).
 2. **Real assembler** — build a GNU binutils `mn10300` toolchain so the

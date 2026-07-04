@@ -65,24 +65,26 @@ The families are recognisable: lifecycle (`EV_SHOW`/`EV_HIDE`/`EV_RESET`), drawi
 ## The object table
 
 Live UI objects are kept in a fixed table in work RAM at **`0x5000757C`**, with
-**`0x38` (56)-byte slots** indexed by object id. `GetEvent` computes the slot
-address arithmetically — this is decoded straight from its converted source:
+**`0x38` (56)-byte slots** indexed by object id. Three functions compute a slot
+address the same way (`base + id*0x38`), which is how the geometry is known;
+`GetCurrentTarget` is the clearest:
 
 ```
-GetEvent:                         # CPU 0x4842943B
-    ...
+GetCurrentTarget:                 # CPU 0x4842943B
     call    GetCurrentObjectId    # d0 <- id of the active object (see below)
     mov     0x38, d1
     mul     d1, d0                # id * 0x38
     add     0x5000757c, d0        # + table base  => &slot[id]
     mov     d0, a0
-    mov     (0x10, a0), d0        # slot + 0x10 = the object's current event
+    movhu   (0x10, a0), d0        # slot + 0x10 = the object's current target
     ret
 ```
 
-So **offset `+0x10`** within a slot holds the object's pending event. Other
-framework accessors (e.g. `SetVisible`, `SetChange`) reach their object through a
-linked-view pointer via the hot helper `GetLinkView` and test flag bits in it.
+So **offset `+0x10`** within a slot holds the object's current target reference.
+`InitializeEventQueue` (`0x484284B4`) walks the same table to reset a slot. Other
+framework accessors (e.g. `SetVisible`, `SetChange`) instead reach their object
+through a linked-view pointer via the hot helper `GetLinkView` and test flag bits
+in it.
 
 ## Two tasks: main and AP
 
@@ -118,17 +120,20 @@ The public entry points, all recovered by name and converted to source:
 
 | Function | CPU addr | Role |
 |----------|----------|------|
-| `InitializeEventQueue` | `0x4842936F` | reset the current object's event queue |
-| `PostEvent` | `0x484293D2` | **enqueue** an event `(obj, param, code)` for later delivery; returns 1 |
-| `SendEvent` | `0x484293AD` | deliver an event **synchronously** (with a param word) |
-| `DispatchEvent` | `0x48429388` | deliver an event to an object now |
-| `GetEvent` | `0x4842943B` | read the current object's pending event (slot `+0x10`) |
+| `InitializeEventQueue` | `0x484284B4` | reset an object's slot in the table |
+| `DispatchEvent` | `0x4842936F` | deliver the **current** object's pending event now (no args) |
+| `SendEvent` | `0x48429388` | deliver an event synchronously, with a param word |
+| `PostEvent` | `0x484293AD` | enqueue an event for later delivery |
+| `GetEvent` | `0x484293D2` | fetch an event `(obj, a0, a1)` for processing |
+| `GetCurrentTarget` | `0x4842943B` | the active object's current target (slot `+0x10`) |
 
-Each begins by resolving the current object via `GetCurrentObjectId`, then hands
+Most begin by resolving the current object via `GetCurrentObjectId`, then hand
 off to a lower-level queue/dispatch helper (`func_48428…`) that walks the object
-tree and invokes the target's window procedure. The window procedure itself is
+tree and invokes the target's window procedure. (`DispatchEvent` is argument-less
+precisely because it acts on the *current* object rather than a passed-in one —
+the detail that finally disambiguated the reflection-table alignment, see below.) The window procedure itself is
 looked up through the toolkit's `MT_GetProcedure` mechanism — the same
-reflection tables that let us recover **490 `*Proc` handlers** by name (see the
+reflection tables that let us recover **518 `*Proc` handlers** by name (see the
 [firmware page](/kn7000-firmware/)). A handler is therefore a function that
 switches on the event code and acts:
 
@@ -143,6 +148,18 @@ long SomeWidgetProc(object *self, int event, long param) {
     }
 }
 ```
+
+## A note on the recovered names
+
+The names above are recovered by pairing each reflection table's code-pointer
+array with its parallel name-pointer array. Getting the **alignment** right
+matters: a one-slot shift silently labels every function with a neighbour's name.
+The alignment was pinned down behaviourally — under the correct pairing every
+`Get*` accessor reads its variable and every `Set*` writes it, with no
+exceptions, whereas the shifted pairing produces impossible "getters" that write
+memory. That check is what confirms, for instance, that the argument-less
+`0x4842936F` is `DispatchEvent` (acting on the current object) rather than a
+similarly argument-less `InitializeEventQueue`.
 
 ## Relationship to the KN5000
 
