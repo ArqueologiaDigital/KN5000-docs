@@ -125,13 +125,21 @@ Shared reuse stops cleanly at the application layer:
 |-------|--------|--------|
 | RTOS/kernel | custom (no banner) | `MILK MN10300 Ver1.0R1` @ `0x3B8AAC` |
 | Compression | [LZSS](/lzss-compression/) | LZSS **and** zlib/deflate 1.0.4 @ `0x3B8604` |
-| Images | headerless 8bpp bitmaps | JPEG (authored in Adobe Photoshop) + Windows BMP |
+| Photo/demo images | headerless 8bpp bitmaps | *adds* JPEG (Adobe Photoshop) + Windows BMP |
 | Tone-init helper | `SwbtWr` @ `0x1F410` | absent (sound-init layer reworked) |
 | Version widgets | — | KN7000-only `AcProgVerBoxProc`, `IvMpVerWinProc`, `DefaultWindow` (same naming grammar) |
 
 The KN7000-only additions follow the **same framework naming grammar**
 (`Ac*BoxProc`, `Iv*WinProc`), exactly what you expect from new features authored
 downstream in a shared codebase.
+
+Note that the image *divergence* is only partial: the KN7000 **adds** JPEG for
+photos and demo art but still stores its **UI icons as headerless
+palette-indexed bitmaps reached through a `{width, height, pointer}` descriptor
+hierarchy — the same design as the KN5000** (293 such bitmaps, including a 240
+sprite icon set; see the [KN7000 image gallery](/kn7000-image-gallery/#raw-ui-bitmaps-table-rom)).
+So even the graphics pipeline is shared at the UI layer; only the photo/demo
+asset format was modernised.
 
 ## The update-disc container is shared too
 

@@ -6,13 +6,19 @@ permalink: /kn7000-image-gallery/
 
 # KN7000 Embedded Image Gallery
 
-**169 images** were extracted from the two KN7000 firmware flash images. Unlike
-the [KN5000](/image-gallery/), which stores headerless raw 8bpp bitmaps, the
-KN7000 uses **standard file formats** — baseline JPEG for photos and demo art,
-and Windows BMP for UI graphics. All images below decode cleanly; each caption
-gives the source ROM, byte offset, and pixel dimensions.
+The KN7000 firmware stores graphics in **two** ways:
 
-Extract them yourself with `image_extract.py` in the `kn7000_extraction` repo.
+* **Standard file formats** — 169 baseline JPEGs (photos, demo art) and Windows
+  BMPs (UI graphics), extracted with `image_extract.py`. These are shown in the
+  sections below; each caption gives the source ROM, byte offset, and dimensions.
+* **Raw palette-indexed bitmaps** — exactly like the [KN5000](/image-gallery/):
+  headerless 4/8bpp indexed pixel data reached through a pointer hierarchy in the
+  table ROM (see [Raw UI bitmaps](#raw-ui-bitmaps-table-rom) at the bottom).
+
+So the earlier "the KN7000 uses standard formats *unlike* the KN5000" is only
+half the story: it **adds** JPEG/BMP but still keeps the KN5000's raw-bitmap
+design for its UI icons — one more piece of the
+[shared codebase](/technics-shared-codebase/).
 
 ## Program ROM — icons & product photos
 
@@ -210,3 +216,26 @@ A set of 42 small 38×80 BMPs render the on-screen **digital drawbars** for the 
 <figure style="margin:0;text-align:center;"><img src="{{ "/assets/images/kn7000-gallery/table_3cfea8.png" | relative_url }}" loading="lazy" alt="table 0x3cfea8 · 38x80" style="max-width:100%;height:auto;border:1px solid #ccc;background:#f6f6f6;border-radius:3px;"><figcaption style="font-size:0.7rem;color:#777;margin-top:2px;">table 0x3cfea8 · 38x80</figcaption></figure>
 <figure style="margin:0;text-align:center;"><img src="{{ "/assets/images/kn7000-gallery/table_3d055e.png" | relative_url }}" loading="lazy" alt="table 0x3d055e · 38x80" style="max-width:100%;height:auto;border:1px solid #ccc;background:#f6f6f6;border-radius:3px;"><figcaption style="font-size:0.7rem;color:#777;margin-top:2px;">table 0x3d055e · 38x80</figcaption></figure>
 </div>
+
+## Raw UI bitmaps (Table ROM)
+
+Separately from the JPEGs/BMPs above, the table ROM holds **293 headerless
+palette-indexed bitmaps** — the same storage design the KN5000 uses. They are
+reached through a pointer hierarchy: a master directory at table file `0x200`
+points to sub-tables of `{width, height, pixel_ptr}` records; the pixel data is
+raw 4/8bpp palette indices. Extract them with `table_bitmaps.py`.
+
+The exact display palette lives in palette RAM / the program ROM and is not yet
+known, so these are rendered **grayscale by palette index** — the shapes are
+exact, the colours are placeholders.
+
+**Sound & category icons** — 53 variable-size 8bpp bitmaps (sub-table 0):
+instrument glyphs, category labels (including the Japanese `音楽` = "music"), and
+a `GENERAL MIDI SPECIAL` logo.
+
+![KN7000 sound/category icons]({{ "/assets/images/kn7000-gallery/tblbmp_icons8.png" | relative_url }})
+
+**UI icon sprite set** — 240 fixed 24×24 4bpp icons (sub-table 2): the main
+on-screen interface glyphs (keyboards, screens, arrows, musical symbols, …).
+
+![KN7000 24x24 UI icon sprite set]({{ "/assets/images/kn7000-gallery/tblbmp_icons4.png" | relative_url }})
