@@ -35,6 +35,20 @@ reset-vector table and no version byte** — the true CPU reset vector and the
 library/kernel code at `0x4C000000` live in a separate, still-undumped internal
 boot ROM.
 
+### Dependency on the undumped library ROM (`0x4C000000`)
+
+The program image is only *half* the code. It makes **7,965 calls to 298
+distinct entry points** in a second ROM at `0x4C000000` that is **not present on
+the system-update floppies** and has not been dumped. The called addresses span
+up to `0x4C5E9A3A`, so that ROM is **at least ~6 MiB**. The way arguments are set
+up at the call sites identifies it as the **C runtime + MILK kernel**: e.g.
+`0x4C001A48` (1,201 calls — a `printf`/`sprintf`-family formatter fed a
+format-string pointer and stacked arguments), `0x4C003051` (a `memcpy`/`strcpy`
+taking dest/src pointers), `0x4C0019D5` (a numeric formatter). This is why a
+running emulator needs that ROM dumped (or the hot entry points high-level
+emulated): the [boot interpreter](/kn7000/) runs 3.06 M instructions and then
+calls straight into `0x4C0…`.
+
 ### Region map
 
 | Range | Contents |

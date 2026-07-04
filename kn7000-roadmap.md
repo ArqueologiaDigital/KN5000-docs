@@ -52,6 +52,7 @@ KN7000 path *shorter* in several places:
 | [Boot sequence](/boot-sequence/) | 🟡 boot header + reset vectors disassembled | trace init once more code is named |
 | [CPU subsystem](/cpu-subsystem/) doc | ⬜ | document the MN10300/AM33 core, its I/O, and the panel sub-CPUs (CPL/CPC/CPR/CPSD) |
 | Reset vector / version block | 🔒 lives in an **undumped internal boot ROM** at `0x4C000000` / top-of-flash `0x7FFFxx` | needs a hardware dump or an exploit (as the KN5000 sub-CPU boot ROM did) |
+| **Library / kernel ROM** at `0x4C000000` (undumped) | 🔒 the firmware makes **7,965 calls to 298 entry points** in it (range → **≥ ~6 MiB**); call patterns show it holds the **C runtime + MILK kernel** (printf, memcpy, formatters) — see `kn7000_mame/notes/library-rom-api.md` | **emulation is blocked on dumping this ROM** (or HLE'ing the hot entry points) |
 | [Test modes](/test-modes/) | 🟡 service-test strings + IC map recovered | document each test screen |
 | [Firmware update procedure](/firmware-update-procedure/) & validation | 🟡 container + `.INF` checksums understood | trace the on-device flash-write path |
 
