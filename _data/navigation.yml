@@ -13,6 +13,8 @@
       url: /kn7000-system-update-discs/
     - title: Firmware Images
       url: /kn7000-firmware/
+    - title: Tasks & Scheduler
+      url: /kn7000-task-scheduler/
     - title: Event & Dispatch System
       url: /kn7000-event-system/
     - title: Display Subsystem
