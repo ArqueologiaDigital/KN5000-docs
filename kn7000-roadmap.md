@@ -70,7 +70,7 @@ so they are the best starting point for each KN7000 equivalent:
 | [MIDI subsystem](/midi-subsystem/) | ⬜ | |
 | [Sequencer](/sequencer/) / [accompaniment engine](/accompaniment-engine/) | 🟡 **[sequencer documented](/kn7000-sequencer/)**: `MT_Seq_*` engine API, `EV_SEQ_*` events, record/play + SMF, Seq→Composer/Pad copy | accompaniment/style engine still ⬜; style/rhythm taxonomy partially shared |
 | [Storage / FDC](/fdc-subsystem/) | 🟡 **[documented](/kn7000-storage-subsystem/)**: three media (floppy FAT12/16, SD card, USB Song Manager) via the shared `Fmm*` File Management Mode; file types `.MID`/`.CST`/Composer/Playlist/…; rich `Sdc*` handler set | trace the SD/FDC media I/O drivers |
-| [Control panel protocol](/control-panel-protocol/) | ⬜ | four panel sub-CPUs vs the KN5000's arrangement |
+| [Control panel protocol](/control-panel-protocol/) | 🟡 **[documented](/kn7000-control-panel/)**: four panel sub-CPUs (CPL/CPC/CPR/CPSD) scan switches + drive LEDs; switch→event mapping (`EV_SW*`/`EV_INDEXSW_*`/`EV_DIAL`), data-dial focus, service test | trace the main-CPU↔sub-CPU serial framing |
 
 ## Emulation (MAME)
 
