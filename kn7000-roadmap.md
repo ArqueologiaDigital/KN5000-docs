@@ -76,8 +76,8 @@ so they are the best starting point for each KN7000 equivalent:
 
 | KN5000 | KN7000 status | Notes |
 |--------|---------------|-------|
-| [MAME driver](/mame-pull-requests/) ([PR #14558](https://github.com/mamedev/mame/pull/14558)) | 🟡 **draft** in the `kn7000_mame` overlay repo: machine driver with the **decoded memory map** (112 I/O regs across 5 banks, dual-TG banks, framebuffer windows, work-RAM globals) + a nearly-complete **MN10300 execution core** | build-test; model peripherals; obtain/HLE the `0x4C000000` ROM to boot |
-| MN10300 CPU core | 🟡 **~99.94% of real instructions implemented**; **semantics validated by a Python interpreter that runs 3.06 M real boot instructions coherently**; length decoder validated (656k, 0 mismatches); `movm` mask resolved empirically | build-test the C++ core, interrupts/exceptions, timing |
+| [MAME driver](/mame-pull-requests/) ([PR #14558](https://github.com/mamedev/mame/pull/14558)) | 🟢 **builds, passes `-validate`, and RUNS** (`build.sh` in the overlay repo): the machine boots the real firmware headless (~1700% speed), executing the decoded memory map (112 I/O regs, dual-TG banks, framebuffer windows) | control-panel HLE + MIDI; model peripherals; obtain/HLE the `0x4C000000` ROM to boot to UI |
+| MN10300 CPU core | 🟢 **~99.94% of real instructions implemented and now VERIFIED in MAME**: its boot I/O trace is byte-identical to the independent Python interpreter's (GPIO/timer init `0x497`/`0xEA6`/…, kernel entry `0x484D7115`, then the undumped `0x4C000000` ROM) — two independent implementations agree exactly | interrupts/exceptions, timing |
 | Peripheral HLE (panel, TG, FDC, display) | ⬜ | reuse KN5000 HLE patterns where the shared design allows |
 
 ## Homebrew & higher-level work
