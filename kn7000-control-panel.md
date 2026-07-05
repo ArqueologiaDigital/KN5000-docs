@@ -17,15 +17,44 @@ LED/dial control — grounded in the service-test screens and the named handlers
 
 ## The panel sub-CPUs
 
-The service-test "PANEL CPU CHECKING" / "PANEL SW&LED CHECK" screens enumerate
-**four panel sub-CPUs**, each responsible for one region of the control surface:
+The service manual's schematics show **three panel PCBs, each with its own 8-bit
+microcomputer**, and the service-test "PANEL CPU CHECKING" / "PANEL SW&LED CHECK"
+screens enumerate **four logical groups** (the fourth, CPSD, has no separate board
+— it is the data-dial/misc group):
 
-| Sub-CPU | Region (inferred from the naming) |
-|---------|-----------------------------------|
-| **CPL** | panel **L**eft |
-| **CPC** | panel **C**entre |
-| **CPR** | panel **R**ight |
-| **CPSD** | a fourth panel/slider–display group |
+| Sub-CPU | PCB | Micro | Role |
+|---------|-----|-------|------|
+| **CPL** | CPL (page 128) | IC1101 = `C0BDB646823` | left: LCD soft-keys, style/rhythm groups, fills, performance pads |
+| **CPC** | CPC (page 130) | (8-bit micro) | centre: the part mixer — 16 `MUTE UP/DOWN`, contrast, page/exit |
+| **CPR** | CPR (page 132) | IC1001 = `C0BDB000023` | right (**master**): sound groups & families, part select, transpose, LCD soft-keys, memory/disk. The main-CPU serial link attaches here and chains to CPL. |
+| **CPSD** | — | (logical) | the ROT data-dial encoder and misc |
+
+The **data dial** is a rotary encoder (`SW1101` on the ROT board) whose A/B lines
+feed CPR directly.
+
+### Button inventory (from the schematics)
+
+All 152 buttons are declared in the MAME driver's input ports. By board:
+
+* **CPL** — `LCD Left 1–5`, `START/STOP`, `SYNCHRO & BREAK`, `INTRO & ENDING 1/2`,
+  `FILL IN 1/2`, `FADE IN/OUT`, `TAP TEMPO`, `SPLIT POINT`; the style/rhythm groups
+  (`SOUL & FUNK`, `BALLAD`, `JAZZ COMBO`, `ROCK & POP`, `BIG BAND & SWING`,
+  `MARCH`, `ENTERTAINER`, `COUNTRY`, `LATIN & WORLD`, `GOSPEL & BLUES`, `BALLROOM`,
+  `MODERN DANCE`, `MOVIE SHOW`, `CUSTOM`, `R & B`); `VARIATION & MSA 1–4`,
+  `MUSIC STYLE ARRANGER`, `PAD 1–6/SOLO`, `PERFORMANCE PADS BANK/STOP/AUTO`,
+  `ONE TOUCH PLAY`, `SOUND SET`, `MUSIC STYLIST`, `AUTO MODE`, `DEMO`,
+  `MEMORY/LOAD`, `PLAY CHORD OFF/ON`, `ARRANGER OFF/ON`.
+* **CPC** — `OTHER PARTS/TG`, `HELP`, `CONTRAST UP/DOWN`, `MUTE UP/DOWN 1–16`
+  (the part mixer), `PAGE UP/DOWN`, `DISPLAY HOLD`, `EXIT`.
+* **CPR** — `SOUND GROUP 1–8`; the sound families (`PIANO`, `GUITAR`, `BRASS`,
+  `STRINGS & VOCAL`, `BASS`, `SYNTH`, `ORGAN & ACCORDION`, `DRUM KITS`, `WORLD`,
+  `PAD`, `MALLET & ORCH PERC`, `TAB ORGAN`, `DIGITAL DRAWBAR`, `SAX & WOODWIND`,
+  `ACCORDION REGISTER`); `PART SELECT LEFT/RIGHT 1–2`, `CONDUCTOR LEFT/RIGHT 1–2`,
+  `TRANSPOSE R1/R2 ±`, `LCD Right 1–5`, `MEMORY`, `FAVORITES`, `VARIATION`,
+  `REVERB`, `CHORUS`, `SUSTAIN`, `DIGITAL EFFECT`, `SOUND DSP`, `EFFECT MIC`,
+  `MULTI`, `TECHNI-CHORD`, `SOLO`, `SOUND SET/EXPLORER`, `EW EXPANSION`, disk/SD
+  (`DISK EASY REC`, `DISK MENU LOAD`, `SD CARD LOAD`, `CUSTOMIZE`, `CUSTOM PANEL`,
+  `PROGRAM MENUS`, `NEXT BANK`, `BANK VIEW`).
 
 Each scans its own switch matrix and drives its own LEDs; the test mode lights
 them group by group (`CPL LEDS to light`, `CPC LEDs to light`, `CPR LEDs to
