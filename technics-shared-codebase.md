@@ -82,6 +82,34 @@ KN7000) and the whole class-introspection table survive the CPU change intact �
 the shared code is the entire event-dispatch + object-registration core, not just
 leaf widgets.
 
+### Framework internals: the dispatch & object model
+
+Decoding the KN7000 tables reveals *how* this shared toolkit works internally —
+mechanism that transfers to the KN5000 too:
+
+* **A unified 32-bit message-id space, partitioned by category** (the high 16
+  bits). The same encoding recurs everywhere: `0x0002_xxxx` toolkit opcodes,
+  `0x0004_xxxx` / `0x0008_xxxx` `MT_` method selectors, `0x0005_xxxx` UI events,
+  `0x0006_xxxx` system/task messages. `SleepMainTask`, for instance, sends
+  opcode `0x00020009` with message id `0x0006009D`.
+* **The `MT_` dispatch table** (KN7000 name array at `0x326CE4`, 241 entries) is
+  *heterogeneous*: each method resolves to **either** a direct code pointer
+  (≈29, e.g. `MT_GetProcedure` itself), a **selector** id (`0x0004_xxxx`, routed
+  through the kernel), or a pointer into the **class-descriptor region** — i.e.
+  the toolkit mixes direct calls, late-bound message dispatch and RTTI in one
+  table.
+* **An object property/class metadata region** (KN7000 ≈`0x1B1000`+): class
+  descriptors delimited by `0xFFFFFF00`, carrying property lists whose names
+  (`parent`, `top`, `super`, `fontcolor`, `pagemax`, `editsw`, …) are what the
+  `MT_GetPropName`/`MT_GetPropData`/`MT_GetClass`/`MT_GetParentClass` RTTI reads.
+* **A named-constant table** for the property values — recovered by
+  `kn7000_disassembly/tools/gen_constants.py`: `VF_*` view flags, `CL_*` palette
+  colours, `BD_*` border styles, and part/track/step enums. These cross-check the
+  rest of the reverse engineering exactly — `VF_Invisible=1`, `VF_Change=4`,
+  `VF_Const=8` are precisely the object flag bits the KN7000's `SetVisible` /
+  `SetChange` / `SetConst` test with `btst`, and `CL_Transparent=0xF7` names the
+  transparent palette index used by both machines' sprite blitters.
+
 ## What is shared: localization & resource tables
 
 | Element | KN5000 | KN7000 |
