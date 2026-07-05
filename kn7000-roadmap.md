@@ -67,10 +67,10 @@ so they are the best starting point for each KN7000 equivalent:
 | [Audio subsystem](/audio-subsystem/) / [tone generator](/tone-generator/) | ⬜ | **dual** tone generators (IC203/204 + IC207/208) — new vs the KN5000 |
 | [Display subsystem](/display-subsystem/) | 🟡 **[documented](/kn7000-display-subsystem/)** from the disassembly: panel-type detection (colour / 2-bit), per-depth bitmap blitters (4/16/256), CLUT @`0x32573C`, font table, LCD I/O `0x34000000` + framebuffer `0x90000000` | trace the exact pixel path to V-RAM |
 | [Keybed scanning](/keybed-scanning/) | ⬜ | |
-| [MIDI subsystem](/midi-subsystem/) | ⬜ | |
+| [MIDI subsystem](/midi-subsystem/) | 🟡 two ports identified (SIO ch 1&2 @ `0x34000810`/`0x34000820`, ISRs `0x484B1E86`/`0x484B2037`, 31250 8N1) and **declared in the MAME driver**; ch2's differing config (`0x1181`) may be a computer/TO-HOST link | trace the MIDI parser + confirm ch2's role |
 | [Sequencer](/sequencer/) / [accompaniment engine](/accompaniment-engine/) | 🟡 **[sequencer documented](/kn7000-sequencer/)**: `MT_Seq_*` engine API, `EV_SEQ_*` events, record/play + SMF, Seq→Composer/Pad copy | accompaniment/style engine still ⬜; style/rhythm taxonomy partially shared |
 | [Storage / FDC](/fdc-subsystem/) | 🟡 **[documented](/kn7000-storage-subsystem/)**: three media (floppy FAT12/16, SD card, USB Song Manager) via the shared `Fmm*` File Management Mode; file types `.MID`/`.CST`/Composer/Playlist/…; rich `Sdc*` handler set | trace the SD/FDC media I/O drivers |
-| [Control panel protocol](/control-panel-protocol/) | 🟡 **[documented](/kn7000-control-panel/)**: four panel sub-CPUs (CPL/CPC/CPR/CPSD) scan switches + drive LEDs; switch→event mapping (`EV_SW*`/`EV_INDEXSW_*`/`EV_DIAL`), data-dial focus, service test | trace the main-CPU↔sub-CPU serial framing |
+| [Control panel protocol](/control-panel-protocol/) | 🟢 **[documented](/kn7000-control-panel/) + serial framing fully reverse-engineered + HLE'd in MAME**: four panel sub-CPUs scan switches + drive LEDs over a 3-channel SIO ASIC; the 2-byte `[ADDR][DATA]` switch/LED frame formats are decoded (e.g. START/STOP press = `C0 10`) and modelled in the driver | deliver switch reports to firmware once the CPU takes SIO interrupts |
 
 ## Emulation (MAME)
 
@@ -78,7 +78,8 @@ so they are the best starting point for each KN7000 equivalent:
 |--------|---------------|-------|
 | [MAME driver](/mame-pull-requests/) ([PR #14558](https://github.com/mamedev/mame/pull/14558)) | 🟢 **builds, passes `-validate`, and RUNS** (`build.sh` in the overlay repo): the machine boots the real firmware headless (~1700% speed), executing the decoded memory map (112 I/O regs, dual-TG banks, framebuffer windows) | control-panel HLE + MIDI; model peripherals; obtain/HLE the `0x4C000000` ROM to boot to UI |
 | MN10300 CPU core | 🟢 **~99.94% of real instructions implemented and now VERIFIED in MAME**: its boot I/O trace is byte-identical to the independent Python interpreter's (GPIO/timer init `0x497`/`0xEA6`/…, kernel entry `0x484D7115`, then the undumped `0x4C000000` ROM) — two independent implementations agree exactly | interrupts/exceptions, timing |
-| Peripheral HLE (panel, TG, FDC, display) | ⬜ | reuse KN5000 HLE patterns where the shared design allows |
+| Peripheral HLE (panel, TG, FDC, display) | 🟡 **control panel + MIDI modelled**: the driver has a 3-channel SIO ASIC model (`0x34000800`), a control-panel HLE (LED-command decode on TX, 250 Hz button scan → switch-report frames on RX) and **two MIDI ports** (byte↔bit UART bridges → MAME `midi_port`), plus a **clickable `.lay`** (184 buttons + LED strips). TG/FDC/display still ⬜ | deliver panel RX + MIDI IN to firmware once the CPU takes SIO interrupts; then TG/FDC/display |
+| MIDI ports | 🟡 **declared in the driver**: SIO channels 1 & 2 (`0x34000810`/`0x34000820`) each wired to a MIDI IN + MIDI OUT port; TX path functional, RX awaits CPU interrupts | verify against real MIDI traffic once interrupts land |
 
 ## Homebrew & higher-level work
 
