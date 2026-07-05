@@ -71,16 +71,32 @@ and the part/track indicator sets. Because the LEDs sit under the buttons and ar
 driven by the same sub-CPU that scans them, the "SW&LED CHECK" test can verify a
 whole section's matrix in one pass.
 
-## Hardware path
+## Hardware path & serial protocol
 
-The main CPU reaches the panel through the low `0x34000000` I/O bank — the
-largest MMIO block, shared with the [display](/kn7000-display-subsystem/) and key
-scan — and the `0x36008000` bit-mapped control/GPIO port (chip selects and
-strobes; register `0x36008004` is toggled heavily during I/O). The exact serial
-or parallel framing between the main CPU and each sub-CPU is not yet traced from
-the disassembly; what is established is the *logical* protocol above (four
-scanning sub-CPUs, switch-to-event mapping, dial and LED control). See the
-[I/O register map](/kn7000/#io-register-map-from-firmware-analysis).
+The service-manual schematics (SX-KN7000, *SCHEMATIC DIAGRAM-15* "CPL CIRCUIT")
+pin this down. **Each panel PCB carries its own 8-bit microcomputer** — on the
+CPL board it is **IC1101 = C0BDB646823** (with crystal X1101) — and that sub-CPU
+does the local work:
+
+* it **scans an 8×8 switch matrix** — eight strobe lines `SW0…SW7` against eight
+  sense columns `SEG0…SEG7`, each cell a diode + a momentary switch (`EVQ2140SR`),
+  so up to 64 buttons per board;
+* it **drives an LED matrix** through a **74LS138 (IC1102) 3-to-8 decoder** plus
+  transistor rows and buffers (IC1103), the LEDs sitting under the buttons;
+* it talks to the main CPU over a **synchronous serial link** — the pins
+  **`SIN`, `SOUT`, `CLK`, `RST`, `CNTR1`** (data in, data out, shared clock,
+  reset, and a control/attention line). CPL chains to the CPR board and on to the
+  main board.
+
+On the **main-CPU side** the panel link lives in the `0x34000000` I/O bank at the
+byte registers **`0x34000800` / `0x34000808` / `0x34000818` / `0x34000828`** (one
+register group per sub-CPU, heavily accessed by the firmware — see the
+[I/O register map](/kn7000/#io-register-map-from-firmware-analysis)). The main CPU
+clocks LED-update bytes *out* over `SOUT` and shifts button-scan bytes *in* over
+`SIN`; the LED state is staged in a RAM shadow buffer (around `0x50150A00`) that a
+per-frame service transmits. This is the **same serial-panel design the KN5000
+uses** (its MAME driver models it with a `cpanel` HLE device driving TXD/RXD/SCLK)
+— the KN7000 simply has four such sub-CPUs instead of two.
 
 ## Relationship to the KN5000
 
