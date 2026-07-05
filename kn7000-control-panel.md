@@ -158,6 +158,44 @@ instead of two. Note that the **sibling SIO channels at `0x34000810` and
 `0x34000820` are the two MIDI ports**, not the panel — an identical channel
 layout at `+0x10` stride, which is what confirms `0x34000800` as the panel link.
 
+### Boot handshake (why the KN7000 wouldn't boot in MAME)
+
+Before the main CPU reaches its home screen it must complete a **handshake** with
+the panel sub-CPUs; if it fails, the boot draws a full-screen diagnostic reading
+**"ERROR in CPU data transmission."** Reproducing this handshake was the last
+thing blocking the firmware from booting under emulation. The chain, reversed
+from the firmware:
+
+1. **Transmit side (interrupt group 0x11).** The main CPU sends **7-byte frames
+   with line-sync bytes woven between the payload**: positions 0,1 sync, 2 =
+   payload byte 1, 3 sync, 4 = payload byte 2, 5,6 sync. A state machine (states
+   1–6, one byte each) advances on a *transfer-complete* interrupt after every
+   byte. The init/ping commands match the KN5000 protocol: `1F DA`, `1F 1A`,
+   `1D 02`, then pings `20 00` (CPL) and `E0 00` (CPR).
+
+2. **The panel answers with a two-edge "attention" pulse (interrupt group
+   0x1A).** On a completed command the panel pulses a dedicated
+   external-interrupt pin twice, and the main CPU flips that pin's **trigger-mode
+   register `0x34000280`** (an eight-field, 2-bits-each register; the panel-ATN
+   pin is bits 7:6) between the two edges — arming the opposite edge for the
+   second transition.
+
+3. **Reply bytes (interrupt group 0x10).** After the ATN handshake the main CPU
+   switches the link to RX and clocks the panel's reply bytes in, **one per
+   interrupt**, into the 92-byte ring buffer described above.
+
+4. **Success test.** The boot code declares success when the **ring's write
+   pointer has moved** (a reply arrived) within a short window; otherwise it
+   retries — **ten times** — and then paints the error screen.
+
+Modeling this faithfully in MAME required, besides the frame format above:
+correct interrupt-priority masking on the CPU (so a handler that re-enables
+interrupts mid-body doesn't re-enter itself), delivering every interrupt through
+a deferred timer (a completion asserted synchronously from inside a register
+write is wiped by the ISR-exit acknowledge), and the two-edge ATN pulse driven
+off the `0x34000280` re-arm write. With those in place the handshake completes,
+the error screen clears, and the KN7000 draws its home screen.
+
 ## Relationship to the KN5000
 
 Distributed panel scanning by dedicated sub-CPUs, the switch-to-event flow, and
