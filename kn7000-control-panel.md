@@ -88,15 +88,46 @@ does the local work:
   reset, and a control/attention line). CPL chains to the CPR board and on to the
   main board.
 
-On the **main-CPU side** the panel link lives in the `0x34000000` I/O bank at the
-byte registers **`0x34000800` / `0x34000808` / `0x34000818` / `0x34000828`** (one
-register group per sub-CPU, heavily accessed by the firmware — see the
-[I/O register map](/kn7000/#io-register-map-from-firmware-analysis)). The main CPU
-clocks LED-update bytes *out* over `SOUT` and shifts button-scan bytes *in* over
-`SIN`; the LED state is staged in a RAM shadow buffer (around `0x50150A00`) that a
-per-frame service transmits. This is the **same serial-panel design the KN5000
-uses** (its MAME driver models it with a `cpanel` HLE device driving TXD/RXD/SCLK)
-— the KN7000 simply has four such sub-CPUs instead of two.
+On the **main-CPU side** the link is **one channel of a multi-channel USART/SIO
+ASIC** in the `0x34000000` bank at base **`0x34000800`** — traced register by
+register from the firmware:
+
+| Register | Role |
+|----------|------|
+| `0x34000800` | channel config/direction (low 3 bits: `\|0x07` = RX+clear, `\|0x04` = TX) |
+| `0x34000804` | channel control (set at init `0x484ABCBA`) |
+| `0x34000808` | **TX data** — LED/command bytes *out* to the sub-CPUs |
+| `0x34000809` | **RX data** — switch/panel bytes *in* |
+| `0x3400080C` | channel status |
+| `0x34000168` | interrupt-control register (ICR) for the channel |
+
+The link is **interrupt-driven and half-duplex** (the same channel carries LEDs
+out and switches in):
+
+1. an **RX interrupt** enters ISR `0x484ACC13`, which does the GPIO handshake,
+   re-arms the config, acks the ICR, and reads **one byte** from `0x34000809`;
+2. the byte is pushed into a **92-byte ring buffer** at `0x5006BDB4` (head
+   `0x5006BDB2`, tail `0x5006BDB0`, data-ready = bit 0 of `0x5006BDA4`);
+3. a **frame-decoder task** (`0x484AD111`) drains the ring, reads a **header**
+   byte and extracts a **3-bit message type** (`(hdr & 0x38) >> 3`), then pulls
+   the following switch/parameter bytes;
+4. each switch byte is dispatched through `0x484AD680`, which forms an index
+   `(b & 0xC0) >> 3 | (b & 0x07)` into a **32-entry jump table at `0x48613108`** —
+   the four panel groups (CPL/CPC/CPR/CPSD) × sub-codes;
+5. decoded changes are edge-detected and emitted as `EV_SW*`/`EV_INDEXSW_*`/
+   `EV_DIAL` events via `SendEvent` (`0x48429388`).
+
+LED output rides the **same channel**: `SetHoldLed`/`SetOtherPartLed` →
+`SetLedByIndex` (`0x484B1BCB`, a jump table at `0x4861518C`) accumulate bits into
+a RAM shadow, and the **TX path `0x484ABF50`** flushes a byte to `0x34000808`
+after switching direction. The `0x36008004`/`0x36008024`/`0x36008064` GPIO lines
+strobe/select which sub-CPU is on the shared bus.
+
+This is the **same serial-panel design the KN5000 uses** (its MAME driver models
+it with a `cpanel` HLE device) — the KN7000 has four sub-CPUs on one channel
+instead of two. Note that the **sibling SIO channels at `0x34000810` and
+`0x34000820` are the two MIDI ports**, not the panel — an identical channel
+layout at `+0x10` stride, which is what confirms `0x34000800` as the panel link.
 
 ## Relationship to the KN5000
 
