@@ -23,6 +23,8 @@
       url: /kn7000-storage-subsystem/
     - title: Sequencer
       url: /kn7000-sequencer/
+    - title: Control Panel Protocol
+      url: /kn7000-control-panel/
     - title: Image Gallery
       url: /kn7000-image-gallery/
     - title: Sound & Style Names
