@@ -123,3 +123,6 @@ UPDATE (CPU core: udf00 implemented): The AM33 udf instruction family (5.68M ski
 
 
 UPDATE (rhythm style-list bug traced): The 'all 8 Beat 1' rhythm-menu bug is NOT a udf/CPU bug. Built-in style data lives in the table ROM (0x48000000); the genre list-box (AcCtgStyleListBoxProc 0x4847BCCA) reads it 269K times/menu but all slots resolve to the default name. The table ROM looks largely intact (valid directory, 1.8% 0xFF, readable names) so the bad-dump theory is weakened -- the list builds 10 slots but the per-slot style-ID/name is uniformly stuck at default (parse/build defect or wrong emulation state). See notes/rhythm-name-list-bug.md. Next: trace the per-slot index in the populate handler.
+
+
+UPDATE (rhythm-bug exec-trace): Built a PC-triggered register trace in the MN10300 core (now reverted). During the BALLAD menu only AcRhythmNameProc (0x4841F3A0) fired (current/focused rhythm name, resolves via 0x48429569->0x48414A4F which returns the task focused-object id, ignoring the style ID) -- it is NOT the 10-slot list drawer. MainGetRhythmName/AcStyleNameProc/AcCtgStyleListBoxProc never fired. So the 10 slots are populated once on menu-open by a generic list-widget path (still unidentified). Next: trace the menu-open/populate path (BALLAD-key handler + list-item add / text-render string arg). notes/rhythm-name-list-bug.md.
