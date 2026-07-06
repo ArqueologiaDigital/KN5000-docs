@@ -56,6 +56,26 @@ All 152 buttons are declared in the MAME driver's input ports. By board:
   (`DISK EASY REC`, `DISK MENU LOAD`, `SD CARD LOAD`, `CUSTOMIZE`, `CUSTOM PANEL`,
   `PROGRAM MENUS`, `NEXT BANK`, `BANK VIEW`).
 
+The exact **SEG-column × SW-row** position of every switch is transcribed from
+the service-manual schematics (CPL = DIAGRAM-15 p128, own sub-CPU IC1101; CPC =
+DIAGRAM-16 p130, the mixer, wired to a scanner via CN1107/1108; CPR = DIAGRAM-17
+p132, sub-CPU IC1001). For example CPR's sound families sit on rows SW2–SW5:
+`GUITAR` at SEG3·SW4, `PIANO` at SEG4·SW4, `BRASS` at SEG1·SW4, `SYNTH` at
+SEG1·SW5, `ORGAN & ACCORDION` at SEG8·SW3. The full three-board matrix lives in
+the driver's `notes/panel-matrix-service-manual.md`.
+
+**Verified button→function bindings (empirical).** Driving each normalised input
+segment in the emulator and reading the resulting screen confirms the true
+function of each button — independent of the (KN5000-derived) silk-screen guess.
+The 16 sound-family buttons and 16 rhythm-genre buttons are fully resolved this
+way; the sound families map (input `SEGnn.bit` → function): SEG0C.b0 `PIANO`,
+b1 `GUITAR`, b2 `MALLET & ORCH PERC`, b3 `WORLD`, b4 `STRINGS & VOCAL`, b5
+`BRASS`; SEG0D.b0 `SAX & WOODWIND`, b1 `ORGAN & ACCORDION`, b2 `SOUND EXPLORER`,
+b3 `DIGITAL DRAWBAR`, b4 `TAB ORGAN`, b5 `ACCORDION REGISTER`; SEG0E.b0 `PAD`,
+b1 `SYNTH`, b2 `BASS`, b3 `DRUM KITS`. (The rhythm genres, menus, transpose and
+octave keys are likewise resolved; part-mute and arranger keys change state
+without opening a titled screen and are being mapped by their state effect.)
+
 Each scans its own switch matrix and drives its own LEDs; the test mode lights
 them group by group (`CPL LEDS to light`, `CPC LEDs to light`, `CPR LEDs to
 light`, `CPSD`) and asks the operator to *"Push each button and check the LED"*.
