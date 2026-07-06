@@ -108,3 +108,6 @@ so they are the best starting point for each KN7000 equivalent:
    generators, SD/USB storage, and panel sub-CPUs.
 6. **Chase the undumped ROMs** — the boot ROM at `0x4C000000` and the picture flash
    at `0x57800000` will eventually need a hardware dump.
+
+
+UPDATE (panel button mapping, static-RE workflow): decoded the full panel button system from the program ROM -- switch#=normSeg*8+bit, PanelSwitchClassTable (per-button LED cell), PanelWireNormTable (ADDR->normSeg), and the 12-byte PanelButtonDispatch descriptors (normSeg.bit->event). Complete map in kn7000_mame/notes/panel-button-normseg-map.md. WIRED the 16-column MUTE row (32 buttons -> PART1-16 on/off) -- verified working with press feedback. ~70 panel buttons now functional (RHYTHM genres, SOUND cats, MUTE row, menu/transport). REMAINING: LCD soft-keys / OTHER PART / PAGE / CONTRAST / EXIT live in normSeg 0x14-0x20 (decode SEG14-20 next); unlabeled 0x20Ax transport events; LED output modeling (panel-leds.md); and the boot service-mode key-combo entry (dynamic panel-test track).
