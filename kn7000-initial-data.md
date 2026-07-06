@@ -84,19 +84,24 @@ frames are **JPEGs already present in the dumped table ROM**:
 (Other 640×240 table-ROM images such as "Welcome to SX-KN7000" @`0x48139EF0` belong
 to the **demo mode**, not the power-on splash.)
 
-In the emulator, boot currently shows a **green screen** where this animation
-should be. The frames are **present in the ROM**, and the decode/blit path is fine —
-the green is a genuine placeholder palette (`InitPaletteRGB` `0x4842D9AD` seeds CLUT
-indices `0x1D`–`0xF3` with 215 identical green entries, meant to be overwritten by a
-displayed picture's own palette). The real gap is that the **splash animation is
-never played**: `OpeningFrameDraw` (`0x4848A931`) would call `DrawJpegFile`
-(`0x48424EC2`) for the seg-05 frames, but its frame-match gate (`0x4848A966`) only
-passes after the frame sequencer (target `0x5006B5A4`, table `OpeningFrameTable`
-`0x485E68B8`) steps `0x00`→`0x42` — which needs ~66 redraws. `OpeningFrameDraw`
-returns without self-requesting a redraw, so those redraws must come from the
-framework's periodic display refresh; in emulation the opening screen is drawn only
-~once. So the fix is in the **redraw/scheduling path** (what drives the opening
-screen's periodic redraws during boot init), not the palette or the JPEG decoder.
+In the emulator, boot shows a **green screen** where this animation should be.
+Runtime tracing pins it down to a **palette-load bug** — everything else works:
+
+* The animation sequencer runs (frame counter `0x5006B5A4` climbs `0x00`→`0x42`,
+  index `0x5006B5A8` steps 0→6), and `DrawJpegFile` (`0x48424EC2`) **does decode**
+  the splash JPEG — at mid-splash the framebuffer holds a real image in palette
+  indices `0xD0`–`0xDC`.
+* But the CLUT entries for those indices are never loaded — they stay the green
+  placeholder `0x0080FF80` (`InitPaletteRGB` `0x4842D9AD` seeds `0x1D`–`0xF3` green,
+  meant to be overwritten by a displayed picture's palette; the overwrite never
+  reaches the work-RAM CLUT at `0x50031490`). A UI color like CLUT[`0x02`] is a
+  correct value, so only the *image* palette range is affected.
+
+So the decoded splash renders as solid green. The fix is to find where a displayed
+picture's palette should reach the CLUT — most likely a **hardware image-palette**
+the LCD controller latches that the driver doesn't yet model (the driver presents
+everything through the single work-RAM CLUT) — not the JPEG decoder or the sequencer,
+which both work.
 
 ## How the rhythm menu resolves a style name
 
