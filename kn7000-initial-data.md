@@ -68,9 +68,27 @@ with holly over sheet music):
 
 It is **byte-identical** to the image already in the program ROM at `0x48745718`
 (shown in the [Image Gallery](/kn7000-image-gallery/) as `program_345718`), so the
-disk simply re-installs the factory default. This matters for the boot "green
-screen": the image exists in the ROM, so a green placeholder is more likely a
-display-path issue than missing data — under investigation.
+disk simply re-installs the factory default.
+
+## The boot splash (and the "green screen")
+
+A real KN7000 opens with a **640×240 splash animation** — three chrome music notes
+sweeping past the Earth toward a starburst, then the mirrored **"KN7000"** logo,
+"Welcome to SX-KN7000", and a KN7000 logo flying over mountains. Every one of these
+frames is a **JPEG already present in the dumped table ROM**:
+
+| Frame | Table-ROM address |
+|-------|-------------------|
+| Music notes in space | `0x480566E8`, `0x4805A32E` |
+| "KN7000" chrome logo | `0x48066517`, `0x4806B954` |
+| "Welcome to SX-KN7000" | `0x48139EF0` |
+| KN7000 over mountains | `0x48162C14` |
+
+In the emulator, boot currently shows a **green screen** where this animation
+should be. Because the frames are **present in the ROM** (not the undumped picture
+flash), the green is a **display-path bug** — the firmware isn't decoding/blitting
+the splash JPEGs — rather than missing data. Tracking down the boot JPEG-decode path
+is the fix.
 
 ## How the rhythm menu resolves a style name
 
