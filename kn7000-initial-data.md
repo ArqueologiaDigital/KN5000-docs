@@ -84,24 +84,23 @@ frames are **JPEGs already present in the dumped table ROM**:
 (Other 640×240 table-ROM images such as "Welcome to SX-KN7000" @`0x48139EF0` belong
 to the **demo mode**, not the power-on splash.)
 
-In the emulator, boot shows a **green screen** where this animation should be.
-Runtime tracing pins it down to a **palette-load bug** — everything else works:
+In the emulator, boot showed a **green screen** where this animation should be. The
+splash JPEG *was* decoding correctly all along — the real cause was that the picture is
+**not palettized at all**. The KN7000 stores picture colour as a **12-bit (4:4:4)
+direct-colour image split across two work-RAM byte-planes**:
 
-* The animation sequencer runs (frame counter `0x5006B5A4` climbs `0x00`→`0x42`,
-  index `0x5006B5A8` steps 0→6), and `DrawJpegFile` (`0x48424EC2`) **does decode**
-  the splash JPEG — at mid-splash the framebuffer holds a real image in palette
-  indices `0xD0`–`0xDC`.
-* But the CLUT entries for those indices are never loaded — they stay the green
-  placeholder `0x0080FF80` (`InitPaletteRGB` `0x4842D9AD` seeds `0x1D`–`0xF3` green,
-  meant to be overwritten by a displayed picture's palette; the overwrite never
-  reaches the work-RAM CLUT at `0x50031490`). A UI color like CLUT[`0x02`] is a
-  correct value, so only the *image* palette range is affected.
+* framebuffer `0x500D4080`: byte = `0xD0 | red4` — the `0xD` high nibble **tags a
+  picture pixel**, the low nibble is 4-bit red;
+* companion plane `0x500F9880`: byte = `(green4 << 4) | blue4`.
 
-So the decoded splash renders as solid green. The fix is to find where a displayed
-picture's palette should reach the CLUT — most likely a **hardware image-palette**
-the LCD controller latches that the driver doesn't yet model (the driver presents
-everything through the single work-RAM CLUT) — not the JPEG decoder or the sequencer,
-which both work.
+The firmware composites the two planes to RGB. The driver was reading only the first
+plane and resolving *every* byte through the UI palette (CLUT `0x50031490`), so the
+picture's `0xD0`–`0xDF` bytes indexed the CLUT's unused (green-placeholder) range →
+solid green. The driver now **composites both planes** for picture pixels
+(`rgb(red4·17, green4·17, blue4·17)`) while keeping the palette path for UI/text, so the
+picture renders in colour. The animation sequencer, JPEG decoder, and CLUT were all fine
+— it was a display-modelling gap. (Full architecture in the driver's
+`display-dual-plane-direct-color.md` note.)
 
 ## How the rhythm menu resolves a style name
 
