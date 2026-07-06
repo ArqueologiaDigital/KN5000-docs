@@ -72,17 +72,17 @@ disk simply re-installs the factory default.
 
 ## The boot splash (and the "green screen")
 
-A real KN7000 opens with a **640×240 splash animation** — three chrome music notes
-sweeping past the Earth toward a starburst, then the mirrored **"KN7000"** logo,
-"Welcome to SX-KN7000", and a KN7000 logo flying over mountains. Every one of these
-frames is a **JPEG already present in the dumped table ROM**:
+A real KN7000 opens with a **640×240 boot splash** — three chrome music notes
+sweeping past the Earth toward a starburst, then the mirrored **"KN7000"** logo. Both
+frames are **JPEGs already present in the dumped table ROM**:
 
 | Frame | Table-ROM address |
 |-------|-------------------|
 | Music notes in space | `0x480566E8`, `0x4805A32E` |
 | "KN7000" chrome logo | `0x48066517`, `0x4806B954` |
-| "Welcome to SX-KN7000" | `0x48139EF0` |
-| KN7000 over mountains | `0x48162C14` |
+
+(Other 640×240 table-ROM images such as "Welcome to SX-KN7000" @`0x48139EF0` belong
+to the **demo mode**, not the power-on splash.)
 
 In the emulator, boot currently shows a **green screen** where this animation
 should be. Because the frames are **present in the ROM** (not the undumped picture
