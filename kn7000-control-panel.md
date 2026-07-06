@@ -102,6 +102,18 @@ So a button press is a hardware scan on a sub-CPU → a report to the main CPU �
 an `EV_SW*` event → the current widget's `…Proc` handler (which typically
 switches on `EV_ACTION` / `EV_SWON`).
 
+## The music key bed
+
+The 61-note key bed is scanned by the tone-generator hardware and read by the CPU
+as a **voice-event FIFO** -- the same interface the KN5000 firmware calls
+"keyboard input" (KN5000 0x110000; KN7000 the read at **0x98050004**). Each event
+is a 16-bit word: **low byte = note, high byte = velocity** (velocity 0 = note
+off); the port yields **0xFFFF when empty**. The firmware polls it and turns each
+event into an internal note (in parallel with the MIDI-in path). The MAME driver
+models this FIFO, so the key bed is playable from the PC keyboard (a ~2-octave
+subset in a tracker-style layout); audible output still awaits the (undumped)
+waveform ROMs, but the note reaches the firmware.
+
 ## The data dial
 
 The rotary data dial is a first-class input: it emits `EV_DIALUP` / `EV_DIALDOWN`
