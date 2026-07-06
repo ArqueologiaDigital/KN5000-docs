@@ -117,3 +117,6 @@ UPDATE (KN5000 panel-model reference + more wiring + colors): Studied how the KN
 
 
 UPDATE (LED modeling started): The driver already receives the firmware's [addr][data] panel-LED commands (panel_led_frame); fixed its routing (cpr/cpl banks, <512>, no drop). Derived the button->LED map from PanelSwitchClassTable (switch#=normSeg*8+bit -> HWrow via 0x48615058 -> cpr/cpl_led index) and BOUND the 16 SOUND-group LEDs in the layout (PIANO=cpr_led32, GUITAR=cpr_led72, ...). Correct by derivation; visual confirmation awaits the sound-menu-nav emulation fix. notes/panel-leds.md. NEXT: bind CPL/status LEDs; reconcile boot-frame status rows; resume soft-key probe once menu-nav is fixed.
+
+
+UPDATE (CPU core: udf00 implemented): The AM33 udf instruction family (5.68M skipped exec/boot, the #1 CPU-core gap) is now 83% resolved. RE-confirmed udf00 = signed multiply-by-immediate (F9/FB/FD, matching the core's existing F6 mulq) from the firmware's Q14 fixed-point usage; implemented it -> unimplemented-opcode executions dropped 5.68M -> 979K/boot, boot+display unaffected. Remaining: udf07 (one hot fixed-point normalize function, 979K hits; exact bit-search semantics need the AM33 manual, left skipped). The rhythm-name 'all 8 Beat 1' bug is NOT a udf bug (a separate data-list issue). notes/mn10300-udf-instructions-unimplemented.md.
