@@ -84,23 +84,30 @@ frames are **JPEGs already present in the dumped table ROM**:
 (Other 640×240 table-ROM images such as "Welcome to SX-KN7000" @`0x48139EF0` belong
 to the **demo mode**, not the power-on splash.)
 
-In the emulator, boot showed a **green screen** where this animation should be. The
-splash JPEG *was* decoding correctly all along — the real cause was that the picture is
-**not palettized at all**. The KN7000 stores picture colour as a **12-bit (4:4:4)
-direct-colour image split across two work-RAM byte-planes**:
+In the emulator, boot first showed a **green screen** where this animation should be.
+Fixing it took untangling **two** independent bugs:
 
-* framebuffer `0x500D4080`: byte = `0xD0 | red4` — the `0xD` high nibble **tags a
-  picture pixel**, the low nibble is 4-bit red;
-* companion plane `0x500F9880`: byte = `(green4 << 4) | blue4`.
+1. **The display model.** KN7000 pictures are **not palettized** — a picture pixel is a
+   12-bit (4:4:4) direct colour split across two work-RAM planes (`0x500D4080` byte =
+   `0xD0 | red4`; companion `0x500F9880` byte = `(green4<<4) | blue4`). The firmware
+   composites these into a 640×240 RGB565 image at `0x9CE00000` — the exact buffer the
+   LCD controller scans. The driver now presents `0x9CE00000` directly, so the whole
+   display (UI *and* pictures) is pixel-exact.
 
-The firmware composites the two planes to RGB. The driver was reading only the first
-plane and resolving *every* byte through the UI palette (CLUT `0x50031490`), so the
-picture's `0xD0`–`0xDF` bytes indexed the CLUT's unused (green-placeholder) range →
-solid green. The driver now **composites both planes** for picture pixels
-(`rgb(red4·17, green4·17, blue4·17)`) while keeping the palette path for UI/text, so the
-picture renders in colour. The animation sequencer, JPEG decoder, and CLUT were all fine
-— it was a display-modelling gap. (Full architecture in the driver's
-`display-dual-plane-direct-color.md` note.)
+2. **The JPEG decoder.** With the display fixed, the splash showed *noise* instead of
+   green — the software JPEG decoder was producing garbage. The cause was a single
+   **unimplemented CPU instruction**: the MN10300/AM33 `udf07` op (a **bit-search**,
+   `BSCH`) used in the decoder's Huffman step. The CPU core was silently skipping it,
+   desyncing the entire bit stream. Implementing it (bit position of the most-significant
+   set bit) made the splash decode **pixel-clean** — verified against a reference decode
+   of the same table-ROM JPEGs.
+
+With both fixed, the emulated KN7000 now plays its real power-on splash — the chrome
+music notes sweeping over the Earth, then the mirrored "KN7000" logo. (Details in the
+driver's `display-dual-plane-direct-color.md` and `mn10300-udf-instructions-unimplemented.md`
+notes.)
+
+<figure style="margin:1rem 0;text-align:center;"><img src="{{ "/assets/images/kn7000/splash-working.png" | relative_url }}" alt="The emulated KN7000 boot splash, decoded and rendered correctly" style="max-width:100%;border:1px solid #ccc;border-radius:3px;"><figcaption style="font-size:0.8rem;color:#777;">The boot splash rendering correctly in emulation after both fixes (dual-plane display + the <code>udf07</code> bit-search CPU op).</figcaption></figure>
 
 ## How the rhythm menu resolves a style name
 
