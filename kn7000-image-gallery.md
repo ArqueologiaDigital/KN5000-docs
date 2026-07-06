@@ -20,6 +20,27 @@ half the story: it **adds** JPEG/BMP but still keeps the KN5000's raw-bitmap
 design for its UI icons — one more piece of the
 [shared codebase](/technics-shared-codebase/).
 
+## Boot splash animation
+
+The very first thing a real KN7000 shows at power-on is a **640×240 splash
+animation** — three chrome music notes sweeping past the Earth toward a starburst,
+then the mirrored **"KN7000"** logo, "Welcome to SX-KN7000", and a logo flying over
+mountains. (Identified from a power-on video and matched to the ROM.) Every frame is
+a JPEG in the **table ROM**:
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin:1rem 0;">
+<figure style="margin:0;text-align:center;"><img src="{{ "/assets/images/kn7000-gallery/table_0566e8.jpg" | relative_url }}" loading="lazy" alt="Music notes over Earth" style="max-width:100%;height:auto;border:1px solid #ccc;border-radius:3px;"><figcaption style="font-size:0.7rem;color:#777;">music notes over Earth · table 0x480566E8</figcaption></figure>
+<figure style="margin:0;text-align:center;"><img src="{{ "/assets/images/kn7000-gallery/table_05a32e.jpg" | relative_url }}" loading="lazy" alt="Music notes, 2-note frame" style="max-width:100%;height:auto;border:1px solid #ccc;border-radius:3px;"><figcaption style="font-size:0.7rem;color:#777;">music notes (2-note frame) · table 0x4805A32E</figcaption></figure>
+<figure style="margin:0;text-align:center;"><img src="{{ "/assets/images/kn7000-gallery/table_066517.jpg" | relative_url }}" loading="lazy" alt="KN7000 chrome logo" style="max-width:100%;height:auto;border:1px solid #ccc;border-radius:3px;"><figcaption style="font-size:0.7rem;color:#777;">"KN7000" chrome logo · table 0x48066517</figcaption></figure>
+<figure style="margin:0;text-align:center;"><img src="{{ "/assets/images/kn7000-gallery/table_06b954.jpg" | relative_url }}" loading="lazy" alt="KN7000 logo variant" style="max-width:100%;height:auto;border:1px solid #ccc;border-radius:3px;"><figcaption style="font-size:0.7rem;color:#777;">"KN7000" logo variant · table 0x4806B954</figcaption></figure>
+<figure style="margin:0;text-align:center;"><img src="{{ "/assets/images/kn7000-gallery/table_139ef0.jpg" | relative_url }}" loading="lazy" alt="Welcome to SX-KN7000" style="max-width:100%;height:auto;border:1px solid #ccc;border-radius:3px;"><figcaption style="font-size:0.7rem;color:#777;">"Welcome to SX-KN7000" · table 0x48139EF0</figcaption></figure>
+<figure style="margin:0;text-align:center;"><img src="{{ "/assets/images/kn7000-gallery/table_162c14.jpg" | relative_url }}" loading="lazy" alt="KN7000 over mountains" style="max-width:100%;height:auto;border:1px solid #ccc;border-radius:3px;"><figcaption style="font-size:0.7rem;color:#777;">KN7000 over mountains · table 0x48162C14</figcaption></figure>
+</div>
+
+Because these frames are **present in the dumped ROM**, the emulator's blank/green
+boot screen is a *display-path* bug (the firmware not decoding/blitting these JPEGs),
+not missing data — see [User Data & Initial Data Disk](/kn7000-initial-data/#the-boot-splash-and-the-green-screen).
+
 ## Program ROM — icons & product photos
 
 The program image embeds a treble-clef LCD icon, a default music-stand photo, artistic demo art, and a series of Technics KN-series product photographs.
