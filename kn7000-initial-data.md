@@ -39,7 +39,7 @@ disk-file dispatch tables (`DiskFileTagTable` `0x48664090`, `DiskFileExtTable`
 
 | File | Destination | Contents |
 |------|-------------|----------|
-| `01CTMINI.AST` | custom **flash** | Custom/Music-Stylist data; a **compressed** (LZSS-family, ~6:1, declared size `0x1E0000`) payload — the codec parameters are not yet reversed |
+| `01CTMINI.AST` | custom **flash** | Custom/Music-Stylist data; an **entropy-coded** (Huffman/LZH-family — *not* LZSS) payload. Version byte `0x01` = compressed flag; the `0x1E0000` is the target flash-region size, not the decompressed size. The install stores it *verbatim* at flash offset `0x20000`; the decoder runs on style-load and is not yet located |
 | `02UMDINI.MD` | battery **SRAM** | user-Memory style references (44 style-IDs) |
 | `03FAVINI.FAV` | battery **SRAM** | Favorites (name + settings) |
 | `04HPGINI.HMP` | battery **SRAM** | Home-Page (hotspots + an embedded BMP) |
@@ -85,10 +85,18 @@ frames are **JPEGs already present in the dumped table ROM**:
 to the **demo mode**, not the power-on splash.)
 
 In the emulator, boot currently shows a **green screen** where this animation
-should be. Because the frames are **present in the ROM** (not the undumped picture
-flash), the green is a **display-path bug** — the firmware isn't decoding/blitting
-the splash JPEGs — rather than missing data. Tracking down the boot JPEG-decode path
-is the fix.
+should be. The frames are **present in the ROM**, and the decode/blit path is fine —
+the green is a genuine placeholder palette (`InitPaletteRGB` `0x4842D9AD` seeds CLUT
+indices `0x1D`–`0xF3` with 215 identical green entries, meant to be overwritten by a
+displayed picture's own palette). The real gap is that the **splash animation is
+never played**: `OpeningFrameDraw` (`0x4848A931`) would call `DrawJpegFile`
+(`0x48424EC2`) for the seg-05 frames, but its frame-match gate (`0x4848A966`) only
+passes after the frame sequencer (target `0x5006B5A4`, table `OpeningFrameTable`
+`0x485E68B8`) steps `0x00`→`0x42` — which needs ~66 redraws. `OpeningFrameDraw`
+returns without self-requesting a redraw, so those redraws must come from the
+framework's periodic display refresh; in emulation the opening screen is drawn only
+~once. So the fix is in the **redraw/scheduling path** (what drives the opening
+screen's periodic redraws during boot init), not the palette or the JPEG decoder.
 
 ## How the rhythm menu resolves a style name
 
