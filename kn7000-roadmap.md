@@ -120,3 +120,6 @@ UPDATE (LED modeling started): The driver already receives the firmware's [addr]
 
 
 UPDATE (CPU core: udf00 implemented): The AM33 udf instruction family (5.68M skipped exec/boot, the #1 CPU-core gap) is now 83% resolved. RE-confirmed udf00 = signed multiply-by-immediate (F9/FB/FD, matching the core's existing F6 mulq) from the firmware's Q14 fixed-point usage; implemented it -> unimplemented-opcode executions dropped 5.68M -> 979K/boot, boot+display unaffected. Remaining: udf07 (one hot fixed-point normalize function, 979K hits; exact bit-search semantics need the AM33 manual, left skipped). The rhythm-name 'all 8 Beat 1' bug is NOT a udf bug (a separate data-list issue). notes/mn10300-udf-instructions-unimplemented.md.
+
+
+UPDATE (rhythm style-list bug traced): The 'all 8 Beat 1' rhythm-menu bug is NOT a udf/CPU bug. Built-in style data lives in the table ROM (0x48000000); the genre list-box (AcCtgStyleListBoxProc 0x4847BCCA) reads it 269K times/menu but all slots resolve to the default name. The table ROM looks largely intact (valid directory, 1.8% 0xFF, readable names) so the bad-dump theory is weakened -- the list builds 10 slots but the per-slot style-ID/name is uniformly stuck at default (parse/build defect or wrong emulation state). See notes/rhythm-name-list-bug.md. Next: trace the per-slot index in the populate handler.
