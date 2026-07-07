@@ -39,15 +39,28 @@ disk-file dispatch tables (`DiskFileTagTable` `0x48664090`, `DiskFileExtTable`
 
 | File | Destination | Contents |
 |------|-------------|----------|
-| `01CTMINI.AST` | custom **flash** | Custom/Music-Stylist data; an **entropy-coded** (Huffman/LZH-family — *not* LZSS) payload. Version byte `0x01` = compressed flag; the `0x1E0000` is the target flash-region size, not the decompressed size. The install stores it *verbatim* at flash offset `0x20000`; the decoder runs on style-load and is not yet located |
+| `01CTMINI.AST` | custom **flash** | Custom/Music-Stylist data; the payload is **raw zlib/DEFLATE** (no wrapper) starting at file offset `0x10`. Version byte `0x01` = compressed flag; the u32 at `+4` (`0x1E0000`) is the **decompressed** size. It inflates to the content of the writable **custom flash** (the region the idd7000 disk programs — write/command window `0x96800000`; `0x56000000`/`0x57000000` are the separate factory flashes), landing at flash offset `0x20000` (`0x1E0000` B fill it to the 2 MB end). Decoded, it carries the real style/sound names (`Swing And Jive`, `Calypso Dance`, `Jazz Fusion`, …) |
 | `02UMDINI.MD` | battery **SRAM** | user-Memory style references (44 style-IDs) |
 | `03FAVINI.FAV` | battery **SRAM** | Favorites (name + settings) |
 | `04HPGINI.HMP` | battery **SRAM** | Home-Page (hotspots + an embedded BMP) |
 
 Only the `.AST` installs to flash; the rest go to battery-backed SRAM (favorites
 block `0x50083D72`, magic `"KN7000 SDDIR INF"`). The extractor
-(`extract_idd7000.py` in the [kn7000_extraction] tools) parses all four; the flash
-image awaits the `.AST` codec.
+(`extract_idd7000.py` in the [kn7000_extraction] tools) parses all four and now
+**decodes the `.AST`** (raw DEFLATE) to a `.flash.bin`.
+
+**The `.AST` codec is plain zlib.** The firmware links **zlib 1.0.4** — its inflate
+error strings (`unknown compression method`, `invalid window size`, `incorrect header
+check`, `need dictionary`, `incorrect data check`) sit at `0x485CD20C`, right after the
+style-type name table (`8 Beat`, `16 Beat`, `Dance Pop`, … at `0x485CCF2C`). The payload
+is a *raw* DEFLATE stream (no 2-byte zlib header) at file offset `0x10`; inflating it with
+`zlib.decompressobj(-15)` yields exactly `0x1E0000` bytes = the custom-flash region from
+offset `0x20000` to the 2 MB end. (The earlier "Huffman/LZH, not zlib" and "LZSS-variant"
+readings were wrong — pylzss's 1.1 MB partial was a false positive; the near-uniform byte
+histogram is just well-compressed DEFLATE output.) Populating the emulated custom flash
+(`0x96800000`, the region reader `0x4847FB68` / parser `0x4847F9F7` currently see as all
+zeros) from this decoded image is what will replace the `8 Beat 1` placeholders with the
+real names.
 
 ### Favorites, decoded
 
