@@ -132,9 +132,26 @@ resolve each model's open questions and to back-fill KN5000/KN7000 gaps (e.g. th
 rhythm-name resolution, panel board-decode). Document the shared framework once, with
 per-model deltas.
 
-## Immediate next step
+## Status & next steps (updated 2026-07-07)
 
-Set up `kn6000_extraction` and commit the four verified flash images
-(`IK1/IK2.SLD` = KN6000, `IKV1/IKV2.SLD` = KN6500) with the checksum verification, then
-run the table-ROM asset decoders — the fastest way to turn the proven reconnaissance
-into a durable, published result.
+**Done:** firmware extracted (all four `IK*/IKV*.SLD` images); [hardware mapped from
+the service manuals](/kn6000-hardware/); **draft MAME drivers built** — `kn6000` and
+`kn6500` are registered in the shared `kn7000_mame` tree (reusing `kn7000_state` and
+the KN7000 machine config, same verified `0x48400000` program base), build into the
+one binary alongside `kn7000`, pass `-verifyroms`, and run their MN10300 firmware at
+~140 % speed with no fatal error. KN6000 style/sound names located in the table ROM
+(`IK2`: "8 Beat"@0x580fd, "Ballad"@0x5833f, "Pop Ballad"@0xa35ce, …).
+
+**Next:** tune each model's memory map / peripheral wiring for a full boot; run the
+table-ROM asset decoders (names, bitmaps, PAD presets); rerun the MILK symbol
+recovery per ROM and four-way align; add `kn5000` to the same binary for direct
+comparison.
+
+## More Technics models incoming
+
+The user is supplying more devices for the same consolidated treatment
+(`~/compartilhado/KN2400_KN2600_KN7000`): **KN2400** (`kn24-11.zip`), **KN2600**
+(`kn26-11.zip` + `KN2600_CD-Rom.zip`), a **PR804** CD-ROM, and additional KN7000
+material (`kn7-14`/`kn7-16` firmware, `KN7000_CD-Rom.zip`, `scd7000`, `idd7000`,
+`ca7001`, `custom1/2`). Triage next: extract each `.SLD`, confirm CPU + MILK
+framework, and fold into what is becoming an N-way family comparison.
