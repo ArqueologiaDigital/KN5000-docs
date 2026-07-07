@@ -38,6 +38,13 @@
     - title: Roadmap (vs KN5000)
       url: /kn7000-roadmap/
 
+- title: Technics KN6000 / KN6500
+  pages:
+    - title: Hardware Architecture
+      url: /kn6000-hardware/
+    - title: Roadmap & Plan
+      url: /kn6000-roadmap/
+
 - title: KN5000 · Hardware
   pages:
     - title: Hardware Architecture

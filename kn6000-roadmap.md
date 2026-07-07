@@ -12,6 +12,12 @@ project achieved for the [KN5000](/system-overview/) and
 disassembly, symbol recovery, table-ROM asset decoding, and a MAME driver with an
 MN10300 CPU core.
 
+The IC-level **[hardware architecture](/kn6000-hardware/)** has been recovered from
+the *Technics SX-KN6000* (89-page) and *SX-KN6500* (142-page) service manuals —
+main CPU **MN10300** (`MN103002A`), program flash `IC11/IC12`, custom-data flash
+`IC18` (defaulted from the Initial Data Disk), tone-generator LSI, DSP, four 64 Mbit
+wave ROMs, and 8-bit panel sub-CPUs (CPL/CPC/CPR).
+
 ## The key discovery: four re-targets of one source tree
 
 Reconnaissance of `~/compartilhado/KN6000/ca_software_files` (downloaded from the
