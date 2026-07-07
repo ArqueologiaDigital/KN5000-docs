@@ -42,6 +42,8 @@
   pages:
     - title: Hardware Architecture
       url: /kn6000-hardware/
+    - title: Names & Symbols
+      url: /kn6000-names/
     - title: Roadmap & Plan
       url: /kn6000-roadmap/
 
