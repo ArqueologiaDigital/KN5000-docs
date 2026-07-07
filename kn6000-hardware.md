@@ -45,8 +45,11 @@ Both the KN6000 and KN6500 have draft MAME drivers (reusing the KN7000 MN10300 m
 `MACHINE_NOT_WORKING` — they do not yet reach a display. The boot sequence was traced and two blockers
 fixed: the program ROM had to be **assembled from both floppy parts** (an earlier extraction used only
 part 1, leaving the upper 2 MB empty — and the firmware jumps into it), and the **library ROM at
-`0x4C000000` is a bus mirror of the program ROM** (unlike the KN7000, which self-loads its library). A
-third derail remains — the MILK RTOS reads an unpopulated object table — under investigation.
+`0x4C000000` is a bus mirror of the program ROM** (unlike the KN7000, which self-loads its library). The
+boot now runs much further: a third derail was traced to the scheduler tick **preempting RTOS object
+creation**, and delaying that tick past boot eliminates it (the CPU reaches a stable state instead of
+crashing). The remaining work is modelling the KN6000's **on-chip timers** (`0x34001080`), which drive its
+RTOS millisecond tick — the driver currently reuses the KN7000's simpler interrupt model.
 
 ## Front-panel & keyboard sub-processors
 
