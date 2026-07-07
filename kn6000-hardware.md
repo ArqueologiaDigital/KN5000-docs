@@ -20,8 +20,8 @@ code-reuse strategy.
 | Ref | Device | Role |
 |-----|--------|------|
 | **IC4** | **32-bit micro controller — Panasonic MN10300** (KN6500: **MN103002A**) | Main CPU. Address bus **A0–A25** (64 MB space), data bus **D0–D31**. Same family as KN7000. |
-| **IC11 / IC12** | **PROGRAM ROM (ODD) / (EVEN)** — 16 Mbit flash each | The MAIN CPU program, byte-interleaved on the 32-bit bus. **= the decoded `IK1.SLD` image.** Field-rewritable from a floppy system-update disc. |
-| **IC13 / IC14** | **PROGRAMMED MASK ROM** | Built-in style / sound tables. **= the `IK2.SLD` table image.** |
+| **IC11 / IC12** | **PROGRAM ROM (ODD) / (EVEN)** — 16 Mbit flash each (4 MB total) | The MAIN CPU program, byte-interleaved on the 32-bit bus. **= `IK1.SLD` + `IK2.SLD` concatenated** — the program update ships as **two floppy parts** (`IK1` = low 2 MB, `IK2` = high 2 MB), so both must be joined to form the 4 MB image. Field-rewritable from a floppy system-update disc. |
+| **IC13 / IC14** | **PROGRAMMED MASK ROM** | Built-in style / sound tables. **Not provided by the firmware update discs** (only the program flash is field-updatable), so a physical chip dump is needed to emulate these. |
 | **IC15** | **RHYTHM DATA ROM** | Built-in rhythm/accompaniment pattern data. |
 | **IC18** | **CUSTOM DATA ROM** — 16 Mbit flash | RHYTHM & ACCOMP data for the RHYTHM-GROUP / CUSTOM function; user COMPOSER data. **Factory-set, and defaulted from the [Initial Data Disk](/kn7000-initial-data/) (`idd6000`); user data is lost if the chip is replaced.** |
 | **IC9 / IC10** | **DRAM** | Main work RAM. |
@@ -38,6 +38,15 @@ code-reuse strategy.
 Initial Data Disk" mechanism** that the KN7000 rhythm-name investigation traced in
 software — the built-in/user rhythm data really does live in a flash IC that the
 `idd*` disk initialises.
+
+## Emulation status (MAME driver)
+
+Both the KN6000 and KN6500 have draft MAME drivers (reusing the KN7000 MN10300 machine) but are
+`MACHINE_NOT_WORKING` — they do not yet reach a display. The boot sequence was traced and two blockers
+fixed: the program ROM had to be **assembled from both floppy parts** (an earlier extraction used only
+part 1, leaving the upper 2 MB empty — and the firmware jumps into it), and the **library ROM at
+`0x4C000000` is a bus mirror of the program ROM** (unlike the KN7000, which self-loads its library). A
+third derail remains — the MILK RTOS reads an unpopulated object table — under investigation.
 
 ## Front-panel & keyboard sub-processors
 
