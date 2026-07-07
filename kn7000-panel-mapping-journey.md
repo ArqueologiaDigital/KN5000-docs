@@ -77,15 +77,25 @@ catch is that the firmware's internal segment numbering doesn't line up cleanly 
 segment numbering yet, so we can't blindly transcribe it. Pinning that remap is on the list; once
 it's done it should name every remaining switch at once.
 
-## Still open: the MUTE buttons
+## Cracking the MUTE matrix by counting presses
 
 The one place the HELP oracle goes quiet is the sixteen **MUTE UP / MUTE DOWN** buttons under the
-LCD. Press them in HELP mode and… nothing — they don't have info pages. They're really per-part
-*volume* nudges (a full press ramps a part to silence), which we can see faintly on the mixer
-(part 7's level dropping from 100 to 99 when we press the confirmed SEG05 button). But teasing out
-which physical button drives which of the sixteen parts needs a different technique — probably
-diffing the mixer display or locating the part-level bytes in RAM — and that's the main thing
-still to figure out. If you own a KN7000 and fancy pressing sixteen buttons for us, get in touch.
+LCD — press them in HELP mode and nothing happens; they have no info pages. They're really per-part
+*volume* nudges: one press drops a part's mixer level by one. That subtlety turned out to be the
+key to a neat trick. Instead of pressing one button and reading the screen, we **encode each
+button's identity in the number of presses**: press the first candidate 5 times, the second 10,
+the third 15, and so on. Then a single snapshot of the PT1–16 mixer shows each affected part
+sitting at a distinct level — the part at 95 was the 5-press button, 90 the 10-press button, and so
+on. One screenshot decodes a whole segment's worth of buttons at once.
+
+The result was beautifully regular: **SEG04 = parts 1–4, SEG05 = parts 5–8, SEG06 = parts 9–12,
+SEG07 = parts 13–16**, with each segment's four up/down pairs driving four consecutive parts.
+Sixteen parts, thirty-two buttons, all mapped in a handful of runs.
+
+It also caught a subtle bug. The "AUTO PLAY CHORD ON/OFF" button had been guessed from the
+firmware's dispatch table — but that table indexes the firmware's *internal* segment numbering,
+which doesn't match the layout's, and the bit we'd assigned to APC is physically a part-10 mute.
+A good reminder that the static table is a lead, not gospel, until a live test confirms it.
 
 ## Where things stand
 
