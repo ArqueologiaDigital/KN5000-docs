@@ -39,7 +39,7 @@ disk-file dispatch tables (`DiskFileTagTable` `0x48664090`, `DiskFileExtTable`
 
 | File | Destination | Contents |
 |------|-------------|----------|
-| `01CTMINI.AST` | custom **flash** | Custom/Music-Stylist data; the payload is **raw zlib/DEFLATE** (no wrapper) starting at file offset `0x10`. Version byte `0x01` = compressed flag; the u32 at `+4` (`0x1E0000`) is the **decompressed** size. It inflates to the content of the writable **custom flash** (the region the idd7000 disk programs — write/command window `0x96800000`; `0x56000000`/`0x57000000` are the separate factory flashes), landing at flash offset `0x20000` (`0x1E0000` B fill it to the 2 MB end). Decoded, it carries the real style/sound names (`Swing And Jive`, `Calypso Dance`, `Jazz Fusion`, …) |
+| `01CTMINI.AST` | custom **flash** | Custom/Music-Stylist data; the payload is **raw zlib/DEFLATE** (no wrapper) starting at file offset `0x10`. Version byte `0x01` = compressed flag; the u32 at `+4` (`0x1E0000`) is the **decompressed** size. It inflates to the content of the writable **custom flash** (the 2 MB region the idd7000 disk programs — command window `0x96800000`), landing at flash offset `0x20000` (`0x1E0000` B fill it to the 2 MB end). Decoded, it carries the real style/sound names (`Swing And Jive`, `Calypso Dance`, `Jazz Fusion`, …) |
 | `02UMDINI.MD` | battery **SRAM** | user-Memory style references (44 style-IDs) |
 | `03FAVINI.FAV` | battery **SRAM** | Favorites (name + settings) |
 | `04HPGINI.HMP` | battery **SRAM** | Home-Page (hotspots + an embedded BMP) |
