@@ -57,10 +57,15 @@ is a *raw* DEFLATE stream (no 2-byte zlib header) at file offset `0x10`; inflati
 `zlib.decompressobj(-15)` yields exactly `0x1E0000` bytes = the custom-flash region from
 offset `0x20000` to the 2 MB end. (The earlier "Huffman/LZH, not zlib" and "LZSS-variant"
 readings were wrong — pylzss's 1.1 MB partial was a false positive; the near-uniform byte
-histogram is just well-compressed DEFLATE output.) Populating the emulated custom flash
-(`0x96800000`, the region reader `0x4847FB68` / parser `0x4847F9F7` currently see as all
-zeros) from this decoded image is what will replace the `8 Beat 1` placeholders with the
-real names.
+histogram is just well-compressed DEFLATE output.) **However**, an empirical test (2026-07-07) showed that preloading the decoded image into the
+custom flash (dataflash `0x56020000`) does **not** change the style names, and a read-tap
+recorded **zero** reads from the custom data-flash (`0x56000000`–`0x561FFFFF`) while the style
+list is displayed. The `8 Beat 1` names are templated at **boot** by a function at `0x484420CB`
+(which copies the default string `0x4872AB42` via the library memcpy `0x4C003043`), from a source
+that is **not** the custom flash. So the decoded image is genuine user data, but the "all 8 Beat 1"
+list bug is a **separate** defect in the boot-time style-name build — populating the custom flash is
+not its fix. Next: disassemble `0x484420CB` (needs an MN10300 disassembler / a QTDEBUG build) to see
+why the style-ID→name lookup defaults.
 
 ### Favorites, decoded
 
