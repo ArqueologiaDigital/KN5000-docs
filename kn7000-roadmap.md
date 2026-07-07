@@ -179,6 +179,8 @@ UPDATE (**5 more panel functions bound from user feedback**, 2026-07-07): Contin
 
 UPDATE (**LCD LEFT soft-keys bound**, 2026-07-07): Per the user's direction, bound the 5 LCD-LEFT soft-keys to **SEG03 b3..b7** (0x08/0x10/0x20/0x40/0x80 = LCD LEFT 1..5). Direct user evidence gave 3/5 (FADE=SEG03 0x20=>LCD LEFT 3, VAR4=0x40=>LCD LEFT 4, SPLIT=0x80=>LCD LEFT 5); LCD LEFT 1-2 extrapolate the run. Freed FADE IN/OUT, VARIATION 4, and SPLIT POINT (their bits were really LCD LEFT 3/4/5; real bits TBD). These are context-sensitive soft-keys (inactive on home), so not snapshot-verifiable — user to confirm on re-test. No double-bindings; boots OK; republished. Remaining panel TODO: START/SYNCHRO/FADE/VAR4/SPLIT real bits, real part-mute matrix, SOUND EXPLORER LED, genre-LED re-sweep, remaining "no visual feedback" buttons.
 
+UPDATE (**genre LEDs re-swept**, 2026-07-07): Re-swept the RHYTHM GROUP genre-select LEDs against the corrected bits (genreled2.lua: press each genre, diff which cpl_led lights). Clean result: **genre G → cpl_led[3 + 8·(G//4) − (G%4)]** (0→cpl3, 4→cpl11, 8→cpl19, 12→cpl27, descending within each 4-group). Added a `GENRE_LED` dict and wired the RHYTHM GROUP LEDs to it; the 4 SEG00 genres (0,1,3,4) that were previously dark now light. The sweep also revealed cpl_led1/cpl_led10 (old "START/STOP"/"SYNCHRO" transport LEDs) are really the genre-2/genre-5 LEDs. Rebuilt + republished. Remaining panel TODO: real bits for START/SYNCHRO/FADE/VAR4/SPLIT, the real part-mute matrix, and the SOUND EXPLORER LED.
+
 **Bonus lead**: the firmware carries its OWN embedded symbol table (name strings ~`0x485F1Axx`: "MainPadRun"/"MainRhyRun"/"MainSeqRun"; addr table ~prog file offset `0x344440`) — mining it could auto-name many firmware functions.
 
 
