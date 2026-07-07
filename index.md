@@ -24,7 +24,7 @@ protocols — as the physical hardware becomes scarce.
 
 | Keyboard | Year | Main CPU | Documentation |
 |----------|------|----------|---------------|
-| **[Technics SX-KN1500]({{ site.baseurl }}/kn1500/)** | 1996 | Toshiba TLCS-900 (TMP95C061) | New — the KN5000's CPU lineage; one mask ROM dumped but unvalidated (BAD_DUMP, needs redump); MAME skeleton |
+| **[Technics SX-KN1500]({{ site.baseurl }}/kn1500/)** | 1996 | Toshiba TLCS-900 (TMP95C061) | New — the KN5000's CPU lineage; one mask ROM dumped but unvalidated — under investigation (needs a redump before emulation) |
 | **[Technics SX-KN5000](#technics-kn5000)** | 1997 | Toshiba TLCS-900/H2 (TMP94C241F) | Extensive — 6 ROMs reconstructed 100% byte-perfect, MAME driver, homebrew SDK |
 | **[Technics SX-KN2400 / KN2600]({{ site.baseurl }}/kn2400-kn2600/)** | 1998–2000 | Panasonic MN10300 | New — drivers built; the KN7000's closest sibling (one firmware serves KN2400/KN2600/PR54) |
 | **[Technics SX-KN6000]({{ site.baseurl }}/kn6000-hardware/)** | 2000 | Panasonic MN10300 | New — firmware extracted, hardware mapped from the service manual; ~85% code shared with KN7000 |
