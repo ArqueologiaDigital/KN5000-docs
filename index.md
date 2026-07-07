@@ -25,13 +25,14 @@ protocols — as the physical hardware becomes scarce.
 | Keyboard | Year | Main CPU | Documentation |
 |----------|------|----------|---------------|
 | **[Technics SX-KN5000](#technics-kn5000)** | 1997 | Toshiba TLCS-900/H2 (TMP94C241F) | Extensive — 6 ROMs reconstructed 100% byte-perfect, MAME driver, homebrew SDK |
+| **[Technics SX-KN2400 / KN2600]({{ site.baseurl }}/kn2400-kn2600/)** | 1998–2000 | Panasonic MN10300 | New — drivers built; the KN7000's closest sibling (one firmware serves KN2400/KN2600/PR54) |
 | **[Technics SX-KN6000]({{ site.baseurl }}/kn6000-hardware/)** | 2000 | Panasonic MN10300 | New — firmware extracted, hardware mapped from the service manual; ~85% code shared with KN7000 |
 | **[Technics SX-KN6500]({{ site.baseurl }}/kn6000-hardware/)** | 2001 | Panasonic MN10300 (MN103002A) | New — firmware extracted, hardware mapped from the service manual |
 | **[Technics SX-KN7000]({{ site.baseurl }}/kn7000/)** | 2002 | Panasonic MN10300/AM33 | Early research — update-disk extraction and firmware analysis underway |
 
 These arrangers span **two CPU architectures** — the TLCS-900 KN5000 and the
-**MN10300 trio (KN6000, KN6500, KN7000)** — yet all four clearly descend from a
-**single evolving source codebase**: the same update-disk container format
+**MN10300 family (KN2400, KN2600, KN6000, KN6500, KN7000)** — yet all clearly descend
+from a **single evolving source codebase**: the same update-disk container format
 (`.SLD`/LZSS), the same MILK UI-framework symbol conventions, resource tables and
 message text recur across every model (the KN6000 shares ~85 % of its strings with
 the KN7000). See the

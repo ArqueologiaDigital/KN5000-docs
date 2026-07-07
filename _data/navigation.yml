@@ -47,6 +47,11 @@
     - title: Roadmap & Plan
       url: /kn6000-roadmap/
 
+- title: Technics KN2400 / KN2600
+  pages:
+    - title: KN2400 / KN2600 / PR54
+      url: /kn2400-kn2600/
+
 - title: KN5000 · Hardware
   pages:
     - title: Hardware Architecture

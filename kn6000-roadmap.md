@@ -155,5 +155,7 @@ The user is supplying more devices for the same consolidated treatment
 (`~/compartilhado/KN2400_KN2600_KN7000`): **KN2400** (`kn24-11.zip`), **KN2600**
 (`kn26-11.zip` + `KN2600_CD-Rom.zip`), a **PR804** CD-ROM, and additional KN7000
 material (`kn7-14`/`kn7-16` firmware, `KN7000_CD-Rom.zip`, `scd7000`, `idd7000`,
-`ca7001`, `custom1/2`). Triage next: extract each `.SLD`, confirm CPU + MILK
-framework, and fold into what is becoming an N-way family comparison.
+`ca7001`, `custom1/2`). **KN2400/KN2600 are now emulated** — see
+[KN2400 / KN2600 / PR54](/kn2400-kn2600/) (MN10300/MILK, the KN7000's closest siblings;
+one firmware serves KN2400/KN2600/PR54). Remaining triage: the PR804 CD-ROM and the extra
+KN7000 material; add a `pr54` clone once its exact model designation is confirmed.
