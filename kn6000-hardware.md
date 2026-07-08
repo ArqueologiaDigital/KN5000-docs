@@ -41,16 +41,25 @@ software — the built-in/user rhythm data really does live in a flash IC that t
 
 ## Emulation status (MAME driver)
 
-Both the KN6000 and KN6500 have draft MAME drivers (reusing the KN7000 MN10300 machine) but are
-`MACHINE_NOT_WORKING` — they do not yet reach a display. The boot sequence was traced and two blockers
-fixed: the program ROM had to be **assembled from both floppy parts** (an earlier extraction used only
-part 1, leaving the upper 2 MB empty — and the firmware jumps into it), and the **library ROM at
-`0x4C000000` is a bus mirror of the program ROM** (unlike the KN7000, which self-loads its library). The
-boot now runs much further: a third derail was traced to the scheduler tick **preempting RTOS object
-creation**, and delaying that tick past boot eliminates it (the CPU reaches a stable state instead of
-crashing). The KN6000's **on-chip timers** (`0x34001080`) have since been modelled — its RTOS millisecond
-tick is INTC group 7 — so the boot now clears its timer delays and runs the real timer ISR. It currently
-stops at a deliberate shutdown/error halt just after timer init, which is the next item under investigation.
+Both the KN6000 and KN6500 now **boot to their main PLAY screen** in the draft MAME driver (which reuses the
+KN7000 MN10300 machine) — the tone/sound-group icon row, the menu bars, and the status bar render. Reaching
+the display took **five stacked boot fixes**:
+
+1. The program ROM had to be **assembled from both floppy parts** — an earlier extraction used only part 1,
+   leaving the upper 2 MB empty, and the firmware jumps into it.
+2. The **library ROM at `0x4C000000` is a bus mirror of the program ROM** (unlike the KN7000, which
+   self-loads its library into RAM).
+3. The boot's single-threaded RTOS **object creation was being preempted by the system tick**, so the tick
+   is delayed past it (the CPU reaches a stable state instead of crashing).
+4. The **on-chip millisecond timer** (`0x34001080`) was modelled as **INTC group 7**, so the boot's timer
+   delay loops clear and the real timer ISR runs.
+5. The firmware's interrupt trampoline has a **general handler** (slot 0) and a separate **exception/fault
+   handler** (slot 1); the driver now routes all maskable interrupts to the general handler instead of the
+   fault vector — the old level-based routing had sent the timer IRQ to the fault handler, causing a
+   deliberate halt.
+
+Both drivers remain `MACHINE_NOT_WORKING` pending the **undumped built-in mask ROMs (IC13/IC14)** — the
+instrument icons currently render with placeholder graphics — and audio needs the undumped wave ROMs.
 
 ## Front-panel & keyboard sub-processors
 
