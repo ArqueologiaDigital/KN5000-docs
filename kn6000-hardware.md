@@ -58,8 +58,12 @@ the display took **five stacked boot fixes**:
    fault vector — the old level-based routing had sent the timer IRQ to the fault handler, causing a
    deliberate halt.
 
-Both drivers remain `MACHINE_NOT_WORKING` pending the **undumped built-in mask ROMs (IC13/IC14)** — the
-instrument icons currently render with placeholder graphics — and audio needs the undumped wave ROMs.
+The play-screen graphics render correctly once the display format is handled: the KN6000/KN6500 LCD panel
+is **RGB555 and mounted rotated 180°** (unlike the KN7000's upright RGB565), so the shared `screen_update`
+reads the framebuffer reversed and decodes 5-5-5 for these models — giving gray sound-group tiles with real,
+upright instrument icons (grand piano, guitars, trumpet, drums) and the correct title/menu colours. Both
+drivers remain `MACHINE_NOT_WORKING` mainly because **audio needs the undumped wave ROMs** (there is no sound
+yet).
 
 ## Front-panel & keyboard sub-processors
 
