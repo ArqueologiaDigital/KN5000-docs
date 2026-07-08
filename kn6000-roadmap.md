@@ -139,13 +139,19 @@ the service manuals](/kn6000-hardware/); **draft MAME drivers built** — `kn600
 `kn6500` are registered in the shared `kn7000_mame` tree (reusing `kn7000_state` and
 the KN7000 machine config, same verified `0x48400000` program base), build into the
 one binary alongside `kn7000`, pass `-verifyroms`, and run their MN10300 firmware at
-~140 % speed with no fatal error. **[Table-ROM name inventories extracted](/kn6000-names/)**:
+~140 % speed and — after a five-fix boot investigation (firmware assembly,
+library=program-ROM mirror, tick-delay past object creation, on-chip ms-timer as INTC
+group 7, and routing IRQs to the firmware's general handler rather than its fault
+vector) — **both now BOOT TO THEIR MAIN PLAY SCREEN** (commit `805cb46`): the
+tone/sound-group icon row, menu bars, and status bar render. **[Table-ROM name inventories extracted](/kn6000-names/)**:
 KN6000 4,440 strings (1,963 internal MILK GUI symbol names + user-facing style/sound
 names), KN6500 4,189 (2,006 symbols) — via the new NUL-walk `name_extract_nul.py`.
 
 **Next:** exploit the recovered **MILK symbol names** for cross-model symbol recovery
-(align KN6000/KN6500/KN7000 GUI-resource identifiers → propagate function names); tune
-each model's memory map / peripheral wiring for a full boot; decode the remaining
+(align KN6000/KN6500/KN7000 GUI-resource identifiers → propagate function names); the
+boot now reaches the main play screen, so the priority shifts to **dumping the built-in
+mask ROMs (IC13/IC14)** — currently undumped, so the instrument icons render with
+placeholder graphics — plus further peripheral wiring; decode the remaining
 table-ROM assets (bitmaps, PAD presets); add `kn5000` to the same binary (blocked on a
 MAME genie/`SOURCES` link quirk — see memory).
 
