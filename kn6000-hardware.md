@@ -48,8 +48,9 @@ part 1, leaving the upper 2 MB empty — and the firmware jumps into it), and th
 `0x4C000000` is a bus mirror of the program ROM** (unlike the KN7000, which self-loads its library). The
 boot now runs much further: a third derail was traced to the scheduler tick **preempting RTOS object
 creation**, and delaying that tick past boot eliminates it (the CPU reaches a stable state instead of
-crashing). The remaining work is modelling the KN6000's **on-chip timers** (`0x34001080`), which drive its
-RTOS millisecond tick — the driver currently reuses the KN7000's simpler interrupt model.
+crashing). The KN6000's **on-chip timers** (`0x34001080`) have since been modelled — its RTOS millisecond
+tick is INTC group 7 — so the boot now clears its timer delays and runs the real timer ISR. It currently
+stops at a deliberate shutdown/error halt just after timer init, which is the next item under investigation.
 
 ## Front-panel & keyboard sub-processors
 
