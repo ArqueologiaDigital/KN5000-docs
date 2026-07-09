@@ -23,6 +23,8 @@
       url: /kn7000-sound-subsystem/
     - title: Effects DSP (ADSP-21065L)
       url: /kn7000-effects-dsp/
+    - title: Sound GUI Map
+      url: /kn7000-sound-gui-map/
     - title: Storage & File System
       url: /kn7000-storage-subsystem/
     - title: User Data & Initial Data Disk
