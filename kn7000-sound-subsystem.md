@@ -160,6 +160,33 @@ Reverb & Effect, the Sound DSP editor, the 5-band Equalizer, the mixer — are
 catalogued in the KN7000 firmware notes; each maps onto the register traffic
 described above.
 
+### From a key press to a voice — the firmware signal path
+
+Tracing an actual note through the disassembly (and confirming each step live in
+the MAME driver) shows a clear pipeline:
+
+1. **Key scan → FIFO.** The sub tone generator scans the key matrix in hardware
+   and posts each event into its voice-event FIFO. The CPU reads it at
+   `0x98050004` as a 16-bit word — low byte = MIDI note, high byte = velocity
+   (velocity 0 = note-off), `0xFFFF` = empty.
+2. **Key-bed service task.** A scheduled task (firmware address `0x48448015`)
+   drains the FIFO, reading events until it sees `0xFFFF`, and gathers the
+   note/velocity pairs.
+3. **Note → pitch.** Each event is decoded by a helper (`0x4844812D`) that turns
+   the MIDI note number into the tone generator's internal pitch value using the
+   instrument's tuning tables and a divide-by-twelve (one octave = 12 semitones),
+   then records it in a per-key voice descriptor.
+4. **Voice allocation → tone-generator registers.** The sound engine assigns the
+   note to a free tone-generator channel and programs that channel through the
+   **register-indirect primitives** in the self-loaded library ROM. Voices
+   **0–63** are written to the **sub** TG (`0x98050000`), voices **64–127** to
+   the **master** TG (`0x98040000`); each register write packs a channel number,
+   a register index and 16 bits of data. Between notes the same primitives emit
+   the cyclic `0xFC0x` refresh.
+
+Steps 1–3 are fully exercised in emulation today; step 4 is where audible
+synthesis currently stops (see below).
+
 ## Factory diagnostics as documentation
 
 The service diagnostic mode (entered by holding **C#3 + D#3 + C#4** at power-on)
@@ -176,9 +203,24 @@ includes several sound tests that double as precise hardware descriptions:
 ## Emulation status
 
 The register interfaces and the DSP host protocol are reverse-engineered and the
-MAME driver models the tone-generator register capture and the key-event FIFO.
-Audible synthesis is blocked only by the **undumped wave ROMs** — the samples
-have no software substitute (the readback window can dump them from real
-hardware, but the chips are not in the update disks). The **effects DSP**, by
-contrast, is fully recoverable because its programs are in the firmware; see the
-[Effects DSP page](/kn7000-effects-dsp/).
+MAME driver models the tone-generator register capture, the key-event FIFO and a
+first-cut audio output stage (a bring-up synth, so the DAC/mixer/speaker path is
+proven). Two things stand between that and firmware-accurate audible synthesis:
+
+- **The firmware voicer gate.** Injecting a key press is now confirmed to travel
+  all the way into the firmware — the key-bed service task consumes the event
+  from the FIFO and decodes it to a pitch — but in the current emulated power-on
+  state the sound engine does **not** go on to program any tone-generator voice
+  registers (only the idle `0xFC0x` refresh continues). The note→voice allocator
+  is not emitting, which points at the boot-time performance/sound-assignment
+  setup rather than the tone-generator interface itself. This is under active
+  investigation.
+- **The undumped wave ROMs.** Even once the firmware drives the voices, the
+  samples themselves live in the four undumped mask ROMs. They have no software
+  substitute for authentic playback (the readback window can dump them from real
+  hardware, but the chips are not in the update disks); labelled **synthetic
+  placeholder** wave ROMs let the synthesis path be developed and tested in the
+  meantime.
+
+The **effects DSP**, by contrast, is fully recoverable because its programs are
+in the firmware; see the [Effects DSP page](/kn7000-effects-dsp/).
