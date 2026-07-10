@@ -77,6 +77,30 @@ Songs interchange as **SMF** (`.MID`) through the storage layer:
 phrase — which is why the pad presets are themselves stored as MIDI event
 streams.
 
+## The tempo clock (how playback actually advances)
+
+Everything the KN7000 plays in time — the sequencer, the rhythm accompaniment,
+the metronome, the built-in demos, MIDI clock out — is paced by **one on-chip
+16-bit hardware timer** (mode register `0x34001082`, 16-bit reload `0x34001092`,
+counter `0x340010A2`). The firmware programs its reload as **1,250,000 ÷ BPM**
+on a 2 MHz timebase (IOCLK 16 MHz ÷ 8), and every underflow raises interrupt
+group 7, whose handler (`0x48447084`) is a **96-PPQN tick**: it advances a
+mod-96 beat phase (`0x50149664`) and steps five clock-lane structures that make
+queued events due. Tempo changes simply rewrite the reload on the fly (clamped
+40–300 BPM). A second timer (`0x34001080/90`) provides the separate 1 kHz
+system tick that runs the RTOS scheduler and UI — which is why a machine can
+have a fully live UI while sequenced playback is stopped.
+
+The ten **demo songs** are self-contained in the program ROM: per song a
+zlib-compressed *setup* blob (track table and initial part programs), a
+*sequence* blob (256-byte-per-measure pages of delta-timed, running-status MIDI
+events) and a *sounds* blob, plus a text "ACT" script that paces the slideshow
+from the song position.
+
+In MAME this timer was the last missing link for playback: with it modeled, the
+demo songs play end-to-end and the rhythm accompaniment starts and runs from
+START/STOP, at the displayed tempo.
+
 ## Relationship to the KN5000
 
 The sequencer concept, the `MT_Seq_*`/`EV_*` naming and the SMF interchange are

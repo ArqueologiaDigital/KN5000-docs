@@ -216,21 +216,45 @@ per-voice register write is suppressed — which is why early builds were silent
 though the key press reached the firmware. Reporting the tone generators present
 (the KN7000 has both) opens the gate and the voice engine drives the hardware.
 
-Two honest caveats remain:
+The boot-screen trade-off that early builds had (sound forced the boot onto the
+SD menu) is solved: a second switch, *"Tone generators / firmware sound (play
+screen, no SD menu)"*, leaves the boot strap alone — so the machine boots to its
+normal home screen — and opens the firmware's tone-generator gate afterwards.
+With it on, the instrument **boots to the home screen and plays**: key bed, chord
+finder, rhythm accompaniment and the built-in demo songs all sound.
 
-- **Placeholder timbre.** The four PCM wave ROMs are still undumped, so the
-  emulator voices each note with a stand-in sine rather than the real samples. The
-  pitch is decoded from the firmware's own pitch register (one octave = a fixed
-  step; verified against an equal-tempered scale), so notes are in tune — they just
-  don't yet have the KN7000's actual voices. The readback window can dump the ROMs
-  from real hardware once one is available.
-- **Boot screen.** Opening the sound gate lets the boot sequence advance into the
-  SD-card subsystem, whose emulation is still in progress, so with sound enabled a
-  fresh boot currently stops on the SD menu rather than the home screen (the key bed
-  and sound still work there). Because of that trade-off, sound is an **opt-in
-  switch** — *Machine Configuration → "Tone generators / firmware sound
-  (experimental)"* — left **off** by default so the machine keeps its normal
-  home-screen boot until the SD subsystem is finished.
+## How a note's pitch really works
 
-The **effects DSP**, by contrast, is fully recoverable because its programs are
-in the firmware; see the [Effects DSP page](/kn7000-effects-dsp/).
+The obvious reading of the TG pitch register — an absolute pitch value — turned
+out to be wrong, and the correction is worth recording. The 18-bit pitch field
+(register class `0x2400`, with bit 16 carried in the class's low bit) is
+**sample-zone-relative**: 0x400 per semitone, but anchored to whichever PCM
+sample zone the voice selected, not to a fixed frequency. The firmware computes
+it in its sound library (`pitch16 = ((note − zoneCenter) << 8) >> keyScaleExp +
+0x4280` plus coarse/fine/multisample corrections, then `pitch18 =
+((pitch16 + 0x1800) << 2)`; key-scale exponent 7 means "fixed pitch" — drums).
+Every tone therefore sits at its own offset, and a placeholder synthesizer that
+reads the register as absolute pitch plays every non-piano part transposed.
+
+The emulator instead recovers the **musical** pitch from the firmware's own
+voice bookkeeping: at note-on the sound library fills a per-voice record
+(`0x500AF940 + slot·0xB4`) whose `notePitch16` field holds the intended pitch —
+note, part transpose, master tune and stretch tuning included — in 1/256-semitone
+units, before the first TG register write of the note. Reading it makes the key
+bed, the demo songs and the **chord finder** all play at true pitch (the chord
+finder's notes were always computed correctly from its chord tables; only its
+part's empty tone descriptors made the register value garbage). Pitch rewrites
+on a sounding voice are applied as relative bends, so vibrato, portamento and
+pitch bend behave. A by-product of the same analysis: the key-bed FIFO carries a
+**key index** (0 = the 61-key bed's bottom C2), not a MIDI note — the firmware
+adds 36.
+
+One honest caveat remains: **placeholder timbre**. The four PCM wave ROMs are
+still undumped, so each voice is a stand-in sine at the correct pitch. The
+tone descriptors in the dumped table ROM already map every voice to its wave
+sample number, so real-sample playback is ready to slot in once the ROMs are
+dumped (the firmware's readback window can extract them from a real unit).
+
+The **effects DSP** is fully recovered — its programs are in the firmware — and
+the emulator boots its ADSP-21065L kernel and routes the tone-generator audio
+through it; see the [Effects DSP page](/kn7000-effects-dsp/).

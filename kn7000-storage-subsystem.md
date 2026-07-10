@@ -75,6 +75,35 @@ functions cluster into the usual operations:
 The file-manager screen strings — `- LOAD -`, `- SAVE -`, `CHECKING`,
 `SAVE OK`, `%d KB free (%d%% used)` — live around `0x2637E4`.
 
+## SD subsystem internals (2026-07 reverse engineering)
+
+Live tracing plus disassembly settled how the SD side actually hangs together —
+including one correction to earlier notes: **the second SIO serial channel
+(`0x34000820`) is the MIDI-2 UART, not the SD link** (its RX handler is a
+standard MIDI parser; the hot status polling seen on SD screens is just the
+engine loop's idle MIDI pump).
+
+The SD stack proper is a layered, DOS-like design:
+
+* A **state machine** over the state byte `0x50083cd8`
+  (`SD_GetState`/`SD_SetState`), ticked from the engine loop
+  (`0x485519bc`). In state 0 it queries the MILK GUI **property system** —
+  `GetProperty(object 0x0210033F, property 0x60047)` — and does nothing while
+  the answer is −1. That property is the firmware's own "SD present/enabled"
+  source, and it is the gate the emulator must satisfy first.
+* Once un-gated, mount work is posted as a 16-byte command message to a
+  dedicated **disk worker task** (`0x4854ad90`, created by `DiskInit`
+  `0x4854aced`), which runs card-detect (GPIO `0x3400016c` bit 4, with a
+  software override at `0x50005204`), card initialisation, and the mount.
+* Files are reached through a **virtual file system**: the SD card is device
+  `"d"`, mounted as drive **`"C:"`**, through per-device function pointers in a
+  RAM device table (`0x500079f8`) — the same VFS the floppy uses. The FAT
+  layer sits on top; the physical SD hardware interface lives behind device
+  `d`'s registered functions and is the remaining unknown to model.
+* Success sets card-ready (`0x50083bc2 = 1`) and state 3 (mounted); the SD
+  screens' "WAIT!" dialog is literally waiting for that state transition, and
+  ERROR 93 ("SD lid is open") is its failure branch.
+
 ## Relationship to the KN5000
 
 The floppy/FAT layer and the FMM screen design are **shared with the KN5000**
