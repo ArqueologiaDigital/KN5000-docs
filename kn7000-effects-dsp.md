@@ -149,6 +149,29 @@ algorithms are *not* recoverable the way the KN7000's are.)
 
 Unlike the tone-generator side — which is blocked by the
 [undumped wave ROMs](/kn7000-sound-subsystem/) — the effects DSP is **fully
-recoverable from data we already have**. Both the DSP core (the SHARC family is
-already emulated in MAME) and its programs (extracted here) exist; what remains is
-device-integration work. It is the most complete part of the KN7000 sound story.
+recoverable from data we already have**. Both the DSP core and its programs
+exist, and the integration path is now completely mapped out:
+
+- **The DSP core is already in MAME.** MAME emulates the ADSP-2106x SHARC family
+  (the `ADSP21062`/`ADSP21060` devices) — the same instruction set the 21065L
+  uses — with a mature interpreter, a recompiler and a disassembler proven in
+  shipping arcade drivers. No instruction-level work is needed.
+- **The programs are recovered** — all 80 records, kernel and effects, extracted
+  and disassembled from the firmware (above).
+- **The 21065L's memory personality has been reverse-engineered from the program
+  itself.** The public summary datasheet doesn't give the internal-memory or I/O
+  register map, so it was *derived from what the program actually uses*: its code
+  lives at program address `0x8000`–`0x8Dxx`, its data at `0x9800`–`0x9Cxx` and
+  `0xC000`–`0xC3xx`, its delay buffers in external SDRAM from `0x80000`, and it
+  touches a specific, now-enumerated set of on-chip I/O registers (serial-port,
+  SDRAM-controller and DMA control blocks). That is exactly what a MAME
+  `adsp21065l` device variant needs.
+
+What remains is genuine but well-scoped device work: add that 21065L variant to
+MAME's SHARC core, wire the host-boot upload (the `0x98000000`/`0x9C000000` port)
+so the firmware loads the DSP as it does on hardware, and — the one piece with no
+MAME precedent — model the serial-audio ports so sound flows tone-generators →
+DSP → DAC. The first milestone is simply proving the recovered programs *run* on
+MAME's SHARC core, which would independently validate the whole disassembly. It is
+the most complete part of the KN7000 sound story, and the best-understood path
+forward.
