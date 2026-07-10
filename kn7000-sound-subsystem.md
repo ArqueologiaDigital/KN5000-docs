@@ -202,11 +202,12 @@ includes several sound tests that double as precise hardware descriptions:
 
 ## Emulation status
 
-**The KN7000 now makes sound in MAME, driven by its own firmware voice engine.**
+**The KN7000 can now make sound in MAME, driven by its own firmware voice engine.**
 Playing a note (PC key bed or MIDI in) travels through the firmware exactly as on
 hardware — key-event FIFO → key-bed task → note-to-pitch → voice allocation — and
 the firmware programs the tone-generator voice registers, which the emulator
-renders to audio. Pitch, polyphony and note timing are the firmware's own.
+renders to audio. Pitch, polyphony and note timing are the firmware's own. Sound is
+an opt-in machine-configuration switch (see the boot-screen caveat below).
 
 Getting there turned on one missing bit. The firmware only programs voices when a
 **tone-generator-present strap** (read at `0x98070000`, tested at firmware
@@ -224,8 +225,12 @@ Two honest caveats remain:
   don't yet have the KN7000's actual voices. The readback window can dump the ROMs
   from real hardware once one is available.
 - **Boot screen.** Opening the sound gate lets the boot sequence advance into the
-  SD-card subsystem, whose emulation is still in progress, so a fresh boot currently
-  stops on the SD menu; the key bed and sound work regardless of the screen shown.
+  SD-card subsystem, whose emulation is still in progress, so with sound enabled a
+  fresh boot currently stops on the SD menu rather than the home screen (the key bed
+  and sound still work there). Because of that trade-off, sound is an **opt-in
+  switch** — *Machine Configuration → "Tone generators / firmware sound
+  (experimental)"* — left **off** by default so the machine keeps its normal
+  home-screen boot until the SD subsystem is finished.
 
 The **effects DSP**, by contrast, is fully recoverable because its programs are
 in the firmware; see the [Effects DSP page](/kn7000-effects-dsp/).
