@@ -184,8 +184,8 @@ the MAME driver) shows a clear pipeline:
    a register index and 16 bits of data. Between notes the same primitives emit
    the cyclic `0xFC0x` refresh.
 
-Steps 1–3 are fully exercised in emulation today; step 4 is where audible
-synthesis currently stops (see below).
+All four steps now run in emulation, and the emulator turns the firmware's voice
+writes into sound (see below).
 
 ## Factory diagnostics as documentation
 
@@ -202,25 +202,30 @@ includes several sound tests that double as precise hardware descriptions:
 
 ## Emulation status
 
-The register interfaces and the DSP host protocol are reverse-engineered and the
-MAME driver models the tone-generator register capture, the key-event FIFO and a
-first-cut audio output stage (a bring-up synth, so the DAC/mixer/speaker path is
-proven). Two things stand between that and firmware-accurate audible synthesis:
+**The KN7000 now makes sound in MAME, driven by its own firmware voice engine.**
+Playing a note (PC key bed or MIDI in) travels through the firmware exactly as on
+hardware — key-event FIFO → key-bed task → note-to-pitch → voice allocation — and
+the firmware programs the tone-generator voice registers, which the emulator
+renders to audio. Pitch, polyphony and note timing are the firmware's own.
 
-- **The firmware voicer gate.** Injecting a key press is now confirmed to travel
-  all the way into the firmware — the key-bed service task consumes the event
-  from the FIFO and decodes it to a pitch — but in the current emulated power-on
-  state the sound engine does **not** go on to program any tone-generator voice
-  registers (only the idle `0xFC0x` refresh continues). The note→voice allocator
-  is not emitting, which points at the boot-time performance/sound-assignment
-  setup rather than the tone-generator interface itself. This is under active
-  investigation.
-- **The undumped wave ROMs.** Even once the firmware drives the voices, the
-  samples themselves live in the four undumped mask ROMs. They have no software
-  substitute for authentic playback (the readback window can dump them from real
-  hardware, but the chips are not in the update disks); labelled **synthetic
-  placeholder** wave ROMs let the synthesis path be developed and tested in the
-  meantime.
+Getting there turned on one missing bit. The firmware only programs voices when a
+**tone-generator-present strap** (read at `0x98070000`, tested at firmware
+`0x484d7713`) says the TGs exist; otherwise a library gate flag stays set and every
+per-voice register write is suppressed — which is why early builds were silent even
+though the key press reached the firmware. Reporting the tone generators present
+(the KN7000 has both) opens the gate and the voice engine drives the hardware.
+
+Two honest caveats remain:
+
+- **Placeholder timbre.** The four PCM wave ROMs are still undumped, so the
+  emulator voices each note with a stand-in sine rather than the real samples. The
+  pitch is decoded from the firmware's own pitch register (one octave = a fixed
+  step; verified against an equal-tempered scale), so notes are in tune — they just
+  don't yet have the KN7000's actual voices. The readback window can dump the ROMs
+  from real hardware once one is available.
+- **Boot screen.** Opening the sound gate lets the boot sequence advance into the
+  SD-card subsystem, whose emulation is still in progress, so a fresh boot currently
+  stops on the SD menu; the key bed and sound work regardless of the screen shown.
 
 The **effects DSP**, by contrast, is fully recoverable because its programs are
 in the firmware; see the [Effects DSP page](/kn7000-effects-dsp/).
