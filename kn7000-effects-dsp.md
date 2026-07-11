@@ -239,14 +239,22 @@ map, IOP set) lives in the project's SHARC fork pending upstreaming.
 
 ### Emulation status: which effects are audible (2026-07)
 
-The MAME bridge that carries tone-generator audio through the DSP currently
-models a **single send + return path**: it feeds the TG mix into effect **unit 0's**
-input and reads unit 0's return. The boot-default **reverb executes on unit 0**,
-so reverb is fully audible and faithful (clean, decaying, robust under dense
-input). The other units — **chorus (7), EQ (8)** and the rest — receive no input
-in this model and are therefore silent, even though selecting their *types*
-correctly reprograms them (verified: the type upload lands, the unit just isn't
-fed).
+The MAME bridge carries tone-generator audio through the DSP. The boot-default
+**reverb executes on unit 0** and is fully audible and faithful (clean, decaying,
+robust under dense input). **Chorus is also audible** (July 2026): it runs on
+unit 4 (a non-flag-gated modulated-delay program), and the bridge now feeds that
+unit its send (the low byte of sub-TG reg `0x8198`, tracking the on-screen CHORUS
+DEPTH) and sums its return as an independent wet — verified as a real chorus
+(LFO comb modulation, not a doubled note), with the reverb output kept
+bit-identical when chorus is off.
+
+The remaining effects — **multi, sound-DSP, EQ** — are the same mechanism (feed
+their unit's input slot, sum its return) and are follow-ups. All ten effect
+programs are loaded and run every frame; the silent ones were simply never fed
+(the bridge historically filled only unit 0's input slot). A special case: four
+of the seventy-two effect programs (a pitch-shifter + three specialty reverbs)
+gate on the SHARC **FLAG3** input pin, which is part of the DSP's double-buffered
+frame handshake; those need the faithful frame model, not just an input feed.
 
 On real hardware the TG routes each part to multiple effect units through its
 per-channel output-bus / effect-send matrix (sub-TG register group `0x20`, 64
