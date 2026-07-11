@@ -8,7 +8,7 @@ permalink: /kn7000-effects-dsp/
 
 The KN7000's reverb, chorus, multi-effects and equalizer all run on **IC306**,
 an **Analog Devices ADSP-21065L** — a 32-bit floating-point "SHARC" DSP (part
-marking `S21065LKS240`, ~60 MHz), with two 16-Mbit SDRAMs (IC307/IC308) for
+marking `S21065LKS240`, run at 66 MHz), with two 16-Mbit SDRAMs (IC307/IC308) for
 delay memory. It sits on the [sound board](/kn7000-sound-subsystem/) between the
 tone generators and the main DAC.
 
@@ -175,3 +175,64 @@ DSP → DAC. The first milestone is simply proving the recovered programs *run* 
 MAME's SHARC core, which would independently validate the whole disassembly. It is
 the most complete part of the KN7000 sound story, and the best-understood path
 forward.
+
+## 2026-07 update: it works — the emulated DSP now plays real effects
+
+Everything above became a working emulation in July 2026: the MAME driver
+host-boots the recovered kernel, uploads the firmware's effect chain, and a
+piano note with reverb ON is clean audio with a naturally decaying tail. The
+route there uncovered hardware truths that were not visible from the static
+program alone; they are recorded here because they *are* the KN7000's design.
+
+### The runtime topology: a TDM patchbay into the tone generator
+
+The DSP's serial outputs feed **no DAC**. All four SPORT transmit pins loop
+back into the tone generator (`DT0A/DT0B/DT1A/DT1B → TG SDIE0-3`), and the DSP's
+TX stream is a time-multiplexed **per-unit patchbay**: each of the kernel's 10
+effect units owns a stereo *return* pair in the frame, and reads its *input*
+from the matching slot 0x20 above it:
+
+| unit | program | return (L/R) | input |
+|---|---|---|---|
+| 0 (panel REVERB) | selected type | `0xC342/43` | `0xC362/63` |
+| 1..5 | per-part inserts | `0xC344/45` .. `0xC34C/4D` | +0x20 each |
+| 6 | chorus-class insert | `0xC358/59` | `0xC378/79` |
+| 7 (CHORUS) | rec58-family | `0xC350/51` | +0x20 |
+| 8 (EQ) | rec34 | `0xC352/53` | +0x20 |
+| 9 | rec49-family | `0xC356/57` | +0x20 |
+
+The **tone generator** performs the final mix: its output-bus registers
+(group 0x20) crossfade each DAC channel between the TG's direct sound and the
+DSP *returns* — the panel REVERB button toggles exactly that crossfade
+(`0x803A = 007F/7F00`), and REVERB TOTAL DEPTH is the return level
+(`0x8338 = 0x8500|depth`). The DSP send enters at unit 0's input slots.
+
+### Hardware truths required for a faithful emulation
+
+- **MODE1 ALUSAT is load-bearing.** The kernel's only mode write
+  (`BIT SET MODE1 0x3000`) enables integer *saturation*; the effects' triangle
+  LFOs are saturate-then-reflect generators. An emulator that wraps integer
+  adds turns every such LFO into a permanent ±2³¹ two-sample oscillation — the
+  signature is an input-independent, never-decaying full-scale wash.
+- **SPORT data is sign-extended** (`DTYPE=01`, right-justified): 24-bit samples
+  must be delivered sign-extended into 32-bit words. Zero-padding turns every
+  negative sample into ≈ +2× full scale (a rectified pedestal that rails every
+  unit's output limiter).
+- **The host interface is the stock ADSP-2106x IOP-register protocol** — the
+  "index" written to `0x98000000` is literally the SHARC IOP register address
+  (IIEP0/IMEP0/CEP0/DMAC-EP0/EPB0...). All runtime parameter and level traffic
+  travels as ordinary framed DM/PM uploads; there are no hidden level registers.
+- **The DSP runs at 66 MHz** and completes exactly 44,100 effect frames per
+  second; per-frame the kernel walks the unit CALL chain (slots at PM
+  `0x8080-0x80A0`, patched to relocated programs at `0x8400 + unit×0x100`).
+
+### Fix catalogue contributed to MAME's SHARC core
+
+Emulating this machine surfaced core bugs relevant to every SHARC system:
+missing ALUSAT in the recompiler's entire fixed-point ALU family (add/sub,
+carry forms, negate, inc/dec, dual add/sub — the interpreter had it), a
+circular-buffer wrap off-by-one (`> B+L` vs `≥ B+L`), pre-modify addressing
+never applying circular wrap, fixed-point AVG truncating where the TRM
+specifies round-to-nearest, unrounded SSFR multiplier forms, and FIX-overflow
+undefined behavior. The 21065L personality (vector base, host boot, memory
+map, IOP set) lives in the project's SHARC fork pending upstreaming.
