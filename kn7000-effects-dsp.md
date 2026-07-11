@@ -236,3 +236,21 @@ never applying circular wrap, fixed-point AVG truncating where the TRM
 specifies round-to-nearest, unrounded SSFR multiplier forms, and FIX-overflow
 undefined behavior. The 21065L personality (vector base, host boot, memory
 map, IOP set) lives in the project's SHARC fork pending upstreaming.
+
+### Emulation status: which effects are audible (2026-07)
+
+The MAME bridge that carries tone-generator audio through the DSP currently
+models a **single send + return path**: it feeds the TG mix into effect **unit 0's**
+input and reads unit 0's return. The boot-default **reverb executes on unit 0**,
+so reverb is fully audible and faithful (clean, decaying, robust under dense
+input). The other units — **chorus (7), EQ (8)** and the rest — receive no input
+in this model and are therefore silent, even though selecting their *types*
+correctly reprograms them (verified: the type upload lands, the unit just isn't
+fed).
+
+On real hardware the TG routes each part to multiple effect units through its
+per-channel output-bus / effect-send matrix (sub-TG register group `0x20`, 64
+channels × `0x10`) and sums all four returns into the DAC. Making chorus / EQ /
+Sound-DSP audible in emulation therefore needs a **multi-unit send/return model**:
+per-effect send buses from the TG, fed into each unit's input slot, with the
+unit returns summed. That is a scoped future change; reverb is complete today.

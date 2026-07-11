@@ -236,3 +236,22 @@ the data-dial focus model are **shared with the KN5000**
 protocol](/control-panel-protocol/)). The KN7000-specific detail observed here is
 the set of **four** sub-CPUs (CPL/CPC/CPR/CPSD) and their concrete test-mode and
 handler names.
+
+## Emulation note: PAGE / CONTRAST mapping (2026-07)
+
+In MAME these two CPC rockers were long mis-mapped (placeholder guesses on the
+analog DATA/dial wires). The firmware resolves them as ordinary **pseudo-part
+up/down** events, and the panel scanner already delivers them:
+
+| Rocker | Pseudo-part | Event pair | Driver bits (normSeg.bit) | Notes |
+|---|---|---|---|---|
+| **PAGE Up / Down** | `0x18` | `0x2001` / `0x2000` | `SEG0B` 0x10 / 0x20 | page-box widget `0x4841DF23` accepts key `0x18`; `AcWindowPageProc` does page +1 / −1 |
+| **CONTRAST + / −** | `0x1D` | `0x2001` / `0x2000` | `SEG05` 0x04 / 0x08 | contrast-edit filter `0x4854E693` accepts only arg-hi `0x1D`; shares the value stepper with the Tempo/Program wheel |
+
+Both were previously mislabeled `BASS ON/OFF` (PAGE) and `PADS ON/OFF`
+(CONTRAST) — folklore names carried over from a sister model. The wires the
+guesses used (normSeg `0x16`–`0x1A`) are **not buttons** at all: they are the
+absolute-analog inputs (DATA dial, pitch-bend / modulation wheels,
+Tempo/Program encoder). Live-verified in the emulator: the corrected PAGE rocker
+walks MULTI EFFECT `PAGE 6/8 → 7 → 8 → 7 → 6 → 5` and the within-group effect-type
+sub-pages. The LCD contrast value is driven but not rendered.
