@@ -234,7 +234,12 @@ carry forms, negate, inc/dec, dual add/sub — the interpreter had it), a
 circular-buffer wrap off-by-one (`> B+L` vs `≥ B+L`), pre-modify addressing
 never applying circular wrap, fixed-point AVG truncating where the TRM
 specifies round-to-nearest, unrounded SSFR multiplier forms, and FIX-overflow
-undefined behavior. The 21065L personality (vector base, host boot, memory
+undefined behavior. A **performance** gap too: the recompiler translated *no*
+fixed-point multiplier at all — the entire single-function multiply / MAC family
+fell back to the interpreter. Measuring the fallback path showed the KN7000
+effects kernel hits it ~66 million times per second of audio; giving those a
+native code path (verified bit-identical) removes 96 % of all interpreter
+fallbacks during a reverb. The 21065L personality (vector base, host boot, memory
 map, IOP set) lives in the project's SHARC fork pending upstreaming.
 
 ### Emulation status: which effects are audible (2026-07)
