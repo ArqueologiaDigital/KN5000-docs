@@ -238,8 +238,9 @@ undefined behavior. A **performance** gap too: the recompiler translated *no*
 fixed-point multiplier at all — the entire single-function multiply / MAC family
 fell back to the interpreter. Measuring the fallback path showed the KN7000
 effects kernel hits it ~66 million times per second of audio; giving those a
-native code path (verified bit-identical) removes 96 % of all interpreter
-fallbacks during a reverb. The 21065L personality (vector base, host boot, memory
+native code path (verified bit-identical) — together with the equally-unimplemented
+fixed-point average the same kernel uses — removes over 99 % of all interpreter
+fallbacks during a reverb (~82 million per run down to under half a million). The 21065L personality (vector base, host boot, memory
 map, IOP set) lives in the project's SHARC fork pending upstreaming.
 
 ### Emulation status: which effects are audible (2026-07)
