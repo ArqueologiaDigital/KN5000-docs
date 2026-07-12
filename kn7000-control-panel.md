@@ -217,6 +217,25 @@ the firmware services the panel handshake wedges the whole link (delivery re-arm
 attention signal only when the outgoing queue is empty), so the driver records the
 fader's power-on position silently and only speaks when it moves.
 
+The remaining two type-2 handlers are the panel's **rotary encoders**, both on wire
+bank `00`. Injecting each on the home screen and watching the on-screen tempo pins
+them down: **`0x17` is the TEMPO/PROGRAM knob** and **`0x10` is the large DATA dial**
+(the one with the central `SET` button). Unlike the faders these are *incremental*
+encoders, not absolute pots: feeding `0x17` a set of fixed absolute values produces a
+**non-monotonic** tempo (`0x40`→184, `0x80`→56, `0x20`→88, `0x10`→88), because the
+firmware acts on the *difference* between successive positions, with acceleration —
+a small fast delta already jumps the tempo by tens of BPM, exactly like turning a
+detented hardware knob quickly. The DATA dial (`0x10`) instead moves the *focused*
+edit field and leaves the tempo alone on the home screen. Because the response to an
+absolute value is meaningless for such a control, the emulator does **not** bind
+these two to a plain slider — a faithful binding has to reproduce the encoder's
+delta-and-acceleration behaviour, which is a separate piece of work.
+
+*(A practical aside for anyone probing the KN7000 in MAME: the musical-notes-over-a-
+globe image you see a few seconds after launch is the **boot splash**, not the idle
+demo — the real `PMEM` home screen only appears around ~13 s in, so timed probes must
+wait for it.)*
+
 ### Boot handshake (why the KN7000 wouldn't boot in MAME)
 
 Before the main CPU reaches its home screen it must complete a **handshake** with
