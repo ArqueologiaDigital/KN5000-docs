@@ -172,11 +172,16 @@ out and switches in):
 3. a **frame-decoder task** (`0x484AD111`) drains the ring, reads a **header**
    byte and extracts a **3-bit message type** (`(hdr & 0x38) >> 3`), then pulls
    the following switch/parameter bytes;
-4. each switch byte is dispatched through `0x484AD680`, which forms an index
-   `(b & 0xC0) >> 3 | (b & 0x07)` into a **32-entry jump table at `0x48613108`** —
-   the four panel groups (CPL/CPC/CPR/CPSD) × sub-codes;
-5. decoded changes are edge-detected and emitted as `EV_SW*`/`EV_INDEXSW_*`/
-   `EV_DIAL` events via `SendEvent` (`0x48429388`).
+4. the **3-bit message type** (step 3) selects the path. **Momentary switches**
+   (types 0 and 1) are edge-detected against a per-segment shadow byte —
+   `CHANGED = DATA XOR shadow` — and each changed bit becomes an
+   `EV_SW*`/`EV_INDEXSW_*` event via `SendEvent` (`0x48429388`).
+   **Latched/continuous controls** (type 2 — the volume faders, data dial and
+   pedal) are instead dispatched through `0x484AD680`, which forms an index
+   `((b & 0xC0) >> 3) | (b & 0x07)` into a **32-entry jump table at `0x48613108`**
+   and latches the new value (see *Continuous controls* below). *(An earlier note
+   here called `0x484AD680` "the switch dispatch"; the momentary keys do not go
+   through it — they take the shadow-XOR path.)*
 
 LED output rides the **same channel**: `SetHoldLed`/`SetOtherPartLed` →
 `SetLedByIndex` (`0x484B1BCB`, a jump table at `0x4861518C`) accumulate bits into
@@ -189,6 +194,28 @@ it with a `cpanel` HLE device) — the KN7000 has four sub-CPUs on one channel
 instead of two. Note that the **sibling SIO channels at `0x34000810` and
 `0x34000820` are the two MIDI ports**, not the panel — an identical channel
 layout at `+0x10` stride, which is what confirms `0x34000800` as the panel link.
+
+### Continuous controls: the volume faders
+
+The four analog volume faders (MAIN, APC/SEQ, MIC, LINE IN), plus the data dial,
+the pitch/modulation controls and the expression pedal, are **not** an ADC read on
+the main CPU — they are digitised by the panel sub-CPUs and delivered as **type-2
+"latched control" frames** `[ADDR, DATA]` on the very same serial link. The
+`0x484AD680` dispatch routes each `ADDR` to one of **six** live handlers (the other
+26 table slots share a no-op); the four volume pots are wire addresses
+**`0xD0`–`0xD3`**, each latching its 8-bit value to a RAM byte (`0x5006BEA1`–`A6`)
+through a per-control invert/halve and a 256-entry taper table before emitting a
+change event.
+
+The MAME driver reproduces this for the **APC/SEQ** fader — identified as `0xD2` by
+correlating its RAM writes against **MUTE UP 9**, which edits the *same* setting
+(their write sets overlap by 44 addresses vs. 20 for the others), and consistent
+with the service manual's ADC map (VR1102 = AD2). Moving the fader makes the driver
+emit `[0xD2, value]`, so it drives the firmware's own accompaniment/sequencer volume
+— the faithful path, not a post-mixer gain. One subtlety: a frame emitted **before**
+the firmware services the panel handshake wedges the whole link (delivery re-arms its
+attention signal only when the outgoing queue is empty), so the driver records the
+fader's power-on position silently and only speaks when it moves.
 
 ### Boot handshake (why the KN7000 wouldn't boot in MAME)
 
