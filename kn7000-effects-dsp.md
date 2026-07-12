@@ -263,6 +263,23 @@ of the seventy-two effect programs (a pitch-shifter + three specialty reverbs)
 gate on the SHARC **FLAG3** input pin, which is part of the DSP's double-buffered
 frame handshake; those need the faithful frame model, not just an input feed.
 
+**Divergence sweep (July 2026): every effect type validated.** The reverb-rail
+bug was root-caused to the recompiler missing the SHARC's fixed-point saturation
+mode (a triangle LFO wrapped instead of clipping, and the feedback loop turned
+that into a permanent full-scale buzz). To prove the fix held for *all* ~200
+effect programs — not just the reverb — a harness walked every effect type on all
+four screens (**241 selections**), reprogrammed each unit, played a note, and
+watched two independent alarms: a 60 Hz sampler on the DSP's own output slots
+(rail = 94 % of full scale, catches self-excitation even over silence) and a DAC
+clip check (catches anything audible, by a separate path). Result: **zero rails,
+zero clips**; the loudest was the Concert reverb at ≈12 % of full scale, over 8×
+below the rail. The load-bearing cases are the LFO-driven flanger, phaser and
+rotary programs — built on the same clip-and-fold arithmetic that sank the reverb
+— which all pass at ≈5 %. The fix generalizes to the whole class. (Scope: the
+non-reverb units mostly ran over near-silence during selection, so this proves no
+program *self-excites* to the rail — the input-independent failure that actually
+occurred; heavy per-effect drive is a separate follow-up.)
+
 On real hardware the TG routes each part to multiple effect units through its
 per-channel output-bus / effect-send matrix (sub-TG register group `0x20`, 64
 channels × `0x10`) and sums all four returns into the DAC. Making chorus / EQ /
