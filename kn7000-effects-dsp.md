@@ -282,7 +282,17 @@ occurred; heavy per-effect drive is a separate follow-up.)
 
 On real hardware the TG routes each part to multiple effect units through its
 per-channel output-bus / effect-send matrix (sub-TG register group `0x20`, 64
-channels × `0x10`) and sums all four returns into the DAC. Making chorus / EQ /
-Sound-DSP audible in emulation therefore needs a **multi-unit send/return model**:
-per-effect send buses from the TG, fed into each unit's input slot, with the
-unit returns summed. That is a scoped future change; reverb is complete today.
+channels × `0x10`) and sums all four returns into the DAC. Each effect has both a
+**send** (reg 8, how much signal enters the effect) and its own **return** (reg
+0xA low byte, how much of the effect's output reaches the DAC).
+
+**Per-effect returns (July 2026).** A live per-effect toggle capture pinned each
+effect's own return register — REVERB = ch03 (`0x803A`), SOUND DSP = ch09
+(`0x809A`), MULTI = ch06 (`0x806A`) — and proved the returns are **independent**:
+pressing REVERB moves only ch03's return and leaves the others untouched. (CHORUS
+is the exception: toggling it moves only its send `0x8198`; it has no separate
+return register, so its wet is send-driven.) The emulation now scales each
+effect's wet by its own return, so **turning reverb off no longer mutes chorus,
+sound-DSP or multi** — they were previously (incorrectly) scaled by the reverb
+return. Verified: the reverb-only output is bit-identical before/after, and with
+reverb off the sound-DSP unit's output now reaches the DAC through ch09's return.
