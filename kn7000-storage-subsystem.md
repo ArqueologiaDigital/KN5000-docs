@@ -104,6 +104,22 @@ The SD stack proper is a layered, DOS-like design:
   screens' "WAIT!" dialog is literally waiting for that state transition, and
   ERROR 93 ("SD lid is open") is its failure branch.
 
+### Emulation status (2026-07): the SD file browser works end-to-end
+
+In MAME, attaching a FAT16 image (`-harddisk sd.hd`) and closing the slot cover
+brings the SD card fully to life. From the **SD MENU** (which opens correctly),
+pressing **LOAD** opens a live, functional **SD LOAD** browser: it detects the
+card, mounts the FAT16 volume, reports the correct free space (e.g. "65,268 KB
+free — 0% used" for a 64 MB card), and paints the FOLDER / SONG columns with the
+FOLDER / ALPHABET / NUMBER sort options and PREV/NEXT navigation. With no image
+attached the same screen correctly shows **ERROR 93 ("SD lid is open")** — the
+firmware's own no-card branch, not an emulation bug. The SD LOAD screen is a
+genuine **PAGE 1/3 → 2/3 → 3/3** multi-page screen (page 1 is the file browser,
+pages 2–3 are the data-type load categories: CURRENT PANEL, PANEL MEMORY,
+SEQUENCER, EFFECT MEMORY, FAVORITES, ALL CUSTOM STYLE…), and the emulated PAGE
+Up/Down buttons walk it correctly. The SD card is driven through the SD-SPI
+transport directly, independent of the floppy's FDC/block-device path.
+
 ## Relationship to the KN5000
 
 The floppy/FAT layer and the FMM screen design are **shared with the KN5000**
