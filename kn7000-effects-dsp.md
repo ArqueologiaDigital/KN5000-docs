@@ -248,11 +248,15 @@ DEPTH) and sums its return as an independent wet — verified as a real chorus
 (LFO comb modulation, not a doubled note), with the reverb output kept
 bit-identical when chorus is off.
 
-**SOUND DSP is also audible** (July 2026): it runs on unit 9 (rec49, identified
-by an enabling-time coefficient diff), fed from its send (sub-TG reg `0x8098`,
-tracking the on-screen SOUND DSP DEPTH) and summed as its own independent wet.
-The remaining effects — **multi** (send `0x8298`) and **EQ** (unit 8, a
-master/insert) — are the same mechanism and are follow-ups. All ten effect
+**SOUND DSP** (unit 9, rec49) and **MULTI** (unit 1, rec15) are also audible
+(July 2026): each is fed from its send register (SOUND DSP `0x8098`, MULTI
+`0x8298` — both low bytes track the on-screen DEPTH) and summed as its own
+independent wet. MULTI's unit was pinned by diffing the coefficient blocks
+between two of its *types* (a delay vs a distortion) so the shared effect-bus
+refresh cancels — unit 1 rewrote 43 words while the rest moved 1–2. **Four
+effects are now audible** (reverb, chorus, SOUND DSP, MULTI), verified coexisting
+with no clipping. The remaining **EQ** (unit 8) is a master/insert (a different
+integration) and is a follow-up. All ten effect
 programs are loaded and run every frame; the silent ones were simply never fed
 (the bridge historically filled only unit 0's input slot). A special case: four
 of the seventy-two effect programs (a pitch-shifter + three specialty reverbs)
