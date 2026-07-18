@@ -149,6 +149,33 @@ Based on the branch review, the following PRs are planned:
 1. Verify the 2 commits apply cleanly on top of PR 6
 2. Test with current firmware
 
+### SHARC core contributions (from the KN7000 work)
+
+The KN7000's effects DSP (an ADSP-21065L) drove a series of fixes to MAME's **shared
+2106x SHARC core** — they live on the base `adsp21062_device`, so they benefit every
+SHARC system in MAME (arcade boards included), not just the Technics drivers. The
+series already exists as clean per-fix commits, staged as patch files in
+`kn7000_mame/notes/upstream-patches/` and catalogued in
+`kn7000_mame/notes/sharc-upstream-patch-series.md`:
+
+| Candidate | Content | State |
+|-----------|---------|-------|
+| Perf: native fixed MAC | the DRC never implemented the fixed-point multiply/accumulate family and fell back to the interpreter (~82M fallbacks per 22 s of reverb) | applies cleanly to upstream; **ready** |
+| Perf: native single-function fixed multiplier | the actual hot path (the multi-op MAC turned out unused by the kernel) | applies cleanly; **ready** |
+| Perf: native fixed ALU average (op 0x09) | last big fallback; overflow-free signed average with exact flags | applies cleanly; **ready** |
+| Correctness: `MODE1.ALUSAT` in the recompiler | the DRC compiled fixed-point add/sub as plain wrapping ops where the interpreter honored saturation — a silent recompiler-vs-interpreter divergence for any SHARC program with ALUSAT set (this is what railed the KN7000's reverb) | needs the documented small rebase (depends on one op-0x09 hunk; drop one KN7000-only clock hunk) + a per-patch reverb-WAV A/B |
+| New device: `adsp21065l_device` | a 21065L personality of the 2106x core (reset PC `0x20004`, internal SRAM map, SDRAM window) — MAME has no 21065L today | gated on cross-checking the RE-derived memory map against the ADSP-21065L datasheet/TRM (PDFs now in the repo) |
+
+All verified bit-identical against the running KN7000 reverb (interpreter == DRC after
+the fixes; >99% of interpreter fallbacks eliminated). Submission is under the project
+owner's authorship; the apply-tests should be re-run against the current upstream base
+before sending.
+
+Also riding with a future KN5000 PR: the control-panel **button ioports moved into
+`kn5000_cpanel_device`** (`device_input_ports()`, layout inputtags qualified
+`cpanel:...`) — the same boundary cleanup applied to the KN7000 driver, so the panel
+device owns its own inputs.
+
 ### Future Research Areas
 
 These are not yet ready for PRs but are active research topics:
