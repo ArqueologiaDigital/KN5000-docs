@@ -14,6 +14,9 @@ tedious matrix scanning off the main CPU and matches the KN5000's arrangement
 (with a different number of sub-CPUs). This page documents the panel from the
 firmware (`kn7000_program.rom`) — the sub-CPUs, how input becomes events, and the
 LED/dial control — grounded in the service-test screens and the named handlers.
+In MAME the sub-CPU side is modelled by a dedicated high-level-emulation device,
+**`kn7000_cpanel_device`**, which owns the panel's buttons and LEDs and speaks the
+serial link to the main CPU (mirroring the KN5000's `kn5000_cpanel` device).
 
 ## The panel sub-CPUs
 
@@ -34,7 +37,18 @@ feed CPR directly.
 
 ### Button inventory (from the schematics)
 
-All 152 buttons are declared in the MAME driver's input ports. By board:
+All 152 front-panel buttons are now declared **by the control-panel device itself**
+(`kn7000_cpanel_device::device_input_ports()`), not by the driver — the panel
+sub-CPUs own their inputs, so their scan-matrix ports live with the HLE that
+emulates them. They are grouped into **22 scan-matrix ports named
+`CP{board}_SEG{col}`** (CPL: 7 columns, CPC: 5, CPR: 10), which the internal MAME
+layout references by the device-relative tag `cpanel:CP{board}_SEG{col}`. The
+**SD front-panel board (CPSD)** switches are *not* on this serial link — they are a
+separate GPIO byte (`0x9CC00008`, `CPSD_SDSW`) read directly by the driver — and the
+**shared analog controls** (the DATA dial, the four volume faders, and the
+Tempo/Program knob) likewise stay in the driver's `INPUT_PORTS` and are handed to the
+device by tag, which digitises them into the same link's continuous-controller
+frames. By board:
 
 * **CPL** — `LCD Left 1–5`, `START/STOP`, `SYNCHRO & BREAK`, `INTRO & ENDING 1/2`,
   `FILL IN 1/2`, `FADE IN/OUT`, `TAP TEMPO`, `SPLIT POINT`; the style/rhythm groups
@@ -63,6 +77,20 @@ p132, sub-CPU IC1001). For example CPR's sound families sit on rows SW2–SW5:
 `GUITAR` at SEG3·SW4, `PIANO` at SEG4·SW4, `BRASS` at SEG1·SW4, `SYNTH` at
 SEG1·SW5, `ORGAN & ACCORDION` at SEG8·SW3. The full three-board matrix lives in
 the driver's `notes/panel-matrix-service-manual.md`.
+
+### Scan-matrix port naming (`CP{board}_SEG{col}`)
+
+The port names encode the **physical scan matrix**: each `CP{board}_SEG{col}` port is
+one scan **column** (segment) that a panel sub-CPU strobes, and each of its bits is one
+**SW sense line** the sub-CPU reads on that column. This is a direct image of the
+firmware's **normalized-segment (`normSeg`) space** — port → `normSeg` with the SW bit
+unchanged, a pure identity, because each scan column maps to exactly **one wire `ADDR`**
+(there is no per-bit repacking). Before it speaks, the device reverse-normalizes each
+column to its wire address: CPL/CPC's columns (`normSeg 0x00`–`0x0B`) go out as wire
+`0xC0`–`0xCB`, CPR's columns (`normSeg 0x0C`–`0x15`) as wire `0x00`–`0x09`. On each scan
+the device reads these ports, and for any column whose bits changed it emits the 2-byte
+`[ADDR][DATA]` switch frame the real sub-CPU would send; the main CPU XORs `DATA`
+against its per-segment shadow to recover the pressed/released edges.
 
 **Verified button→function bindings (empirical).** Driving each normalised input
 segment in the emulator and reading the resulting screen confirms the true
@@ -132,6 +160,19 @@ and the part/track indicator sets. Because the LEDs sit under the buttons and ar
 driven by the same sub-CPU that scans them, the "SW&LED CHECK" test can verify a
 whole section's matrix in one pass.
 
+In MAME these become the device's LED outputs — `cpl_led#` / `cpc_led#` / `cpr_led#`,
+one bank per panel board — which the layout lights under each button. A LED command
+rides the **same serial channel** as the button reports: the firmware sends a
+`[ADDR][DATA]` frame whose `ADDR` selects a board and an 8-bit LED register and whose
+`DATA` bits are the individual lamps, and the device decodes it onto those outputs. The
+map is **authoritative from a real-machine lamp test** — driving the firmware's
+`F3`+`F4` service LED sweep on Felipe's own KN7000 confirmed **79 press-lit LEDs** (the
+lamp under each button). Together with the mode/indicator lamps (state LEDs such as the
+CUSTOMIZE-menu, DISK-in-use, split-point and conductor indicators), the device binds
+**101 named LED outputs**. A handful of driven LED bits are not yet tied to a named
+panel function; the decoder still passes those through, so the layout can name them
+once identified.
+
 ## Hardware path & serial protocol
 
 The service-manual schematics (SX-KN7000, *SCHEMATIC DIAGRAM-15* "CPL CIRCUIT")
@@ -189,11 +230,17 @@ a RAM shadow, and the **TX path `0x484ABF50`** flushes a byte to `0x34000808`
 after switching direction. The `0x36008004`/`0x36008024`/`0x36008064` GPIO lines
 strobe/select which sub-CPU is on the shared bus.
 
-This is the **same serial-panel design the KN5000 uses** (its MAME driver models
-it with a `cpanel` HLE device) — the KN7000 has four sub-CPUs on one channel
-instead of two. Note that the **sibling SIO channels at `0x34000810` and
-`0x34000820` are the two MIDI ports**, not the panel — an identical channel
-layout at `+0x10` stride, which is what confirms `0x34000800` as the panel link.
+This is the **same serial-panel design the KN5000 uses**, and MAME now models the
+KN7000's sub-CPU side the same way — with its own **`kn7000_cpanel_device`** HLE. The
+main CPU reaches it over **channel 0** of this on-chip USART/SIO controller, run in
+**synchronous** mode; the driver forwards each channel-0 TX byte to the device
+(`tx_byte`) and the device pushes replies back through two callbacks — an **ATN** pulse
+(main asserts interrupt group `0x1A`) and an **RXD** byte (pushed onto the channel-0
+receive FIFO, asserting group `0x10`). The **two sibling channels** at `0x34000810` and
+`0x34000820` are the *same* controller at a `+0x10` stride but configured for
+**asynchronous UART** framing: channel 1 is MIDI port 1 and channel 2 is the **SD
+sub-CPU (CPSD) link** (which itself frames its traffic as MIDI). That identical `+0x10`
+channel layout is what pins `0x34000800` down as the panel link.
 
 ### Continuous controls: the volume faders
 

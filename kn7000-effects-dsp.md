@@ -167,14 +167,14 @@ exist, and the integration path is now completely mapped out:
   SDRAM-controller and DMA control blocks). That is exactly what a MAME
   `adsp21065l` device variant needs.
 
-What remains is genuine but well-scoped device work: add that 21065L variant to
-MAME's SHARC core, wire the host-boot upload (the `0x98000000`/`0x9C000000` port)
-so the firmware loads the DSP as it does on hardware, and — the one piece with no
-MAME precedent — model the serial-audio ports so sound flows tone-generators →
-DSP → DAC. The first milestone is simply proving the recovered programs *run* on
-MAME's SHARC core, which would independently validate the whole disassembly. It is
-the most complete part of the KN7000 sound story, and the best-understood path
-forward.
+All of that device work has since been done — see the update below. The 21065L
+variant was added to MAME's SHARC core, the host-boot upload (the
+`0x98000000`/`0x9C000000` port) was wired so the firmware loads the DSP exactly as
+it does on hardware, and — the one piece with no MAME precedent — the serial-audio
+ports were modelled so sound flows tone-generators → DSP → DAC. The recovered
+programs *run* on MAME's SHARC core, which independently validated the whole
+disassembly. What was the best-understood path forward is now the most complete
+part of the KN7000 sound story.
 
 ## 2026-07 update: it works — the emulated DSP now plays real effects
 
@@ -183,6 +183,26 @@ host-boots the recovered kernel, uploads the firmware's effect chain, and a
 piano note with reverb ON is clean audio with a naturally decaying tail. The
 route there uncovered hardware truths that were not visible from the static
 program alone; they are recorded here because they *are* the KN7000's design.
+
+### How MAME runs it: an LLE kernel and a dry-passthrough bridge
+
+The recovered kernel runs under **low-level emulation** on MAME's SHARC core: the
+21065L personality (vector base, host-boot port, internal memory map and IOP
+register set) was added as a device variant, the MN10300 host-boots it as the
+hardware does, and the **recompiler is enabled** — so stepping the effects kernel
+every audio frame costs little more than leaving the DSP idle (near-free).
+
+A **`kn7000_dsp_bridge_device`** sits between the tone generators and the speakers
+and carries audio across the CPU/audio-thread boundary over two 44.1 kHz rings:
+one pushes each TG frame into the DSP, the other pops the DSP's processed frame
+back out. When the DSP is not yet producing (early boot) — or an effect is off —
+the bridge simply passes the TG through, so the **dry baseline is bit-transparent**
+(TG → DSP → speaker was verified spectrally identical to the DSP-off path within
+1 %). Each audio-frame IRQ0 tick reads the DSP's unit-0 SPORT **return** buffer
+(data memory `0xC342/43`, the runtime-derived TX0) and writes the TG **send** into
+its unit-0 SPORT **input** buffer (`0xC362/63`, RX0); the ring buffering is what
+keeps the CPU-timeline DSP and the audio-thread stream aligned (an earlier
+fixed-slot exchange produced a ring-misalignment artifact, since resolved).
 
 ### The runtime topology: a TDM patchbay into the tone generator
 
@@ -302,3 +322,11 @@ effect's wet by its own return, so **turning reverb off no longer mutes chorus,
 sound-DSP or multi** — they were previously (incorrectly) scaled by the reverb
 return. Verified: the reverb-only output is bit-identical before/after, and with
 reverb off the sound-DSP unit's output now reaches the DAC through ch09's return.
+
+The one honest open item is **absolute wet level**. The routing, the on/off
+behaviour and the per-effect independence are all correct and grounded in captured
+hardware register traffic, but each effect's return is summed at a fixed makeup
+constant that has **not yet been calibrated against a real KN7000** — so the exact
+dry-vs-wet balance is still provisional and awaits an A/B against the instrument.
+(This is the classic remaining gap once an algorithm is faithful: it does the
+right thing, at a level that still needs a reference ear.)

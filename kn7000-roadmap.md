@@ -49,7 +49,7 @@ KN7000 path *shorter* in several places:
 | KN5000 | KN7000 status | Notes |
 |--------|---------------|-------|
 | [Memory map](/memory-map/) | 🟡 [top-level map known](/kn7000/); **112 individual I/O registers recovered** across 5 banks (timers, GPIO, LCD block, dual tone generators) — see the [I/O register map](/kn7000/#io-register-map-from-firmware-analysis) | assign each bank to its peripheral device |
-| [Boot sequence](/boot-sequence/) | 🟢 runs in MAME through hardware init, BSS, the MILK kernel and the self-loaded library ROM. **MN10300 interrupts now implemented and FIRING** (INTC `0x34000100` + system-tick timer → maskable vector `0x4C03DDA0`; the library handler runs and returns via `rti`). Boot still parks in a task-ready poll (`0x4C03DCF3`): the tick fires but doesn't yet wake a task | advance the scheduler — likely implement the handler's AM33 `udf*`/extended ops + confirm the IAGR index |
+| [Boot sequence](/boot-sequence/) | ✅ **boots all the way to the main play/home screen** in MAME — hardware init, BSS, the MILK kernel and the self-loaded library ROM, then the MILK RTOS scheduler multitasks under the MN10300 interrupts + 2-level INTC (the 1 kHz tick vectors to the scheduler entry, which switches task stacks). The old "parks in a task-ready poll" stall is long past | the full 640×240 UI renders with real fonts/CLUT, and the power-on splash decodes and animates (music-notes-over-Earth + logo) |
 | [CPU subsystem](/cpu-subsystem/) doc | ⬜ | document the MN10300/AM33 core, its I/O, and the panel sub-CPUs (CPL/CPC/CPR/CPSD) |
 | Reset vector / version block | 🔒 lives in an **undumped internal boot ROM** at `0x4C000000` / top-of-flash `0x7FFFxx` | needs a hardware dump or an exploit (as the KN5000 sub-CPU boot ROM did) |
 | **Library / kernel ROM** at `0x4C000000` | 🟢 **NOT undumped — self-loaded from the program flash at runtime**: `InitializeBlock27` (`0x484D7BBD`) copies ~253 KB from prog-ROM `0x487B8FD1` into `0x4C000000`, which the copy loop aliases to `0x8C000000` (adds `0x40000000`). All 298 entry points (C runtime + MILK kernel: printf `0x4C001A48`, …) are inside that block. In MAME, aliasing `0x4C`↔`0x8C` to one RAM makes the boot run the real library code — no dump, no HLE. See `kn7000_mame/notes/library-rom-loading.md` | (was wrongly thought to need a hardware dump) |
@@ -64,13 +64,13 @@ so they are the best starting point for each KN7000 equivalent:
 | KN5000 subsystem | KN7000 status | Notes |
 |------------------|---------------|-------|
 | [UI Framework](/ui-framework/) / [widget types](/ui-widget-types/) | 🟡 **518 `*Proc` window-procedures + 353 `*Func` handlers named**; the runtime core is documented from the disassembly — [Event & Dispatch](/kn7000-event-system/) (60 `EV_*` codes, object table @`0x5000757C`) and [Tasks & Scheduler](/kn7000-task-scheduler/) (main/AP tasks, sleep/wake message API) | port the remaining KN5000 widget docs; the `MT_` method-selector table |
-| [Audio subsystem](/audio-subsystem/) / [tone generator](/tone-generator/) | ⬜ | **dual** tone generators (IC203/204 + IC207/208) — new vs the KN5000 |
+| [Audio subsystem](/audio-subsystem/) / [tone generator](/tone-generator/) | 🟡 **the KN7000 sings** — the TG pitch pipeline is fixed (musically-correct notes from the lib voice record's `notePitch16`), demo songs + rhythm accompaniment play (96-PPQN tempo timer `0x48447084`), and the chord finder is in tune. **Reverb is shipped and audible** with a working on/off tail (a SHARC MODE1 ALUSAT saturation fix in the recompiler), and **four global effects** (reverb + chorus + SOUND-DSP + MULTI) are routed with per-effect returns; the effects DSP (ADSP-21065L) runs **LLE** with SHARC DRC enabled | **dual** tone generators (IC203/204 + IC207/208) — new vs the KN5000. Timbre is still a **sine placeholder**: the four PCM wave mask ROMs are undumped (`NO_DUMP`), and full 7-stage voice envelopes are not yet modelled |
 | [Display subsystem](/display-subsystem/) | 🟡 **[documented](/kn7000-display-subsystem/)** from the disassembly: panel-type detection (colour / 2-bit), per-depth bitmap blitters (4/16/256), CLUT @`0x32573C`, font table, LCD I/O `0x34000000` + framebuffer `0x90000000` | trace the exact pixel path to V-RAM |
 | [Keybed scanning](/keybed-scanning/) | ⬜ | |
-| [MIDI subsystem](/midi-subsystem/) | 🟡 two ports identified (SIO ch 1&2 @ `0x34000810`/`0x34000820`, ISRs `0x484B1E86`/`0x484B2037`, 31250 8N1) and **declared in the MAME driver**; ch2's differing config (`0x1181`) may be a computer/TO-HOST link | trace the MIDI parser + confirm ch2's role |
+| [MIDI subsystem](/midi-subsystem/) | 🟡 two ports wired in the driver (SIO ch 1&2 @ `0x34000810`/`0x34000820`, ISRs `0x484B1E86`/`0x484B2037`, 31250 8N1) with **RX reaching the firmware**; a **MIDI→keybed velocity bridge** turns incoming notes into keybed events (velocity honoured) and the rear MIDI IN fires its RX ISR | trace the MIDI parser + confirm ch2's role (`0x1181`, possibly a computer/TO-HOST link) |
 | [Sequencer](/sequencer/) / [accompaniment engine](/accompaniment-engine/) | 🟡 **[sequencer documented](/kn7000-sequencer/)**: `MT_Seq_*` engine API, `EV_SEQ_*` events, record/play + SMF, Seq→Composer/Pad copy | accompaniment/style engine still ⬜; style/rhythm taxonomy partially shared |
-| [Storage / FDC](/fdc-subsystem/) | 🟡 **[documented](/kn7000-storage-subsystem/)**: three media (floppy FAT12/16, SD card, USB Song Manager) via the shared `Fmm*` File Management Mode; file types `.MID`/`.CST`/Composer/Playlist/…; rich `Sdc*` handler set | trace the SD/FDC media I/O drivers |
-| [Control panel protocol](/control-panel-protocol/) | 🟢 **[documented](/kn7000-control-panel/) + serial framing fully reverse-engineered + HLE'd in MAME**: four panel sub-CPUs scan switches + drive LEDs over a 3-channel SIO ASIC; the 2-byte `[ADDR][DATA]` switch/LED frame formats are decoded (e.g. START/STOP press = `C0 10`) and modelled in the driver | deliver switch reports to firmware once the CPU takes SIO interrupts |
+| [Storage / FDC](/fdc-subsystem/) | 🟡 **[documented](/kn7000-storage-subsystem/)** + **the SD card MOUNTS in MAME**: a byte-wide SPI master (`0x9805000C`, CS = GPIO `0x36008004` bit 1, data/CSD CRC16 init `0x0000` fix) reads a real card image (`run.sh` attaches `sdcard_from_real_kn7000.img` by default), and the SD LOAD file browser lists folders/songs | three media (floppy FAT12/16, SD card, USB Song Manager) via the shared `Fmm*` File Management Mode. The floppy **FORMAT** path (blocked on unmapped LCD soft-keys) and the FDC media I/O are still ⬜ |
+| [Control panel protocol](/control-panel-protocol/) | ✅ **[documented](/kn7000-control-panel/), reverse-engineered, and modelled as a dedicated MAME device** (`kn7000_cpanel_device`): the four panel sub-CPUs' scan/LED serial framing is HLE'd, with **154 buttons + 101 LED outputs** bound on physical scan-matrix tags `CP{board}_SEG{col}`, a clickable layout, and a [written design language](/kn7000-design-language/) governing the artwork | button presses and LED feedback reach the firmware end-to-end; see [Architecture & code organization](#architecture--code-organization) below |
 
 ## Emulation (MAME)
 
@@ -81,6 +81,49 @@ so they are the best starting point for each KN7000 equivalent:
 | Peripheral HLE (panel, TG, FDC, display) | 🟡 **control panel + MIDI modelled**: the driver has a 3-channel SIO ASIC model (`0x34000800`), a control-panel HLE (LED-command decode on TX, 250 Hz button scan → switch-report frames on RX) and **two MIDI ports** (byte↔bit UART bridges → MAME `midi_port`), plus a **clickable `.lay`** (184 buttons + LED strips). TG/FDC/display still ⬜ | deliver panel RX + MIDI IN to firmware once the CPU takes SIO interrupts; then TG/FDC/display |
 | MIDI ports | 🟡 **declared in the driver**: SIO channels 1 & 2 (`0x34000810`/`0x34000820`) each wired to a MIDI IN + MIDI OUT port; TX path functional, RX awaits CPU interrupts | verify against real MIDI traffic once interrupts land |
 | SX-KN1500 (TLCS-900 / TMP95C061) | 🟡 **driver built + bundled** into the one `kn7000` binary (`kn1500.cpp`); **memory map + LCD interface reversed from the service manual** (user-provided): RAM = IC21 512 KB DRAM @CS3 0x000000, prog IC15 @0xe00000, rhythm IC17 @0xc00000; LCD = **HD44780 header on CN7**, control bit-banged from CPU Port 7. See `kn7000_mame/notes/kn1500-lcd.md` | **boot gated — CONFIRMED `BAD_DUMP`**: early crt0 RAM-init reads a region descriptor from `0xf38b24`, which lands in an **8-bit-data ROM region** (`{byte,0xff}`) → base/count read as garbage → the marching test runs off forever. A **patch experiment** (inject a valid descriptor) gets the boot *past* the test, then it derails on more garbage from the same 8-bit-data regions — so **~half of IC15 reads as `{byte,0xff}`** and is unusable. Needs a **verified physical re-read of IC15**; driver + LCD path (HD44780 device → SVG) are ready once the dump is fixed |
+
+## Architecture & code organization
+
+Beyond *what* the emulator does, the KN7000 work keeps raising the question of *where each
+responsibility should live* in the MAME source tree — which behaviour belongs to the driver, which
+to a peripheral device, and which to the CPU core. Three items, in the three legend states:
+
+### 1. The control-panel inputs now live in the panel device ✅
+
+The KN7000's four panel sub-CPUs scan the switch matrix and drive the indicator LEDs; that
+behaviour is emulated by `kn7000_cpanel_device`
+(`src/mame/matsushita/kn7000_cpanel.cpp`/`.h`), split out of the monolithic `kn7000.cpp` to mirror
+the KN5000's `kn5000_cpanel_device`. In this session the **22 button ioports** — named by physical
+scan column, `CP{board}_SEG{col}` — were **moved out of the driver's `INPUT_PORTS` and into the
+device's `device_input_ports()`**: the switches belong to the sub-CPUs the device emulates, so the
+ioports belong there too. The device binds its own ports by tag, the driver no longer declares them,
+and the layout now references them with the device path (`inputtag="cpanel:CP{board}_SEG{col}"`, a
+final pass in `gen_lay.py`). Commit `df73be3`; the same move was applied to the KN5000 in mainline
+MAME (commit `efc8d90`). The SD-board GPIO (`CPSD_SDSW`) and the shared volume / DATA-dial / TEMPO
+analog controls stay in the driver, since the audio path and the layout faders reference them
+directly.
+
+### 2. The on-chip SIO belongs in the MN10300 CPU core ⬜
+
+The MN10300's on-chip serial controller (`0x34000800`–`0x3400082f`, three USART channels: the
+control-panel link plus the two MIDI ports) is currently **HLE'd in the driver** — `sio_r` / `sio_w`
+in `kn7000.cpp`, with per-channel RX FIFOs and a byte-transfer-completion interrupt. That is the
+wrong home for it: the serial controller is a **CPU-internal peripheral**, not a KN7000 board
+feature. MAME's `mn10300` core (`src/devices/cpu/mn10300/`) is a young device that models the
+instruction set but **no on-chip peripherals** — and it is *derived from* the mature `mn10200` core
+(`src/devices/cpu/mn10200/`), which already models on-chip serial, timers, and prescalers. A
+bus-accurate serial controller therefore belongs in the CPU core, where a single implementation
+would serve **every** MN10300 model — KN7000, KN6000, KN6500, KN2400, KN2600 — rather than being
+re-HLE'd per driver. (The KN5000 is excluded: it is a Toshiba TLCS-900, not an MN10300.) Doing so
+would retire the driver's SIO HLE. This is the next step.
+
+### 3. Techni-chord is pure software ✅
+
+A recurring question was whether **Techni-chord** — the auto-harmony feature — needs any dedicated
+hardware. It does not: it is entirely **firmware**. It reads the played chord and melody and emits
+extra harmony note events on the ORCHESTRATOR part, so nothing new has to be modelled for it — it
+follows the ordinary voice path and sounds as soon as the tone generator does (which it now does).
+The full analysis is on the dedicated [Techni-chord](/kn7000-technichord/) page.
 
 ## Homebrew & higher-level work
 

@@ -202,26 +202,30 @@ includes several sound tests that double as precise hardware descriptions:
 
 ## Emulation status
 
-**The KN7000 can now make sound in MAME, driven by its own firmware voice engine.**
-Playing a note (PC key bed or MIDI in) travels through the firmware exactly as on
-hardware — key-event FIFO → key-bed task → note-to-pitch → voice allocation — and
-the firmware programs the tone-generator voice registers, which the emulator
-renders to audio. Pitch, polyphony and note timing are the firmware's own. Sound is
-an opt-in machine-configuration switch (see the boot-screen caveat below).
+**The KN7000 boots to its main play screen and sings in MAME, driven by its own
+firmware voice engine** — the machine is `MACHINE_IMPERFECT_SOUND`. Playing a note
+(PC key bed or MIDI in) travels through the firmware exactly as on hardware —
+key-event FIFO → key-bed task → note-to-pitch → voice allocation — and the firmware
+programs the tone-generator voice registers, which the emulator renders to audio.
+Pitch, polyphony and note timing are the firmware's own; sound is on by default and
+needs no switch.
 
 Getting there turned on one missing bit. The firmware only programs voices when a
 **tone-generator-present strap** (read at `0x98070000`, tested at firmware
 `0x484d7713`) says the TGs exist; otherwise a library gate flag stays set and every
 per-voice register write is suppressed — which is why early builds were silent even
-though the key press reached the firmware. Reporting the tone generators present
-(the KN7000 has both) opens the gate and the voice engine drives the hardware.
+though the key press reached the firmware. The emulator now reports both tone
+generators present (the KN7000 has both), so the gate opens and the voice engine
+drives the hardware from the moment the home screen appears.
 
-The boot-screen trade-off that early builds had (sound forced the boot onto the
-SD menu) is solved: a second switch, *"Tone generators / firmware sound (play
-screen, no SD menu)"*, leaves the boot strap alone — so the machine boots to its
-normal home screen — and opens the firmware's tone-generator gate afterwards.
-With it on, the instrument **boots to the home screen and plays**: key bed, chord
-finder, rhythm accompaniment and the built-in demo songs all sound.
+With the tone generators driven, the instrument **plays on the home screen**: key
+bed, chord finder, rhythm accompaniment and the built-in demo songs all sound. The
+demo songs and the auto-accompaniment run off a modelled on-chip tempo timer — the
+16-bit timer TM5 (mode `0x34001082`, reload `0x34001092`, count `0x340010A2`) whose
+underflow raises INTC group 7 and fires the firmware's **96-PPQN sequencer tick ISR**
+(`0x48447084`). Clocked at IOCLK ÷ 8 (16 MHz ÷ 8 = 2 MHz), its reload works out to
+1,250,000 ÷ BPM ticks per beat, so the sequenced parts run at the tempo the panel
+sets.
 
 ## How a note's pitch really works
 
@@ -249,12 +253,36 @@ pitch bend behave. A by-product of the same analysis: the key-bed FIFO carries a
 **key index** (0 = the 61-key bed's bottom C2), not a MIDI note — the firmware
 adds 36.
 
-One honest caveat remains: **placeholder timbre**. The four PCM wave ROMs are
-still undumped, so each voice is a stand-in sine at the correct pitch. The
-tone descriptors in the dumped table ROM already map every voice to its wave
-sample number, so real-sample playback is ready to slot in once the ROMs are
-dumped (the firmware's readback window can extract them from a real unit).
+### Note-off and the amplitude envelope
+
+Note-release turned out **not** to be the `0x0001 = 0xC000` voice mute the register
+map first suggested — that write is only boot init and voice-steal. On a real key-up
+the firmware ramps the note down by rewriting registers 0, 1, 4, 5, 8, 9 of the
+note's **odd companion block** with a decay target and rates (`reg0` drops from full
+scale to `0x9180`), and it aims at the companion block even when only the even block
+is sounding. The emulator models this: a below-full-scale `reg0` rewrite on either
+half releases every gated voice of the pair `{v & ~1, v | 1}` that has been held
+longer than 20 ms (the guard skips the note-on's own programming). Each voice's held
+level comes from its programmed amplitude envelope — the sustain level (SUS1) and
+decay-rate (DCY2) registers the firmware writes at note-on — so a Concert Grand
+decays while an organ or string patch sustains.
+
+The full **7-stage** amplitude envelope is only partially modelled. A few sounds
+(the plucked guitar/mallet family) send no key-up write at all and let the sample
+ring its own multi-stage envelope; the placeholder holds those at their sustain
+level instead — a known limitation, alongside a still-provisional chip rate curve.
+
+One honest caveat remains above all: **placeholder timbre**. The four PCM wave ROMs
+are still undumped, so each voice is a stand-in **sine** at the correct pitch — real
+timbre awaits the ROMs. The tone descriptors in the dumped table ROM already map
+every voice to its wave sample number, so real-sample playback is ready to slot in
+once the ROMs are dumped (the firmware's readback window can extract them from a real
+unit).
 
 The **effects DSP** is fully recovered — its programs are in the firmware — and
-the emulator boots its ADSP-21065L kernel and routes the tone-generator audio
-through it; see the [Effects DSP page](/kn7000-effects-dsp/).
+the emulator boots its ADSP-21065L kernel (running as low-level SHARC code, with
+MAME's SHARC recompiler enabled) and routes the tone-generator audio through it.
+Four effect units are driven and audible, each with its own return level — reverb,
+chorus, the Sound DSP, and the multi-effect — and the reverb's on/off tail works: a
+MODE1 `ALUSAT` saturation fix in the SHARC recompiler stopped the reverb's feedback
+path from railing. See the [Effects DSP page](/kn7000-effects-dsp/).

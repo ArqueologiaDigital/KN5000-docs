@@ -25,6 +25,8 @@
       url: /kn7000-effects-dsp/
     - title: Sound GUI Map
       url: /kn7000-sound-gui-map/
+    - title: "Techni-chord (auto-harmony)"
+      url: /kn7000-technichord/
     - title: Storage & File System
       url: /kn7000-storage-subsystem/
     - title: User Data & Initial Data Disk
@@ -37,6 +39,8 @@
       url: /kn7000-sequencer/
     - title: Control Panel Protocol
       url: /kn7000-control-panel/
+    - title: Panel Design Language
+      url: /kn7000-design-language/
     - title: Image Gallery
       url: /kn7000-image-gallery/
     - title: Sound & Style Names

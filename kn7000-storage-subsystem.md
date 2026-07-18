@@ -98,27 +98,67 @@ The SD stack proper is a layered, DOS-like design:
 * Files are reached through a **virtual file system**: the SD card is device
   `"d"`, mounted as drive **`"C:"`**, through per-device function pointers in a
   RAM device table (`0x500079f8`) — the same VFS the floppy uses. The FAT
-  layer sits on top; the physical SD hardware interface lives behind device
-  `d`'s registered functions and is the remaining unknown to model.
+  layer sits on top; the fops funnel into a disk-worker command poster
+  (`0x4847030e`, message type 3) whose read/write commands drive the physical
+  transport below.
 * Success sets card-ready (`0x50083bc2 = 1`) and state 3 (mounted); the SD
   screens' "WAIT!" dialog is literally waiting for that state transition, and
   ERROR 93 ("SD lid is open") is its failure branch.
 
-### Emulation status (2026-07): the SD file browser works end-to-end
+The **physical transport** — earlier "the remaining unknown to model" — is now
+fully identified and emulated: it is a plain **byte-wide SPI master**. The 16-bit
+register `0x9805000C` is one full-duplex SPI shift register to the card slot; each
+write clocks eight bits (MSB-first) and a handshake through the ICR of
+external-interrupt group `0x1C` (register `0x34000170`, polled on bit 4) signals
+completion. The chip-select is a GPIO latch bit — `0x36008004` bit 1, active-low.
+The firmware speaks **stock SD SPI** (the wake-up `0xFF` clocks with CS released,
+then `CMD0`/`CMD1`/`CMD59`/`CMD9`/`CMD16`/`CMD10`, CRC7-framed commands, `0xFE`
+data tokens, CRC16 data blocks), so MAME's generic `spi_sdcard` device serves it
+directly. Two CRC quirks had to be patched into an overlay of that device: the
+CSD block needed its CRC16 appended, and the SD **data-block CRC16 uses an init
+value of `0x0000`** where MAME's `util::crc16` starts from `0xFFFF` — that
+mismatch failed every CSD read until it was fixed.
 
-In MAME, attaching a FAT16 image (`-harddisk sd.hd`) and closing the slot cover
-brings the SD card fully to life. From the **SD MENU** (which opens correctly),
-pressing **LOAD** opens a live, functional **SD LOAD** browser: it detects the
-card, mounts the FAT16 volume, reports the correct free space (e.g. "65,268 KB
-free — 0% used" for a 64 MB card), and paints the FOLDER / SONG columns with the
-FOLDER / ALPHABET / NUMBER sort options and PREV/NEXT navigation. With no image
-attached the same screen correctly shows **ERROR 93 ("SD lid is open")** — the
-firmware's own no-card branch, not an emulation bug. The SD LOAD screen is a
+### Emulation status: the SD card mounts and the file browser works
+
+**The SD card mounts.** With a card image attached, the SPI handshake runs its
+full init sequence and the mount chain reaches **state 3** with card-ready set —
+reaching that state reads the **boot sector and FAT from the host image**, so
+sector reads work against a real filesystem. From the **SD MENU** the **SD LOAD**
+browser is live: it reports the correct free space (e.g. "65,268 KB free — 0%
+used" for a 64 MB card) and paints the **FOLDER / SONG columns** with the FOLDER /
+ALPHABET / NUMBER sort options and PREV/NEXT navigation. The SD LOAD screen is a
 genuine **PAGE 1/3 → 2/3 → 3/3** multi-page screen (page 1 is the file browser,
 pages 2–3 are the data-type load categories: CURRENT PANEL, PANEL MEMORY,
 SEQUENCER, EFFECT MEMORY, FAVORITES, ALL CUSTOM STYLE…), and the emulated PAGE
-Up/Down buttons walk it correctly. The SD card is driven through the SD-SPI
-transport directly, independent of the floppy's FDC/block-device path.
+Up/Down buttons walk it correctly.
+
+**A real card image is attached by default.** `run.sh` now passes
+`-harddisk sdcard_from_real_kn7000.img` for the KN7000 model (commit `8a7d8b2`);
+callers can substitute their own image, or pass `-harddisk ""` for an empty slot.
+This default exists because of a hardware **conflation of card-detect signals**:
+the hinged slot **cover switch** and the **card-present line** feed the *same*
+detect input — the polled ICR of external-interrupt group `0x1B`
+(`0x3400016C` bit 4) — so the firmware cannot tell an *empty slot* apart from an
+*open lid*. Both read as bit 4 = 1, and both surface as **ERROR 93 ("SD lid is
+open")**. Consequently a card image is required to satisfy the check even with the
+cover modelled closed (`SDCOVER`, default CLOSED); with no image the same screen
+correctly shows ERROR 93 — the firmware's own no-card branch, not an emulation
+bug.
+
+**The state machine is edge-driven, so the card is inserted after boot.** The SD
+mount is demand-driven off the debounced *transition* of the detect line, not its
+level — a line that reads "present" from power-on never edges, and nothing ever
+fires. The driver therefore models the slot as **empty at power-on** and inserts
+the card a few seconds after boot (an insert timer at t≈6 s), producing the 1→0
+detect edge that posts the insert message and kicks off the mount. Toggling the
+cover switch live reproduces the same edge: closing with a card fires the mount,
+opening triggers removal and the ERROR 93 gate.
+
+The physical SD path is the byte-wide SPI mailbox described above; it is separate
+from the **floppy's FDC** (IC103, N82077AA-compatible, memory-mapped at
+`0x98020000`), though both share the disk-worker/VFS command layer higher up. The
+FDC is wired, but the floppy **FORMAT** path is still open.
 
 ## Relationship to the KN5000
 
