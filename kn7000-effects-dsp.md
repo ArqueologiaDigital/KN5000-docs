@@ -19,6 +19,14 @@ alone, with no physical chip and no undumped ROM. All 80 programs are
 disassembled and documented in the project's disassembly repository; this page
 explains how it works.
 
+> **The documentation pass over the pool is complete.** Every record — the
+> kernel, the four boot probes, all 72 effect programs and the three data
+> records — now has a full algorithm identification, with the GUI names pinned
+> from the firmware's own descriptor tables. The consolidated result, from the
+> Moorer/Dattorro reverb to the Leslie simulator's 7:6 rotors and the
+> brass-simulator physical models, is on the companion page:
+> **[The Complete Algorithm Catalog]({{ site.baseurl }}/kn7000-dsp-algorithms/)**.
+
 ## Host boot: the CPU loads the DSP
 
 Because the SHARC has no external boot memory, the MN10300 **host-boots** it: it

@@ -65,6 +65,7 @@ and understanding its system-update disks and firmware images.
 | [KN7000 Firmware Images]({{ site.baseurl }}/kn7000-firmware/) | Program & table flash layout, version numbers, string/hardware inventory, byte-exact disassembly project |
 | [KN7000 Image Gallery]({{ site.baseurl }}/kn7000-image-gallery/) | 169 images extracted from the firmware (demo slideshows, product photos, digital-drawbar UI graphics) |
 | [Techni-chord (auto-harmony)]({{ site.baseurl }}/kn7000-technichord/) | Proof that the auto-harmony feature is pure firmware, not a tone-generator capability |
+| [Effects DSP Algorithm Catalog]({{ site.baseurl }}/kn7000-dsp-algorithms/) | Every ADSP-21065L program identified — kernel, 72 effect algorithms, GUI names as ROM fact |
 | [Panel Design Language]({{ site.baseurl }}/kn7000-design-language/) | The control panel as a kit of injection-moulded parts — the design system behind the layout artwork |
 | [Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/) | Cross-model code/data reuse between KN5000 and KN7000 |
 | [Roadmap (vs KN5000)]({{ site.baseurl }}/kn7000-roadmap/) | What was done for the KN5000 and how each piece maps onto the KN7000 |

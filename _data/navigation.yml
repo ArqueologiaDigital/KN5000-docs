@@ -23,6 +23,8 @@
       url: /kn7000-sound-subsystem/
     - title: Effects DSP (ADSP-21065L)
       url: /kn7000-effects-dsp/
+    - title: DSP Algorithm Catalog
+      url: /kn7000-dsp-algorithms/
     - title: Sound GUI Map
       url: /kn7000-sound-gui-map/
     - title: "Techni-chord (auto-harmony)"
