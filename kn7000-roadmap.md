@@ -103,19 +103,26 @@ MAME (commit `efc8d90`). The SD-board GPIO (`CPSD_SDSW`) and the shared volume /
 analog controls stay in the driver, since the audio path and the layout faders reference them
 directly.
 
-### 2. The on-chip SIO belongs in the MN10300 CPU core ⬜
+### 2. The on-chip SIO now lives in the MN10300 CPU core ✅
 
 The MN10300's on-chip serial controller (`0x34000800`–`0x3400082f`, three USART channels: the
-control-panel link plus the two MIDI ports) is currently **HLE'd in the driver** — `sio_r` / `sio_w`
-in `kn7000.cpp`, with per-channel RX FIFOs and a byte-transfer-completion interrupt. That is the
+control-panel link plus the two MIDI ports) was **HLE'd in the driver** — `sio_r` / `sio_w` in
+`kn7000.cpp`, with per-channel RX FIFOs and a byte-transfer-completion interrupt. That was the
 wrong home for it: the serial controller is a **CPU-internal peripheral**, not a KN7000 board
 feature. MAME's `mn10300` core (`src/devices/cpu/mn10300/`) is a young device that models the
-instruction set but **no on-chip peripherals** — and it is *derived from* the mature `mn10200` core
-(`src/devices/cpu/mn10200/`), which already models on-chip serial, timers, and prescalers. A
-bus-accurate serial controller therefore belongs in the CPU core, where a single implementation
-would serve **every** MN10300 model — KN7000, KN6000, KN6500, KN2400, KN2600 — rather than being
-re-HLE'd per driver. (The KN5000 is excluded: it is a Toshiba TLCS-900, not an MN10300.) Doing so
-would retire the driver's SIO HLE. This is the next step.
+instruction set but modelled **no on-chip peripherals** — and it is *derived from* the mature
+`mn10200` core (`src/devices/cpu/mn10200/`), which already models on-chip serial, timers, and
+prescalers. **This move is now done** (overlay commits `9bb2de8` core + `9eb0e4b` driver): the
+core carries the three-channel register model behind an **internal address map** — the same
+mechanism the MN10200 uses, and MAME appends a device's internal map *after* the driver's map so
+the core's window takes priority — and raises per-channel **`devcb` callbacks** (TX byte, TX-done,
+RX-ready, RX-enable) plus a public `sio_rx_push()`. The driver keeps only what genuinely is board
+wiring: the interrupt-controller routing and the channel endpoints (the panel HLE device and the
+two MIDI UART bridges). A single core implementation now serves **every** MN10300 model — KN7000,
+KN6000, KN6500, KN2400, KN2600 all inherit it from the shared machine config. (The KN5000 is
+excluded: it is a Toshiba TLCS-900, not an MN10300.) Verified live after the move: the KN7000
+boots to its home screen, panel buttons navigate (RHYTHM group → genre list), the SD MENU opens,
+and the KN6000 still reaches its play screen.
 
 ### 3. Techni-chord is pure software ✅
 
