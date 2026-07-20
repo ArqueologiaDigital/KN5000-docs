@@ -17,6 +17,54 @@ play. (The multi-language help text and JPEG colour-profile strings that share
 the 16-char format are excluded.)
 
 
+## How the instrument addresses a sound
+
+SOUND EXPLORER prints a small annotation beside every sound it lists —
+`[32.11-1  Concert Grand` — which the manual (p35) describes as the sound's MIDI
+**bank select MSB**, **bank select LSB** and **program change** number.
+
+Reverse engineering of the firmware shows that this is not just a MIDI courtesy:
+it is the instrument's *internal* primary key. The bank classifier packs the
+three values into a single 24-bit integer,
+
+```
+key = (bank MSB << 16) | (bank LSB << 8) | program change
+```
+
+and every voice lookup — including the ones that happen at note-on time, with no
+MIDI cable involved — is a hash lookup on that key.
+
+### The five sound sources
+
+The key is not looked up in one table. It is offered to **five resource
+archives** in turn, and the first one that is fitted *and* contains the key wins.
+The number of the winning source (0–4) is the "class" the rest of the firmware
+carries around with the sound.
+
+| class | address window | what it holds |
+|---|---|---|
+| **0** | `0x48000000` | the **internal** archive — the factory preset sounds listed on this page. Always present; the fallback for every lookup that misses everywhere else. |
+| **1** | `0x57000000` | the factory read-only data flash |
+| **2** | `0x56000000` | the **custom** flash, programmed from disk |
+| **3** | `0x41000000` | a further expansion window |
+| **4** | `0x41800000` | a further expansion window |
+
+Sources 1–4 are all validated the same way at boot: a header self-check, then a
+sixteen-byte comparison against a string held in the program flash — the string
+is **`Expansion Board`**. Because all four windows are checked against that same
+signature, the firmware itself does not distinguish them by name; only the
+address differs. Which of them the front panel's **MEMORY** and **EW EXPANSION**
+buttons reach is therefore *not* determined from the code alone, and is left open
+here rather than guessed.
+
+If a lookup misses everywhere, the parameter-record path degrades in four steps —
+exact key, then the bank LSB rounded down to a multiple of eight (a bank
+*family* match), then the LSB alone with the MSB dropped, then a built-in default
+— which is why a MIDI file written for a different instrument still produces a
+sound on a KN7000 rather than silence.
+
+Full technical write-up: `notes/sound-bank-classes.md` in the emulation repository.
+
 ## User / Compile voice banks  
 <small>table @ `0x0406dd` — 19 names</small>
 
