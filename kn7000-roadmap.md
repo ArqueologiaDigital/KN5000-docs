@@ -86,7 +86,7 @@ so they are the best starting point for each KN7000 equivalent:
 
 Beyond *what* the emulator does, the KN7000 work keeps raising the question of *where each
 responsibility should live* in the MAME source tree — which behaviour belongs to the driver, which
-to a peripheral device, and which to the CPU core. Three items, in the three legend states:
+to a peripheral device, and which to the CPU core. Four items, all now resolved:
 
 ### 1. The control-panel inputs now live in the panel device ✅
 
@@ -124,7 +124,29 @@ excluded: it is a Toshiba TLCS-900, not an MN10300.) Verified live after the mov
 boots to its home screen, panel buttons navigate (RHYTHM group → genre list), the SD MENU opens,
 and the KN6000 still reaches its play screen.
 
-### 3. Techni-chord is pure software ✅
+### 3. The on-chip INTC and timers now live in the MN10300 CPU core ✅
+
+The SIO move set the pattern; the **interrupt controller** and the **on-chip 16-bit timers**
+completed it (overlay commits `e8429c8` core + `02f2595` driver). The INTC
+(`0x34000100`–`0x340002ff`: the GxICR array, the IAGR read quirks the firmware's library
+dispatcher relies on, the EXTMD trigger-mode register, and the group-`0x17` effects-DSP
+self-test handshake) and the TM4/TM5 timer pair (`0x34001080`/`0x34001090`/`0x340010a0` — TM5
+is the **tempo timer**, the 96-PPQN clock behind every demo song and rhythm accompaniment)
+were both driver-side HLE; like the SIO, they are CPU-internal peripherals and now sit behind
+the core's internal address map, byte-exact with the proven driver model. The board keeps only
+genuine board policy, wired through new `devcb` hooks: *which* interrupt group each peripheral
+asserts (a thin `intc_assert` forwarder), the per-level interrupt vectors (machine
+configuration — the KN7000's firmware handlers vs. the KN6000/KN6500 trampoline), the panel
+transfer-complete re-delivery quirk, and the panel-ATN edge re-arm decode. A pleasing dividend:
+the KN6000/KN6500 boot had relied on a **1 kHz HLE stand-in** for their on-chip ms-timer — with
+the real TM5 in the core, their firmware programs the timer itself (reload `0xFA0`, i.e. a
+2.0005 ms period) and the hack is retired; the stand-in turns out to have run at **double** the
+true hardware rate. Verified live: the KN7000 boots, plays a demo song (tempo timer through the
+core), opens the BALLAD list and the SD MENU, and the reverb regression WAV is **bit-identical**
+to the pre-migration baseline across two runs; the KN6000 reaches its play screen on the real
+timer alone.
+
+### 4. Techni-chord is pure software ✅
 
 A recurring question was whether **Techni-chord** — the auto-harmony feature — needs any dedicated
 hardware. It does not: it is entirely **firmware**. It reads the played chord and melody and emits
