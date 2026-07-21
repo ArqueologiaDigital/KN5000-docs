@@ -8,6 +8,18 @@ permalink: /control-panel-protocol/
 
 This document provides comprehensive information for implementing High Level Emulation (HLE) of the KN5000 control panel MCUs in MAME.
 
+> ### ⚠ Known limitation of the current implementation (2026-07-21)
+>
+> This guide describes the protocol and the HLE as designed. Two defects found since it was written are **not** reflected in the design notes below, and anyone implementing from this document should know about both.
+>
+> **1. The receiver must gate its byte latch on the clock source.** A synchronous serial receiver that latches a byte every eight rising edges *regardless of who drove them* will manufacture one spurious inbound byte per byte the CPU transmits, because the link is full-duplex and the CPU's own transmit edges also shift eight bits in off the idle line. In MAME this produced 521 spurious bytes per boot, which decoded as real panel events: a spurious `0x00` is right-panel segment 0 = the TRANSPOSE row, and an odd count of them swaps the (header, state) pairing so one button reads as another. The fix is to latch only when the external clock is actually selected (`(SCxMOD & 3) == 0 && IOC`).
+>
+> **2. That fix, as shipped, is incomplete — it can wedge the link permanently.** If the gate closes and reopens *mid-byte*, the receiver's bit counter is stranded, the "still need clocks" condition never clears, the internal baud generator free-runs, and — see the sliding-window note in §"Critical implementation notes" — those dead edges retrigger the 50 µs idle timer faster than it can expire, so INTA is never asserted again and the panel is never granted the bus. **The link is then dead for the rest of the session.** Three candidate fixes (a livelock guard, a receiver-side resync, and a sender-side bus handshake) were each implemented and measured, and all three were rejected. The governing result: **the residue is loss, not misframe** — a byte the receiver never got cannot be reconstructed by any receiver-side change, because a resync restores *bit* framing while leaving *packet* framing shifted.
+>
+> Full state, measurements and the rejected candidates: `kn7000_mame/notes/kn5000-cpserial-INDEX.md` in the project notes.
+>
+> **Terminology warning:** "phantom byte" is used in *two different senses*. In this document it means the firmware's own deliberate dummy `SC1BUF` writes (PFFC off), which the HLE filters. In the investigation notes and the blog it means the spurious RX-during-TX latches described in (1). They are unrelated.
+
 ## 1. Overview
 
 ### Purpose of Control Panel MCUs
@@ -634,7 +646,7 @@ void kn5000_cpanel_device::send_button_packet(int segment, bool is_left_panel)
 **Critical implementation notes:**
 - **LED commands must NOT generate responses.** The firmware sends LED commands in rapid batches via the TX state machine. If the HLE queues sync responses, they accumulate during continuous clocking (idle_detect never fires). When finally delivered via INTA, they set IOC=1, blocking the baud rate timer and deadlocking the TX state machine.
 - **Phantom byte filtering:** The `tx_start` callback signals whether each byte is real (PFFC on) or phantom (PFFC off). The HLE uses deferred flag application to handle a MAME timing race where `tx_start` for byte N+1 fires before byte N's last rising edge.
-- **Idle detect sliding window:** Every SCLK edge retriggers the 50 µs timer. This ensures INTA fires only after the firmware's last phantom byte completes, not during the TX state machine's inter-byte gaps.
+- **Idle detect sliding window:** Every SCLK edge retriggers the 50 µs timer. This ensures INTA fires only after the firmware's last phantom byte completes, not during the TX state machine's inter-byte gaps. **⚠ This is also a hazard, not only a virtue** (see the known-limitation box at the top): because *every* edge retriggers it, a clock that runs when it should not — e.g. an internal baud generator free-running because the receiver's bit counter was stranded mid-byte — will retrigger this window faster than it can expire. INTA is then never asserted again and the panel link wedges for the whole session. If you implement the sliding window, make sure nothing can produce an unbounded stream of edges the protocol did not ask for.
 
 ### Button State Reporting Format
 
