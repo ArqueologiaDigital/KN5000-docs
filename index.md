@@ -101,6 +101,7 @@ and hardware have been reverse engineered in depth.
 |------|--------|-------------|
 | [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) | Documented | Serial protocol for buttons, LEDs, encoders |
 | [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) | Documented | DSP effects, tone generation, voice management |
+| [Effects DSP (NEC uPD6383GF)]({{ site.baseurl }}/effects-dsp/) | Documented | IC311 effects processor — chip, instruction word, decoded EQ/reverb, 50-effect parameter catalogue |
 | [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) | Documented | Hardware key scanning, note encoding, voice slots |
 | [Display Subsystem]({{ site.baseurl }}/display-subsystem/) | Documented | Framebuffer layout, palette, VGA registers |
 | [Storage Subsystem]({{ site.baseurl }}/storage-subsystem/) | Documented | Floppy, flash, Table Data ROM, HDAE5000 |

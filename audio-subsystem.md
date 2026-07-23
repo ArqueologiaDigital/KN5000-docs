@@ -63,7 +63,7 @@ The KN5000 audio subsystem handles all sound generation, processing, and output.
 | DSP Registers | 0x130000/0x130002 | Register-indirect config (4 channels, addr/data) |
 | HDAE5000 PPI | 0x160000 | Parallel port interface (expansion) |
 
-See [Tone Generator]({{ site.baseurl }}/tone-generator/) for the complete register map and chip inventory.
+See [Tone Generator]({{ site.baseurl }}/tone-generator/) for the complete register map and chip inventory, and [Effects DSP (NEC uPD6383GF)]({{ site.baseurl }}/effects-dsp/) for the IC311 effects processor's architecture, instruction word, decoded algorithms and the full 50-effect parameter catalogue.
 
 ### DSP Port I/O Control (Sub CPU Internal Ports)
 

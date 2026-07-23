@@ -6,9 +6,16 @@ permalink: /dsp-bytecode-interpreter/
 
 # DSP Bytecode Interpreter
 
-The KN5000's dual DSP chips (IC310 MN19413 and IC311 DS3613GF-3BA) are programmed via a two-level bytecode interpreter running on the SubCPU. This page documents the interpreter architecture, opcodes, and register write protocol.
+The KN5000's dual DSP chips (IC310 MN19413 and IC311 NEC uPD6383GF) are programmed via a two-level bytecode interpreter running on the SubCPU. This page documents the interpreter architecture, opcodes, and register write protocol.
 
 > **Status:** Architecture and opcode tables decoded from SubCPU firmware. Register-to-effect parameter mapping still incomplete.
+
+> **Note:** This page predates the identification of IC311. It formerly called the chip
+> "DS3613GF-3BA, a custom ASIC" — that was a transcription error; the part is the **NEC
+> uPD6383GF-3BA**. Everything below about the *SubCPU-side* interpreter remains valid; for
+> the DSP chip's own architecture, instruction word, decoded algorithms and the full
+> effect/parameter catalogue, see the newer
+> [Effects DSP (NEC uPD6383GF)]({{ site.baseurl }}/effects-dsp/) page.
 
 ## Architecture
 
@@ -156,5 +163,6 @@ Effect configurations are loaded by `DSP_WriteEFFConfig`, which looks up the alg
 
 ## Related Pages
 
+- [Effects DSP (NEC uPD6383GF)]({{ site.baseurl }}/effects-dsp/) — the IC311 DSP chip itself: architecture, instruction word, decoded algorithms, effect/parameter catalogue
 - [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) — Overall audio architecture
 - [Tone Generator]({{ site.baseurl }}/tone-generator/) — IC303 wavetable synth
