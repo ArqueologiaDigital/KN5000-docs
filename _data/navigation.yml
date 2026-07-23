@@ -119,6 +119,10 @@
   pages:
     - title: Audio Subsystem
       url: /audio-subsystem/
+    - title: Effects DSP (NEC uPD6383GF)
+      url: /effects-dsp/
+    - title: Effects-DSP Flowcharts
+      url: /effects-dsp/flowcharts/
     - title: Tone Generator
       url: /tone-generator/
     - title: Sound Categories

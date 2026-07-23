@@ -298,6 +298,9 @@ found, and the search is documented as exhausted.
 
 ## Related pages
 
+- [Effects-DSP Program Flowcharts]({{ site.baseurl }}/effects-dsp/flowcharts/) — one
+  structural signal-flow diagram per microprogram (the shared kernel + 38 effect bodies),
+  synced from the disassembly tree and rendered as Mermaid.
 - [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) — the Sub CPU audio firmware and
   the parallel host interface that reaches this chip.
 - [DSP Bytecode Interpreter]({{ site.baseurl }}/dsp-bytecode-interpreter/) — the Sub
