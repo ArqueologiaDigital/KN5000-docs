@@ -8,7 +8,11 @@ permalink: /tone-generator/
 
 The KN5000's tone generator is a custom Matsushita LSI (TC183C230002, IC303) that provides 64-voice polyphonic wavetable synthesis. It is controlled by the Sub CPU via a register-indirect interface and reads waveform data from four 32Mbit ROMs (IC304-IC307).
 
-> **Status:** Register map partially reverse-engineered from SubCPU firmware init sequence. See [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) for the overall audio architecture.
+> **Status:** Register map reverse-engineered from the SubCPU firmware; the tone generator now **makes
+> sound in MAME** — real IC307 PCM, the firmware's software envelope, held-note sustain, per-semitone
+> pitch, velocity and polyphony all work (July 2026). Remaining gap: waveform *selection* (every voice
+> currently plays one fabricated sine). See [MAME Emulation Status](#mame-emulation-status) below and
+> [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) for the overall audio architecture.
 
 ## Hardware Overview
 
@@ -344,36 +348,83 @@ Waveform ROMs (IC304-307) ──> Tone Generator LSI (IC303)
 
 ## MAME Emulation Status
 
+The KN5000 tone generator **makes sound** in MAME: a keyed note plays real PCM from the one
+dumped wave ROM (IC307), shaped by the firmware's own envelope, sustains while held, and responds
+to velocity — verified in July 2026. The sub-CPU runs its **dumped ROM**, so the envelope, voice
+lifecycle and pitch math are executed as real firmware, not re-implemented; the emulation's job is
+to model the IC303 chip faithfully enough that those firmware writes produce the right audio.
+
 | Component | Address | Status |
 |-----------|---------|--------|
-| Register Config (0x100000) | Write-only | **Tone gen device** — accepts register writes, tracks 64-voice state |
+| Register Config (0x100000) | Write **+ Read** | **Tone gen device** — register-address latch on write; **active-voice bitmap on read** (see below) |
 | Register Data (0x100002) | Read/Write | **Tone gen device** — data port, voice status readback |
-| Keyboard Input (0x110000) | Read-only | **Tone gen device** — keybed event queue |
+| Keyboard Input (0x110000) | Read-only | **Tone gen device** — keybed event queue (note/velocity) |
 | DSP Config (0x130000) | Read/Write | **DSP1 device** — `kn5000_dsp1_device`, 4 channels × 0x20 registers |
 | Serial1 (SA interface) | UART | **No receiver** — TX sends into void |
 | Waveform RAM (0x1E0000) | Read/Write | **Stub (`noprw`)** — no sample storage |
-| Sound output | Stereo 48kHz | **PCM playback** — pitch, pan, volume, interpolation, release envelope |
+| Sound output | Stereo 48kHz | **Audible PCM playback** — real IC307 samples, software envelope, sustain, per-semitone pitch, velocity, polyphony |
 
 The `kn5000_tonegen_device` (in `kn5000_tonegen.cpp`) implements:
 - Register-indirect interface matching the hardware protocol (address latch at 0x100000, data at 0x100002)
 - 64 voice states with 32 registers each (8 groups × 4 banks, including group 0xA)
-- 13 global configuration registers
-- Voice control state machine (key on/off via group 0 bank 0)
-- Waveform ROM reading from the `waveform` region (IC304-IC307, 16MB total)
-- Stereo output via MAME sound stream (48kHz) with linear interpolation
-- **Pitch**: semitone ratio from reg[1] (0x8000=1.0x equal temperament) + octave from reg[8] (note_value/12, base octave 3)
-- **Volume**: velocity (reg[2], vel²/4+63) × main volume (reg[20], inverted 0xFF=mute)
-- **Stereo pan**: left (reg[21]) and right (reg[22]) from group 8, range 0-0x78, center=0x3C
-- **Waveform**: reg[3] (waveform control, +0x0C0) used as index — chip internally maps to ROM addresses
-- Release envelope (50ms fade-out on key-off)
-- 2-second hold timer for voice status readback (firmware compatibility)
-- Waveform latch strobe protocol (group 0, bank 2, bit 15 SET/CLEAR)
+- 13 global configuration registers; voice control state machine (key on/off via group 0 bank 0)
+- Waveform ROM reading from the `waveform` region (IC304-IC307, 16 MB); stereo 48 kHz stream with linear interpolation
 
-**Limitations:** Waveform ROMs IC304-IC306 are NO_DUMP (synthetic approximations available: sine, sawtooth, square/triangle). Waveform index mapping is approximate — the real chip's internal register-to-ROM-address logic is unknown. No DSP effects (reverb, chorus, EQ). Envelope is a simple linear fade, not the hardware's multi-stage envelope. Loop points handled by simple wrap-to-start (real chip reads loop boundaries from ROM parameter records).
+### Sound-generation findings (July 2026)
 
-The keybed scanner generates note-on/note-off events from MAME input ports (PC keyboard mapped to a 2-octave piano layout). Events are queued in the tone gen device and read by `ToneGen_Read_Voice_Data` at 0x110000/0x110002. The full bidirectional note flow works: keybed → subcpu → maincpu (for display/MIDI) → subcpu → tone gen registers.
+- **Real IC307 PCM is audible.** The "does this voice have sample data?" test originally checked only
+  the *first* sample byte; but real waveforms routinely start at a zero-crossing (IC307 index 0 is a
+  sine that begins at sample 0), so every such waveform was wrongly skipped → silence. Fixed by probing
+  a small window of samples. A keyed note now sounds from the real dumped bank.
+- **The software envelope is honored.** The KN5000 has **no hardware EG** — the envelope is a *per-note,
+  multi-stage software* generator running in the SUB CPU (steppers `LABEL_026E5B`/`026EC3`), clocked by
+  the audio tick, that rewrites the voice's amplitude every tick to group 0/bank 0 as `0xF000|magnitude`
+  (low 9 bits = level). MAME now latches that per-tick magnitude and applies it, and gates key-on strictly
+  on the `0x8100` note-on command so the envelope writes no longer retrigger the voice. GUI editors
+  `SEAMPENV/SEPITENV/SEFILENV` = amplitude/pitch/filter envelopes (same three domains as the KN7000).
+- **Held notes sustain.** The firmware polls an **active-voice bitmap by *reading* 0x100000** (it writes a
+  bank index 0-3, then reads back a 16-bit "which voices are sounding" word); its software voice-manager
+  frees any voice commanded ON but reported silent. The address had been modelled write-only, so the read
+  returned 0 and every held note was released after ~45 ms. A `status_r()` handler now returns the
+  active-voice bitmap, and note-off is detected from the firmware's release-envelope burst (a real key-up
+  programs a release ramp rather than writing `0x7E00`).
+- **Per-semitone pitch.** The IC303 is a PCM **multisample** chip: `reg[8]` (group 4/bank 0) steps +0x100
+  per semitone *within* a sample zone and resets at zone boundaries, and `reg[1]`'s low nibble selects the
+  zone — so no single register holds an absolute note, and the per-zone sample roots are not in the chip
+  registers. An earlier "reg[1] = semitone ratio, reg[8] = octave" model was wrong (every semitone
+  collapsed to one pitch). Because every voice currently renders the same fabricated sine (see wave-number
+  limitation below), MAME recovers the true played note from the input FIFO and drives equal temperament
+  directly — a faithful stand-in until real multisample tuning is wired in. Verified: a chromatic scale
+  produces 12 distinct rising pitches; octaves double.
+- **Velocity.** The firmware's per-voice loudness is a **log-domain attenuation** in the high byte of
+  reg[20] (lower value = louder), velocity-scaled through a log table (`0x0118FE`). MAME expands it
+  log→linear, giving a proper dynamic range (soft-vs-hard ≈ 6.5×). Panel Touch-Sensitivity scaling happens
+  upstream in the sub-CPU curve, so this widens whatever curve the setting selects.
+- **Polyphony.** Simultaneous chord notes share one keybed-scan timestamp, so a naive "most-recent note"
+  correlation gave every voice the same note (a chord played as three copies of the root). Fixed with a
+  register-anchored pairing: the voices of one chord are distinguished by a monotonic pitch index built
+  from `reg[1]` (zone) and `reg[8]` (within-zone offset) and paired in order to the chord's input notes —
+  so C-E-G rings as C-E-G, and dual-layer voices (identical index) collapse to the same note.
+- **MIDI → internal keybed bridge (velocity).** A host MIDI controller can play the machine's own 61-key
+  bed with velocity (`-kbdmidi midiin`), separate from the rear MIDI jacks — a MIDI UART deserializes to
+  `kbd_midi_rx()`, which pushes note-on/off events in the same wire format the physical keybed scanner
+  uses. See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/).
 
-See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) for the note encoding format and signal flow.
+**Open / honest limitations:**
+- **Waveform selection is unresolved** — *every* voice currently resolves to IC307 index 0 (a fabricated
+  sine), so notes are correctly *pitched* and *voiced* but timbrally identical. Which register selects the
+  waveform, and how it indexes IC307's 198-entry table, is under active investigation (an earlier static
+  guess of reg[9] was falsified by a live capture showing reg[9] = 0). A real KN5000's Piano/Guitar/etc.
+  sound different; this is the main remaining faithfulness gap.
+- **Waveform ROMs IC304-IC306 are NO_DUMP** (only IC307 is dumped). Whether per-waveform root note / tuning
+  / loop points live in IC307's dumped parameter records or elsewhere is being decoded — *not* assumed to
+  be in the undumped ROMs.
+- **No DSP effects** (reverb, chorus, EQ) — the effects DSP (IC311) is a separate subsystem.
+
+The keybed scanner generates note-on/note-off events from MAME input ports. Events are queued in the tone
+gen device and read by `ToneGen_Read_Voice_Data` at 0x110000/0x110002. The full bidirectional note flow
+works: keybed (or MIDI bridge) → subcpu → maincpu (for display/chord detection) → subcpu → tone gen
+registers. See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) for the note encoding format.
 
 ## Related Pages
 
