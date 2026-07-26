@@ -26,7 +26,7 @@ The KN5000's tone generator is a custom Matsushita LSI (TC183C230002, IC303) tha
 | Interface | Memory-mapped register-indirect (address/data pair) |
 | Address Lines | SubCPU memory bus + P6.7 chip-select |
 | Waveform ROMs | IC304 (QS6GU3C32375), IC305 (QS6GT3C33A01), IC306 (QS6GU3C32374), IC307 (QS6GX3C32008) |
-| Waveform RAM | IC308 (M5M44260AJ7S, 4Mbit DRAM), IC309 (M5M44260AJ7S, 4Mbit DRAM) |
+| Waveform RAM | *(none — see note)* IC303 has **no** external work RAM. IC308/IC309 are the two **effects DSPs'** delay DRAMs and are not connected to IC303 (corrected 2026-07-26 from the service-manual schematics). |
 
 ## Memory-Mapped Interface
 
@@ -306,8 +306,8 @@ From the service manual schematics (Tone Generator Sections A and B):
 | IC305 | QS6GT3C33A01 | 32Mbit Waveform ROM |
 | IC306 | QS6GU3C32374 | 32Mbit Waveform ROM |
 | IC307 | QS6GX3C32008 | 32Mbit Waveform ROM |
-| IC308 | M5M44260AJ7S | 4Mbit DRAM (DSP1 work RAM) |
-| IC309 | M5M44260AJ7S | 4Mbit DRAM (DSP2 work RAM) |
+| IC308 | M5M418128AJ-6 | 1Mbit DRAM — delay memory for **DSP2 (IC310, MN19413)** |
+| IC309 | M5M44260AJ-7S | 4Mbit DRAM — delay memory for **DSP1 (IC311, uPD6383GF)**. Only address lines A0–A8 reach it; A9–A16 are unconnected. |
 | IC310 | MN19413 | **DSP2** (Matsushita, serial interface) |
 | IC311 | DS3613GF-3BA | **DSP1** (parallel + memory-mapped) |
 | IC312 | M5218AFP | Dual op-amp (DAC output buffer) |

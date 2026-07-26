@@ -62,7 +62,24 @@ to be inferred from the microcode itself.**
 | Multiplier | **24 × 24** fixed-point |
 | ALU | **44-bit**, with two accumulators (**ACCA / ACCB**) and two shifters |
 | Delay memory | On-chip controller for **external DRAM**; ring-buffer address generation (echo / reverb-A / reverb-B regions) |
-| Audio I/O | Serial audio in/out (DI / DO), three ports; this board uses one stereo pair |
+| Audio I/O | Serial audio in/out, **three DI and three DO ports — all six wired on this board** (corrected 2026-07-26; the earlier "one stereo pair" reading was falsified by the schematics). LRCKI selects L/R on every line. |
+
+### Signal topology — IC311 is a SEND/RETURN INSERT (MEASURED, service manual)
+
+IC311 is **not** in the main output path. It hangs off the tone generator:
+
+```
+IC303.SDOA -> DI1        DO1 -> IC303.SDIA
+IC303.SDOB -> DI2        DO2 -> IC303.SDIB
+IC303.SDO1 -> DI3        DO3 -> leaves the block (destination open)
+
+main mix:  IC303.SDO0 -> IC310 (DSP2) -> IC313 PCM69AU DAC -> analog board
+```
+
+The wet output returns *into* IC303, which mixes it; the main mix leaves on a different bus.
+**Consequence: nothing IC311 does can remove or attenuate the dry sound — it can only add.**
+The per-sample frame restart is the chip's internal PC-RST cadenced by **LRCKI, which IC303
+generates**; the Fs-RST and Fs-MASK pins are strapped inactive on this board.
 
 ### Board facts (verified on the KN5000 by Felipe)
 
