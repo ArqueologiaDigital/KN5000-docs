@@ -1957,9 +1957,18 @@ The MAME driver (`kn5000.cpp`) includes device classes for the audio chips. The 
 **Tone Generator (`kn5000_tonegen_device`):**
 - Register-indirect config interface (address port + data port)
 - 64-voice PCM wavetable playback at 48kHz from waveform ROMs (IC304-IC307)
-- Pitch scaling: semitone ratio (reg[1]) with octave shift (reg[8])
-- Stereo pan: left/right from group 8 regs (reg[21]/reg[22]), range 0-0x78
-- Waveform selection from reg[3] (waveform control register)
+- Waveform selection from `+0x040` (reg[1]) alone: `bank = bits[15:14]` (1 = IC307, the one
+  hardware-rooted dump), `page = bits[13:12]`, `chunk = bits[11:0]` — a plain 0-based index
+  into that 1 MB page's own self-delimiting directory
+- Pitch: the played note (recovered from the key-bed/MIDI event that caused the voice) plus
+  the transpose/detune the `+0x400` (reg[8]) log-pitch register carries, resampling the
+  recording's measured fundamental to the target frequency
+- Loudness: the log-domain level in the high byte of `+0x800` (reg[20]), `gain = 2^((L-231)/10)`
+- Timbre: a per-voice low-pass filter whose cutoff is the 7-bit TVF parameter in `+0x100`
+  (reg[4]), gated on bit 10 (the firmware's own "this word carries a computed cutoff" flag)
+- Pan: centred. The group-8/9/10 register *pairs* are NOT an L/R pair — every firmware
+  updater writes the same computed value to both members — so there is no evidence-based
+  per-voice pan source yet
 - KEY ON (0x8100) / KEY OFF (0x7E00) voice management with per-voice hold timer (2s)
 - Voice status readback: reports KEY ON while hold timer active
 - Keyboard input interface with `push_keybed_event()` for MAME input port integration
