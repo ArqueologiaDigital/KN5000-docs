@@ -325,3 +325,77 @@ The complete change set has been tested with the following ROM set:
 - Menu navigation (display updates correctly)
 - MIDI note input
 - Keybed note input (when assigned via MAME input configuration)
+
+---
+
+# MN10300 family: the ROM-record contribution
+
+*Added 2026-08-02. A separate line of work from the KN5000 PRs above: those improve an existing
+driver, this creates one.*
+
+## Why a driver with no CPU
+
+MAME has an MN10300 **disassembler** but no execution core (`scripts/src/cpu.lua` says
+"disassembler only"), so no CPU device can be instantiated for the KN7000, KN6000, KN6500, KN2400
+or KN2600. Rather than wait, the first contribution declares **ROM records only**, following the
+precedent of `src/mame/bfm/bfm_sc6.cpp` — an 80-line driver with no CPU and a machine-config body
+reading `// nothing yet`. The part is named in a commented-out line in each machine configuration
+so the hardware stays documented until a core exists.
+
+## What it contains
+
+Two commits, 606 insertions, nothing modified or deleted:
+
+| commit | contents |
+|---|---|
+| `machine/intelfsh.cpp` | `MBM29LV160B` and `MX29LV160B` — 16 Mbit bottom-boot parts |
+| `matsushita/kn7000.cpp` | five machines, eleven dumped images, thirty undumped declarations, the KN6000 expansion connector and the HD-SX3 |
+
+Every device gets a line under its real part number and manual-verified capacity. Anything that is
+not an honest dump of that machine's own part is **`NO_DUMP` with the correct expected size**, never
+shipped as substitute data — see [ROM Dumping Roadmap](/rom-dumping-roadmap/) for what remains.
+
+## The flash device IDs were read, not guessed
+
+MAME can model a flash chip well enough to answer real erase and program command sequences, but the
+manufacturer and device ID are functional: the firmware performs a JEDEC autoselect and compares the
+response against its own table before it will program anything. Get them wrong and the firmware
+silently refuses the part.
+
+The table is in the ROM, and it carries the part names as plain ASCII:
+
+```
+  mfr 0x04  dev 0x2249  35 sectors   " MBM29LV160B "
+  mfr 0xc2  dev 0x2249  35 sectors   " MX29LV160B  "
+  mfr 0x1f  dev 0x00c0  40 sectors   " AT49BV16X4  "
+```
+
+35 sectors is exactly a 16 Mbit bottom-boot map (16K + 2x8K + 32K + 31x64K). The KN6000 and KN6500
+tables hold the first and third entries only; the KN7000 (2002) adds Macronix, which the KN6000
+(1999) does not have — Panasonic second-sourced over time, so **absence from a table is not
+evidence that a part number is wrong**.
+
+> This also corrected the driver: the KN7000 service manual captions IC21 as "32M FLASH", but every
+> part the firmware accepts is 16 Mbit, so a 32 Mbit device would fail its own autoselect check.
+> With a `0x200000` sector map and a 2 MB decode window, that is three independent reasons against
+> one printed caption.
+
+## Custom-data flash as a BIOS choice
+
+The custom flash is populated from a floppy, not at the factory. Nine images are declared for the
+KN7000 as `ROM_SYSTEM_BIOS` options — the factory Initial Data Disk plus eight published data sets
+(Blue Bayou, Piano Player, Jazz Organ Soloist, Bob's Band, Traditional Melody, Jogeh 1, Vibraphone,
+Italian Accordion 7) — because a real instrument holds exactly one at a time. They load at offset
+`0x20000` in a `ROMREGION_ERASEFF` region, so the untouched boot sectors read `0xFF` as erased flash
+does.
+
+## Build notes
+
+```
+make SUBTARGET=kn7000 SOURCES=src/mame/matsushita/kn7000.cpp USE_QTDEBUG=0 -j6
+./kn7000 -validate
+```
+
+> **Adding a new `#include` to a driver requires `REGENIE=1`** on a `SOURCES=` build. Without it the
+> dependency scan stays cached, the new device's source is never compiled, and the link fails with
+> an undefined constructor that reads like a missing definition rather than a stale project.

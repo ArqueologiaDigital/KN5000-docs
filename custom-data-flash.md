@@ -69,6 +69,63 @@ Style data contains accompaniment arrangement data including style names (e.g., 
 
 Written by the `CaptureLcd` firmware routine. Zero-filled in factory state.
 
+Loaded from disk by `Gfx_LoadSplashBMP` (`0xFAE86D`) and written by `Flash_SaveSplashScreen`
+(`0xFAF00B`). Three details differ from a plain BMP copy, established 2026-08-02:
+
+- the **palette is stored after the pixels**, not before — pixels occupy `0x3C0000`–`0x3D2BFF`
+  and the palette `0x3D2C00`–`0x3D2FFF`;
+- rows are un-flipped to **top-down** on the way in;
+- palette entries are reordered **BGR0 → RGB0**.
+
+`CaptureLcd` (`0xFAF02F`) writes the reverse, emitting `bfSize = 0x13036` = 77,878 bytes — exactly
+the size of the five `.bmp` files on the Initial Data Disk, which are therefore in the instrument's
+**own screenshot format** rather than an arbitrary external one.
+
+## Installing an Initial Data Disk (`.RCM`) — the loader rewrites as it writes
+
+The disk-menu path reaches the loader through the extension table at `0xEA0340`–`0xEA0367`
+(10 entries, reverse order; `RCM` is index 6, labelled "RHYTHM CUSTOM"):
+`FileIO_BuildNameWithExt` `0xF891AB` → `FileIO_GetTypeFromExtension` `0xF896F0` → the RCM read
+wrapper `0xF87913` → the loader at `0xF186A9`. The export-table variant `rcm_ld` is `0xF18A74`,
+the same algorithm with I/O callbacks.
+
+Eight chunks are copied straight through, with no permutation. Lengths come from a table at
+file `+0x40`, whose entry 0 is the header size and whose entry 8 is never read — **the final block
+uses a hard-coded `0xF400`**, and `0x63800 + 0xF400 = 0x72C00`, exactly EOF:
+
+| file offset | length | flash section | base |
+|---|---|---|---|
+| `0x000400` | `0xE000` | 0 | `0x300000` |
+| `0x00E400` | `0xE000` | 1 | `0x319800` |
+| `0x01C400` | `0xDC00` | 2 | `0x330000` |
+| `0x02A000` | `0xF400` | 3 | `0x349800` |
+| `0x039400` | `0xE000` | 4 | `0x360000` |
+| `0x047400` | `0xD400` | 5 | `0x379800` |
+| `0x054800` | `0xF000` | 6 | `0x390000` |
+| `0x063800` | `0xF400` (hard-coded) | 7 | `0x3B0000` |
+
+> **The payload is not written verbatim.** `Flash_StoreSection` (`0xF17189`) calls `0xF17001`
+> before any flash access, which walks 30 records of `0x60` bytes at `base + 0x60 + 0x60n` and
+> rewrites fields 0, 2, 3, 4 and 5 through `Pack12BitValueWithBank` (`0xF1710C`):
+>
+> ```
+> v = (v == 0xFFFF) ? v : ((k+1) << 12) | (v & 0x0FFF)
+> ```
+>
+> The section index (1-based) is folded into the top nibble. `0xFFFF` is left alone, and the
+> `0x60`-byte section header is untouched.
+
+**The control that proves it:** section 7 never takes that path, and file section 7 is
+byte-identical to chip `0xB0000`–`0xBEFFF`. One section transformed, one not, both as predicted.
+
+Erase is **per-sector, never chip-wide** — twelve 64 KiB sectors covering `0x300000`–`0x3BFFFF`
+only. Wallpaper (`0x3C0000`), registration (`0x3D3000`) and SubCPU staging (`0x3E0000`) are not
+touched by a disk install.
+
+> **Contrast with the KN6000/KN6500/KN7000**, whose `.AST` payload *is* written verbatim, at flash
+> offset `0x20000`. Only the KN5000 stamps. See [ROM Dumping Roadmap](/rom-dumping-roadmap/) and
+> [KN7000 Initial Data](/kn7000-initial-data/).
+
 ## Registration Memory (0x3D3000)
 
 4KB region storing user registration presets (3 banks + configuration):
