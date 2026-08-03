@@ -419,6 +419,12 @@ The `kn5000_tonegen_device` (in `kn5000_tonegen.cpp`) implements:
 - **Waveform ROMs IC304-IC306 are NO_DUMP** (only IC307 is dumped). Whether per-waveform root note / tuning
   / loop points live in IC307's dumped parameter records or elsewhere is being decoded — *not* assumed to
   be in the undumped ROMs.
+  - **No CPU wave-read port.** IC303's CPU-facing ports (`0x100000`/`0x100002` register+voice-status,
+    `0x110000` keybed events) do not let the CPU address a wave-ROM location and read the sample back. The
+    service-mode Wave ROM Check is an *acoustic* test (sine playback, listen for distortion), not a
+    checksum. This is unlike the KN7000, whose tone generators expose a wave-memory read port that its
+    §8.9 test sweeps digitally — so the KN7000's clean software dump route does **not** transfer here.
+    See [KN7000 Expansion Bus & Wave-ROM Dump Routes](/kn7000-expansion-and-wave-dump/).
 - **No DSP effects** (reverb, chorus, EQ) — the effects DSP (IC311) is a separate subsystem.
 
 The keybed scanner generates note-on/note-off events from MAME input ports. Events are queued in the tone

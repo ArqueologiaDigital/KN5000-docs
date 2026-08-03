@@ -148,13 +148,31 @@ have it. This is how homebrew on the HD-AE5000 already works; see
 [HD-AE5000 Homebrew](/hdae5000-homebrew/).
 
 *Applies to:* IC18/IC19 on the KN7000, IC15 and the table/font devices on the KN6xxx — anything on
-the CPU bus. **Not** the wave ROMs, which sit on the tone generator's private buses and are not
-CPU-visible.
+the CPU bus. On the **KN7000 the wave ROMs also qualify** (see Method B′); on the KN5000 they do not.
+
+### Method B′ — read the KN7000 wave ROMs through the tone-generator port *(no desoldering, no harness)*
+
+The KN7000 wave ROMs were long assumed CPU-invisible. They are not: the tone generators expose a
+**wave-memory read port**, and the service-mode §8.9 WAVE ROM test already sweeps the full 16 MiB of
+each part through it. The read loop (checksum core `0x484839A1`) is simply:
+
+```
+  side A (IC203/IC204):  write hi-addr -> 0x98050006 ; write addr -> 0x98050008 ; read WORD <- 0x9805000A
+  side B (IC207/IC208):  write hi-addr -> 0x98040006 ; write addr -> 0x98040008 ; read WORD <- 0x9804000A
+```
+
+**Proposal.** Upload a small routine over an existing exfil path (MIDI sysex / SD) that drives that
+port across the whole address space and streams the words out. Verify against the firmware's own
+[golden checksums](#5-verifying-a-dump). This reaches all four KN7000 wave ROMs (64 MB) with no
+hardware work at all. Full write-up: [KN7000 Expansion Bus & Wave-ROM Dump Routes](/kn7000-expansion-and-wave-dump/).
+
+*Applies to:* KN7000 IC203/204/207/208 only. **The KN5000's IC303 has no equivalent read port** — its
+Wave ROM Check is an acoustic (listen-for-distortion) test — so its wave ROMs still need Method C or D.
 
 ### Method C — in-circuit read on the tone-generator bus *(no desoldering, needs a harness)*
 
-The wave ROMs are the bulk of what is missing (16 of 22 devices, ~200 MB) and Method B cannot
-reach them.
+For the machines with **no** CPU-side wave read (the KN5000, and if Method B′'s port arithmetic cannot
+be pinned down) the wave ROMs are the bulk of what is missing and must be read on their own bus.
 
 **Proposal.** Hold the tone generator in reset so it stops driving its bus, then clip onto the ROM
 and drive address lines from an external microcontroller, reading data back. Practical notes: these
@@ -200,6 +218,17 @@ gives an oracle for every device it covers. See [Test Modes](/test-modes/).
 > **This is the single highest-value thing an owner can contribute without any disassembly**:
 > enter the ROM device test and photograph the screen. It costs nothing, risks nothing, and turns
 > every future dump from "plausible" into "verified".
+
+**The KN7000 wave-ROM golden checksums** are already extracted from the firmware (table `0x485CFD18`),
+so a Method B′ dump of those four parts can be verified with no instrument at all. The value is
+Σ(hi+lo) over every 16-bit word of the device:
+
+| device | expected checksum |
+|---|---|
+| IC203 | `0x8164C77C` |
+| IC204 | `0x815CFC83` |
+| IC207 | `0x8331EF0B` |
+| IC208 | `0x83254F9D` |
 
 **The `.INF` oracles**, where an update disk exists for that device, as in §2.
 
