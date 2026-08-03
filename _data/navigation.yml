@@ -33,6 +33,8 @@
       url: /kn7000-technichord/
     - title: Expansion Bus & Wave-ROM Dump
       url: /kn7000-expansion-and-wave-dump/
+    - title: "Wave-ROM Dump Tutorial (Pi Pico)"
+      url: /kn7000-wave-rom-dump/
     - title: Storage & File System
       url: /kn7000-storage-subsystem/
     - title: USB Subsystem
