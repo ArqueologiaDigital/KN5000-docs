@@ -146,8 +146,11 @@ only **BAD_DUMP copies of IC307** — a real read-out would fix them.
   and read the sample word back, the way the KN7000's `0x9805000A` does.
 - Consistent with that, the KN5000's **Wave ROM Check (Test 6)** is an **acoustic** test: the ROMs are
   made to output sine waves as keys are pressed and the technician listens for distortion (C keys →
-  IC304 & IC305, C#–B → IC306 & IC307). A machine with a digital read-back port would use a checksum
-  sweep, as the KN7000 does — the acoustic design is itself evidence that IC303 exposes no such port.
+  IC304 & IC305, C#–B → IC306 & IC307). Disassembling its handler confirms it: `TEST6FUNC`
+  (`0xFB7E0E` → core `0xFB7C8F`) sends a single command byte (`0x0003`) toward the tone-generator sub-
+  CPU and polls a **status byte** (`(0x8A24) == 0xFC`), then reports OK/NG. There is **no read loop**
+  — nothing like the KN7000's 8-million-iteration sweep of `0x9805000A`. The main CPU never sees a
+  sample word; it triggers the sine-wave diagnostic and waits for a pass/fail.
 
 So the clean software route does **not** transfer to the KN5000. Its wave ROMs remain reachable only
 by an in-circuit snoop of IC303's bus while it plays, or by desoldering — see the
