@@ -164,7 +164,7 @@ each part through it. The read loop (checksum core `0x484839A1`) is simply:
 **Proposal.** Upload a small routine over an existing exfil path (MIDI sysex / SD) that drives that
 port across the whole address space and streams the words out. Verify against the firmware's own
 [golden checksums](#5-verifying-a-dump). This reaches all four KN7000 wave ROMs (64 MB) with no
-hardware work at all. Full write-up: [KN7000 Expansion Bus & Wave-ROM Dump Routes](/kn7000-expansion-and-wave-dump/).
+hardware work at all. Full write-up: [KN7000 Expansion Bus & Wave-ROM Dump Routes]({{ site.baseurl }}/kn7000-expansion-and-wave-dump/).
 
 *Applies to:* KN7000 IC203/204/207/208 only. **The KN5000's IC303 has no equivalent read port** — its
 Wave ROM Check is an acoustic (listen-for-distortion) test — so its wave ROMs still need Method C or D.

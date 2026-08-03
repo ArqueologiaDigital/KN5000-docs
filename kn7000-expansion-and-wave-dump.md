@@ -154,8 +154,8 @@ only **BAD_DUMP copies of IC307** — a real read-out would fix them.
 
 So the clean software route does **not** transfer to the KN5000. Its wave ROMs remain reachable only
 by an in-circuit snoop of IC303's bus while it plays, or by desoldering — see the
-[ROM Dumping Roadmap](/rom-dumping-roadmap/), Methods C and D. (See also
-[Tone Generator (IC303)](/tone-generator/).)
+[ROM Dumping Roadmap]({{ site.baseurl }}/rom-dumping-roadmap/), Methods C and D. (See also
+[Tone Generator (IC303)]({{ site.baseurl }}/tone-generator/).)
 
 ## MAME status
 
@@ -174,7 +174,7 @@ The port is service-test-only, so boot is unaffected.
 
 ## See also
 
-- [ROM Dumping Roadmap](/rom-dumping-roadmap/) — where these routes sit in the overall plan
-- [KN7000 Sound Subsystem](/kn7000-sound-subsystem/)
-- [Tone Generator (IC303)](/tone-generator/) — the KN5000 side
-- [Memory Map](/memory-map/)
+- [ROM Dumping Roadmap]({{ site.baseurl }}/rom-dumping-roadmap/) — where these routes sit in the overall plan
+- [KN7000 Sound Subsystem]({{ site.baseurl }}/kn7000-sound-subsystem/)
+- [Tone Generator (IC303)]({{ site.baseurl }}/tone-generator/) — the KN5000 side
+- [Memory Map]({{ site.baseurl }}/memory-map/)

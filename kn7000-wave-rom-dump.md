@@ -259,6 +259,6 @@ order‑independent), so wire `WD0→GP0 … WD15→GP15` in order and keep the 
 
 ## See also
 
-- [KN7000 Expansion Bus & Wave‑ROM Dump Routes](/kn7000-expansion-and-wave-dump/) — why the wave port
+- [KN7000 Expansion Bus & Wave‑ROM Dump Routes]({{ site.baseurl }}/kn7000-expansion-and-wave-dump/) — why the wave port
   works and the software alternative
-- [ROM Dumping Roadmap](/rom-dumping-roadmap/)
+- [ROM Dumping Roadmap]({{ site.baseurl }}/rom-dumping-roadmap/)

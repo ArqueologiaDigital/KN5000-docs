@@ -424,7 +424,7 @@ The `kn5000_tonegen_device` (in `kn5000_tonegen.cpp`) implements:
     service-mode Wave ROM Check is an *acoustic* test (sine playback, listen for distortion), not a
     checksum. This is unlike the KN7000, whose tone generators expose a wave-memory read port that its
     §8.9 test sweeps digitally — so the KN7000's clean software dump route does **not** transfer here.
-    See [KN7000 Expansion Bus & Wave-ROM Dump Routes](/kn7000-expansion-and-wave-dump/).
+    See [KN7000 Expansion Bus & Wave-ROM Dump Routes]({{ site.baseurl }}/kn7000-expansion-and-wave-dump/).
 - **No DSP effects** (reverb, chorus, EQ) — the effects DSP (IC311) is a separate subsystem.
 
 The keybed scanner generates note-on/note-off events from MAME input ports. Events are queued in the tone
