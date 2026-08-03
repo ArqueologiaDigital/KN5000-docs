@@ -102,13 +102,27 @@ The terminal takes a **type-AB USB cable** to a PC. The bundled CD-ROM carries t
      real USB-MIDI / USB-audio device to the host is beyond MAME's current USB-device support and needs
      the co-processor behaviour regardless; deferred until step 1 lands.
 
-## Open questions / next steps
+## Register-level reverse engineering — first pass
 
-- Which MN10300 port pins carry `USB.SI/SO` / `USBM.TX` / `USB.WAITM/H`, and which I/O register or SIO
-  channel they become (schematic p118/119).
-- The host **USB driver** in firmware, and the Computer-Connection menu handler that writes the mode.
-- The link **command framing** (a serial mailbox with a wait handshake).
-- Whether this link is a relative of the KN5000/HD-AE5000 "CP-serial" protocol.
+Pushing on "which main-CPU register is the link" narrows it sharply, mostly by elimination:
+
+- **Not an on-chip serial (SIO).** The MN10300 has exactly three USARTs, and all three are already
+  identified — control panel, MIDI-1, MIDI-2. The USB link is not one of them.
+- **Not a memory-mapped mailbox.** Every access into the whole `0x9800xxxx` I/O window is accounted for
+  by the tone generators, the SD mailbox, the floppy controller, and sound control — none is USB.
+- **It is a transistor-buffered GPIO bit-bang.** On the main-CPU schematic the link's signals
+  (`USB.SD` = data, `USB.ST` = clock/strobe, `USB.MAITU`, and the `USB.WAIT*` handshake) pass through
+  discrete level-shifter transistors and gate glue — i.e. ordinary port pins toggled in software, which
+  is exactly why it does not appear as a peripheral register. The USB-board end adds a UART (`UTXD2`)
+  on the USB controller.
+- **The link is non-blocking at boot.** The instrument boots fully with no PC attached, so the USB code
+  runs only on demand. **No boot stub is needed** — HLE is required only to make the USB *features*
+  work, which lowers its priority and de-risks it.
+
+**Next probe:** the fastest route to the exact port/bit is dynamic — run the emulator, open the MIDI
+menu's *Computer Connection* screen (or the Audio Recorder), and log GPIO activity; the pins toggled
+only there are the link. Then the firmware bit-bang routine and the mode-write handler give the command
+framing to HLE. (The link may also be a relative of the KN5000/HD-AE5000 "CP-serial" protocol.)
 
 ## See also
 
