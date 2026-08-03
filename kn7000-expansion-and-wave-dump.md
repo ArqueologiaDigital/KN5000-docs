@@ -162,8 +162,15 @@ by an in-circuit snoop of IC303's bus while it plays, or by desoldering — see 
 The four EXP.CS windows are modelled as empty SY-EW slots — open bus, read-zero, writes dropped —
 replacing an earlier 24 MiB RAM placeholder (the firmware only ever *reads* these windows; there is
 not a single store to any of the four bases). The machine boots to the play screen and reports "NO
-WAVE EXPANSION BOARD", the way real empty hardware does. The tone-generator wave-read port is not yet
-modelled.
+WAVE EXPANSION BOARD", the way real empty hardware does.
+
+The **tone-generator wave-read port is now modelled** for both tone generators: writes to `+6`/`+8`
+latch the bank and word address, and a read of `+A` returns the composed sample word. The address
+arithmetic follows the firmware's checksum core exactly — verified by driving the port from Lua and
+comparing the readback against the source bytes (address `0x8040` → word `0x20` → byte `0x40`, byte-
+for-byte). Sample data is sourced from the synthetic `wavepack` placeholder until the four real ROMs
+are dumped, at which point they drop straight in and the §8.9 checksum will match the golden values.
+The port is service-test-only, so boot is unaffected.
 
 ## See also
 
