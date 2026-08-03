@@ -245,10 +245,10 @@ CMD_PROCESSING_STATE check
 
 ## References
 
-- [Inter-CPU Protocol](/inter-cpu-protocol/) — Latch communication mechanism
-- [MIDI Subsystem](/midi-subsystem/) — MIDI message dispatch on Sub CPU
-- [Audio Subsystem](/audio-subsystem/) — Sound generation and DSP
-- [SysEx Messages](/sysex-messages/) — System Exclusive message handling
+- [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) — Latch communication mechanism
+- [MIDI Subsystem]({{ site.baseurl }}/midi-subsystem/) — MIDI message dispatch on Sub CPU
+- [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) — Sound generation and DSP
+- [SysEx Messages]({{ site.baseurl }}/sysex-messages/) — System Exclusive message handling
 
 ---
 

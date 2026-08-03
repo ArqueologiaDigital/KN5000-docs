@@ -104,10 +104,10 @@ The update may not have completed successfully. This can happen due to:
 ## Technical Details
 
 For technical documentation of the update process internals, see:
-- [Firmware Update Display](/firmware-update-display/) — LCD message state machine
-- [Firmware Update Validation](/firmware-update-validation/) — Validation checks and error handling
-- [System Update Discs](/system-update-discs/) — Disc format specification
-- [Flash Programming](/flash-programming/) — Flash erase/program routines
+- [Firmware Update Display]({{ site.baseurl }}/firmware-update-display/) — LCD message state machine
+- [Firmware Update Validation]({{ site.baseurl }}/firmware-update-validation/) — Validation checks and error handling
+- [System Update Discs]({{ site.baseurl }}/system-update-discs/) — Disc format specification
+- [Flash Programming]({{ site.baseurl }}/flash-programming/) — Flash erase/program routines
 
 ## Creating Custom Update Discs
 
@@ -117,7 +117,7 @@ Custom firmware update discs can be created using the tools in the `custom-kn500
 python tools/make_update_disc.py <rom_file> <output_disc.img> --type 7
 ```
 
-See [System Update Discs](/system-update-discs/#creating-update-discs) for details.
+See [System Update Discs]({{ site.baseurl }}/system-update-discs/#creating-update-discs) for details.
 
 ---
 

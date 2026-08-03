@@ -11,7 +11,7 @@ a **main** task (the foreground UI / panel loop) and an **AP** ("application")
 task (background work — song/data processing, longer operations). They take turns
 by explicitly sleeping and waking each other through a small message API. This
 page documents that mechanism as decoded from `kn7000_program.rom`; it is the
-companion to the [Event & Dispatch System](/kn7000-event-system/), which is what
+companion to the [Event & Dispatch System]({{ site.baseurl }}/kn7000-event-system/), which is what
 each task actually runs while awake.
 
 ## The two tasks
@@ -27,7 +27,7 @@ work RAM:
 Code decides "am I the main or the AP task?" by comparing them — exactly what the
 event layer's `GetCurrentObjectId` helper does before it picks the active task's
 focused-object id (`0x500D3C60` for main, `0x500D3C5C` for AP; see the
-[event page](/kn7000-event-system/)). So each task carries its own focused UI
+[event page]({{ site.baseurl }}/kn7000-event-system/)). So each task carries its own focused UI
 object, and the event dispatcher always acts on the running task's object.
 
 ## Sleep / wake API
@@ -80,7 +80,7 @@ cmp 0x600A1, d1 ; beq …
 
 The underlying context switch / run-queue lives in the **MILK kernel** (the
 banner `MILK MN10300 Ver1.0R1` at `0x3B8AAC`), part of which is in the
-still-[undumped library ROM](/kn7000-firmware/) at `0x4C000000`.
+still-[undumped library ROM]({{ site.baseurl }}/kn7000-firmware/) at `0x4C000000`.
 
 ## Task refresh
 
@@ -93,7 +93,7 @@ the scheduler hands back to the event system.
 ## Relationship to the KN5000
 
 Cooperative main/AP tasking on the MILK kernel is **shared with the KN5000**
-(same source tree — [Shared Codebase Map](/technics-shared-codebase/)); the
+(same source tree — [Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/)); the
 message opcode/id convention and the sleep/wake naming carry across. What is
 observed here for the KN7000 specifically are the concrete addresses — the task
 handles (`0x50380004` / `0x5038002C`), the per-task focused-object pointers, the

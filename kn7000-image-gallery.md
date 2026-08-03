@@ -11,14 +11,14 @@ The KN7000 firmware stores graphics in **two** ways:
 * **Standard file formats** — 169 baseline JPEGs (photos, demo art) and Windows
   BMPs (UI graphics), extracted with `image_extract.py`. These are shown in the
   sections below; each caption gives the source ROM, byte offset, and dimensions.
-* **Raw palette-indexed bitmaps** — exactly like the [KN5000](/image-gallery/):
+* **Raw palette-indexed bitmaps** — exactly like the [KN5000]({{ site.baseurl }}/image-gallery/):
   headerless 4/8bpp indexed pixel data reached through a pointer hierarchy in the
   table ROM (see [Raw UI bitmaps](#raw-ui-bitmaps-table-rom) at the bottom).
 
 So the earlier "the KN7000 uses standard formats *unlike* the KN5000" is only
 half the story: it **adds** JPEG/BMP but still keeps the KN5000's raw-bitmap
 design for its UI icons — one more piece of the
-[shared codebase](/technics-shared-codebase/).
+[shared codebase]({{ site.baseurl }}/technics-shared-codebase/).
 
 ## Boot splash animation
 
@@ -38,7 +38,7 @@ ROM). Both are JPEGs in the **table ROM**. (Other 640×240 table-ROM images such
 
 Because these frames are **present in the dumped ROM**, the emulator's blank/green
 boot screen is a *display-path* bug (the firmware not decoding/blitting these JPEGs),
-not missing data — see [User Data & Initial Data Disk](/kn7000-initial-data/#the-boot-splash-and-the-green-screen).
+not missing data — see [User Data & Initial Data Disk]({{ site.baseurl }}/kn7000-initial-data/#the-boot-splash-and-the-green-screen).
 
 ## Program ROM — icons & product photos
 

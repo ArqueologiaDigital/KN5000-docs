@@ -353,7 +353,7 @@ Two commits, 606 insertions, nothing modified or deleted:
 
 Every device gets a line under its real part number and manual-verified capacity. Anything that is
 not an honest dump of that machine's own part is **`NO_DUMP` with the correct expected size**, never
-shipped as substitute data — see [ROM Dumping Roadmap](/rom-dumping-roadmap/) for what remains.
+shipped as substitute data — see [ROM Dumping Roadmap]({{ site.baseurl }}/rom-dumping-roadmap/) for what remains.
 
 ## The flash device IDs were read, not guessed
 

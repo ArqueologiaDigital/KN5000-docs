@@ -10,7 +10,7 @@ The complete list of the KN7000's **built-in rhythm styles**, recovered directly
 the program ROM. The names live in a genre&rarr;style table pair rooted at
 `StyleGenreTable` (program-ROM `0x4873ACC0`): each 8-byte genre entry points to a
 genre name and to that genre's style sub-table, whose entries carry the real style
-names. See the [reverse-engineering notes](/kn7000/) for how the on-screen style list
+names. See the [reverse-engineering notes]({{ site.baseurl }}/kn7000/) for how the on-screen style list
 resolves these. Extracted by walking the table structure; **270 styles across 11 genres**.
 
 ## Rock & Pop (58 styles)

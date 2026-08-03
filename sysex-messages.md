@@ -212,10 +212,10 @@ The command mapping (`0x30`/`0x33` → bank 4B, `0x38`/`0x3A` → bank 49) corre
 
 ## References
 
-- [MIDI Subsystem](/midi-subsystem/) — MIDI dispatch and channel handling
-- [Audio Subsystem](/audio-subsystem/) — Sound generation and DSP configuration
-- [Sequencer](/sequencer/) — MIDI recording and playback
-- [Inter-CPU Protocol](/inter-cpu-protocol/) — Main/Sub CPU MIDI routing
+- [MIDI Subsystem]({{ site.baseurl }}/midi-subsystem/) — MIDI dispatch and channel handling
+- [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) — Sound generation and DSP configuration
+- [Sequencer]({{ site.baseurl }}/sequencer/) — MIDI recording and playback
+- [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) — Main/Sub CPU MIDI routing
 
 ---
 

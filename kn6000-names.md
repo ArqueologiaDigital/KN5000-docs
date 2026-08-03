@@ -7,7 +7,7 @@ permalink: /kn6000-names/
 # KN6000 / KN6500 — table-ROM names & symbols
 
 Beyond rhythm and sound data, the KN6000/KN6500 **table ROMs** (the decompressed
-`IK2.SLD` / `IKV2.SLD` images — see [hardware](/kn6000-hardware/)) hold extensive
+`IK2.SLD` / `IKV2.SLD` images — see [hardware]({{ site.baseurl }}/kn6000-hardware/)) hold extensive
 ASCII string tables. They come in two kinds, both extracted here:
 
 | ROM | Total strings | Internal MILK symbols | User-facing names |
@@ -22,7 +22,7 @@ need a NUL-walk extractor (`name_extract_nul.py` in `kn7000_extraction`).
 ## Internal MILK symbol names — the symbol-recovery goldmine
 
 The larger share is **internal GUI-resource identifiers** from the
-[MILK application framework](/technics-shared-codebase/) — the *same class* of
+[MILK application framework]({{ site.baseurl }}/technics-shared-codebase/) — the *same class* of
 named-resource data whose reflection tables gave the KN7000 its **2,302 function
 names**. Examples (KN6000):
 
@@ -35,7 +35,7 @@ names**. Examples (KN6000):
 - **Service / test mode:** `TEST5_Itimatu`, `TEST6_OK`, `TEST6_NO`, `HDD_COMM_TEST`
 
 Because these identifiers recur across the MN10300 models, they are a **Rosetta
-stone** for [cross-model symbol recovery](/cross-version-diff-guidebook/): a symbol
+stone** for [cross-model symbol recovery]({{ site.baseurl }}/cross-version-diff-guidebook/): a symbol
 named in one ROM names the equivalent object in the others, and aligning them across
 KN6000/KN6500/KN7000 propagates names throughout the shared codebase.
 

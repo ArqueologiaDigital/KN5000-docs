@@ -59,7 +59,7 @@ The TMP94C241F is a Toshiba 32-bit microcontroller from the TLCS-900/H2 family.
 | Address Bus | 24-bit (16MB address space) |
 | Data Bus | 16-bit external |
 | Registers | 8 general purpose (32-bit each) |
-| Instruction Set | CISC, variable length (1-7 bytes) — see [Instruction Encoding Reference](/tlcs900-instruction-encoding/) |
+| Instruction Set | CISC, variable length (1-7 bytes) — see [Instruction Encoding Reference]({{ site.baseurl }}/tlcs900-instruction-encoding/) |
 
 ### On-Chip Peripherals
 

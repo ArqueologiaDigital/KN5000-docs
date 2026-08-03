@@ -8,8 +8,8 @@ permalink: /kn7000-sound-gui-map/
 
 How the KN7000's sound-related screens connect. Each node is a display; each edge
 is the panel button, on-screen soft button, or menu item that opens it. This is
-the navigation companion to the [Sound Subsystem](/kn7000-sound-subsystem/) and
-[Effects DSP](/kn7000-effects-dsp/) hardware pages — it maps what the player
+the navigation companion to the [Sound Subsystem]({{ site.baseurl }}/kn7000-sound-subsystem/) and
+[Effects DSP]({{ site.baseurl }}/kn7000-effects-dsp/) hardware pages — it maps what the player
 touches to the hardware those pages describe. Screen names and paths are from the
 user's manual (2002).
 
@@ -80,10 +80,10 @@ flowchart TD
 ## Where each screen meets the hardware
 
 - **SOUND / SOUND EXPLORER / DIGITAL DRAWBAR / TAB ORGAN / ACCORDION** choose a
-  patch for a part — they program the [tone generators](/kn7000-sound-subsystem/)
+  patch for a part — they program the [tone generators]({{ site.baseurl }}/kn7000-sound-subsystem/)
   (which voice, pitch, level) and load the patch's default effects.
 - **SOUND DSP / REVERB / CHORUS / MULTI / MIC / EQUALIZER** all drive the
-  [effects DSP](/kn7000-effects-dsp/): selecting a type downloads that effect's
+  [effects DSP]({{ site.baseurl }}/kn7000-effects-dsp/): selecting a type downloads that effect's
   SHARC microprogram into the corresponding effect unit (unit 9 = Reverb, 7 =
   Chorus, 8 = Equalizer, 0 = Enhancer, 1–6 = Multi/Sound-DSP inserts), and the
   parameter tables adjust its coefficients.

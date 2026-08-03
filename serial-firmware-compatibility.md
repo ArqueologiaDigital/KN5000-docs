@@ -14,7 +14,7 @@ This report documents the effort to fix the MAME KN5000 driver's serial communic
 
 ## Background
 
-The [first round of serial debugging](/serial-debugging/) (January 2026) got individual bytes transmitting correctly between the CPU serial device and the control panel HLE. The [compatibility review](https://github.com/felipesanches/custom-kn5000-roms/blob/main/anotherworld/docs/serial-cpanel-compatibility-2026-02-11.md) (February 11) fixed three additional bugs that made the AW VM's polled serial work.
+The [first round of serial debugging]({{ site.baseurl }}/serial-debugging/) (January 2026) got individual bytes transmitting correctly between the CPU serial device and the control panel HLE. The [compatibility review](https://github.com/felipesanches/custom-kn5000-roms/blob/main/anotherworld/docs/serial-cpanel-compatibility-2026-02-11.md) (February 11) fixed three additional bugs that made the AW VM's polled serial work.
 
 But the original firmware uses a fundamentally different serial approach than the AW VM, and it was still broken:
 
@@ -368,8 +368,8 @@ Loop timing: DEC 1, WA (2) + CP WA, 0 (2) + JR Z (2) + JR T (4) = ~10 cycles = 6
 - `shared/sfr_tmp94c241.asm` — SFR register addresses
 
 **Related documentation:**
-- [Serial Debugging Journey (Jan 2026)](/serial-debugging/) — First round of bit-level timing fixes
-- [Control Panel Protocol](/control-panel-protocol/) — Command format, button segments, LED commands
+- [Serial Debugging Journey (Jan 2026)]({{ site.baseurl }}/serial-debugging/) — First round of bit-level timing fixes
+- [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) — Command format, button segments, LED commands
 
 ---
 

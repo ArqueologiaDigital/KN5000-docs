@@ -202,7 +202,7 @@ The lack of cryptographic verification means:
 
 4. **Physical access required** — The update requires a specific button held during boot with a floppy disc inserted, plus the firmware version sentinel set to 0xFF. This provides some protection against accidental triggering but not against intentional custom firmware installation.
 
-For a detailed analysis of the floppy update attack surface, see [Floppy Security Analysis](/floppy-security-analysis/).
+For a detailed analysis of the floppy update attack surface, see [Floppy Security Analysis]({{ site.baseurl }}/floppy-security-analysis/).
 
 ## Code References
 
@@ -221,10 +221,10 @@ For a detailed analysis of the floppy update attack surface, see [Floppy Securit
 
 ## References
 
-- [Firmware Update Display](/firmware-update-display/) — LCD message state machine
-- [System Update Discs](/system-update-discs/) — Disc format and file contents
-- [Flash Programming](/flash-programming/) — Flash erase/program routines
-- [Floppy Security Analysis](/floppy-security-analysis/) — Attack surface analysis
+- [Firmware Update Display]({{ site.baseurl }}/firmware-update-display/) — LCD message state machine
+- [System Update Discs]({{ site.baseurl }}/system-update-discs/) — Disc format and file contents
+- [Flash Programming]({{ site.baseurl }}/flash-programming/) — Flash erase/program routines
+- [Floppy Security Analysis]({{ site.baseurl }}/floppy-security-analysis/) — Attack surface analysis
 
 ---
 

@@ -6,7 +6,7 @@ permalink: /kn7000-firmware/
 
 # KN7000 Firmware Images
 
-Two flash images are recovered from the [system-update discs](/kn7000-system-update-discs/):
+Two flash images are recovered from the [system-update discs]({{ site.baseurl }}/kn7000-system-update-discs/):
 `kn7000_program.rom` (main firmware) and `kn7000_table.rom` (resource archive).
 Offsets below are file offsets in hex; integers are little-endian **except** the
 `.SLD` size field.
@@ -14,7 +14,7 @@ Offsets below are file offsets in hex; integers are little-endian **except** the
 ## Program image (`kn7000_program.rom`, 0x3F6F01 bytes)
 
 Panasonic **MN10300/AM33** code, mapped at CPU address `0x48400000`
-(file offset + base). See the [KN7000 overview](/kn7000/) for the full memory map.
+(file offset + base). See the [KN7000 overview]({{ site.baseurl }}/kn7000/) for the full memory map.
 
 ### Boot header (0x0 – 0x80)
 
@@ -46,7 +46,7 @@ up at the call sites identifies it as the **C runtime + MILK kernel**: e.g.
 format-string pointer and stacked arguments), `0x4C003051` (a `memcpy`/`strcpy`
 taking dest/src pointers), `0x4C0019D5` (a numeric formatter). This is why a
 running emulator needs that ROM dumped (or the hot entry points high-level
-emulated): the [boot interpreter](/kn7000/) runs 3.06 M instructions and then
+emulated): the [boot interpreter]({{ site.baseurl }}/kn7000/) runs 3.06 M instructions and then
 calls straight into `0x4C0…`.
 
 ### Region map
@@ -80,7 +80,7 @@ updates (the rhythm ROM and the `0x57800000` picture flash).
 - Flash-chip IDs `MBM29LV160B`, `MX29LV160B`, `AT49BV16X4` (`0x1CF9EA`+) for the sound-RAM expansion
 - Model-compatibility list `@Expansion Board KN7000 SOUND RAM`, then `KN6000`/`KN5000`/`KN3000`/`KN2000`/`KN1600 SOUND RAM` (`0x1B8517`+)
 - UI languages: English / German / French / Spanish / Indonesian message blocks (Italian has a menu entry but no translated text), plus an EUC-JP developer easter-egg entry at `0x1A0C4D`
-- Developer symbol tables: `_TT_*` tag names, `*Proc` window-procedure names (`AcProgVerBoxProc`, `IvMpVerWinProc`, …), `MT_*` API names (`MT_GetLanguagePtr`, `MT_FLASHWRITE`), GUI object names (`PanelSimulator`, `ClipBoard`, `DefaultWindow`) — the same conventions as the KN5000 (see [Shared Codebase Map](/technics-shared-codebase/))
+- Developer symbol tables: `_TT_*` tag names, `*Proc` window-procedure names (`AcProgVerBoxProc`, `IvMpVerWinProc`, …), `MT_*` API names (`MT_GetLanguagePtr`, `MT_FLASHWRITE`), GUI object names (`PanelSimulator`, `ClipBoard`, `DefaultWindow`) — the same conventions as the KN5000 (see [Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/))
 
 ### Embedded images
 
@@ -118,13 +118,13 @@ every step. Disassembly listings are generated with MAME's `unidasm`
 (`-arch mn10300`).
 
 This mirrors the KN5000 approach, whose
-[ROM reconstruction](/rom-reconstruction/) reached 100% byte-perfect matches on
+[ROM reconstruction]({{ site.baseurl }}/rom-reconstruction/) reached 100% byte-perfect matches on
 all six ROMs.
 
 ### 2,302 functions named by reusing KN5000 knowledge
 
 The disassembly gets a large head start from the
-[shared codebase](/technics-shared-codebase/): the KN7000 embeds the same "MILK"
+[shared codebase]({{ site.baseurl }}/technics-shared-codebase/): the KN7000 embeds the same "MILK"
 UI-toolkit **runtime reflection tables** the KN5000 does — code-pointer arrays
 each followed by an index-parallel name-pointer array, used by the firmware's
 `MT_GetProcedure`-style lookup. There are **~114 such tables** (one per

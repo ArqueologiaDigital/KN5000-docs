@@ -358,9 +358,9 @@ Messages at Y=160 are displayed sequentially (each new message overwrites the pr
 
 ## References
 
-- [System Update Discs](/system-update-discs/) — Disc format, signatures, and file contents
-- [Flash Programming](/flash-programming/) — Flash erase/program routines and hardware details
-- [LZSS Compression](/lzss-compression/) — SLIDE4K format used by compressed update types
+- [System Update Discs]({{ site.baseurl }}/system-update-discs/) — Disc format, signatures, and file contents
+- [Flash Programming]({{ site.baseurl }}/flash-programming/) — Flash erase/program routines and hardware details
+- [LZSS Compression]({{ site.baseurl }}/lzss-compression/) — SLIDE4K format used by compressed update types
 
 ---
 

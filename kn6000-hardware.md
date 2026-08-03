@@ -10,9 +10,9 @@ Reconstructed from the **Technics SX-KN6000** (89-page) and **SX-KN6500**
 (142-page) service manuals, cross-checked against the decoded firmware. The
 KN6000 and KN6500 are **architecturally the KN7000's siblings** — the same
 Panasonic **MN10300** main CPU and the same [MILK application
-framework](/technics-shared-codebase/) — not the TLCS-900 KN5000. See the
-[KN6000/KN6500 roadmap](/kn6000-roadmap/) for the preservation plan and the
-[cross-version diff guidebook](/cross-version-diff-guidebook/) for the four-way
+framework]({{ site.baseurl }}/technics-shared-codebase/) — not the TLCS-900 KN5000. See the
+[KN6000/KN6500 roadmap]({{ site.baseurl }}/kn6000-roadmap/) for the preservation plan and the
+[cross-version diff guidebook]({{ site.baseurl }}/cross-version-diff-guidebook/) for the four-way
 code-reuse strategy.
 
 ## Main board (board **A**, MAIN)
@@ -23,7 +23,7 @@ code-reuse strategy.
 | **IC11 / IC12** | **PROGRAM ROM (ODD) / (EVEN)** — 16 Mbit flash each (4 MB total) | The MAIN CPU program, byte-interleaved on the 32-bit bus. **= `IK1.SLD` + `IK2.SLD` concatenated** — the program update ships as **two floppy parts** (`IK1` = low 2 MB, `IK2` = high 2 MB), so both must be joined to form the 4 MB image. Field-rewritable from a floppy system-update disc. |
 | **IC13 / IC14** | **PROGRAMMED MASK ROM** | Built-in style / sound tables. **Not provided by the firmware update discs** (only the program flash is field-updatable), so a physical chip dump is needed to emulate these. |
 | **IC15** | **RHYTHM DATA ROM** | Built-in rhythm/accompaniment pattern data. |
-| **IC18** | **CUSTOM DATA ROM** — 16 Mbit flash | RHYTHM & ACCOMP data for the RHYTHM-GROUP / CUSTOM function; user COMPOSER data. **Factory-set, and defaulted from the [Initial Data Disk](/kn7000-initial-data/) (`idd6000`); user data is lost if the chip is replaced.** |
+| **IC18** | **CUSTOM DATA ROM** — 16 Mbit flash | RHYTHM & ACCOMP data for the RHYTHM-GROUP / CUSTOM function; user COMPOSER data. **Factory-set, and defaulted from the [Initial Data Disk]({{ site.baseurl }}/kn7000-initial-data/) (`idd6000`); user data is lost if the chip is replaced.** |
 | **IC9 / IC10** | **DRAM** | Main work RAM. |
 | **IC20** | **SRAM** | Battery-backed panel / user state. |
 | **IC304** | **Digital Signal Processor** (+ **IC305/IC308 SDRAM**) | Reverb / chorus / effects DSP with its own SDRAM. |

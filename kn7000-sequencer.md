@@ -12,7 +12,7 @@ karaoke-style lyrics, and the ability to turn a recorded sequence into a Compose
 style or a Pad phrase. Like the rest of the UI it runs on the MILK toolkit, so it
 is decoded here from `kn7000_program.rom` through its **event namespace** and its
 **`MT_` engine API**, both recovered from the firmware's reflection tables. It sits
-between the [storage](/kn7000-storage-subsystem/) layer (which loads/saves the
+between the [storage]({{ site.baseurl }}/kn7000-storage-subsystem/) layer (which loads/saves the
 `.MID` files) and the tone generators that play the notes.
 
 ## Engine API
@@ -42,7 +42,7 @@ piano-roll ("note") view and a numeric step-list view, ending each frame with
 ## Event namespace
 
 The sequencer screen has its own `EV_*` event block (name table at program
-`0x35570C`), separate from the global [UI events](/kn7000-event-system/):
+`0x35570C`), separate from the global [UI events]({{ site.baseurl }}/kn7000-event-system/):
 
 * **transport** — `EV_PlayStartIni`, `EV_PlayRequest`, `EV_GetEvent`
 * **display** — `EV_SEQ_DRAW`, `EV_ALLCLEAR`, `EV_ALLDRAW`, `EV_RENEW`,
@@ -62,7 +62,7 @@ name): track selection `SeqTrackSel`, measure navigation `SeqMeasUpDown`,
 `SeqRecMetTglFunc`, and stop `SeqRecStopExec`. Lyrics display is handled by
 `SeqLyricsShowHide` / `SeqLyricsSong` and set up by the AP-task helper
 `AppSEQ_InitSmfLyrics` — confirming the sequencer engine runs in the **AP task**
-(see [Tasks & Scheduler](/kn7000-task-scheduler/)) while its screen runs in the
+(see [Tasks & Scheduler]({{ site.baseurl }}/kn7000-task-scheduler/)) while its screen runs in the
 main task.
 
 ## Standard MIDI Files and conversions
@@ -73,7 +73,7 @@ Songs interchange as **SMF** (`.MID`) through the storage layer:
 `SmfSeqToSongNumFunc` / `SmfSeqFromSongNumFunc`. A recorded sequence can also be
 **converted in place** into other engines' data — `SeqToCmpCopyGrid` /
 `Seq2CmpCpEditFunc` copy it into a **Composer** style, and `SeqToPadCopyGrid` /
-`Seq2PadCpEditFunc` copy it into a **[Pad](/kn7000-sound-names/#sound-arranger-pad-presets)**
+`Seq2PadCpEditFunc` copy it into a **[Pad]({{ site.baseurl }}/kn7000-sound-names/#sound-arranger-pad-presets)**
 phrase — which is why the pad presets are themselves stored as MIDI event
 streams.
 
@@ -104,8 +104,8 @@ START/STOP, at the displayed tempo.
 ## Relationship to the KN5000
 
 The sequencer concept, the `MT_Seq_*`/`EV_*` naming and the SMF interchange are
-**shared with the KN5000** ([Shared Codebase Map](/technics-shared-codebase/));
-the [Sequencer](/sequencer/) and [Accompaniment engine](/accompaniment-engine/)
+**shared with the KN5000** ([Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/));
+the [Sequencer]({{ site.baseurl }}/sequencer/) and [Accompaniment engine]({{ site.baseurl }}/accompaniment-engine/)
 KN5000 pages are the conceptual companions. The concrete KN7000 specifics
 observed here are the addresses of the engine API and event tables and the
 Seq→Composer / Seq→Pad conversion paths.

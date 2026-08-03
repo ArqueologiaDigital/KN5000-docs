@@ -13,10 +13,10 @@ flash** that ships **blank** and is programmed, once, from an **"Initial Data"
 floppy disk** during first setup. This page documents that subsystem, recovered by
 reverse-engineering the firmware's disk-load/install path.
 
-This is the same design the [KN5000](/system-overview/) uses — its MAME driver
+This is the same design the [KN5000]({{ site.baseurl }}/system-overview/) uses — its MAME driver
 notes that the custom-data flash (IC19) "was dumped from a system that had it
 already programmed by the initial data disk" — one more piece of the
-[shared codebase](/technics-shared-codebase/).
+[shared codebase]({{ site.baseurl }}/technics-shared-codebase/).
 
 ## The custom-data flash
 
@@ -85,7 +85,7 @@ with holly over sheet music):
 <figure style="margin:1rem 0;text-align:center;"><img src="{{ "/assets/images/kn7000/idd7000-homepage.png" | relative_url }}" alt="Initial Data disk home-page image, 160x100" style="image-rendering:pixelated;width:320px;max-width:100%;border:1px solid #ccc;border-radius:3px;"><figcaption style="font-size:0.8rem;color:#777;">The factory home-page image, carved from <code>04HPGINI.HMP</code> (160×100, 2× shown)</figcaption></figure>
 
 It is **byte-identical** to the image already in the program ROM at `0x48745718`
-(shown in the [Image Gallery](/kn7000-image-gallery/) as `program_345718`), so the
+(shown in the [Image Gallery]({{ site.baseurl }}/kn7000-image-gallery/) as `program_345718`), so the
 disk simply re-installs the factory default.
 
 ## The boot splash (and the "green screen")
@@ -145,4 +145,4 @@ styles); it is the **empty custom flash**. Populating it — by reversing the `.
 codec, or dumping a programmed part — is the fix.
 
 [kn7000_extraction]: https://github.com/felipesanches/kn5000_homebrew
-[disassembly]: /kn7000-firmware/
+[disassembly]: {{ site.baseurl }}/kn7000-firmware/

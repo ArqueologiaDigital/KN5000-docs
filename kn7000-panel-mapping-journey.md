@@ -10,7 +10,7 @@ permalink: /kn7000-panel-mapping/
 
 The Technics SX-KN7000 has a *lot* of front-panel buttons — well over a hundred, spread across
 rhythm styles, sound groups, performance pads, effects, transport controls, part mixers, and a
-cluster of system keys around the LCD. For the [work-in-progress MAME driver](/kn7000-roadmap/)
+cluster of system keys around the LCD. For the [work-in-progress MAME driver]({{ site.baseurl }}/kn7000-roadmap/)
 to feel like a real KN7000, every one of those buttons has to send the right signal to the
 emulated firmware. This post is the story of how we got most of the way there — including a few
 wrong turns that are worth telling.
@@ -106,4 +106,4 @@ how emulation and reverse engineering feed each other: a working (if incomplete)
 the instrument that helped map the very hardware it emulates.
 
 *The button map lives in `notes/panel-button-map.md` in the driver overlay repo; the running
-tally is on the [KN7000 roadmap](/kn7000-roadmap/).*
+tally is on the [KN7000 roadmap]({{ site.baseurl }}/kn7000-roadmap/).*

@@ -9,7 +9,7 @@ permalink: /kn7000-effects-dsp/
 The KN7000's reverb, chorus, multi-effects and equalizer all run on **IC306**,
 an **Analog Devices ADSP-21065L** — a 32-bit floating-point "SHARC" DSP (part
 marking `S21065LKS240`, run at 66 MHz), with two 16-Mbit SDRAMs (IC307/IC308) for
-delay memory. It sits on the [sound board](/kn7000-sound-subsystem/) between the
+delay memory. It sits on the [sound board]({{ site.baseurl }}/kn7000-sound-subsystem/) between the
 tone generators and the main DAC.
 
 The striking result of reverse-engineering it: **the DSP has no boot ROM, and
@@ -149,14 +149,14 @@ The KN6000 and KN6500 use the **same** ADSP-21065L and carry a **byte-identical*
 program pool to one another; compared with the KN7000, the kernel's data tables
 match while the program code is a slightly older build. One DSP model and one
 effect analysis therefore serve all three instruments — see the
-[KN6000/KN6500 notes](/kn6000-hardware/). (The KN5000 is different: its effects
+[KN6000/KN6500 notes]({{ site.baseurl }}/kn6000-hardware/). (The KN5000 is different: its effects
 run on two fixed-function ASICs with undumped internal ROM, so its effect
 algorithms are *not* recoverable the way the KN7000's are.)
 
 ## Why this matters for emulation
 
 Unlike the tone-generator side — which is blocked by the
-[undumped wave ROMs](/kn7000-sound-subsystem/) — the effects DSP is **fully
+[undumped wave ROMs]({{ site.baseurl }}/kn7000-sound-subsystem/) — the effects DSP is **fully
 recoverable from data we already have**. Both the DSP core and its programs
 exist, and the integration path is now completely mapped out:
 

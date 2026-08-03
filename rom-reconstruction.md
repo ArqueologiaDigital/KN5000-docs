@@ -537,7 +537,7 @@ This milestone significantly improves codebase navigability and makes the disass
 
 **All C screen data `.handler` fields now use symbolic references** — 52 handler symbols across 2 linker scripts (`maincpu.ld`, `ctlonly.ld`) replace raw numeric addresses in the C-compiled screen data structures, enabling cross-reference navigation and maintaining the link between C UI definitions and assembly handler routines.
 
-**IC307 waveform ROM format fully decoded** — The waveform ROM (IC307, 4MB) format has been fully reverse-engineered: 16-bit signed PCM samples at 32kHz, organized as a sample table (512 entries with start/end/loop addresses) followed by raw sample data. See [Waveform ROM Format](/waveform-rom-format/) for full documentation.
+**IC307 waveform ROM format fully decoded** — The waveform ROM (IC307, 4MB) format has been fully reverse-engineered: 16-bit signed PCM samples at 32kHz, organized as a sample table (512 entries with start/end/loop addresses) followed by raw sample data. See [Waveform ROM Format]({{ site.baseurl }}/waveform-rom-format/) for full documentation.
 
 ### Binary Include Splitting
 

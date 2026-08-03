@@ -311,11 +311,11 @@ Key MIDI state variables maintained in DRAM:
 
 ## References
 
-- [MIDI Subsystem](/midi-subsystem/) — Internal MIDI processing (Sub CPU)
-- [SysEx Messages](/sysex-messages/) — System Exclusive message formats
-- [Audio Subsystem](/audio-subsystem/) — Sound generation
-- [Sequencer](/sequencer/) — MIDI recording and playback
-- [CPU Subsystem](/cpu-subsystem/) — TMP94C241F serial channel details
+- [MIDI Subsystem]({{ site.baseurl }}/midi-subsystem/) — Internal MIDI processing (Sub CPU)
+- [SysEx Messages]({{ site.baseurl }}/sysex-messages/) — System Exclusive message formats
+- [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) — Sound generation
+- [Sequencer]({{ site.baseurl }}/sequencer/) — MIDI recording and playback
+- [CPU Subsystem]({{ site.baseurl }}/cpu-subsystem/) — TMP94C241F serial channel details
 
 ---
 

@@ -311,8 +311,8 @@ The accompaniment engine has its own MIDI filter system:
 
 ## Research Needed
 
-- [x] ~~Document external MIDI serial port configuration~~ — Complete: see [MIDI Serial I/O](/midi-serial-io/)
-- [x] ~~Analyze MIDI routing logic in Main CPU~~ — Complete: see [MIDI Serial I/O](/midi-serial-io/)
-- [x] ~~Document Technics SysEx message format~~ — Complete: see [SysEx Messages](/sysex-messages/)
+- [x] ~~Document external MIDI serial port configuration~~ — Complete: see [MIDI Serial I/O]({{ site.baseurl }}/midi-serial-io/)
+- [x] ~~Analyze MIDI routing logic in Main CPU~~ — Complete: see [MIDI Serial I/O]({{ site.baseurl }}/midi-serial-io/)
+- [x] ~~Document Technics SysEx message format~~ — Complete: see [SysEx Messages]({{ site.baseurl }}/sysex-messages/)
 - [x] ~~Document MIDI filter and channel assignment settings~~ — Complete: 26 voice channels, voice data tables (0xEDB264, 0xEDAE64, 0xEE8EB8-0xEE8F70), channel lookup functions, multi-layer voice system (0-4 layers per channel), drum channel special-casing (0x48), Sub CPU filter tables, accompaniment MIDI filtering
 - [x] ~~Map remaining proprietary CC handlers (0x97, 0x9B-0x9D)~~ — Complete: CC91=freq mult, CC95=portamento, CC97=fine pitch, CC9B=vibrato depth, CC9C=vibrato enable, CC9D=tremolo depth

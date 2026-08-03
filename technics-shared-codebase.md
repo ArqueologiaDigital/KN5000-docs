@@ -12,8 +12,8 @@ match** — which is valuable precisely because the two machines use **different
 CPU architectures**, so any similarity must originate above the machine-code
 level, in shared *source*.
 
-> **The key constraint:** the [KN5000](/cpu-subsystem/) runs a Toshiba
-> **TLCS-900/H2**; the [KN7000](/kn7000/) runs a Panasonic **MN10300/AM33**.
+> **The key constraint:** the [KN5000]({{ site.baseurl }}/cpu-subsystem/) runs a Toshiba
+> **TLCS-900/H2**; the [KN7000]({{ site.baseurl }}/kn7000/) runs a Panasonic **MN10300/AM33**.
 > Compiled machine code therefore **cannot** be shared. Everything that *does*
 > match — identifier names, resource tables, message text, numeric constants —
 > is evidence of a shared source tree that was **recompiled** for each target.
@@ -152,7 +152,7 @@ Shared reuse stops cleanly at the application layer:
 | Layer | KN5000 | KN7000 |
 |-------|--------|--------|
 | RTOS/kernel | custom (no banner) | `MILK MN10300 Ver1.0R1` @ `0x3B8AAC` |
-| Compression | [LZSS](/lzss-compression/) | LZSS **and** zlib/deflate 1.0.4 @ `0x3B8604` |
+| Compression | [LZSS]({{ site.baseurl }}/lzss-compression/) | LZSS **and** zlib/deflate 1.0.4 @ `0x3B8604` |
 | Photo/demo images | headerless 8bpp bitmaps | *adds* JPEG (Adobe Photoshop) + Windows BMP |
 | Tone-init helper | `SwbtWr` @ `0x1F410` | absent (sound-init layer reworked) |
 | Version widgets | — | KN7000-only `AcProgVerBoxProc`, `IvMpVerWinProc`, `DefaultWindow` (same naming grammar) |
@@ -165,7 +165,7 @@ Note that the image *divergence* is only partial: the KN7000 **adds** JPEG for
 photos and demo art but still stores its **UI icons as headerless
 palette-indexed bitmaps reached through a `{width, height, pointer}` descriptor
 hierarchy — the same design as the KN5000** (293 such bitmaps, including a 240
-sprite icon set; see the [KN7000 image gallery](/kn7000-image-gallery/#raw-ui-bitmaps-table-rom)).
+sprite icon set; see the [KN7000 image gallery]({{ site.baseurl }}/kn7000-image-gallery/#raw-ui-bitmaps-table-rom)).
 So even the graphics pipeline is shared at the UI layer; only the photo/demo
 asset format was modernised.
 
@@ -173,10 +173,10 @@ asset format was modernised.
 
 Independently of the firmware, the update subsystem is the same across models —
 same `.SLD` container, same 24-bit big-endian size field, same 4 KB
-[LZSS](/lzss-compression/), same `.INF` checksum sidecar — only the magic string
+[LZSS]({{ site.baseurl }}/lzss-compression/), same `.INF` checksum sidecar — only the magic string
 differs (`SLIDE4K` → `JKPRG4K`/`JKTB14K`/`JKTB24K`). See
-[KN7000 System Update Discs](/kn7000-system-update-discs/) and the KN5000's
-[System Update Discs](/system-update-discs/).
+[KN7000 System Update Discs]({{ site.baseurl }}/kn7000-system-update-discs/) and the KN5000's
+[System Update Discs]({{ site.baseurl }}/system-update-discs/).
 
 ## Why this matters
 

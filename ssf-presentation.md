@@ -704,7 +704,7 @@ flowchart TD
 
 ### DSP Status Polling Bug
 
-The SubCPU's DSP ready signal (Port H bit 0) was not connected in MAME, causing every DSP operation to spin through 8,000 timeout iterations. This dramatically inflated the SwbtWr blocking time. See [Tone Generator Initialization — DSP Status Polling Bug](/swbwr-tone-init/#dsp-status-polling-bug-march-2026-discovery) for the full analysis.
+The SubCPU's DSP ready signal (Port H bit 0) was not connected in MAME, causing every DSP operation to spin through 8,000 timeout iterations. This dramatically inflated the SwbtWr blocking time. See [Tone Generator Initialization — DSP Status Polling Bug]({{ site.baseurl }}/swbwr-tone-init/#dsp-status-polling-bug-march-2026-discovery) for the full analysis.
 
 ### Lua Diagnostic Trace Results
 

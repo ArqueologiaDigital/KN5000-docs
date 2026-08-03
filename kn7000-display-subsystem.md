@@ -9,9 +9,9 @@ permalink: /kn7000-display-subsystem/
 The KN7000 draws its UI to an LCD through the MILK toolkit's graphics layer:
 palette-indexed bitmaps and text, composited by a family of blit routines and
 handed to the LCD controller. This page ties the **hardware** (the LCD I/O bank
-and framebuffer window found by [analysing the boot](/kn7000/)) to the
+and framebuffer window found by [analysing the boot]({{ site.baseurl }}/kn7000/)) to the
 **firmware** (the drawing functions recovered by name in the
-[disassembly](/kn7000-firmware/)). Addresses are decoded from
+[disassembly]({{ site.baseurl }}/kn7000-firmware/)). Addresses are decoded from
 `kn7000_program.rom`; work-RAM globals are in the `0x50000000` region.
 
 ## Panel type: colour vs 2-bit grayscale
@@ -37,7 +37,7 @@ the 2-bit panel.
 ## Palette-indexed bitmaps
 
 UI artwork is stored as **headerless palette-indexed bitmaps** (the same design
-as the KN5000 — see the [Table image format](/kn7000-firmware/)). Pixels are
+as the KN5000 — see the [Table image format]({{ site.baseurl }}/kn7000-firmware/)). Pixels are
 raw palette indices, row-major; the bit depth is 2, 4 or 8 bpp. The blit API has
 a **dedicated fast path per depth**, which is how the depths are known:
 
@@ -62,7 +62,7 @@ Indices are resolved through a **256-entry colour look-up table**, stored in the
 program image at file **`0x32573C`**. Each entry is a 32-bit **`0x00BBGGRR`**
 (BGR-order) word — proven by the named colour constants below (`CL_Red` = index
 `0xF9` = stored `0x000000FF`, i.e. the *low* byte is red). It is the first data
-structure the [disassembly project](/kn7000-firmware/) lifted from raw bytes into
+structure the [disassembly project]({{ site.baseurl }}/kn7000-firmware/) lifted from raw bytes into
 typed source. At runtime the palette is manipulated through `SetPaletteRGB`
 (`0x4842D9F1`), `GetPaletteRGB` (`0x4842DB23`) and `GetPaletteRGB4`
 (`0x4842DB30`); `ConvPaletteMono4` (`0x4842DC88`) derives the 2-bit-panel
@@ -106,16 +106,16 @@ so a descriptor holds the glyph height at `+2` (and further metrics beyond).
 `GetFontCount` / `GetFontNameTable` enumerate the installed fonts, and
 `ConvertStrings` / `ConvertStringsEx` render/transform strings — the KN7000 draws
 English/German/French/Spanish/Indonesian text plus a Japanese developer entry
-(see [firmware strings](/kn7000-firmware/)).
+(see [firmware strings]({{ site.baseurl }}/kn7000-firmware/)).
 
 ## LCD hardware
 
 Two hardware regions serve the display, both recovered without a schematic:
 
 * **LCD controller I/O — `0x34000000` bank.** The
-  [I/O register map](/kn7000/#io-register-map-from-firmware-analysis) found this
+  [I/O register map]({{ site.baseurl }}/kn7000/#io-register-map-from-firmware-analysis) found this
   to be the largest peripheral block (**58 registers**, dense 16-bit writes at
-  `0x34000108…0x34000280` plus byte sub-blocks). The [boot trace](/kn7000/) shows
+  `0x34000108…0x34000280` plus byte sub-blocks). The [boot trace]({{ site.baseurl }}/kn7000/) shows
   it being programmed during initialisation (`0x34000280 ← 0xFFFF`, …) alongside
   the `0x36008000` control/GPIO port.
 * **Framebuffer / video window — `0x90000000`** (and a second window at
@@ -128,8 +128,8 @@ Two hardware regions serve the display, both recovered without a schematic:
 
 The bitmap storage design, the transparent index `0xF7`, the CLUT approach and
 the `Draw*`/`…Proc` naming are all **shared with the KN5000**
-([Shared Codebase Map](/technics-shared-codebase/)); the KN5000
-[Display subsystem](/display-subsystem/) page is the conceptual companion. What
+([Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/)); the KN5000
+[Display subsystem]({{ site.baseurl }}/display-subsystem/) page is the conceptual companion. What
 is KN7000-specific: the multiple **panel types** (colour and 2-bit) with runtime
 detection, standard **JPEG** artwork alongside the indexed bitmaps, and the
 `0x34000000`/`0x90000000` hardware addresses.

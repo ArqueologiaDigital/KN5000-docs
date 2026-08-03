@@ -11,7 +11,7 @@ and a full digital effects chain. This page describes the sound hardware as
 drawn in the service manual and as driven by the firmware: two tone-generator
 LSIs playing samples from four wave ROMs, a floating-point effects DSP, and the
 DACs and analog stages that reach the speakers. The dedicated
-[Effects DSP page](/kn7000-effects-dsp/) covers the DSP's programs in depth.
+[Effects DSP page]({{ site.baseurl }}/kn7000-effects-dsp/) covers the DSP's programs in depth.
 
 Addresses are decoded from `kn7000_program.rom` (mapped at CPU `0x48400000`);
 I/O registers live in the `0x98000000` sound bank. Chip identities are from the
@@ -77,7 +77,7 @@ A register access packs a 16-bit **address** and 16-bit **data** into the two
 adjacent ports. At idle the firmware writes a cyclic `0xFC0x` "system refresh"
 pattern; a note-on writes a per-voice sequence (pitch, velocity, key-on strobe,
 pan, effect sends) very much like the documented
-[KN5000 tone generator](/tone-generator/), whose register map is the working
+[KN5000 tone generator]({{ site.baseurl }}/tone-generator/), whose register map is the working
 template for decoding the KN7000's.
 
 ## Wave ROMs (IC203, IC204, IC207, IC208)
@@ -112,7 +112,7 @@ port (index register `0x98000000`, data register `0x9C000000`) and streams in
 the reverb, chorus, multi-effect and equalizer programs. Remarkably, **those
 programs are embedded in the dumped firmware**, so the entire effects engine is
 recoverable without the physical chip. The dedicated
-[Effects DSP page](/kn7000-effects-dsp/) documents the host protocol, the
+[Effects DSP page]({{ site.baseurl }}/kn7000-effects-dsp/) documents the host protocol, the
 runtime, and every effect algorithm.
 
 ## DACs, ADCs and the analog path
@@ -285,4 +285,4 @@ MAME's SHARC recompiler enabled) and routes the tone-generator audio through it.
 Four effect units are driven and audible, each with its own return level — reverb,
 chorus, the Sound DSP, and the multi-effect — and the reverb's on/off tail works: a
 MODE1 `ALUSAT` saturation fix in the SHARC recompiler stopped the reverb's feedback
-path from railing. See the [Effects DSP page](/kn7000-effects-dsp/).
+path from railing. See the [Effects DSP page]({{ site.baseurl }}/kn7000-effects-dsp/).

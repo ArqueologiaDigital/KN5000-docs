@@ -37,7 +37,7 @@ Example full-screen reference screens, extracted verbatim from the ROM:
 ![KN7000 ORGAN STYLIST style-list reference]({{ site.baseurl }}/assets/images/table-rom/organ-stylist.jpg)
 
 The ORGAN STYLIST list above shows real style names (`Swing Tonewheels`, `Classic B3 Jazz`, …) that
-match the [built-in rhythm catalog](/kn7000-rhythm-catalog/) recovered from the program ROM.
+match the [built-in rhythm catalog]({{ site.baseurl }}/kn7000-rhythm-catalog/) recovered from the program ROM.
 
 A smaller `240×160` panel graphic:
 
@@ -46,5 +46,5 @@ A smaller `240×160` panel graphic:
 ## Reproduce
 De-interleave `kn7000_table_{even,odd}.rom` (`out[0::4]=e[0::2]; out[1::4]=e[1::2]; out[2::4]=o[0::2];
 out[3::4]=o[1::2]`) → 4 MB image; walk the u32 directory at offset 0; extract JPEGs by scanning
-`ff d8 ff e0` → `ff d9`. See also the [firmware images](/kn7000-firmware/) page for the full
+`ff d8 ff e0` → `ff d9`. See also the [firmware images]({{ site.baseurl }}/kn7000-firmware/) page for the full
 per-segment breakdown; technical detail in `kn7000_mame/notes/table-rom-format.md`.

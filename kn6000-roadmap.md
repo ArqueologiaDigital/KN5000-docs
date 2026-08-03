@@ -7,12 +7,12 @@ permalink: /kn6000-roadmap/
 # KN6000 / KN6500 — preservation plan
 
 Goal: reproduce, for the Technics **SX-KN6000** and **SX-KN6500**, everything the
-project achieved for the [KN5000](/system-overview/) and
-[KN7000](/kn7000-roadmap/) — extraction, ROM reconstruction, a byte-exact
+project achieved for the [KN5000]({{ site.baseurl }}/system-overview/) and
+[KN7000]({{ site.baseurl }}/kn7000-roadmap/) — extraction, ROM reconstruction, a byte-exact
 disassembly, symbol recovery, table-ROM asset decoding, and a MAME driver with an
 MN10300 CPU core.
 
-The IC-level **[hardware architecture](/kn6000-hardware/)** has been recovered from
+The IC-level **[hardware architecture]({{ site.baseurl }}/kn6000-hardware/)** has been recovered from
 the *Technics SX-KN6000* (89-page) and *SX-KN6500* (142-page) service manuals —
 main CPU **MN10300** (`MN103002A`), program flash `IC11/IC12`, custom-data flash
 `IC18` (defaulted from the Initial Data Disk), tone-generator LSI, DSP, four 64 Mbit
@@ -135,7 +135,7 @@ per-model deltas.
 ## Status & next steps (updated 2026-07-07)
 
 **Done:** firmware extracted (all four `IK*/IKV*.SLD` images); [hardware mapped from
-the service manuals](/kn6000-hardware/); **draft MAME drivers built** — `kn6000` and
+the service manuals]({{ site.baseurl }}/kn6000-hardware/); **draft MAME drivers built** — `kn6000` and
 `kn6500` are registered in the shared `kn7000_mame` tree (reusing `kn7000_state` and
 the KN7000 machine config, same verified `0x48400000` program base), build into the
 one binary alongside `kn7000`, pass `-verifyroms`, and run their MN10300 firmware at
@@ -143,7 +143,7 @@ one binary alongside `kn7000`, pass `-verifyroms`, and run their MN10300 firmwar
 library=program-ROM mirror, tick-delay past object creation, on-chip ms-timer as INTC
 group 7, and routing IRQs to the firmware's general handler rather than its fault
 vector) — **both now BOOT TO THEIR MAIN PLAY SCREEN** (commit `805cb46`): the
-tone/sound-group icon row, menu bars, and status bar render. **[Table-ROM name inventories extracted](/kn6000-names/)**:
+tone/sound-group icon row, menu bars, and status bar render. **[Table-ROM name inventories extracted]({{ site.baseurl }}/kn6000-names/)**:
 KN6000 4,440 strings (1,963 internal MILK GUI symbol names + user-facing style/sound
 names), KN6500 4,189 (2,006 symbols) — via the new NUL-walk `name_extract_nul.py`.
 
@@ -162,6 +162,6 @@ The user is supplying more devices for the same consolidated treatment
 (`kn26-11.zip` + `KN2600_CD-Rom.zip`), a **PR804** CD-ROM, and additional KN7000
 material (`kn7-14`/`kn7-16` firmware, `KN7000_CD-Rom.zip`, `scd7000`, `idd7000`,
 `ca7001`, `custom1/2`). **KN2400/KN2600 are now emulated** — see
-[KN2400 / KN2600 / PR54](/kn2400-kn2600/) (MN10300/MILK, the KN7000's closest siblings;
+[KN2400 / KN2600 / PR54]({{ site.baseurl }}/kn2400-kn2600/) (MN10300/MILK, the KN7000's closest siblings;
 one firmware serves KN2400/KN2600/PR54). Remaining triage: the PR804 CD-ROM and the extra
 KN7000 material; add a `pr54` clone once its exact model designation is confirmed.

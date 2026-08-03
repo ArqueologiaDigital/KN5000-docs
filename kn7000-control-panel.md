@@ -115,7 +115,7 @@ rather than fixed logic.
 ## Switch input → events
 
 When a sub-CPU reports a switch change, the main CPU turns it into a MILK
-[event](/kn7000-event-system/) delivered to the focused object. The panel input
+[event]({{ site.baseurl }}/kn7000-event-system/) delivered to the focused object. The panel input
 events form a recognisable family:
 
 * **general switches** — `EV_SWON`, `EV_SWOFF`, `EV_SWBOTH`, `EV_ASSSWB`
@@ -325,8 +325,8 @@ the error screen clears, and the KN7000 draws its home screen.
 
 Distributed panel scanning by dedicated sub-CPUs, the switch-to-event flow, and
 the data-dial focus model are **shared with the KN5000**
-([Shared Codebase Map](/technics-shared-codebase/), [Control panel
-protocol](/control-panel-protocol/)). The KN7000-specific detail observed here is
+([Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/), [Control panel
+protocol]({{ site.baseurl }}/control-panel-protocol/)). The KN7000-specific detail observed here is
 the set of **four** sub-CPUs (CPL/CPC/CPR/CPSD) and their concrete test-mode and
 handler names.
 

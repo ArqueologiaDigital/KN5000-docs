@@ -7,20 +7,20 @@ permalink: /kn7000-event-system/
 # KN7000 Event & Dispatch System
 
 The KN7000's user interface is **event-driven**, built on the same object-oriented
-"MILK" toolkit as the [KN5000](/ui-framework/). Screens are trees of *objects*
+"MILK" toolkit as the [KN5000]({{ site.baseurl }}/ui-framework/). Screens are trees of *objects*
 (windows, boxes, switches, list boxes…); the firmware delivers **events** to an
 object's *window procedure* (`…Proc`), which updates state and redraws. This page
 documents the KN7000 implementation as recovered from the firmware itself — the
 event-code table and the dispatch functions are both decoded directly from
 `kn7000_program.rom`, and the named functions below are converted to readable,
-re-assemblable source in the [disassembly project](/kn7000-firmware/).
+re-assemblable source in the [disassembly project]({{ site.baseurl }}/kn7000-firmware/).
 
 ## Event codes
 
 The firmware embeds a 60-entry name table (program file `0x326BF0`) enumerating
 every event type. The **event code is the table index**, so `EV_NONE = 0`,
 `EV_SHOW = 1`, and so on. These are identical in spirit to the KN5000's
-[event codes](/event-codes/) — the shared framework — with KN7000-specific
+[event codes]({{ site.baseurl }}/event-codes/) — the shared framework — with KN7000-specific
 additions (SD card, wallpaper preview, DSP sound names).
 
 | Code | Name | Code | Name |
@@ -134,7 +134,7 @@ precisely because it acts on the *current* object rather than a passed-in one �
 the detail that finally disambiguated the reflection-table alignment, see below.) The window procedure itself is
 looked up through the toolkit's `MT_GetProcedure` mechanism — the same
 reflection tables that let us recover **518 `*Proc` handlers** by name (see the
-[firmware page](/kn7000-firmware/)). A handler is therefore a function that
+[firmware page]({{ site.baseurl }}/kn7000-firmware/)). A handler is therefore a function that
 switches on the event code and acts:
 
 ```c
@@ -165,8 +165,8 @@ similarly argument-less `InitializeEventQueue`.
 
 The event **names, codes and dispatch shape are shared** with the KN5000 — both
 firmwares are re-targets of one MILK-based source tree (see the
-[Shared Codebase Map](/technics-shared-codebase/)). What differs is machine-
+[Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/)). What differs is machine-
 specific: the KN7000 adds SD-card, wallpaper and DSP-sound events, runs on the
 MN10300 rather than the TLCS-900, and keeps its object table at a different RAM
-address. The KN5000 [Event Codes](/event-codes/) and [UI Framework](/ui-framework/)
+address. The KN5000 [Event Codes]({{ site.baseurl }}/event-codes/) and [UI Framework]({{ site.baseurl }}/ui-framework/)
 pages remain the best conceptual companions to this one.

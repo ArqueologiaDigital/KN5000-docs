@@ -8,8 +8,8 @@ permalink: /kn7000-system-update-discs/
 
 The Technics SX-KN7000 receives firmware and data updates from floppy disks
 containing LZSS-compressed `.SLD` files. The container is the same family as the
-[KN5000's `SLIDE4K` format](/system-update-discs/) and the same
-[LZSS scheme](/lzss-compression/), with different magic strings.
+[KN5000's `SLIDE4K` format]({{ site.baseurl }}/system-update-discs/) and the same
+[LZSS scheme]({{ site.baseurl }}/lzss-compression/), with different magic strings.
 
 All findings below were verified by extracting the images and checking them
 against the checksums shipped on the disks.
@@ -91,5 +91,5 @@ disks of each set, and verifies the result against the `.INF` manifest before
 writing `kn7000_program.rom` and `kn7000_table.rom`. It reuses the same LZSS
 decompressor used for the KN5000 (`pylzss`, 4 KB window, zero-initialized).
 
-See the [Firmware Images](/kn7000-firmware/) page for what the extracted images
+See the [Firmware Images]({{ site.baseurl }}/kn7000-firmware/) page for what the extracted images
 contain.

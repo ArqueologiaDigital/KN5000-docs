@@ -12,7 +12,7 @@ driven through one **File Management Mode (FMM)** in the firmware. The SD slot a
 USB link are **new versus the KN5000** (which had only the floppy drive). This
 page documents the storage subsystem from `kn7000_program.rom`: the media, the
 file types, and the file-manager function family, all recovered by name from the
-[reflection tables](/kn7000-firmware/).
+[reflection tables]({{ site.baseurl }}/kn7000-firmware/).
 
 ## Storage media
 
@@ -163,7 +163,7 @@ FDC is wired, but the floppy **FORMAT** path is still open.
 ## Relationship to the KN5000
 
 The floppy/FAT layer and the FMM screen design are **shared with the KN5000**
-([Storage / FDC](/fdc-subsystem/), [Shared Codebase Map](/technics-shared-codebase/)).
+([Storage / FDC]({{ site.baseurl }}/fdc-subsystem/), [Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/)).
 The KN7000 **extends** it with the SD-card slot (folders, playlists, rename — a
 much richer file model) and the USB *Song Manager* PC link, neither of which the
 KN5000 had. Those additions are visible precisely as the extra `Sdc*` / USB

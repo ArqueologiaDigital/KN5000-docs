@@ -55,8 +55,8 @@ fact of this roadmap and it shapes every proposal below.
 writes: the Initial Data Disk payload is inflated and written **verbatim to flash offset
 `0x20000`**, the top 30 of the 64 KiB sectors of a 16 Mbit bottom-boot device. Nine images are
 declared for the KN7000 (factory default plus eight published data sets) and one shared IDD6000
-payload for the KN6000 and KN6500. See [Custom Data Flash](/custom-data-flash/) and
-[KN7000 Initial Data](/kn7000-initial-data/).
+payload for the KN6000 and KN6500. See [Custom Data Flash]({{ site.baseurl }}/custom-data-flash/) and
+[KN7000 Initial Data]({{ site.baseurl }}/kn7000-initial-data/).
 
 **HD-SX3 expansion firmware.** 768 KiB, decompressed from `EXTAPR.SLD` in 2026-08-02 — the first
 time this image had been recovered.
@@ -130,7 +130,7 @@ mask ROMs above without anyone touching hardware.
 **Proposal.** Sweep dealer archives, the Wayback Machine, European Technics user groups (the
 KN-series had an active German-language community), and collector CD-ROMs for `.SLD`/`.AST` files
 whose 8-byte magic is not one we already recognise. The container is documented in
-[LZSS Compression](/lzss-compression/); the magic letter is sequential by generation
+[LZSS Compression]({{ site.baseurl }}/lzss-compression/); the magic letter is sequential by generation
 (KN5000 `H`, KN6000 `I`, KN7000 `J`).
 
 *Applies to:* potentially the table/font and rhythm devices on every model. Not the wave ROMs,
@@ -142,10 +142,10 @@ The main CPU can address several of these devices directly. A small program uplo
 existing path can read a ROM and stream it out.
 
 **Proposal.** Establish which regions the CPU can see from the memory map
-([Memory Map](/memory-map/)), then use one of the exfiltration routes the firmware already
+([Memory Map]({{ site.baseurl }}/memory-map/)), then use one of the exfiltration routes the firmware already
 implements — MIDI system-exclusive dump, the serial port, floppy write, or SD write on models that
 have it. This is how homebrew on the HD-AE5000 already works; see
-[HD-AE5000 Homebrew](/hdae5000-homebrew/).
+[HD-AE5000 Homebrew]({{ site.baseurl }}/hdae5000-homebrew/).
 
 *Applies to:* IC18/IC19 on the KN7000, IC15 and the table/font devices on the KN6xxx — anything on
 the CPU bus. On the **KN7000 the wave ROMs also qualify** (see Method B′); on the KN5000 they do not.
@@ -198,7 +198,7 @@ acquire than a working one. **Prefer a dead donor over a working instrument in e
 `IC414` (KN7000) and `IC404` (KN2600) are the SD-card sub-CPU's own program flash.
 
 **Proposal.** The inter-CPU protocol is already documented for this family
-([Inter-CPU Protocol](/inter-cpu-protocol/), [Sub-CPU Command Format](/subcpu-command-format/)).
+([Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/), [Sub-CPU Command Format]({{ site.baseurl }}/subcpu-command-format/)).
 Check whether the sub-CPU implements a memory-read or firmware-verify command; the main CPU has to
 be able to validate a sub-CPU update somehow, and whatever mechanism does that is likely readable.
 This is a firmware reverse-engineering task, not a hardware one, and costs nothing to attempt.
@@ -213,7 +213,7 @@ better than checking it against our own expectations.
 **The ROM DEVICE TEST.** These machines have a service-mode self-test that computes and displays
 checksums per device — the KN7000 firmware contains display strings of the form
 `CUSTOM FLASH:     IC21 =`. Entering that mode on a real instrument and photographing the values
-gives an oracle for every device it covers. See [Test Modes](/test-modes/).
+gives an oracle for every device it covers. See [Test Modes]({{ site.baseurl }}/test-modes/).
 
 > **This is the single highest-value thing an owner can contribute without any disassembly**:
 > enter the ROM device test and photograph the screen. It costs nothing, risks nothing, and turns
@@ -250,7 +250,7 @@ instruments that agree byte-for-byte are strong evidence against a bad read.
 
 ## See also
 
-- [MAME Pull Requests](/mame-pull-requests/) — how these declarations reach upstream
-- [Custom Data Flash](/custom-data-flash/) · [KN7000 Initial Data](/kn7000-initial-data/)
-- [ROM Reconstruction](/rom-reconstruction/) · [LZSS Compression](/lzss-compression/)
-- [Flash Programming](/flash-programming/) · [Test Modes](/test-modes/)
+- [MAME Pull Requests]({{ site.baseurl }}/mame-pull-requests/) — how these declarations reach upstream
+- [Custom Data Flash]({{ site.baseurl }}/custom-data-flash/) · [KN7000 Initial Data]({{ site.baseurl }}/kn7000-initial-data/)
+- [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) · [LZSS Compression]({{ site.baseurl }}/lzss-compression/)
+- [Flash Programming]({{ site.baseurl }}/flash-programming/) · [Test Modes]({{ site.baseurl }}/test-modes/)

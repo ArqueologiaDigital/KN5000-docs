@@ -123,8 +123,8 @@ only. Wallpaper (`0x3C0000`), registration (`0x3D3000`) and SubCPU staging (`0x3
 touched by a disk install.
 
 > **Contrast with the KN6000/KN6500/KN7000**, whose `.AST` payload *is* written verbatim, at flash
-> offset `0x20000`. Only the KN5000 stamps. See [ROM Dumping Roadmap](/rom-dumping-roadmap/) and
-> [KN7000 Initial Data](/kn7000-initial-data/).
+> offset `0x20000`. Only the KN5000 stamps. See [ROM Dumping Roadmap]({{ site.baseurl }}/rom-dumping-roadmap/) and
+> [KN7000 Initial Data]({{ site.baseurl }}/kn7000-initial-data/).
 
 ## Registration Memory (0x3D3000)
 

@@ -1138,7 +1138,7 @@ The following bugs in MAME's TMP94C241 serial emulation were discovered and fixe
 | **Wrong header encoding** | Left panel used `0x40\|segment` (bits 7:6=01, dead zone) | Changed to `0xC0\|segment` (bits 7:6=11) |
 | **Ghost button toggles** | MAME input ports return momentary single-bit glitches | Per-segment confirmation (2 consecutive scans) |
 
-See also: [Serial Firmware Compatibility](/serial-firmware-compatibility/) for full debugging history.
+See also: [Serial Firmware Compatibility]({{ site.baseurl }}/serial-firmware-compatibility/) for full debugging history.
 
 ## 9. Protocol Gaps (What We Don't Know)
 
