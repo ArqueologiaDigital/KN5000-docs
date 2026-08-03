@@ -119,10 +119,15 @@ Pushing on "which main-CPU register is the link" narrows it sharply, mostly by e
   runs only on demand. **No boot stub is needed** — HLE is required only to make the USB *features*
   work, which lowers its priority and de-risks it.
 
-**Next probe:** the fastest route to the exact port/bit is dynamic — run the emulator, open the MIDI
-menu's *Computer Connection* screen (or the Audio Recorder), and log GPIO activity; the pins toggled
-only there are the link. Then the firmware bit-bang routine and the mode-write handler give the command
-framing to HLE. (The link may also be a relative of the KN5000/HD-AE5000 "CP-serial" protocol.)
+**Dynamic trace, and the real gate.** A Lua GPIO/SIO tracer was driven straight to **MIDI MENU →
+Computer Connection** using the (fully mapped) LCD soft-keys, and the mode was cycled on-screen. The
+result is a clean negative: *opening the screen and changing the mode produce only control-panel serial
+traffic* — SIO channel 0 muxed by GPIO `0x36008024`/`0x36008064`, driven from `0x484AC6xx-0x484ACDxx`.
+**No USB communication fires.** The USB co-processor only starts talking to the main CPU once a PC is
+physically attached (VBUS + enumeration); with no PC and the (undumped) USB controller unmodelled,
+nothing raises "connected", so the main CPU never drives the link. Reaching the USB bit-bang is
+therefore a firmware/HLE task — modelling the controller's connected/enumeration handshake — not a
+UI-navigation one.
 
 ## See also
 
