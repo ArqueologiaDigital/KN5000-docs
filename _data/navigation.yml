@@ -37,6 +37,8 @@
       url: /kn7000-wave-rom-dump/
     - title: Firmware Robustness & ROM Archival
       url: /kn7000-firmware-security/
+    - title: "Program-ROM Clip Read (IC16/IC17)"
+      url: /kn7000-program-rom-clip-read/
     - title: Storage & File System
       url: /kn7000-storage-subsystem/
     - title: USB Subsystem
