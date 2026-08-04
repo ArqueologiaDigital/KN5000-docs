@@ -35,6 +35,8 @@
       url: /kn7000-expansion-and-wave-dump/
     - title: "Wave-ROM Dump Tutorial (Pi Pico)"
       url: /kn7000-wave-rom-dump/
+    - title: Firmware Robustness & ROM Archival
+      url: /kn7000-firmware-security/
     - title: Storage & File System
       url: /kn7000-storage-subsystem/
     - title: USB Subsystem
