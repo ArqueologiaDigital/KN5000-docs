@@ -79,11 +79,22 @@ Two pointer tables are selected based on the keyboard model code stored in RAM:
 
 Each table contains 4-byte LE pointers to 198-byte preset records in the 0x951000 region. These records contain sound program names (e.g., "Easy Listening", "German Schlager") and associated parameters.
 
-## Demo Song System (0x988000)
+## Help System (0x988000)
 
-The demo song index table at 0x988000 contains **12 entries** of 4-byte LE pointers to demo song data in the 0x988030-0x9963FA range.
+The table at 0x988000 is **not** a demo-song index: it is the HELP system's language index -- **12 entries** of 4-byte LE pointers forming two parallel 6-slot tables, both indexed by the help-language number in RAM 0x0340E4:
 
-Demo category names at 0x99EC00 include:
+| Address | Table | Slot 0 | 1 | 2 | 3 | 4 | 5 |
+|:---|:---|:---|:---|:---|:---|:---|:---|
+| `0x988000` | `HelpIntro_LanguageTable` (intro strings) | EN `0x988030` | DE `0x988160` | FR `0x988296` | ES `0x988404` | EN again | ID `0x98855E` |
+| `0x988018` | `HelpDB_LanguageTable` (SLIDE8K databases) | EN `0x988690` | DE `0x98BB3A` | FR `0x98F0DA` | ES `0x992A0C` | EN again | ID `0x9963FA` |
+
+There are only five distinct languages (English, German, French, Spanish, Indonesian); slot 4 of both tables reuses English. The intro strings at 0x988030-0x98868F are the null-terminated Latin-1 paragraphs shown on the HELP start screen (`~0d` is the newline escape).
+
+Each database is a **SLIDE8K** container (11-byte header: `"SLIDE8K\0"` magic + 24-bit big-endian decompressed size) holding an LZSS stream -- 0x2000-byte window, write position starting at 0x1FF6, 13-bit absolute ring offsets, 3-10 byte match lengths. Every block decompresses to exactly **0x9000 (36,864) bytes**: a self-referential pointer table plus help-string pool based at RAM 0x69800. The help-language load path in the Main CPU ROM (near `HELPLANGCHKMAIN`) reads the block pointer from 0x988018 and calls `SLIDE_Parse_Header`, which dispatches on the `8` of the magic to `SLIDE_Decompress_8K_Init`.
+
+A sixth, *stale* SLIDE8K block sits at 0x983B3A: an older revision of the German database, referenced nowhere. Its stream is **truncated** -- the factory image wrote the two effect-preset pointer tables at 0x986000/0x987000 over its tail, so its decode matches the live German database for exactly 0x55E0 bytes and garbles beyond. All six blocks are preserved byte-exactly; the five live ones are rebuilt from decompressed sources in `table_data/includes/help_databases/` via `scripts/build/compress_slide8k.py --strict --reference` (see `table_data/help_databases.s`).
+
+The actual demo song sequence data lives above the help databases (from 0x9999CC), with demo category names at 0x99EC00:
 - "Tour Of The 5000"
 - "Accordion", "Piano Styles", "Jazz&Rock Organ"
 - "Church & Theatre", "Light Orchestra"
@@ -112,9 +123,9 @@ Referenced by `SetWallPaper` via the wallpaper table at 0xEAAE62 in the Main CPU
 
 ## LZSS Compressed Presets (0x8E0000)
 
-Factory preset data compressed using **SLIDE4K** algorithm. The section begins with an ASCII "SLIDE4K" marker followed by compression parameters and the compressed data stream (~28KB).
+Factory preset data compressed using the **SLIDE4K** algorithm. The block is an 11-byte header -- 8-byte `"SLIDE4K\0"` magic + 24-bit **big-endian** decompressed size -- followed by the LZSS stream: **27,967 bytes** in total (11-byte header + 27,956-byte stream, 0x8E0000-0x8E6D3E).
 
-Decompresses to ~33KB of parameter data (MIDI-range values 0-127). Referenced by `SubCPU_Send_Payload` during boot. If decompression fails, firmware falls back to data at 0x830000.
+Decompresses to **38,144 bytes (0x9500)** of parameter data (MIDI-range values 0-127) -- the Feature Demo preset, demo-preset entry 18. Referenced by `SubCPU_Send_Payload` during boot. If decompression fails, firmware falls back to data at 0x830000.
 
 ## First-Stage Bootloader (0x9FB4E8)
 
