@@ -8,7 +8,17 @@ permalink: /fdc-subsystem/
 
 This page documents the FDC (Floppy Disk Controller) handler routines from the KN5000 firmware. The FDC interfaces with a uPD72068GF-3B9 controller at IC208.
 
-**Status:** Many routines are disassembled below but not yet integrated into the assembly source (still stored as raw bytes with EQU labels).
+There are **two** FDC drivers in the machine, and they are different code:
+
+| driver | where | status |
+|--------|-------|--------|
+| runtime driver | Program ROM 0xF96B13-0xF97E80, `v10/maincpu/storage/fdc_routines.s` | partly symbolic; several routines are still emitted as raw bytes with inline-label comments |
+| first-stage bootloader driver | Table Data ROM 0x9FD8A5-0x9FEA9C, `table_data/boot_fdc_driver.s` | **fully labelled** since August 2026 (commit `65c79cb`); 84 labels, byte-matching rebuild |
+
+The bootloader driver is a compact port of the runtime one, and each of its routine
+headers names its runtime twin. That correspondence turned out to be the most useful
+thing about it: it settles what several of the runtime driver's guessed names actually
+do — see [What the boot twin corrects](#what-the-boot-twin-corrects).
 
 ---
 
@@ -521,24 +531,221 @@ reached when DMA3 is not armed.
 
 ## Handler Dispatch Table (0xF97D8D)
 
-The FDC uses a handler dispatch table starting at 0xF97D8D:
+The runtime driver dispatches through the 12-entry `u16` offset table
+`FDC_HANDLER_OFFSETS` at **0xEA98CA**, whose entries are relative to
+`FDC_HANDLER_DISPATCH_BASE` at 0xF97D8D. The offsets in the ROM are
+`0, 5, 13, 21, 29, 37, 45, 50, 55, 60, 65, 70`, which gives the handler entry points
+below. (The addresses in earlier revisions of this page were off by 1-14 bytes; these
+are the offsets read out of `kn5000_v10_program.rom` and they agree with
+`symbols/maincpu_symbols_reference.txt`.)
 
-| Index | Address | Handler Name | Description |
-|-------|---------|--------------|-------------|
-| 0 | F97D8D | DISPATCH_BASE | Basic handler (calls F97639) |
-| 1 | F97D93 | HANDLER_01 | CMD_ENABLE + FDC_CmdRecalibrate (formerly FDC_SeekRecalibrate) |
-| 2 | F97D99 | HANDLER_02 | CMD_ENABLE + STATUS_HANDLER |
-| 3 | F97D9F | HANDLER_03 | CMD_ENABLE + CMD_EXEC |
-| 4 | F97DA5 | HANDLER_04 | CMD_ENABLE + SECTOR_XFER |
-| 5 | F97DAB | HANDLER_05 | CMD_ENABLE + MODE_CONFIG |
-| 6 | F97DB1 | HANDLER_06 | CMD_ENABLE only |
-| 7 | F97DB5 | HANDLER_07 | CMD_DISABLE |
-| 8 | F97DB9 | HANDLER_08 | STATUS_COPY |
-| 9 | F97DBD | HANDLER_09 | OUTPUT_CTRL |
-| 10 | F97DC1 | HANDLER_10 | CMD_DISPATCH_SUB |
-| 11 | F97DC5 | HANDLER_11 | CMD_ENABLE + INTERRUPT_HANDLER |
+The index is the **command number** of the request — the same numbering the bootloader
+driver uses, which is how the "Command" column below is known:
 
-All handlers end by jumping to FDC_Handler_ExitStatus which sets the status flag and returns.
+| Cmd | Offset | Address | Handler | Body | Command meaning |
+|-----|--------|---------|---------|------|-----------------|
+| 0 | 0 | 0xF97D8D | `FDC_HANDLER_DISPATCH_BASE` | `FDC_InitSequence_Full` | initialize |
+| 1 | 5 | 0xF97D92 | `FDC_HANDLER_01` | `FDC_CMD_ENABLE` + `FDC_CmdRecalibrate` | recalibrate |
+| 2 | 13 | 0xF97D9A | `FDC_HANDLER_02` | `FDC_CMD_ENABLE` + `FDC_STATUS_HANDLER` | **seek** |
+| 3 | 21 | 0xF97DA2 | `FDC_HANDLER_03` | `FDC_CMD_ENABLE` + `FDC_CMD_EXEC` | **read sectors** |
+| 4 | 29 | 0xF97DAA | `FDC_HANDLER_04` | `FDC_CMD_ENABLE` + `FDC_SECTOR_XFER` | **write sectors** |
+| 5 | 37 | 0xF97DB2 | `FDC_HANDLER_05` | `FDC_CMD_ENABLE` + `FDC_MODE_CONFIG` | **format** |
+| 6 | 45 | 0xF97DBA | `FDC_HANDLER_06` | `FDC_CMD_ENABLE` only | motor on |
+| 7 | 50 | 0xF97DBF | `FDC_HANDLER_07` | `FDC_CMD_DISABLE` | motor off |
+| 8 | 55 | 0xF97DC4 | `FDC_HANDLER_08` | `FDC_STATUS_COPY` | get last error |
+| 9 | 60 | 0xF97DC9 | `FDC_HANDLER_09` | `FDC_OUTPUT_CTRL` | set disk-changed |
+| 10 | 65 | 0xF97DCE | `FDC_HANDLER_10` | `FDC_CMD_DISPATCH_SUB` | controller reset |
+| 11 | 70 | 0xF97DD3 | `FDC_HANDLER_11` | `FDC_CMD_ENABLE` + `FDC_INTERRUPT_HANDLER` | sense drive status |
+
+All handlers end by jumping to `FDC_Handler_ExitStatus`, which sets the status flag and returns.
+
+### What the boot twin corrects
+
+The runtime driver's routine names were assigned before the command numbering was known,
+and several of them describe the wrong thing. The bootloader twin (which *is* organised
+by command) settles them:
+
+| Runtime name | Actually | Bootloader twin |
+|--------------|----------|-----------------|
+| `FDC_STATUS_HANDLER` (0xF97696) | the **SEEK** handler — a misnomer | `FDC_CmdSeek` |
+| `FDC_CMD_EXEC` (0xF976E4) | read sectors | `FDC_CmdReadSectors` |
+| `FDC_SECTOR_XFER` (0xF97835) | write sectors | `FDC_CmdWriteSectors` |
+| `FDC_MODE_CONFIG` (0xF97984) | format | `FDC_CmdFormat` |
+| `FDC_CMD_ENABLE` (0xF97C21) | motor on | `FDC_CmdMotorOn` |
+| `FDC_CMD_DISABLE` (0xF97C4B) | motor off | `FDC_CmdMotorOff` |
+| `FDC_STATUS_COPY` (0xF97C54) | get last error | `FDC_CmdGetLastError` |
+| `FDC_OUTPUT_CTRL` (0xF97C5B) | set disk-changed | `FDC_CmdSetDiskChanged` |
+| `FDC_CMD_DISPATCH_SUB` (0xF96D95) | controller reset | `FDC_CmdControllerReset` |
+| `FDC_INTERRUPT_HANDLER` (0xF97C7C) | sense drive status | `FDC_CmdSenseDriveStatus` |
+
+The old names are still in the maincpu source as of this writing — renaming them
+repo-wide is a recorded follow-up, not yet done, so the disassembly and the tables
+earlier on this page still use them. `FDC_SeekRecalibrate` was already renamed to
+`FDC_CmdRecalibrate` (commit `274b343`).
+
+---
+
+## The Bootloader's FDC Driver (ROM 0x9FD8A5-0x9FEA9C)
+
+4,600 bytes in the Table Data ROM, running at the boot-time alias 0xFFD8A5-0xFFEA9C
+(at reset the Table Data ROM is mapped at 0xE00000-0xFFFFFF, so boot address = ROM
+address + 0x600000). It was carried in the build as `bootcode_flash_handlers.bin` and
+labelled "Flash Update Type Handlers / Type 1..8 disk types" — **that label was wrong**.
+It is the complete command layer of the bootloader's floppy driver for the uPD72068 at
+IC208. Source: `table_data/boot_fdc_driver.s`.
+
+### Hardware interfaces
+
+| Interface | Use |
+|-----------|-----|
+| 0x110008 | uPD72068 main status register (read) / **auxiliary command** register (write) — 0x36 software reset, 0x33 enable external mode, `rate|0x0B` control internal mode, `drives|0x0E` enable motors, 0x4F select format |
+| 0x11000A | data register: uPD765-style commands, parameters, result bytes |
+| 0x120000 | DMA-acknowledge data port, used by DMA channel 3 and by the PIO fallback |
+| DMA3 | DMAS3/DMAD3/DMAC3/DMAM3 (CR 0x0C/0x2C/0x4C/0x4E); mode 0x00 = I/O→memory, 0x08 = memory→I/O |
+| Port A bit 3 (SFR 0x28) | drive motor / enable line |
+| Port H bit 0 (SFR 0x44) | FDC TC (terminal count), pulsed by `FDC_PulseTC` |
+| INTE45 / INTETC23 / INTCLR | INT4 (FDC IRQ) and INTTC3 (DMA3 end) enables |
+
+Data-rate bits for the aux control-internal-mode command: 0x00 = 250 kbps, 0x40 = 500,
+0x80 = 600, 0xC0 = 300.
+
+### `FDC_Request` — the single public entry (boot 0xFFE944)
+
+The caller pushes a pointer to a **14-byte request block**:
+
+| Offset | Size | Field |
+|--------|------|-------|
+| +0x00 | u16 | command (0-11) |
+| +0x02 | u16 | drive |
+| +0x04 | u16 | head / flag |
+| +0x06 | u16 | track / media-type code |
+| +0x08 | u16 | starting sector |
+| +0x0A | u16 | sector count |
+| +0x0C | u32 | buffer address |
+
+`FDC_Request` copies the block to RAM 0x0C6E.. and mirrors it at 0x0C7E.., rotates the
+status history, validates, dispatches, then returns `HL` = the sign-extended sticky
+status. A busy latch at RAM 0x0C44 (0xA5 = executing, 0x5A = done) makes the driver
+non-re-entrant: a second request while one is running fails with error 0xFB. Command 0
+is the exception — it always clears the latch and preempts.
+
+### The three offset tables at 0x9FB496 and the `jp T, XIX+WA` idiom
+
+Three tables of 16-bit offsets are packed together at ROM 0x9FB496-0x9FB4D1 (boot
+0xFFB496). They were previously an unlabelled 60-byte `.byte` block; commit `0494f44`
+symbolized them, which is what made the driver disassemblable at all — all three are
+consumed by a computed jump of the form
+
+```asm
+        add   wa, wa                  ; index * 2
+        lda   xix, <table address>
+        ld    wa, (xix + wa)          ; fetch the 16-bit offset
+        lda   xix, <target base>
+        jp    T, XIX+WA               ; jump to base + offset
+```
+
+so without the tables the branch targets are unknown and the following bytes cannot be
+decoded.
+
+| Table | ROM address | Entries | Index | Base the offsets are relative to | Consumed at |
+|-------|-------------|---------|-------|----------------------------------|-------------|
+| `FDC_DiskTypeStanza_Offsets` | 0x9FB496 | 6 | low nibble of the media-type code (0x0C9C), values 0-5 | `FDC_MediaStanza_Type0` (0x9FD9A2) | boot 0xFFD98F, in `FDC_MediaConfigAndRecalibrate` |
+| `FDC_ValidateCmd_Offsets` | 0x9FB4A2 | 12 | command number | `FDC_Validate_FormatParams` (0x9FDAAB) | boot 0xFFDA97, in `FDC_ValidateRequest` |
+| `FDC_CommandDispatch_Offsets` | 0x9FB4BA | 12 | command number | `FDC_Dispatch_Initialize` (0x9FEA07) | boot 0xFFE9F4, in `FDC_Request` |
+
+The values, read out of `kn5000_table_data.rom`:
+
+* stanzas: `0, 21, 43, 65, 87, 108`
+* validators: `0, 14, 14, 14, 14, 14, 8, 8, 8, 11, 8, 14` — only four distinct validators
+  exist (format-params, accept-always, head/drive, drive+track+sector)
+* dispatch stubs: `0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55` — twelve uniform 5-byte
+  stubs, each `calr <handler>; jr T, FDC_Request__finish`
+
+Media-type codes 6-15 skip the stanza table entirely and run `FDC_MediaStanza_Default`
+(whose body is identical to type 0); commands > 11 skip the dispatch table and report
+error 0xFF.
+
+### Commands
+
+| Cmd | Handler (boot addr) | Runtime twin |
+|-----|---------------------|--------------|
+| 0 | `FDC_CmdInitialize` (0xFFE2BD) | `FDC_InitSequence_Full` |
+| 1 | `FDC_CmdRecalibrate` (0xFFE2D6) | `FDC_CmdRecalibrate` |
+| 2 | `FDC_CmdSeek` (0xFFE31A) | `FDC_STATUS_HANDLER` |
+| 3 | `FDC_CmdReadSectors` (0xFFE368) | `FDC_CMD_EXEC` |
+| 4 | `FDC_CmdWriteSectors` (0xFFE4AA) | `FDC_SECTOR_XFER` |
+| 5 | `FDC_CmdFormat` (0xFFE5FE) | `FDC_MODE_CONFIG` |
+| 6 | `FDC_CmdMotorOn` (0xFFE89B) | `FDC_CMD_ENABLE` |
+| 7 | `FDC_CmdMotorOff` (0xFFE8C5) | `FDC_CMD_DISABLE` |
+| 8 | `FDC_CmdGetLastError` (0xFFE8CE) | `FDC_STATUS_COPY` |
+| 9 | `FDC_CmdSetDiskChanged` (0xFFE8D5) | `FDC_OUTPUT_CTRL` |
+| 10 | `FDC_CmdControllerReset` (0xFFDA6A) | `FDC_CMD_DISPATCH_SUB` |
+| 11 | `FDC_CmdSenseDriveStatus` (0xFFE8F6) | `FDC_INTERRUPT_HANDLER` |
+
+`FDC_CmdInitialize` does a display refresh and a TC pulse, clears the disk-changed and
+media-removed flags, enables INT4/INTTC3, strobes a software reset and then runs
+`FDC_MediaConfigAndRecalibrate` (boot 0xFFD8A5) — the full drive/media (re)configuration:
+aux reset 0x36, drain the result phase, SPECIFY, select-format, the media stanza, then
+control-internal-mode, motor-on and a recalibrate. `FDC_CmdRecalibrate` seeks to track 5
+first for head-load settling, then issues RECALIBRATE (0x07).
+
+### Media geometry presets
+
+`FDC_SetGeometryForDiskType` (boot 0xFFDBAD) writes one of three presets from the low
+nibble of the media-type code:
+
+| Media type | Geometry | Gaps (r/w, format) |
+|------------|----------|--------------------|
+| 0, 4, 5 | 9 x 512 B, 80 tracks | 0x1B / 0x54 (720 KB 2DD) |
+| 2 | 8 x 1024 B, 77 tracks | 0x53 / 0x74 (2DD-8, 1024-byte sectors) |
+| 3 | 18 x 512 B, 80 tracks | 0x1B / 0x6C (1.44 MB 2HD) |
+
+The common tail derives SRT from the code's high nibble and fixes HUT = 0x0F, HLT = 1,
+ND = 0, DTL = 0xFF. Unknown types raise error 0xFE.
+
+### Error codes
+
+Sticky per request — the first error wins (`FDC_Error`), and command 8 returns the
+*previous* request's code:
+
+| Code | Meaning | Code | Meaning |
+|------|---------|------|---------|
+| 0x01/0x02/0x03 | ready-wait timeouts | 0x33 | no data (sector not found) |
+| 0x08 | unspecified FDC error | 0x34 | overrun |
+| 0x09 | result-phase timeout | 0x35 | missing address mark |
+| 0x10 | read retries exhausted | 0x36 | data CRC error |
+| 0x20 | write retries exhausted | 0x37 | end of cylinder |
+| 0x2F | write-protected | 0xFB | driver re-entered |
+| 0x31 | drive not ready | 0xFC | controller not present |
+| 0x32 | equipment check / fault | 0xFE | bad request parameters |
+| | | 0xFF | no such command |
+
+### `FDC_ProbeDiskFormat` — five requests that fingerprint the media
+
+`FDC_ProbeDiskFormat` (ROM 0x9FEB3D, boot 0xFFEB3D) in `table_data/boot_disk_probe.s`
+sits on top of `FDC_Request`. It sets `PHFC = 0x1E`, returns immediately if Port D bit 6
+says there is no disk, then builds and submits five 14-byte request blocks at RAM 0x0D52:
+
+| # | Command | Track | Sector | Count | Buffer |
+|---|---------|-------|--------|-------|--------|
+| 1 | 0 (initialize) | field = 0x00E0 | 0 | 0 | NULL |
+| 2 | 3 (read sectors) | 0 | 1 | 1 | 0x0D62 |
+| 3 | 3 | 78 | 1 | 1 | 0x0D62 |
+| 4 | 3 | 10 | 1 | 1 | 0x0D62 |
+| 5 | 3 | 40 | 1 | 1 | 0x0D62 |
+
+Four single-sector reads at spread-out tracks: the pass/fail pattern across tracks
+0/10/40/78 is what distinguishes the three geometry presets above. Afterwards it waits
+200 ticks and increments a probe-pass counter at 0x104C.
+
+Two caveats. The alternative track field 0x00D3 in request 1 is **dead code** — the
+register it is selected on is always 0 at that point, so the `NZ` arm never runs. And
+`FDC_ProbeDiskFormat` itself has **no caller**: an exhaustive search of the table_data
+and maincpu ROMs for both address forms found no reference. It is retained factory or
+diagnostic code; the shipped update path drives `FDC_Request` directly. The same is true
+of the neighbouring `Boot_PulsePD0` (ROM 0x9FEB2B), whose Port D bit 0 line is not yet
+identified. `Boot_CheckDiskPresent` (ROM 0x9FEC63) *is* live — it is the boot-time twin
+of `Check_for_Floppy_Disk_Change` and reads the same active-low Port D bit 6.
 
 ## Code References
 
@@ -585,4 +792,13 @@ The TC (Terminal Count) signal terminates multi-sector FDC transfers. It should 
 
 ---
 
-*Last updated: March 2026*
+## See Also
+
+- [Boot Sequence]({{ site.baseurl }}/boot-sequence/) - where the bootloader's FDC driver is used, and the rest of the first-stage bootloader
+- [Boot CP-Serial Link]({{ site.baseurl }}/boot-cpserial-link/) - the bootloader's other big driver, disassembled in the same wave
+- [Storage Subsystem]({{ site.baseurl }}/storage-subsystem/) - disk formats and the file system above the FDC
+- [Firmware Update Procedure]({{ site.baseurl }}/firmware-update-procedure/) - the boot path that drives `FDC_Request`
+
+---
+
+*Last updated: August 2026*

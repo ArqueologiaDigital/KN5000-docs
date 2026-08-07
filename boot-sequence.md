@@ -58,7 +58,10 @@ Power On
 
 ### Stage 1: Table Data ROM Bootloader
 
-> **Status**: The table_data boot code section (0xFFB4E8-0xFFFFFF, 19,224 bytes) is now **100% byte-matching**. See `table_data/kn5000_table_data.asm` and the reference disassembly at `original_ROMs/table_data_bootcode.unidasm`.
+> **Status (August 2026)**: the first-stage bootloader is **fully disassembled** — there
+> are no raw `.incbin` blobs left anywhere in it, and the rebuilt `kn5000_table_data.rom`
+> is byte-identical to the dump. See `table_data/kn5000_table_data.s` and the six
+> dedicated modules listed under [First-Stage Bootloader: No Raw Blobs Left](#first-stage-bootloader-no-raw-blobs-left).
 
 #### Reset Vector (0xFFFEE0)
 
@@ -129,11 +132,16 @@ The bit mask table at 0x1044 is used for bit manipulation operations throughout 
 
 The bootloader contains a complete set of flash programming routines for all target memories:
 
-| Routine Type | Address Range | Targets |
-|--------------|---------------|---------|
-| 16-bit flash routines | 0xFFB812-0xFFBC1C | HDAE5000 ROM, Custom Data Flash |
-| 32-bit flash routines | 0xFFBC1D-0xFFC0D2 | Table Data ROM (interleaved) |
-| Disk detection | 0xFFBFC4-0xFFC0D2 | Floppy disk header validation |
+| Group | Address Range | First routine | Targets |
+|-------|---------------|---------------|---------|
+| 16-bit flash routines | 0xFFB812-0xFFBBF2 | `Flash_Reset_16bit` | HDAE5000 ROM, Custom Data Flash |
+| Flash init + helper | 0xFFBBF3-0xFFBC2C | `Flash_Init_Custom_And_Table`, `MemBlock_FillWithZeros` | called from `Boot_Init` |
+| 32-bit flash routines | 0xFFBC2D-0xFFBF06 | `Flash_Reset_32bit` | Table Data ROM (interleaved) |
+| Boot sector reads | 0xFFBF07-0xFFBFC3 | `FDC_Reset`, `FDC_ReadSector` | thin wrappers over `FDC_Request` |
+| Disk type detection | 0xFFBFC4-0xFFC0D3 | `Boot_DetectDiskType` | eight update-disk signatures, compared with `Boot_memcmp` |
+
+(Boundaries above are the symbol addresses from the rebuilt ELF, so the ranges no longer
+overlap the way the earlier table did.)
 
 > **See Also**: [Flash Programming]({{ site.baseurl }}/flash-programming/) for detailed protocol documentation and comparison with Program ROM flash routines.
 
@@ -232,6 +240,116 @@ The firmware update system recognizes these LZSS-compressed file types:
 | - | `"Technics KN5000 CMPCUSTOMDATA FILE"` | Compressed custom data |
 
 The `PCK` suffix indicates LZSS-compressed content using the SLIDE4K format.
+
+#### First-Stage Bootloader: No Raw Blobs Left
+
+Until August 2026 six regions of the bootloader were carried in the build as raw binary
+includes with guessed labels. All six are now labelled assembly, and the 2 MB Table Data
+ROM still rebuilds byte-identical to the dump:
+
+| former blob | ROM range | now built from | commit |
+|-------------|-----------|----------------|--------|
+| `bootcode_hdae_to_lzss.bin` | 0x9FC6F7-0x9FC8C1 | inline in `kn5000_table_data.s` (HD-AE5000 boot-flash tail) | `22ecfb5` |
+| `bootcode_flash_handlers.bin` | 0x9FD8A5-0x9FEA9C | `table_data/boot_fdc_driver.s` | `65c79cb` |
+| `bootcode_utils.bin` | 0x9FEB2B-0x9FF228 | `boot_disk_probe.s` + `boot_cpserial.s` | `72242c0` |
+| `bootcode_serial_handlers.bin` | 0x9FF229-0x9FF2F1 | `boot_cpserial_isr.s` | `3de6871` |
+| `bootcode_serial_state.bin` | 0x9FF2F2-0x9FFB55 | `boot_cpserial_states.s` (tail `Boot_sbrk` opens `boot_clib.s`) | `3de6871` |
+| `bootcode_malloc_and_after.bin` | 0x9FFB56-0x9FFEDF | `boot_clib.s` + `boot_debug.s` | `670077e` |
+
+The blob files themselves are still on disk untouched, because the archived ASL mirror of
+the build still includes them.
+
+Two of the old labels were simply wrong, and the corrections matter:
+
+* `bootcode_flash_handlers.bin` is **not** a set of "flash update type handlers". It is
+  the complete command layer of the bootloader's **floppy disk driver** for the uPD72068
+  at IC208 (see below).
+* the CP-serial half of `bootcode_utils.bin` was described as "motor control / VGA
+  display / progress bar". It is the bootloader's own control-panel serial driver.
+
+> **A cautionary detail.** The `bootcode_hdae_to_lzss.bin` include used to start
+> *mid-instruction*: the source emitted a 4-byte fragment and the fifth byte of a 5-byte
+> `LD A, (0x160002)` was byte 0 of the blob. The ROM still rebuilt byte-identical — a
+> byte-match gate cannot see this — but any disassembly of the blob starting at its own
+> first byte begins in the middle of an instruction, so everything decoded from there was
+> suspect; the surrounding comment also described the instruction as a *store* when it is
+> a PPI Port B *read*. Wave 0 emitted the instruction
+> whole and skipped blob byte 0 with `.incbin "file", 1, 459` (commit `f79fcb1`). When a
+> blob boundary lands inside an instruction, the disassembly around it is untrustworthy
+> even though the build is green.
+
+#### The Bootloader's Own Floppy Driver (0xFFD8A5-0xFFEA9C)
+
+4,600 bytes, entered through the single public routine `FDC_Request` (boot 0xFFE944),
+which takes a pointer to a 14-byte request block and supports twelve commands
+(initialize, recalibrate, seek, read, write, format, motor on/off, get last error, set
+disk-changed, controller reset, sense drive status). It is a compact port of the main
+firmware's FDC driver, rebuilt for the boot-time update path, and each routine's header
+in `table_data/boot_fdc_driver.s` cites its main-CPU twin.
+
+Dispatch runs through three tables of 16-bit offsets packed together at ROM
+0x9FB496-0x9FB4D1 — media-type stanzas, per-command validators, per-command execution
+stubs — each consumed by a `jp T, XIX+WA` computed jump. Full detail, including the
+request-block layout, the error codes and the disk-format probe, is on the
+[FDC Subsystem]({{ site.baseurl }}/fdc-subsystem/#the-bootloaders-fdc-driver-rom-0x9fd8a5-0x9fea9c)
+page.
+
+#### Boot C Runtime (0xFFFB2F-0xFFFE7F)
+
+The bootloader links a small compiler-runtime/libc subset. Every block, free or
+allocated, carries a 6-byte header: `u32 next`, `u16 size`, then the data the caller sees.
+
+| routine | boot address | notes |
+|---------|--------------|-------|
+| `Boot_sbrk` | 0xFFFB2F | bump allocator over the arena at RAM (0x009998)/(0x00999C); returns 0xFFFFFFFF when exhausted |
+| `Boot_malloc` | 0xFFFB56 | first-fit over the free list at RAM (0x0099A0); splits a block when the leftover is ≥ 10 bytes; falls back to `Boot_sbrk` |
+| `Boot_free` | 0xFFFCDD | address-ordered insertion with forward *and* backward coalescing; each merge reclaims the absorbed block's 6-byte header |
+| `Boot_memcmp` | 0xFFFBDC | bounded compare — but a matching 0x00 byte ends it early, so the semantics are `strncmp`, not `memcmp` |
+| `Boot_SDivMod32` / `Boot_UDivMod32` | 0xFFFC0E / 0xFFFC63 | signed wrapper + unsigned 32/32 core; hardware `div` when the divisor fits in 16 bits, restoring shift-subtract otherwise; divide-by-zero returns 0xFFFFFFFF |
+
+Only two callers use the heap: `Boot_DetectDiskType` (sector-signature buffer) and
+`LZSS_Decompress` (the 4 KB sliding window) — which is exactly the `malloc at 0xFFFB56` /
+`free at 0xFFFCDD` pair named in the decompression algorithm above.
+
+The divide runtime is the compiler's, not the bootloader's: the same routine is linked
+into the main CPU firmware (`DivMod32` / `Math_DivideU32`) and into the HD-AE5000
+extension ROM (`HDAE5000_Divide_Unsigned` / `HDAE5000_Divide_Signed` at 0x29B8BF /
+0x29B8C5). The three copies share the algorithm and the entry structure but are not
+byte-identical — a few instruction encodings differ. The HD-AE5000 labels are also
+swapped with respect to what the code does: the routine labelled `_Signed` there is the
+unsigned core, and `_Unsigned` is its modulo entry.
+
+The tail of the region ends in dead code: `Boot_free_DeadTail9998` (0xFFFD7D) is a
+byte-for-byte copy of `Boot_free` from its `extz xhl` onward with the list head address
+changed from 0x0099A0 to 0x009998, with no prologue and no reference anywhere in the ROM.
+It is **not** a callable "secondary-heap free" — control cannot reach it.
+
+#### Boot-Time Control-Panel Serial Link
+
+The bootloader also carries a complete control-panel serial driver of its own — three
+interrupt handlers, an 11-entry state machine, ring buffers and a packet codec — spread
+across `boot_cpserial.s`, `boot_cpserial_isr.s` and `boot_cpserial_states.s`. It is
+**independent of the runtime `CPanel_*` stack** in the Program ROM.
+
+It is only brought up when a disk is present, and only one probe answer changes the boot
+path:
+
+```
+Boot_Init
+    ├── Boot_CheckDiskPresent (0xFFEC63)  — Port D bit 6, active low
+    │        └── no disk ──> jump to Program ROM
+    ├── BootSerial_Init (0xFFEC7E)        — handshake + device ident
+    ├── Boot_ProbeExternalDevice (0xFFED0E) ──> HL = device class
+    │        ├── class != 4 ──> jump to Program ROM
+    │        └── class == 4 ──> firmware update UI
+```
+
+One finding is worth carrying here: the driver's external-decode hook for class-2
+received packets resolves to `BootStub_ReturnError` (ROM 0x9FB80E, `ldw hl, 0xFFFF; ret`),
+and the caller treats 0xFFFF as failure — so **class-2 packets are always dropped on a
+stock machine**.
+
+Full documentation: [Boot CP-Serial Link]({{ site.baseurl }}/boot-cpserial-link/).
 
 #### Evidence
 
@@ -508,12 +626,12 @@ When `SubCPU_Send_Payload` is called, the memory map has been configured by the 
 | 0x100000-0x1DFFFF | I/O Peripherals | FDC, LCD, Latch, etc. |
 | 0x1E0000-0x1EFFFF | SRAM | Static RAM |
 | 0x300000-0x3FFFFF | Custom Data Flash | External chip select (B1CS) |
-| 0x800000-0x9FFFFF | **Table Data ROM** | Contains Sub CPU payload at offset 0x30000 |
+| 0x800000-0x9FFFFF | **Table Data ROM** | Contains the tone database at offset 0x30000 |
 | 0xE00000-0xFFFFFF | Program ROM | Currently executing code |
 
 **Address Resolution for Key Accesses:**
 
-- **0x830000** → Table Data ROM offset 0x30000 (Sub CPU firmware payload)
+- **0x830000** → Table Data ROM offset 0x30000 (tone database — data for the Sub CPU, *not* its executable)
 - **0x8E0000** → Table Data ROM offset 0xE0000 (LZSS compressed preset data)
 - **0x3E0000** → Custom Data Flash offset 0xE0000 (firmware update staging area)
 
@@ -534,7 +652,7 @@ Both flags are 0xFF in the factory ROM, meaning:
 
 | Step | Source Address | Destination | Size | Notes |
 |------|----------------|-------------|------|-------|
-| 1-5 | 0x830000-0x870000 | Sub CPU 0x050000-0x090000 | 5 × 64KB | Main payload from Table Data ROM |
+| 1-5 | 0x830000-0x870000 | Sub CPU 0x050000-0x090000 | 5 × 64KB | Tone database from Table Data ROM (data) |
 | 6 | 0x3E0000 | Decompressed buffer | ~33KB | Optional LZSS preset data (see below) |
 | 7 | Buffer + 0x100 | Main CPU 0x0404 | 2 bytes | Copies word to Main CPU RAM |
 | 8-10 | Buffer/Fallback | Sub CPU 0x00F000-0x02F000 | 3 × 64KB | Additional data blocks |
@@ -640,19 +758,35 @@ SubCPU_Send_Payload:                ; 0xEF068A
     RET
 ```
 
-### Subprogram Storage Location (RESOLVED)
+### Subprogram Storage Location (UNDER INVESTIGATION)
 
-The Sub CPU firmware payload storage is now fully understood:
+> ⚠ **Retraction (2026-08).** This section previously read "RESOLVED" and stated that the
+> Sub CPU's 192 KB executable is stored uncompressed at Table Data ROM `0x830000`. That is
+> **wrong and is withdrawn.** `0x830000-0x87FFEF` is the **tone database** — sound-parameter
+> data, copied into the Sub CPU's *data* window. Where the executable comes from at run time
+> is a separate, still-open question. See
+> [Tone Database]({{ site.baseurl }}/tone-database/) and
+> [SubCPU Payload Loading]({{ site.baseurl }}/subcpu-payload-loading/).
 
-**Primary Payload: Table Data ROM offset 0x30000**
-
-The main Sub CPU firmware (192KB, matching `kn5000_subprogram_v142.rom`) is stored **uncompressed** at:
+**What the 320 KB transfer actually carries: the tone database**
 
 | Source | Address | ROM Offset | Size | Destination |
 |--------|---------|------------|------|-------------|
-| Table Data ROM | 0x830000-0x87FFFF | 0x30000-0x7FFFF | 320KB | Sub CPU 0x050000-0x090000 |
+| Table Data ROM | 0x830000-0x87FFEF | 0x30000-0x7FFEF | 320KB | Sub CPU **data** RAM 0x050000-0x09FFFF |
 
-This is the definitive source of the Sub CPU executable. The `SubCPU_Send_Payload` routine transfers 5×64KB chunks via `InterCPU_E1_Bulk_Transfer`.
+`SubCPU_Send_Payload` moves this as 5×64KB chunks via `InterCPU_E1_Bulk_Transfer`. Its
+contents are the factory tone/voice records, drum kits, percussion bank, wave-source name
+catalogues and envelope pool — not code.
+
+**Where the executable comes from: unresolved**
+
+The same routine transfers the code blocks (Sub CPU `0x400` and `0xF000`-`0x3EEFF`) from a
+base held in `XIZ`: the LZSS image at Custom Data Flash `0x3E0000` if it decompresses, and
+table-data `0x800000` otherwise. In the images this project holds, **neither is the
+payload** — custom-data `0x3E0000` is erased (all `0xFF`; no File Type 007 update was ever
+applied to the dumped unit), and no byte of `kn5000_subprogram_v142.rom` appears anywhere in
+the table-data or custom-data dumps. The executable is known only from its own ROM dump and
+from the compressed update-disc images.
 
 **LZSS Compressed Region at 0x8E0000 (Preset Parameters, NOT Executable):**
 
@@ -682,11 +816,13 @@ In normal factory boot, the LZSS decompression from 0x3E0000 likely fails (no va
 
 **Remaining Open Questions:**
 
-1. ~~What data is at `0x830000`~~ **RESOLVED:** Sub CPU firmware payload
-2. ~~How the ~192KB executable reaches Sub CPU RAM~~ **RESOLVED:** Direct 5×64KB transfers
-3. ~~Whether Sub CPU has its own dedicated ROM chip~~ **RESOLVED:** Yes, the Sub CPU Boot ROM (128KB, IC30) contains the boot loader; the 192KB payload is transferred from Table Data ROM
-4. **NEW:** What is the purpose of the preset data at 0x8E0000, and when is it used?
-5. **NEW:** Under what conditions does the 0x3E0000 LZSS path succeed (firmware update mode)?
+1. What data is at `0x830000`? **Answered:** the tone database (data, not code).
+2. **Where does the ~192 KB executable come from?** Still open — neither of
+   `SubCPU_Send_Payload`'s two source bases holds it in the images we have.
+3. Does the Sub CPU have its own ROM chip? **Yes** — the 128 KB Sub CPU Boot ROM (IC30)
+   holds the boot loader. It does *not* hold the 192 KB runtime payload.
+4. What is the purpose of the preset data at 0x8E0000, and when is it used?
+5. Under what conditions does the 0x3E0000 LZSS path succeed (firmware update mode)?
 
 See [LZSS Compression](lzss-compression.md) for decompression details.
 
@@ -1257,4 +1393,6 @@ Time    Event
 - [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) - Build status and known issues
 - [Flash Programming]({{ site.baseurl }}/flash-programming/) - Flash memory programming routines and update system
 - [HDAE5000 Hard Disk Expansion]({{ site.baseurl }}/hdae5000/) - HD-AE5000 firmware details
-- [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) - Serial communication with control panel
+- [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) - Serial communication with control panel (runtime driver)
+- [Boot CP-Serial Link]({{ site.baseurl }}/boot-cpserial-link/) - The bootloader's own, independent CP-serial driver
+- [FDC Subsystem]({{ site.baseurl }}/fdc-subsystem/) - Both FDC drivers, including the bootloader's
