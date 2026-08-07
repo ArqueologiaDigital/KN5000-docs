@@ -104,12 +104,18 @@
       url: /boot-sequence/
     - title: SubCPU Payload Loading
       url: /subcpu-payload-loading/
+    - title: Sub-CPU Firmware Images
+      url: /subcpu-firmware-images/
     - title: ROM Reconstruction
       url: /rom-reconstruction/
     - title: Source Code Map
       url: /source-map/
     - title: Table Data ROM
       url: /table-data-rom/
+    - title: Music Stylist Database
+      url: /music-stylist-database/
+    - title: Panel Memory Factory Data
+      url: /panel-memory-factory-data/
     - title: Custom Data Flash
       url: /custom-data-flash/
     - title: Firmware Updates
@@ -135,8 +141,12 @@
       url: /effects-dsp/
     - title: Effects-DSP Flowcharts
       url: /effects-dsp/flowcharts/
+    - title: DSP Effect Data Zone
+      url: /dsp-effect-data-zone/
     - title: Tone Generator
       url: /tone-generator/
+    - title: Tone Database
+      url: /tone-database/
     - title: Sound Categories
       url: /sound-categories/
     - title: Waveform ROM Format
@@ -170,6 +180,8 @@
   pages:
     - title: Control Panel Protocol
       url: /control-panel-protocol/
+    - title: Boot CP-Serial Link
+      url: /boot-cpserial-link/
     - title: Inter-CPU Protocol
       url: /inter-cpu-protocol/
     - title: SubCPU Command Format
@@ -226,6 +238,8 @@
       url: /image-gallery/
     - title: ROM Strings
       url: /rom-strings/
+    - title: Disassembly Workflow
+      url: /disassembly-workflow/
     - title: Reverse Engineering
       url: /reverse-engineering/
     - title: MAME Pull Requests
