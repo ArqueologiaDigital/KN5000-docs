@@ -6,7 +6,15 @@ permalink: /source-map/
 
 # Source Code Map
 
-This page describes every source file in the [disassembly repository](https://github.com/ArqueologiaDigital/kn5000-roms-disasm). The firmware is reconstructed from TLCS-900/H2 assembly using LLVM's `llvm-mc` assembler. All 6 ROMs build to **100% byte-identical** copies of the originals.
+This page describes every source file in the [disassembly repository](https://github.com/ArqueologiaDigital/kn5000-roms-disasm). The firmware is reconstructed from TLCS-900/H2 assembly using LLVM's `llvm-mc` assembler.
+
+> ⚠ **This page is stale.** Its file paths predate the per-version source-tree split — the
+> main-CPU top level is now `v10/maincpu/…`, the sub-CPU payload `v142/subcpu/…` — several
+> listed filenames no longer exist, and the include counts and the "6 ROMs" figure are out
+> of date (the build now checks **15** verification sections, and the 2026-08 waves added
+> whole new modules). For the current, measured picture see
+> [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/). Rewriting this page is
+> queued.
 
 ## ROM Overview
 

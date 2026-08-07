@@ -155,7 +155,7 @@ A significant contributor to the ~16-second blocking time was identified in the 
 
 ### The Bug
 
-SubCPU Port H bit 0 is not connected in MAME. The firmware's `DSP_Read_Status` routine (SubCPU address `0x0383F7`) reads PH.0 to determine whether DSP1 (IC310, MN19413) is ready to accept a command. Since the MAME Port H read callback returns 0 for all bits, the DSP always appears "busy."
+SubCPU Port H bit 0 is not connected in MAME. The firmware's `DSP_Read_Status` routine (SubCPU address `0x0383F7`) reads PH.0 to determine whether DSP2 (IC310, MN19413) is ready to accept a command. Since the MAME Port H read callback returns 0 for all bits, the DSP always appears "busy."
 
 ### Impact
 

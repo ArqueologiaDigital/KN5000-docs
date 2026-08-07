@@ -67,7 +67,11 @@ Settled translator-opcode semantics (measured; `kn7000_mame/tools/kn5000_dsp_par
 | `0x72` | compressor THRESHOLD (`0x04`) / RATIO (`0x0D`) cells |
 
 The UI value range is 0..99 (lerp divisor `0x63`); the 100-entry curve tables
-CURVE_A/B/C/D sit at `0x012483`/`0x012613`/`0x0127A3`/`0x012B33`. The user-facing
+CURVE_A/B/C/D sit at `0x012483`/`0x012613`/`0x0127A3`/`0x012B33`. Those names are the
+kn7000_mame tooling's; the assembly source labels them `DSP_FreqParamCurve_Algo0`
+(`0x012483`), `DSP_FreqParamCurve_Algo1` (`0x012613`), `DSP_FreqParamCurve_Algo2`
+(`0x0127A3`), `DSP_OscParamCurve` (`0x0129A3`) and `DSP_CoeffCurve_Op62` (`0x012B33`) —
+five ladders, not four; the CURVE_x scheme skips `0x0129A3` entirely. The user-facing
 parameter *names* live on the **main CPU** (85-entry table at `0x0324D5`, units at
 `0x03241A`); the per-effect ordered name list was captured live per effect
 (`kn7000_mame/notes/kn5000-dsp-paramlist.md`) and is quoted in the per-effect banners of

@@ -53,7 +53,8 @@ Phase 2: LZSS Decompression
   Source: 0x3E0000 (Custom Data Flash)
   Dest:   0x050000 (Main CPU RAM, temporary)
   Calls SLIDE_Parse_Header (LZSS decompressor)
-  If decompression fails (HL=0xFFFF): falls back to Table Data ROM base
+  If decompression fails (HL=0xFFFF): falls back to Table Data ROM base 0x800000
+  (the `ld xiz, 0x800000` in `SubCPU_Send_Payload` — *not* 0x830000, as older notes had it)
 
 Phase 3: Transfer decompressed data to SubCPU
   XIZ+0x100, 64KB    → SubCPU 0x00F000

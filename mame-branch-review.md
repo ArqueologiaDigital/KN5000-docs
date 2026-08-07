@@ -42,7 +42,7 @@ The most complete active branch, containing the next major batch of driver impro
 | **UART mode** | 1 | 8-bit UART TX/RX for TMP94C241 serial channels (enables MIDI) |
 | **MIDI output** | 1 | Wire TX0 to `midi_port` device |
 | **Tone generator** | 7 | Full `kn5000_tonegen_device` (IC303): PCM playback, pitch/pan/volume, release envelope, linear interpolation |
-| **DSP1 stub** | 1 | IC311 DS3613GF-3BA device stub |
+| **DSP1 stub** | 1 | IC311 uPD6383GF-3BA device stub |
 | **Timer 0 output** | 1 | Wire TO0 to FDC Terminal Count |
 | **SNS NMI emulation** | 1 | Boot-time write tap for payload checksum (NVRAM persistence) |
 | **Code style** | 1 | Minor upstream compliance cleanup |
@@ -129,7 +129,7 @@ Based on the branch review, the following PRs are planned:
 - Floppy disk controller wiring (PC AT register layout, PORT D dskchg)
 - 8-bit UART mode for TMP94C241 serial channels
 - MIDI output via TX0
-- DSP1 device stub (IC311 DS3613GF-3BA)
+- DSP1 device stub (IC311 uPD6383GF-3BA)
 - Timer 0 output to FDC Terminal Count
 - SNS NMI payload checksum for NVRAM persistence
 
@@ -181,7 +181,7 @@ device owns its own inputs.
 These are not yet ready for PRs but are active research topics:
 
 - **Waveform ROM decoding**: IC307 format has been decoded (see [Waveform ROM Format]({{ site.baseurl }}/waveform-rom-format/)). Remaining waveform ROMs (IC304--IC306) are undumped.
-- **DSP emulation**: Both DSP ICs (MN19413 serial, DS3613GF-3BA parallel) have device stubs. Full emulation requires decoding the DSP bytecode interpreter and register semantics.
+- **DSP emulation**: Both DSP ICs (MN19413 serial, uPD6383GF-3BA parallel) have device stubs. Full emulation requires decoding the DSP bytecode interpreter and register semantics.
 - **SSF slide transitions**: Feature Demo visual presentation uses SSF bitmaps that never render in emulation. Root cause is likely missing waveform-driven sequencer completion signals.
 
 ## Branch Management Policy

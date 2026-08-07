@@ -193,7 +193,7 @@ This is **not** the same as byte-level interleaving (`even[0], odd[0], even[1], 
 |----|-------------|----------|-----------|
 | IC303 | TC183C230002 | Tone Generator | Memory-mapped at 0x100000 (SubCPU) |
 | IC310 | MN19413 | DSP2 (mixing/EQ) | Serial GPIO bit-bang (SubCPU) |
-| IC311 | DS3613GF-3BA | DSP1 (effects) | Memory-mapped at 0x130000 + parallel port (P7/PZ) |
+| IC311 | uPD6383GF-3BA | DSP1 (effects) | Memory-mapped at 0x130000 + parallel port (P7/PZ) |
 | IC304-306 | — | Waveform ROMs | Connected to IC303 (undumped) |
 
 The tone generator IC303 handles polyphonic synthesis with 64 voice channels, while IC311 (DSP1) provides digital effects (reverb, chorus, delay, distortion) and IC310 (DSP2) handles mixing and EQ. The SubCPU controls all three via dedicated interfaces.

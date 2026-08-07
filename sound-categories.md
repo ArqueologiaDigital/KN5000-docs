@@ -173,9 +173,11 @@ When a user selects a sound:
 
 ## Instrument Patch Catalog
 
-The Table Data ROM contains the display names for all instrument patches, embedded within variable-length sound parameter records in the 0x832000-0x850000 address range. Each patch record includes a padded ASCII name string (up to 20 characters) along with multi-layer synthesis parameters (envelope, filter, LFO, effects routing).
+The Table Data ROM contains the display names for all instrument patches, embedded within variable-length sound parameter records.
 
-The following catalog was extracted by scanning the Table Data ROM for ASCII name strings. Names are organized by approximate address region, which corresponds loosely to the 16 factory categories above. GM-compatible patches (0x846000-0x850000) largely duplicate KN5000-specific patches with different parameter settings.
+> **Superseded framing.** The address range and record shape this section originally quoted ("0x832000-0x850000", "a padded ASCII name string up to 20 characters") came from a string scan and are wrong. The records are the **tone database**: 579 variable-length records tiling `0x8324D4`-`0x855A47`, each opening with a 16-character space-padded name field, reached through the 629-entry offset table at `0x831B00` — not by their string spacing. See [Tone Database]({{ site.baseurl }}/tone-database/). The catalog below is still a useful name listing; its address groupings are approximate.
+
+The following catalog was extracted by scanning the Table Data ROM for ASCII name strings. Names are organized by approximate address region, which corresponds loosely to the 16 factory categories above. GM-compatible patches largely duplicate KN5000-specific patches with different parameter settings.
 
 **Total: ~303 unique instrument patches** (291 KN5000-specific + 12 GM-only)
 

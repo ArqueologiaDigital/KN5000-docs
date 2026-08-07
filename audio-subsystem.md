@@ -67,7 +67,7 @@ See [Tone Generator]({{ site.baseurl }}/tone-generator/) for the complete regist
 
 ### DSP Port I/O Control (Sub CPU Internal Ports)
 
-The dual DSP chips are controlled via the Sub CPU's internal I/O ports. DSP1 (IC311, DS3613GF-3BA) uses a parallel bus protocol with Port PZ/P7 for command/data handshake. DSP2 (IC310, MN19413) uses GPIO bit-bang serial on Port F. Both share chip-select lines:
+The dual DSP chips are controlled via the Sub CPU's internal I/O ports. DSP1 (IC311, uPD6383GF-3BA) uses a parallel bus protocol with Port PZ/P7 for command/data handshake. DSP2 (IC310, MN19413) uses GPIO bit-bang serial on Port F. Both share chip-select lines:
 
 | Port | Bit | Signal | Function |
 |------|-----|--------|----------|
@@ -826,7 +826,7 @@ The number of H0/H5/H2 groups varies by effect type (more complex effects have m
 
 | Channel | DSP Chip | Max Params | Notes |
 |---------|----------|-----------|-------|
-| 0 | DSP1 (DS3613GF-3BA) | 28 | |
+| 0 | DSP1 (uPD6383GF-3BA) | 28 | |
 | 1 | DSP1 | 24 | Hardcoded reverb/chorus programs |
 | 2 | DSP2 (MN19413) | 46 | Most parameters |
 | 3 | DSP2 | 20 | |
@@ -1372,7 +1372,7 @@ The KN5000 uses two custom DSP chips for effects processing:
 | IC | Part Number | Manufacturer | Notes |
 |----|-------------|-------------|-------|
 | IC310 | MN19413 | Matsushita (Panasonic) | Custom ASIC, no public documentation |
-| IC311 | DS3613GF-3BA | Unknown origin | Custom ASIC, no public documentation |
+| IC311 | uPD6383GF-3BA | NEC | No datasheet or programming manual is public; identified from the Pioneer CDJ-500 service manual (see [Effects DSP]({{ site.baseurl }}/effects-dsp/)) |
 
 Both DSPs use an identical 8-bit parallel bus protocol with shared data lines but separate chip-select signals. They are NOT general-purpose DSPs — they are dedicated effects processors with a fixed command interface.
 
@@ -1384,7 +1384,7 @@ The Sub CPU controls both DSPs via GPIO pins:
 |-----|------|----------|
 | P7.3 | Port 7 bit 3 | Write strobe (active low) |
 | P7.4 | Port 7 bit 4 | Read strobe (active low) |
-| P7.5 | Port 7 bit 5 | CS1 — DSP1 chip select (IC311, DS3613GF-3BA) |
+| P7.5 | Port 7 bit 5 | CS1 — DSP1 chip select (IC311, uPD6383GF-3BA) |
 | P7.6 | Port 7 bit 6 | Command/Data select (1=command, 0=data) |
 | PE.6 | Port E bit 6 | CS2 — DSP2 chip select (IC310, MN19413) |
 | PH.0 | Port H bit 0 | Status input (busy/ready) |
@@ -1423,7 +1423,7 @@ Register writes use CMD 0x30 followed by 4-byte data groups: `[0x00, addr, val_h
 
 **The DSP chips do NOT receive external microcode from the Sub CPU.** Investigation of the SubCPU firmware reveals that no large code blocks are ever uploaded to the DSPs. Instead:
 
-1. **DSPs are pre-programmed at manufacture** — The MN19413 (IC310) and DS3613GF-3BA (IC311) contain internal ROM with their instruction set already loaded. They are dedicated effects processors with a fixed command interface, not general-purpose programmable DSPs.
+1. **The DSPs are programmable, and the firmware programs them at run time.** An earlier revision of this page claimed both chips carry fixed internal microcode. That is **superseded**: the Sub CPU uploads bytecode microprograms to IC311 (uPD6383GF) through the [DSP bytecode interpreter]({{ site.baseurl }}/dsp-bytecode-interpreter/), which is how the effect algorithms are switched. See [Effects DSP]({{ site.baseurl }}/effects-dsp/).
 
 2. **Sub CPU controls DSPs via register writes only** — All communication uses the 8-bit parallel bus handshake protocol (Port PZ data, Port P7 control lines). The Sub CPU sends:
    - **Command bytes** (P7.6=1): Select DSP register or operation mode
@@ -1959,7 +1959,7 @@ The MAME driver (`kn5000.cpp`) includes device classes for the audio chips. The 
 | Device | Chip | IC | Interface | MAME Class | Status |
 |--------|------|----|-----------|------------|--------|
 | Tone Generator | TC183C230002 | IC303 | Memory-mapped (0x100000) | `kn5000_tonegen_device` | 64-voice PCM with pitch/pan/volume, keybed input, voice status readback |
-| DSP1 | DS3613GF-3BA | IC311 | Memory-mapped (0x130000) | `kn5000_dsp1_device` | Register stub: 4 channels × 0x20 registers, accepts writes |
+| DSP1 | uPD6383GF-3BA | IC311 | Memory-mapped (0x130000) | `kn5000_dsp1_device` | Register stub: 4 channels × 0x20 registers, accepts writes |
 | DSP2 | MN19413 | IC310 | Serial (GPIO bit-bang) | (port callbacks) | Not yet a separate device; serial protocol handled by SubCPU GPIO |
 
 **Tone Generator (`kn5000_tonegen_device`):**

@@ -1062,7 +1062,7 @@ The KN5000's audio subsystem is managed entirely by the SubCPU (a second TMP94C2
 ### What Extensions Cannot Do
 
 - Directly program the tone generator (MN89316, at `0x100000-0x15FFFF` — these registers are written by both CPUs but controlled by SubCPU firmware logic)
-- Directly program the DSP effect processors (MN19413 / DS3613GF — connected via SubCPU GPIO, no main CPU access)
+- Directly program the DSP effect processors (MN19413 / uPD6383GF — connected via SubCPU GPIO, no main CPU access)
 - Bypass the SubCPU for audio output
 
 ### Practical Guidance

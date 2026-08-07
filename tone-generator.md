@@ -244,13 +244,13 @@ Registers 0x50-0x57 are zeroed during boot for each block.
 
 ### DSP Command Protocol
 
-DSP1 (IC311, DS3613GF-3BA) uses an 8-bit parallel bus protocol, while DSP2 (IC310, MN19413) uses GPIO bit-bang serial. Both are controlled via Sub CPU GPIO pins:
+DSP1 (IC311, uPD6383GF-3BA) uses an 8-bit parallel bus protocol, while DSP2 (IC310, MN19413) uses GPIO bit-bang serial. Both are controlled via Sub CPU GPIO pins:
 
 | Pin | Port | Function |
 |-----|------|----------|
 | P7.3 | Port 7 bit 3 | Write strobe (active low) |
 | P7.4 | Port 7 bit 4 | Read strobe (active low) |
-| P7.5 | Port 7 bit 5 | CS1 — DSP1 chip select (IC311, DS3613GF-3BA) |
+| P7.5 | Port 7 bit 5 | CS1 — DSP1 chip select (IC311, uPD6383GF-3BA) |
 | P7.6 | Port 7 bit 6 | Command/Data select (1=command, 0=data) |
 | PE.6 | Port E bit 6 | CS2 — DSP2 chip select (IC310, MN19413) |
 | PH.0 | Port H bit 0 | Status input (busy/ready) |
@@ -309,7 +309,7 @@ From the service manual schematics (Tone Generator Sections A and B):
 | IC308 | M5M418128AJ-6 | 1Mbit DRAM — delay memory for **DSP2 (IC310, MN19413)** |
 | IC309 | M5M44260AJ-7S | 4Mbit DRAM — delay memory for **DSP1 (IC311, uPD6383GF)**. Only address lines A0–A8 reach it; A9–A16 are unconnected. |
 | IC310 | MN19413 | **DSP2** (Matsushita, serial interface) |
-| IC311 | DS3613GF-3BA | **DSP1** (parallel + memory-mapped) |
+| IC311 | uPD6383GF-3BA | **DSP1** (parallel + memory-mapped) |
 | IC312 | M5218AFP | Dual op-amp (DAC output buffer) |
 | IC313 | PCM69AU | **D-A Converter** (18-bit stereo, Burr-Brown) |
 | IC314 | M5218AFP | Dual op-amp (output buffer) |

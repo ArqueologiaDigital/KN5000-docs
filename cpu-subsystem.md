@@ -149,7 +149,7 @@ The 2MB Main CPU ROM is organized as:
 | 0x002000-0x031FFF | 192KB | Payload RAM (loaded from Main CPU at boot) |
 | 0x100000-0x10FFFF | 64KB | Tone Generator hardware registers |
 | 0x120000 | 1B | Inter-CPU communication latch |
-| 0x130000-0x130002 | 4B | DSP registers (DS3613GF-3BA: address + data) |
+| 0x130000-0x130002 | 4B | DSP registers (uPD6383GF-3BA: address + data) |
 | 0xFE0000-0xFFFFFF | 128KB | Boot ROM |
 
 ### Boot Process
@@ -184,7 +184,7 @@ The Sub CPU's primary role is real-time audio synthesis and effects processing. 
 - Per-channel filter frequency (0x04520A), filter Q (0x04520E), output (0x0451CC)
 - Filter frequency clamped to max 0x1C
 
-**DSP Effects Processing (DS3613GF-3BA):**
+**DSP Effects Processing (uPD6383GF-3BA):**
 - Memory-mapped DSP at 0x130000 (address) / 0x130002 (data)
 - 4 effect channels × 32 registers each
 - Bytecode interpreter at 0x03C32E (1,613 bytes, 6 native handlers)

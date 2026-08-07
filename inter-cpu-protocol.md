@@ -510,7 +510,7 @@ SubCPU_Send_Payload:           ; 0xEF068A
 
 | Chunk | Source | Sub CPU Dest | Size |
 |-------|--------|--------------|------|
-| 1-5 | 0x830000-0x870000 | 0x050000-0x090000 | 5 × 64KB |
+| 1-5 | 0x830000-0x870000 | 0x050000-0x090000 | 5 × 64KB | *(the [tone database]({{ site.baseurl }}/tone-database/) — data, not the Sub CPU executable)* |
 | 6-8 | Decompressed/Fallback | 0x00F000-0x02F000 | 3 × 64KB |
 | 9 | Buffer | 0x000400 | 256 bytes |
 
