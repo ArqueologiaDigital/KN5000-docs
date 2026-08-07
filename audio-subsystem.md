@@ -1132,6 +1132,13 @@ The tone generator (IC303, TC183C230002) is a custom Matsushita 64-voice wavetab
 
 See [Tone Generator]({{ site.baseurl }}/tone-generator/) for the complete register map, initialization sequence, and chip inventory.
 
+### Where the tone parameters come from
+
+The parameter records the Sub CPU pushes into IC303 are not built in code: they are read from the
+**tone database**, the 320 KB block at Table Data ROM `0x830000`-`0x87FFEF` that the Main CPU
+bulk-copies to Sub CPU RAM `0x50000` at boot. See [Tone Database]({{ site.baseurl }}/tone-database/)
+for the directory, the 629-entry tone-record offset table, drum kits and percussion banks.
+
 ### Voice Slot Table
 
 16 voice slots at 0x4A4C-0x4A5C track active notes:
@@ -1353,6 +1360,7 @@ See [Tone Generator]({{ site.baseurl }}/tone-generator/#serial-port-1-sa-interfa
 - [Tone Generator]({{ site.baseurl }}/tone-generator/) -- Register map and chip inventory
 - [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) -- Communication details
 - [SubCPU Payload Loading]({{ site.baseurl }}/subcpu-payload-loading/) -- How firmware reaches the SubCPU
+- [Tone Database]({{ site.baseurl }}/tone-database/) -- Factory tone/voice records, drum kits, wave catalogues
 - [MIDI Subsystem]({{ site.baseurl }}/midi-subsystem/) -- External MIDI handling
 - [CPU Subsystem]({{ site.baseurl }}/cpu-subsystem/) -- Main and Sub CPU details
 - [System Overview]({{ site.baseurl }}/system-overview/) -- Overall architecture

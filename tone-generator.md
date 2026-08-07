@@ -416,6 +416,11 @@ The `kn5000_tonegen_device` (in `kn5000_tonegen.cpp`) implements:
   waveform, and how it indexes IC307's 198-entry table, is under active investigation (an earlier static
   guess of reg[9] was falsified by a live capture showing reg[9] = 0). A real KN5000's Piano/Guitar/etc.
   sound different; this is the main remaining faithfulness gap.
+  One lead worth following: the [Tone Database]({{ site.baseurl }}/tone-database/) carries three
+  **wave-source name catalogues** (`ToneDB_SourceNameList1/2`, `ToneDB_DrumSourceNameList` — 333, 339 and
+  424 rows of a 13-character PCM source name plus three id/flag bytes), each reached from a tone record
+  through 1024-entry index maps. The id/flag bytes are not yet decoded, so this is a hypothesis about
+  where the real wave index lives, not a result.
 - **Waveform ROMs IC304-IC306 are NO_DUMP** (only IC307 is dumped). Whether per-waveform root note / tuning
   / loop points live in IC307's dumped parameter records or elsewhere is being decoded — *not* assumed to
   be in the undumped ROMs.
@@ -435,6 +440,7 @@ registers. See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) for the no
 ## Related Pages
 
 - [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) -- Overall audio architecture
+- [Tone Database]({{ site.baseurl }}/tone-database/) -- The factory tone/voice records these registers are loaded from
 - [SubCPU Payload Loading]({{ site.baseurl }}/subcpu-payload-loading/) -- How firmware reaches the SubCPU
 - [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) -- Latch communication details
 - [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) -- Full system hardware
