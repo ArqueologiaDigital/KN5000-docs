@@ -436,8 +436,10 @@ buttons).
 `Composer_FactoryMemoryImage` at `0x9B4000` is a 64 KB image of the COMPOSER (user rhythm
 style) memory, copied wholesale to RAM `0x94800` at boot. It carries three factory user
 styles in four variations each (" Pop Samba 1".."4", "GentleSwing 1".."4", "German 3/4
-1".."4") plus 18 empty "Clear" slots, and from image offset `+0xC000` the rhythm cell
-streams in the same cell grammar the factory rhythms use.
+1".."4") plus 18 empty "Clear" slots, and from image offset `+0xAB00` (ROM `0x9BEB00`) the
+rhythm cell streams in the same cell grammar the factory rhythms use — 52 `80 nn 00 FF FF 87`
+cell headers, each on a 256-byte boundary. (The module header's "+0xC000" is too late by
+0x1500 bytes.)
 
 See **[Panel Memory & Composer Factory Data]({{ site.baseurl }}/panel-memory-factory-data/)** for the
 record format and the loader routines.
