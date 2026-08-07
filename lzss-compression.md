@@ -6,7 +6,64 @@ permalink: /lzss-compression/
 
 # LZSS Compression
 
-The KN5000 firmware uses LZSS compression (SLIDE4K format) for storing preset and parameter data. This page documents all compressed regions and the decompression routines.
+The KN5000 firmware uses two closely related LZSS (Lempel-Ziv-Storer-Szymanski)
+container formats, told apart by a single character in their magic string:
+
+- **SLIDE4K** — 4 KB sliding window. Used for the 19 demo-song preset blocks in
+  the Table Data ROM and for the compressed Sub-CPU firmware-update images.
+- **SLIDE8K** — 8 KB sliding window. Used for the six multilingual HELP
+  databases in the Table Data ROM. This variant was **undocumented before
+  2026-08-07**; its decoder was recovered from the firmware and its round-trip
+  tooling landed in commit `f40a93d` of the disassembly repository.
+
+Both are handled by the same firmware entry point, `SLIDE_Parse_Header`, which
+dispatches on the `4`/`8` character of the magic. This page documents both
+formats, every compressed region found in the dumped ROMs, the decompression
+routines, and the build-time round-trip that keeps rebuilt ROMs byte-identical.
+
+## The Two Variants at a Glance
+
+| Property | SLIDE4K | SLIDE8K |
+|----------|---------|---------|
+| **Magic (8 bytes)** | `"SLIDE4K", 0x00` | `"SLIDE8K", 0x00` |
+| **Header size** | 11 bytes | 11 bytes |
+| **Size field** | 24-bit **big-endian** at header+8 | 24-bit **big-endian** at header+8 |
+| **Ring buffer size** | 0x1000 (4,096) | 0x2000 (8,192) |
+| **Ring mask** | 0xFFF | 0x1FFF |
+| **Zero pre-fill** | ring[0x0000-0x0FED] | ring[0x0000-0x1FF5] |
+| **Initial write position** | 0x0FEE | 0x1FF6 |
+| **Match offset** | `((high & 0xF0) << 4) \| low` — 12 bits | `((high & 0xF8) << 5) \| low` — 13 bits |
+| **Match count** | `(high & 0x0F) + 3` → 3-18 bytes | `(high & 0x07) + 3` → 3-10 bytes |
+| **Flag byte** | 8 elements, LSB first, 1 = literal | identical |
+| **Termination** | declared output size only | declared output size only |
+| **Firmware decoder** | `SLIDE_Decompress_4K_Init` (0xEF3FAB) | `SLIDE_Decompress_8K_Init` (0xEF40C5) |
+| **Blocks known** | 19 in table_data (+ 3 archived update images) | 6 in table_data |
+
+Addresses are Main CPU program ROM (v10). Both routines and the dispatcher live
+in `v10/maincpu/boot/system_handlers.s` (lines 6845, 6968 and 7091).
+
+**The dispatcher** (`SLIDE_Parse_Header`, 0xEF41E3,
+`v10/maincpu/boot/system_handlers.s:7091`) compares the first **five** bytes of
+the block against `SLIDE_STRING` and then reads the sixth character:
+
+```asm
+	ld	a, (xwa)
+	cp	a, 0x34		; '4'
+	jr	nz, SLIDE_Parse_Check8K
+	...
+	calr	SLIDE_Decompress_4K_Init
+SLIDE_Parse_Check8K:
+	cp	a, 0x38		; '8'
+	jr	nz, SLIDE_Parse_ReturnOK
+	...
+	calr	SLIDE_Decompress_8K_Init
+```
+
+(`system_handlers.s:7110-7128`.) An unrecognised sixth character is silently
+ignored — the routine returns success without decompressing anything. Only a
+missing `SLIDE` prefix returns the 0xFFFF failure code.
+
+---
 
 ## Compressed Data Regions
 
@@ -42,7 +99,10 @@ two payload bytes of the compressed stream.
 (`kn5000_subprogram_v142_compressed.rom`) carries size field `03 00 00`;
 big-endian that is 0x030000 = 196,608, exactly the decompressed size of the
 Sub-CPU program. Read little-endian it would be 3. (The preset block's
-`00 95 00` is endian-symmetric and cannot discriminate.)
+`00 95 00` is endian-symmetric and cannot discriminate.) The firmware agrees:
+both `SLIDE_Decompress_*_Init` routines build the count as
+`(hdr[8] << 16) + ((hdr[9] << 8) | hdr[10])`
+(`v10/maincpu/boot/system_handlers.s:6986-6998`).
 
 The decoder stops as soon as the declared output size (38,144 bytes) is
 reached, which happens at ROM address `0x8E6CF4` after consuming 27,881 stream
@@ -60,6 +120,93 @@ stays byte-identical.
 - Most bytes are in MIDI range (0-127)
 - Contains repeating structural patterns (e.g., `0x80 XX` flags, `00 03` record markers)
 - Does NOT match the Sub CPU ROM byte patterns
+
+### The Other 18 SLIDE4K Blocks (Demo Song Presets)
+
+The 0x8E0000 block is entry 18 of a set of 19. Entries 0-17 run from
+**0x9C4050** to **0x9F94CA**, abutting one another except for a single 0xFF pad
+byte at **0x9C9017**; 0xFF fill follows from 0x9F94CB. Each has its own 11-byte
+`SLIDE4K` header; the last of them starts at 0x9F494E. A scan of
+`original_ROMs/kn5000_table_data.rom` for the magic finds exactly these 19
+blocks and no others; their declared decompressed sizes range from 0x1700 to
+0x9500 bytes. They are built from checked-in MIDI + YAML sources (see
+[Source Files](#source-files) below).
+
+<a id="slide8k-help-databases"></a>
+
+### SLIDE8K Help Databases (0x983B3A - 0x9999CB)
+
+Six SLIDE8K blocks exist in the entire dumped ROM set — all of them in the Table
+Data ROM, inside the region historically covered by
+`table_data/includes/icons_to_strings.bin`. Five are live multilingual HELP
+databases; the sixth is an orphan (below).
+
+| # | ROM address | Language | Stream length | Compressed slice | Decompressed |
+|---|-------------|----------|---------------|------------------|--------------|
+| 0 | `0x983B3A` | German (**stale, orphaned**) | 0x3EEE (16,110) | 16,111 B | 0x9000 |
+| 1 | `0x988690` | English (also used for slot 4) | 0x349E (13,470) | 13,471 B | 0x9000 |
+| 2 | `0x98BB3A` | German | 0x3594 (13,716) | 13,717 B | 0x9000 |
+| 3 | `0x98F0DA` | French | 0x3926 (14,630) | 14,631 B | 0x9000 |
+| 4 | `0x992A0C` | Spanish | 0x39E2 (14,818) | 14,819 B | 0x9000 |
+| 5 | `0x9963FA` | Indonesian | 0x35C6 (13,766) | 13,767 B | 0x9000 |
+
+"Stream length" is the compressed bitstream proper (header excluded); the
+"compressed slice" checked in as
+`original_ROMs/help_db_<lang>_compressed.original.bin` is that stream **plus the
+one trailing alignment pad byte** (see
+[Byte-Exact Recompression](#byte-exact-recompression)). Every block declares —
+and produces — exactly 0x9000 (36,864) bytes.
+
+**What the payload is.** Each decompressed database starts with a table of
+32-bit little-endian pointers into itself, based at **RAM 0x69800** (the English
+database's first entries are 0x69B22, 0x69E5C, 0x6A1B8, …), followed by the
+help-string pool. Strings are Latin-1 with `~0d` as the newline escape. The
+payload's internal record format has **not** been decoded further: the
+decompressed databases are checked in as binaries
+(`table_data/includes/help_databases/help_db_<lang>.bin`), not yet as text
+sources.
+
+**How the firmware gets there.** The help-language load path in the Main CPU ROM
+reads the language number from RAM 0x0340E4, indexes the pointer table at
+0x988018, and calls the dispatcher with the destination in XBC:
+
+```
+f4779f: ld   A,(0x0340e4)      ; help language number
+f477a4: sll  0x02,A            ; × 4
+f477ab: add  XWA,0x00988018    ; HelpDB_LanguageTable
+f477b1: ld   XWA,(XWA)         ; -> SLIDE8K block address
+f477b3: ld   XBC,0x00069800    ; destination RAM
+f477d3: call 0xef41e3          ; SLIDE_Parse_Header
+```
+
+There are only five distinct languages: slot 4 of the six-entry table reuses the
+English block at 0x988690. See
+[Table Data ROM]({{ site.baseurl }}/table-data-rom/) for the language index and
+intro strings, and `table_data/help_databases.s` for the annotated source.
+
+#### The orphaned block at 0x983B3A
+
+Block 0 is a **superseded revision of the German database**. No 32-bit
+little-endian pointer to 0x983B3A exists in any dumped ROM (v7, v9, v10 program
+ROMs, table data, custom data, Sub-CPU) — nothing references it.
+
+Its stream is not merely "corrupt": decoding it reproduces the live German
+database **byte-for-byte for exactly 0x55E0 output bytes**, and then diverges.
+The reason is visible in the ROM layout: the factory image wrote the two Music
+Stylist pointer tables (`StyleRec_PtrTable_C2C5` at 0x986000 and
+`StyleRec_PtrTable_Default` at 0x987000) straight over this obsolete block's
+tail. The last element decoded entirely from surviving bytes ends at ROM
+0x985FFE; the very next element reads its two bytes at 0x985FFF/0x986000 —
+i.e. straddles into the overwritten region — and everything from output byte
+0x55E0 onward is therefore garbage. The decoder still walks the (now foreign)
+bytes until the output count reaches 0x9000, consuming its last stream byte at
+ROM 0x987A32.
+
+The block is **preserved byte-exactly and deliberately not "fixed"**: the
+surviving stream is emitted as a raw slice (`table_data/help_databases.s`),
+because its true tail no longer exists anywhere. Its whole walked extent is
+still round-trip verified by `make verify-help-databases` so the bytes stay
+pinned.
 
 ---
 
@@ -100,6 +247,12 @@ The flash write routine (`Flash_EraseSectorWithBankSelect`) uses `CUSTOM_DATA_FL
 | 001 | Program DATA FILE 1/2 | Table Data ROM 0x800000 | Uncompressed |
 | 003 | Table DATA FILE 1/2 | Table Data ROM 0x800000 | Uncompressed |
 
+The three archived update images
+(`original_ROMs/kn5000_subprogram_v14{0,1,2}_compressed.rom`, 93,124 / 93,181 /
+93,203 bytes) are whole-file SLIDE4K containers: the 11-byte header followed by
+one stream, decompressing to the 196,608-byte Sub-CPU payload. Only **v1.42**
+has a full source tree behind it; see [Round-Trip Coverage](#round-trip-coverage).
+
 ### Boot Sequence Behavior
 
 **After a firmware update:**
@@ -118,7 +271,7 @@ The flash write routine (`Flash_EraseSectorWithBankSelect`) uses `CUSTOM_DATA_FL
 |---------|---------------|---------|
 | 0x3E0000 | Custom Data Flash (offset 0xE0000) | Firmware update staging area |
 | 0x8E0000 | Table Data ROM (offset 0xE0000) | Factory LZSS preset data |
-| 0x830000-0x87FFFF | Table Data ROM (offset 0x30000-0x7FFFF) | Factory Sub CPU payload |
+| 0x830000-0x87FFFF | Table Data ROM (offset 0x30000-0x7FFFF) | Tone database -- data shipped to Sub CPU RAM 0x050000 |
 
 The addresses `0x3E0000` and `0x8E0000` are **NOT the same physical data** - they are different chips:
 - `0x3E0000` = Custom Data Flash IC19 (user-writable)
@@ -187,18 +340,15 @@ The following questions remain open regarding where the LZSS preset data actuall
 
 **Open Questions - Sub CPU Payload Transfer:**
 
-The Sub CPU executable payload (~192KB) must be transferred to the Sub CPU via the inter-CPU communication latches during boot. The source location remains under investigation:
+The Sub CPU executable payload (~192KB) is transferred to the Sub CPU via the inter-CPU communication latches during boot. **Where the Main CPU reads it from is unresolved.**
 
-1. **Memory Map Reconfiguration:** During the two-stage boot process, the Table Data ROM is initially mapped at `0xE00000-0xFFFFFF`, then remapped to `0x800000-0x9FFFFF`. The payload source address may differ between Stage 1 and Stage 2 boot contexts.
+1. **`0x830000-0x87FFFF` is not it.** That region is the **tone database** -- sound-parameter *data*, copied into the Sub CPU's data window at RAM 0x050000, not into its code area at 0x400+. See [Tone Database]({{ site.baseurl }}/tone-database/) and the retraction on [SubCPU Payload Loading]({{ site.baseurl }}/subcpu-payload-loading/).
 
-2. **Potential Payload Locations:**
-   - `0x830000-0x87FFFF` (Table Data ROM, post-remap) - Referenced by `SubCPU_Send_Payload`
-   - `0xE30000-0xE7FFFF` (same physical ROM, Stage 1 boot context)
-   - Other regions that become visible after memory controller configuration
+2. **`SubCPU_Send_Payload`'s two source bases** are the LZSS image at Custom Data Flash `0x3E0000` if it decompresses, and table-data `0x800000` otherwise. In the images this project holds, neither contains the payload: custom-data `0x3E0000` is erased (all 0xFF -- no File Type 007 update was ever applied to the dumped unit), and no byte of `kn5000_subprogram_v142.rom` appears anywhere in the table-data or custom-data dumps.
 
-3. **The `SubCPU_Send_Payload` routine** transfers data from multiple address ranges to different Sub CPU RAM regions. The exact mapping and whether the full 192KB executable is transferred vs. loaded from a separate Sub CPU ROM chip requires further analysis.
+3. **The executable is known only** from its own ROM dump (`kn5000_subprogram_v142.rom`) and from the compressed update-disc images. The runtime code-payload source path is flagged as open, not explained.
 
-See [Boot Sequence](boot-sequence.md) and [Inter-CPU Protocol](inter-cpu-protocol.md) for related documentation.
+See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) and [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for related documentation.
 
 ---
 
@@ -282,11 +432,226 @@ def decompress_slide4k(data):
 
 ---
 
+## SLIDE8K Format Specification
+
+SLIDE8K is the same scheme with a doubled ring and one bit moved from the match
+count into the match offset. The authority for everything below is
+`scripts/build/decompress_slide8k.py` / `compress_slide8k.py` in the
+disassembly repository — they round-trip all six factory blocks byte-identically
+— cross-checked line by line against `SLIDE_Decompress_8K_Init`
+(`v10/maincpu/boot/system_handlers.s:6968-7089`).
+
+### Container
+
+```
+Offset  Size  Content
+------  ----  -------
+0x00    7     "SLIDE8K"
+0x07    1     0x00 terminator
+0x08    3     Decompressed size, 24-bit BIG-ENDIAN
+              (all six factory blocks: 00 90 00 = 0x9000 = 36,864 bytes)
+0x0B    ...   compressed stream
+```
+
+Identical in shape to SLIDE4K; only the magic differs.
+
+### Ring Buffer
+
+The firmware `malloc`s **0x2000** bytes and zero-fills only up to the initial
+write position, leaving the last ten ring bytes as allocator garbage:
+
+```
+ef40cc: push 0x2000              ; ring size
+ef40cf: call 0xff0e80            ; Malloc
+ef40db: lda  XBC,XHL+0x1ff6      ; fill limit
+ef40e0: ld   (XWA+),0x00         ; zero-fill ring[0x0000-0x1FF5]
+ef40e4: cp   XWA,XBC
+ef40e6: jr   C,0xef40e0
+ef40e8: ld   BC,0x1ff6           ; initial write position
+```
+
+So ring positions **0x0000-0x1FF5 are zero** and the write position starts at
+**0x1FF6**, wrapping modulo 0x2000. (SLIDE4K: 0x1000-byte ring, zero-filled to
+0x0FED, write position 0x0FEE — `system_handlers.s:6849-6860`.) A valid encoder
+must never emit a match reading ring[0x1FF6-0x1FFF] before the corresponding
+output bytes have been written; `compress_slide8k.py` enforces exactly that
+(`find_longest_match`, lines 195-243).
+
+### Flag Bytes
+
+The firmware keeps the flag in a 16-bit word as `0xFF00 | flags` and shifts it
+right once per element; the reload happens when the 0xFF sentinel has been
+shifted out of bit 8 (`system_handlers.s:7004-7013`). That is what guarantees
+exactly 8 elements per flag byte. Bit 0 after each shift selects the element
+type — **LSB first**, 1 = literal, 0 = back-reference (`:7017`).
+
+### Match Encoding
+
+A back-reference is two bytes, low then high:
+
+```
+offset = ((high & 0xF8) << 5) | low      ; 13-bit ABSOLUTE ring position
+count  = (high & 0x07) + 3               ; 3 .. 10 bytes
+```
+
+The offset is an absolute ring position, not a distance, and the ring is written
+while the copy runs — so a match may legally read bytes it has just produced
+(this is how runs longer than the distance to the write position are encoded).
+
+The firmware forms the offset with `and wa, 0xf8` / `sll wa, 5`
+(`system_handlers.s:7047-7048`). The **+3 base** is confirmed twice over: the
+count field is masked with `and iz, 0x7` and then incremented by 2
+(`:7052-7053`), and the copy loop is **inclusive** — `cp iy, iz` / `jr ule`
+(`:7076-7077`) — so it runs `iy = 0 … iz`, i.e. `(high & 0x07) + 3` iterations.
+The SLIDE4K routine is structurally identical with `0xF0`/`<<4`, `and iz, 0xf`
+(`:6924-6930`, `:6953-6954`), giving `(high & 0x0F) + 3`.
+
+### Termination
+
+Termination is **purely by output count** against the header's declared size.
+The count is checked before every compressed-stream byte read and after every
+element, but the match copy loop itself is *not* bounds-checked, so a final
+back-reference could in principle overrun the declared size. None of the six
+factory blocks do — all produce exactly 0x9000 bytes.
+
+There is no end-of-stream marker, and the trailing bits of the last flag byte
+are never examined.
+
+### Reference Decoder
+
+```python
+WINDOW_SIZE, WINDOW_MASK, START = 0x2000, 0x1FFF, 0x1FF6
+
+def decompress_slide8k(buf, offset=0):
+    assert buf[offset:offset + 8] == b"SLIDE8K\x00"
+    size = (buf[offset+8] << 16) | (buf[offset+9] << 8) | buf[offset+10]
+    i = offset + 11
+
+    window = bytearray(WINDOW_SIZE)   # zero prefill
+    wpos = START
+    out = bytearray()
+    flag = 0                          # 16-bit flag word, 0xFF00 | flags
+
+    while True:
+        flag >>= 1
+        if not (flag & 0x100):        # sentinel gone: reload
+            if len(out) >= size: break
+            flag = 0xFF00 | buf[i]; i += 1
+        if flag & 1:                              # literal
+            if len(out) >= size: break
+            b = buf[i]; i += 1
+            out.append(b); window[wpos] = b
+            wpos = (wpos + 1) & WINDOW_MASK
+        else:                                     # back-reference
+            if len(out) >= size: break
+            low = buf[i]; i += 1
+            if len(out) >= size: break
+            high = buf[i]; i += 1
+            ref = ((high & 0xF8) << 5) | low
+            for k in range((high & 0x07) + 3):    # ring is live during the copy
+                b = window[(ref + k) & WINDOW_MASK]
+                out.append(b); window[wpos] = b
+                wpos = (wpos + 1) & WINDOW_MASK
+        if len(out) >= size: break
+
+    return bytes(out)
+```
+
+---
+
+<a id="byte-exact-recompression"></a>
+
+## Byte-Exact Recompression
+
+Rebuilding a ROM from source means the compressed blocks must come out
+**byte-identical**, and for both SLIDE variants that is only achievable by
+replaying the original encoder's decisions (`--reference`). Plain re-encoding
+produces a *valid* stream, but not the factory bytes: the original Technics
+compressor's offset/length choices do not follow a simple greedy or lazy
+matching rule.
+
+Two further subtleties, specific to how these streams end, would defeat a naive
+re-encode even if the match choices were reproduced:
+
+**1. Partially consumed final flag byte with nonzero unused bits.** Because the
+decoder stops on the output count, the last flag byte is usually consumed
+mid-group, and its never-read high bits are not guaranteed to be zero. Measured
+on the six factory streams:
+
+| Block | Last flag byte | Elements consumed | Unused bits |
+|-------|----------------|-------------------|-------------|
+| German (stale, 0x983B3A) | `0xA0` | 1 | **nonzero** (0x50 remaining) |
+| English | `0x30` | 6 | 0 |
+| German | `0x00` | 3 | 0 |
+| French | `0x00` | 8 | 0 |
+| Spanish | `0x00` | 4 | 0 |
+| Indonesian | `0x00` | 5 | 0 |
+
+The replay path therefore re-emits each original flag byte **verbatim**, while
+still verifying that its *consumed* bits agree with the replayed decisions
+(`compress_slide8k.py`, `encode_decisions`, lines 111-161).
+
+**2. An alignment pad byte after every stream.** Each factory block is followed
+by exactly one byte of leftover encoder output that the decoder never reads,
+so that the next block starts on an even address. The values are arbitrary:
+0x20, 0x7F, 0xCF, 0xCD, 0xCE after the English, German, French, Spanish and
+Indonesian streams respectively. Such a byte yields no decision and would be
+lost on re-encode, so when the replayed output is an exact prefix of the
+reference the remaining original bytes are carried over unchanged
+(`compress_slide8k.py`, `compress_with_reference`, lines 295-297).
+
+With `--strict`, anything that cannot be reproduced from the reference decisions
+is a hard error, so a rebuilt ROM can never silently diverge from the factory
+bytes.
+
+---
+
+<a id="round-trip-coverage"></a>
+
+## Round-Trip Coverage
+
+| Data | Format | Source of truth in the repo | Build gate |
+|------|--------|------------------------------|------------|
+| 19 demo-song presets | SLIDE4K | `.mid` + `.yaml` per preset | `make verify-demo-presets` |
+| 5 live help databases | SLIDE8K | decompressed `.bin` per language | `make verify-help-databases` |
+| stale German block | SLIDE8K | raw slice of the dump (tail lost) | round-trip checked, not rebuilt |
+| v1.42 update image | SLIDE4K | the source-built v142 payload | `cmp` inside `make all` |
+| v1.40 / v1.41 update images | SLIDE4K | archived images only | not source-built |
+
+**Still open:** `kn5000_subprogram_v141.rom` has no source tree (tracked as issue
+`kn5000-v41`), and the v1.40 payload exists only because it was decompressed out
+of its update image and committed for preservation. The help-database *payloads*
+are likewise still opaque binaries — decoding their pointer-table/string-pool
+record format is future work.
+
+---
+
 ## Decompression Routines
 
-All LZSS decompression routines are located in the **table_data** ROM. They are used during boot and firmware update operations.
+The KN5000 contains **two independent decompressor implementations**.
 
-### LZSS_Decompress (Main Decompressor)
+### Main CPU program ROM (both variants)
+
+These are the routines the running instrument uses, e.g. for the help databases
+and the demo presets. Source: `v10/maincpu/boot/system_handlers.s`.
+
+| Label | Address (v10) | Purpose |
+|-------|---------------|---------|
+| `SLIDE_Parse_Header` | `0xEF41E3` | Validate `"SLIDE"`, dispatch on `'4'`/`'8'` |
+| `SLIDE_Decompress_4K_Init` | `0xEF3FAB` | SLIDE4K decoder (0x1000 ring) |
+| `SLIDE_Decompress_8K_Init` | `0xEF40C5` | SLIDE8K decoder (0x2000 ring) |
+
+Calling convention: XWA = pointer to the block, XBC = destination address.
+Returns HL = 0 on success, 0xFFFF when the `"SLIDE"` prefix is absent.
+
+### Table Data ROM bootloader (SLIDE4K only)
+
+A second, self-contained decompressor lives in the first-stage bootloader at the
+end of the **table_data** ROM. It is used during boot and firmware-update
+operations, reads its input through a sector buffer, and paints a progress
+indicator. Source: `table_data/kn5000_table_data.s`.
+
+#### LZSS_Decompress (Main Decompressor)
 
 | Property | Value |
 |----------|-------|
@@ -313,7 +678,7 @@ XSP+0x0C: Window base address (copy of +0x10)
 XSP+0x10: Window buffer pointer (from malloc)
 ```
 
-### LZSS_ReadByte
+#### LZSS_ReadByte
 
 | Property | Value |
 |----------|-------|
@@ -324,7 +689,7 @@ XSP+0x10: Window buffer pointer (from malloc)
 
 **Description:** Handles sector buffering for reading compressed data. Reads 0x2400 bytes per sector from the table_data ROM and manages sector advancement for large compressed data.
 
-### LZSS_OutputByte
+#### LZSS_OutputByte
 
 | Property | Value |
 |----------|-------|
@@ -335,7 +700,7 @@ XSP+0x10: Window buffer pointer (from malloc)
 
 **Description:** Buffers 4 bytes and writes them as a 32-bit word to the destination for efficient memory access. Uses buffer at RAM address 0x0C0A.
 
-### LZSS_OutputByte_Alt
+#### LZSS_OutputByte_Alt
 
 | Property | Value |
 |----------|-------|
@@ -345,7 +710,7 @@ XSP+0x10: Window buffer pointer (from malloc)
 
 **Description:** Variant of LZSS_OutputByte that uses buffer at RAM address 0x0C0E instead of 0x0C0A. Used in flash update operations.
 
-### LZSS_ParseHeader
+#### LZSS_ParseHeader
 
 | Property | Value |
 |----------|-------|
@@ -353,13 +718,18 @@ XSP+0x10: Window buffer pointer (from malloc)
 | **Label** | `LZSS_ParseHeader` |
 | **Purpose** | Parse and validate LZSS header for flash updates |
 
-**Description:** Sets up source address (0x3E0000 = Table Data ROM), validates the header against expected signature at 0xA150, and pre-reads 4 sectors for initial buffer fill.
+**Description:** Sets up the source address (0x3E0000 = Custom Data Flash),
+reads six header bytes and `memcmp`s five of them against the `"SLIDE"` string
+at 0xFFA150 (= table_data 0x9FA150), then pre-reads sectors for the initial
+buffer fill. Note that this bootloader path compares only the five-character
+prefix and always uses its 4K decoder — it has **no** SLIDE8K support. Only the
+Main CPU's `SLIDE_Parse_Header` inspects the `4`/`8` character.
 
 ---
 
 ## RAM Variables
 
-The LZSS routines use the following RAM locations:
+The table_data bootloader's LZSS routines use the following RAM locations:
 
 | Address | Size | Purpose |
 |---------|------|---------|
@@ -374,19 +744,27 @@ The LZSS routines use the following RAM locations:
 | `0x0C0A` | 4 | Temporary output buffer (LZSS_OutputByte) |
 | `0x0C0E` | 4 | Temporary output buffer (LZSS_OutputByte_Alt) |
 
+The Main CPU's `SLIDE_Decompress_*_Init` routines keep their state on the stack
+and in the malloc'd ring instead; the ring pointer is stashed at RAM 0x0622.
+
 ---
 
 ## SLIDE String Markers
 
-The firmware contains "SLIDE" string markers used to detect and validate SLIDE4K format headers:
+The firmware contains `"SLIDE"` string markers used to validate SLIDE headers
+before decompression. There are exactly two in the Main CPU program ROM and one
+in the table_data ROM:
 
 | Location | Address | Label |
 |----------|---------|-------|
-| Main CPU | `0xEA2350` | `SLIDE_STRING` |
-| Main CPU | `0xEA2376` | `SLIDE_STRING_2` |
+| Main CPU | `0xE00032` | `SLIDE_STRING` |
+| Main CPU | `0xE00188` | `SLIDE_STRING_2` |
 | Table Data | `0x9FA150` | (within boot data) |
 
-These strings are used by header validation routines to confirm that compressed data uses the SLIDE4K format before attempting decompression.
+`SLIDE_Parse_Header` compares against `SLIDE_STRING`; the table_data bootloader's
+`LZSS_ParseHeader` compares against the copy at 0x9FA150. Only the five-character
+prefix is compared in both cases — the variant character is checked separately
+(and only by the Main CPU routine).
 
 ---
 
@@ -395,96 +773,152 @@ These strings are used by header validation routines to confirm that compressed 
 ### Boot Sequence
 
 During the boot sequence, the Main CPU's `SubCPU_Send_Payload` routine:
-1. Transfers uncompressed payload data from 0x830000-0x87FFFF to Sub CPU RAM
-2. Optionally attempts to decompress data from 0x3E0000 (the SLIDE4K region)
-3. If decompression fails (returns 0xFFFF), uses alternate uncompressed source
-4. The Sub CPU ROM itself is a **separate chip** - not transferred from table_data
+1. Transfers the **tone database** from 0x830000-0x87FFFF to Sub CPU data RAM 0x050000 (five 64 KB bulk transfers) -- this is data, not the executable
+2. Attempts to decompress the SLIDE4K image at 0x3E0000 in Custom Data Flash
+3. If decompression fails (returns 0xFFFF), falls back to base 0x800000
+4. Transfers the code blocks (Sub CPU 0x400 and 0xF000-0x3EEFF) from whichever base survived step 2/3 -- and in the dumped images neither base holds the payload, so the actual factory source is **unresolved**
 
-See [Boot Sequence](boot-sequence.md) for details.
+See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for details.
+
+### Help System
+
+Pressing HELP and then any panel button looks the button up in the active
+language's database. The database is decompressed on demand from one of the five
+SLIDE8K blocks into RAM 0x69800 (see
+[SLIDE8K Help Databases](#slide8k-help-databases) above).
 
 ### Firmware Updates
 
-The LZSS decompressor is also used during firmware updates to handle compressed update files. The flash update handlers (at 0x9FD800-0x9FEA9C) can process compressed ROM images using both SLIDE4K and SLIDE8K formats.
+The LZSS decompressor is also used during firmware updates to handle compressed
+update files. The bootloader's flash-update path (`Boot_FlashUpdate_Main`, 0x9FCC2A
+onward) processes compressed ROM images in SLIDE4K form; the archived Sub-CPU update
+images are all SLIDE4K. The region **0x9FD8A5-0x9FEA9C**, which older notes called
+"flash update handlers", is not part of that path -- it is the bootloader's uPD72068
+FDC command-layer driver (see [FDC Subsystem]({{ site.baseurl }}/fdc-subsystem/)).
 
 ---
 
 ## Compression Tools
 
-### scripts/decompress_lzss.py
+All tools live in `scripts/build/` in the disassembly repository.
 
-Decompresses SLIDE4K data from the table_data ROM.
-
-```bash
-# Extract and decompress from table_data ROM
-python scripts/decompress_lzss.py --extract-from-rom original_ROMs/kn5000_table_data.ic11 output.bin
-
-# Decompress standalone compressed file
-python scripts/decompress_lzss.py compressed.bin output.bin
-```
-
-### scripts/compress_lzss.py
-
-Compresses data using SLIDE4K algorithm. Supports byte-identical output via reference file.
+### SLIDE4K
 
 ```bash
-# Standard compression
-python scripts/compress_lzss.py input.bin output.bin
+# Re-derive all 19 demo-preset blocks from the factory ROM
+python3 scripts/build/decompress_demo_presets.py \
+    --rom original_ROMs/kn5000_table_data.rom \
+    --output-dir table_data/includes/demo_presets --emit-references
 
-# Byte-identical compression (uses original compression decisions)
-python scripts/compress_lzss.py input.bin output.bin --reference original_compressed.bin
+# Byte-identical recompression (replays the factory encoder's decisions)
+python3 scripts/build/compress_lzss.py input.bin output.bin \
+    --strict --reference original_ROMs/demo_preset_18_compressed.original.bin
+
+# ... and with the 11-byte "SLIDE4K\0" + 24-bit BE size header prepended
+python3 scripts/build/compress_lzss.py input.bin output.rom \
+    --strict --with-header --reference original_ROMs/kn5000_subprogram_v142_compressed.rom
 ```
 
-**Note:** The `--reference` option decodes compression decisions from the original file and replays them, producing byte-identical output when the input data matches. This is necessary because the original Technics compressor uses specific offset/length choices that don't follow a simple greedy or lazy matching algorithm.
-
-### Makefile Targets
+### SLIDE8K
 
 ```bash
-# Full rebuild: assemble preset_data.asm → compress → include in ROM
-make rebuild-preset-data
+# Extract all six known blocks (payload + raw stream) from the dump slice
+python3 scripts/build/decompress_slide8k.py --all --outdir /tmp/slide8k
 
-# Recompress only (without reassembly, uses existing uncompressed binary)
-make recompress-lzss
+# Decompress one block at a known offset, asserting the expected size
+python3 scripts/build/decompress_slide8k.py table_data/includes/icons_to_strings.bin \
+    --offset 0x43918 --expected-size 0x9000 --output help_db_english.bin
 
-# Clean intermediate files
-make clean_preset_data
+# Byte-identical recompression
+python3 scripts/build/compress_slide8k.py help_db_english.bin out.bin \
+    --strict --reference original_ROMs/help_db_english_compressed.original.bin
 ```
 
-The build uses the reference file at `original_ROMs/preset_data_compressed.original.bin` to ensure byte-matching output.
+`decompress_slide8k.py --compressed-out` writes the stream **without** the header
+and **without** the alignment pad, which is the form `--reference` expects to
+compare against.
+
+**Note:** the `--reference` option decodes the compression decisions from the
+original file and replays them. Without it, both compressors emit a valid but
+different stream — see [Byte-Exact Recompression](#byte-exact-recompression).
 
 ---
 
+## Makefile Targets
+
+```bash
+# --- SLIDE4K: 19 demo-song presets ---------------------------------------
+make decompress-demo-presets   # bootstrap: re-extract from the factory ROM
+make demo-midi                 # regenerate the .mid sources
+make demo-sidecars             # regenerate the .yaml sidecars
+make rebuild-demo-presets      # .mid + .yaml -> .bin -> compressed .bin
+make verify-demo-presets       # byte-compare all 19 against the factory streams
+
+# --- SLIDE8K: 6 help databases -------------------------------------------
+make decompress-help-databases # bootstrap: re-extract the decompressed sources
+make rebuild-help-databases    # recompress the checked-in sources
+make verify-help-databases     # byte-compare all 6 against the factory streams
+```
+
+`make all` rebuilds every ROM and additionally regenerates
+`rebuilt_ROMs/kn5000_subprogram_v142_compressed.rom` from the source-built v142
+payload with `compress_lzss.py --strict --with-header --reference`, sealing it
+with a `cmp` against the archived update image.
+
+Both `verify-*` targets print one `OK`/`MISMATCH` line per block. As of
+2026-08-07 all 25 blocks (19 SLIDE4K + 6 SLIDE8K) report `OK`.
+
+---
+
+<a id="source-files"></a>
+
 ## Source Files
 
-### table_data/preset_data.asm
+### Demo-song presets (SLIDE4K)
 
-Assembly source file describing the preset data structure. Currently:
-- **Header section (0x00-0xAF):** Fully defined with explicit `db` statements
-- **Parameter section (0xB0+):** Binary include with documentation
+The compressed blocks are **build products**. The checked-in sources are MIDI
+files plus YAML sidecars carrying everything MIDI cannot express (song header,
+cell topology, padding, stream order, running-status flags):
 
 ```
-table_data/preset_data.asm           <- Assembly source
-    ↓ (assemble)
-table_data/includes/preset_data.bin  <- Uncompressed binary
-    ↓ (LZSS compress with --reference)
-table_data/includes/preset_data_compressed.bin  <- Compressed, included in ROM
+table_data/includes/demo_presets/midi/demo_preset_NN.mid     <- musical content
+table_data/includes/demo_presets/sidecar/demo_preset_NN.yaml <- everything else
+    ↓ (midi_to_preset.py)
+table_data/includes/demo_presets/demo_preset_NN.bin          <- uncompressed
+    ↓ (compress_lzss.py --strict --reference)
+table_data/includes/demo_presets/demo_preset_NN_compressed.bin  <- in ROM
 ```
 
-As reverse engineering progresses, more of the parameter section can be converted from binary include to documented data definitions.
+Both `.bin` stages are generated and git-ignored. *(This supersedes the earlier
+`table_data/preset_data.asm` flow described in older revisions of this page;
+that file no longer exists.)*
 
-### Related Files
+### Help databases (SLIDE8K)
+
+```
+table_data/includes/help_databases/help_db_<lang>.bin        <- checked-in source
+    ↓ (compress_slide8k.py --strict --reference)
+table_data/includes/help_databases/help_db_<lang>_compressed.bin  <- in ROM
+```
+
+`table_data/help_databases.s` is the assembly module that emits the language
+pointer tables, the intro strings, the 11-byte SLIDE8K headers and these
+payloads — and the stale German block as a raw slice.
+
+### Reference files
 
 | File | Description |
 |------|-------------|
-| `table_data/preset_data.asm` | Assembly source for preset data |
-| `table_data/includes/preset_data_uncompressed.bin` | Original decompressed data (reference) |
-| `table_data/includes/preset_data_compressed.bin` | Compressed output for ROM inclusion |
-| `original_ROMs/preset_data_compressed.original.bin` | Reference for byte-matching compression |
+| `original_ROMs/demo_preset_NN_compressed.original.bin` | Factory SLIDE4K stream, ×19 |
+| `original_ROMs/help_db_<lang>_compressed.original.bin` | Factory SLIDE8K stream + pad byte, ×6 |
+| `original_ROMs/kn5000_subprogram_v14{0,1,2}_compressed.rom` | Sub-CPU update images (whole-file SLIDE4K) |
 
 ---
 
 ## Future Work
 
-- [ ] Reverse engineer parameter record format in detail
+- [ ] Decode the help-database payload format (pointer table + string pool at RAM 0x69800) into per-topic sources
+- [ ] Reverse engineer the preset parameter record format in detail
 - [ ] Determine the exact purpose of each parameter type (`18 XX` codes)
-- [ ] Convert more of preset_data.asm from binary include to documented data
-- [ ] Investigate if any other data in the ROMs uses SLIDE4K compression
+- [ ] Build a source tree for the v1.41 Sub-CPU payload (issue `kn5000-v41`)
+- [ ] Re-derive the 0x8E0000 section boundaries from the full 38,144-byte decompression
