@@ -29,20 +29,25 @@ The handler receives:
 
 ## CMD_DISPATCH_TABLE
 
-The 8-entry jump table at `0x00F46C` dispatches commands to handlers:
+The 8-entry jump table at `0x00F46C` dispatches commands to handlers. It is now emitted as
+a symbolic `.long` table in `v142/subcpu/subcpu_data_tables.s`, so the entries below are the
+labels the assembler resolves, and the addresses are the bytes actually in the ROM:
 
-| Index | Command Range | Handler | Purpose |
-|-------|--------------|---------|---------|
-| 0 | `0x00`-`0x1F` | `Audio_CmdHandler_00_1F` | MIDI/audio data to ring buffer |
-| 1 | `0x20`-`0x3F` | `Audio_CmdHandler_20_3F` | No-op (returns immediately) |
-| 2 | `0x40`-`0x5F` | `Audio_CmdHandler_40_5F` | Skip N bytes (data drain) |
-| 3 | `0x60`-`0x7F` | `Audio_CmdHandler_60_7F` | DSP streaming data |
-| 4 | `0x80`-`0x9F` | `Serial1_DataTransmit_Loop` | Serial port 1 (SC1) TX |
-| 5 | `0xA0`-`0xBF` | `Audio_CmdHandler_A0_BF` | Tone generator control |
-| 6 | `0xC0`-`0xDF` | `Audio_CmdHandler_C0_FF` | No-op (returns immediately) |
-| 7 | `0xE0`-`0xFF` | `Audio_CmdHandler_C0_FF` | No-op (returns immediately) |
+| Index | Command Range | Handler | Address | Purpose |
+|-------|--------------|---------|---------|---------|
+| 0 | `0x00`-`0x1F` | `Audio_CmdHandler_00_1F` | `0x034D5F` | MIDI/audio data to ring buffer |
+| 1 | `0x20`-`0x3F` | `Audio_CmdHandler_20_3F` | `0x01FC7C` | No-op (returns immediately) |
+| 2 | `0x40`-`0x5F` | `Audio_CmdHandler_40_5F` | `0x01FC7F` | Skip N bytes (data drain) |
+| 3 | `0x60`-`0x7F` | `Audio_CmdHandler_60_7F` | `0x035893` | DSP streaming data (enqueues into the DSP ring at `0x003B60`) |
+| 4 | `0x80`-`0x9F` | `Serial1_DataTransmit_Loop` | `0x01F890` | Serial port 1 (SC1) TX |
+| 5 | `0xA0`-`0xBF` | `Audio_CmdHandler_A0_BF` | `0x03CFEE` | Tone generator control |
+| 6 | `0xC0`-`0xDF` | `Audio_CmdHandler_C0_FF` | `0x020C12` | No-op (returns immediately) |
+| 7 | `0xE0`-`0xFF` | `Audio_CmdHandler_C0_FF` | `0x020C12` | No-op (returns immediately) |
 
-Note: Ranges 6 and 7 share the same no-op handler. Special E1/E2/E3 commands bypass this table entirely (see Special Commands below).
+Note: Ranges 6 and 7 share the same no-op handler. Special E1/E2/E3 commands bypass this table entirely (see Special Commands below) — they are intercepted in `INT0_HANDLER` itself and never reach entry 7.
+
+This is the **whole** Main CPU → Sub CPU command surface: eight ranges, one 3-bit selector,
+nothing else.
 
 ## Handler Details
 
@@ -198,6 +203,53 @@ Commands `0xE1`, `0xE2`, and `0xE3` are handled by the `MICRODMA_CH0_HANDLER` st
 
 Used as a handshake signal during multi-step transfers.
 
+## Second-level dispatch: jump-offset tables and case maps
+
+`CMD_DISPATCH_TABLE` only picks one of eight handlers. Everything below it — the audio and
+effect sub-commands — is dispatched through a family of ROM tables that sat in the
+disassembly as an undifferentiated byte run until the zone-A0 carve of 2026-08
+(`v142/subcpu/subcpu_data_tables.s`, disassembly commit `09a82ec`). Every split point in
+that carve is an address some instruction references, and the set tiles the region with no
+orphan bytes.
+
+Two shapes recur:
+
+* a **jump-offset table** of signed `u16` values added to a fixed code base, consumed by a
+  computed `jp T, base + table[index*2]`; and
+* an **opcode → case map**, a byte table that folds a sparse opcode range down to a small
+  dense case number, which then indexes a jump-offset table.
+
+| table | address | shape | dispatcher |
+|-------|---------|-------|------------|
+| `OFFSETS_F460` | `0x00F460` | 6 × `u16`, base `0x01FB76` | `Timer_AudioTick_Handler` round-robin (INTT1) |
+| `VOICEPARAM_TONE_OPTION_JUMPTABLE` | `0x00F965` | 7 × `u16`, base `0x02E89B` | `VoiceParam_Set_Tone_Option` (option 0-6) |
+| `AUDIO_CMD_TONEEDIT_JUMPTABLE` | `0x00F973` | 20 × `u16`, base `0x02EDB9` | `Audio_Cmd_ToneEdit_TableJump` (opcodes `0x00`-`0x13`) |
+| `DSP_EFFPARAM_APPLY_JUMPTABLE` | `0x00F99B` | 12 × `u16`, base `0x02F2D9` | `DSP_EffParam_Apply_By_AlgoType` (algorithm type 0-11) |
+| `VOICE_DSPOUT_A_JUMPTABLE` | `0x00F9B3` | 8 × `u16`, base `0x02F36E` | `Voice_DSPOut_Apply_A` |
+| `VOICE_DSPOUT_B_JUMPTABLE` | `0x00F9C3` | 8 × `u16`, base `0x02F3FA` | `Voice_DSPOut_Apply_B` (byte-identical contents to A) |
+| `VOICE_DSPOUT_SECOND_A_JUMPTABLE` | `0x00F9D3` | 8 × `u16`, base `0x02F48C` | `Voice_DSPOut_Second_A` |
+| `AUDIO_CMD_EFFPARAM_CASEMAP` | `0x00F9E3` | 85 bytes → cases `0x00`-`0x1E` | `Audio_Cmd_EffParam_TableJump` (opcode − `0x11`) |
+| `AUDIO_CMD_EFFPARAM_JUMPTABLE` | `0x00FA38` | 31 × `u16`, base `0x02F9FA` | same, after the case map |
+| `AUDIO_CMD_EFFECTPARAM_JUMPTABLE` | `0x00FA76` | 19 × `u16`, base `0x02F86F` | `Audio_Cmd_EffectParam_Dispatch` (opcodes `0x15`-`0x27`) |
+| `AUDIO_CMD_DSPUNIT_CASEMAP` | `0x00FA9C` | 26 bytes → cases 0-8 | `Audio_Cmd_DSPUnit_TableJump` (opcode − `0x1F`) |
+| `AUDIO_CMD_DSPUNIT_JUMPTABLE` | `0x00FAB6` | 9 × `u16`, base `0x02FFF9` | same, after the case map |
+| `AUDIO_CMD_TONEEDIT_REPLY_CASEMAP` | `0x00FAC8` | 24 bytes → cases 0-6 | `Audio_Cmd_ToneEdit_Reply_TableJump` (opcodes `0x19`-`0x24` and `0x2B`-`0x36`, folded) |
+| `AUDIO_CMD_TONEEDIT_REPLY_JUMPTABLE` | `0x00FAE0` | 7 × `u16`, base `0x0304B6` | same, after the case map |
+| `DSP_SETCOEFF_MASTERCONFIG_JUMPTABLE` | `0x00FAEE` | 24 × `u16`, base `0x0317CF` | `DSP_SetCoeff_MasterConfig` (selector 0-23; offset `0x0282` is the shared no-op arm) |
+| `VOICEPARAM_FINALIZE_QUERY_JUMPTABLE` | `0x00FB1E` | 8 × `u16`, base `0x031B5B` | `VoiceParamFinalize_SecondaryDispatch` (status bit 3 clear) |
+| `VOICEPARAM_FINALIZE_ACTION_JUMPTABLE` | `0x00FB2E` | 8 × `u16`, base `0x031AA1` | `Voice_ParamFinalize` (status bit 3 set) |
+| `AlgoJumpTable1`-`AlgoJumpTable6` | `0x00FB66`-`0x00FBE3` | 12/12/12/9/9/9 × `u16` | algorithm-type arms, bases `0x033812`, `0x0339DE`, `0x033E44`, `0x0340CC`, `0x0341BE`, `0x03429D` |
+
+The same zone also holds `VoiceParamFinalize_HandlerParams` (`0x00FB3E`, 16 bytes), for
+which **no code reference has been found** — its "eight byte-pairs of handler operand sizes"
+reading is a content hypothesis only, and is flagged as such in the source.
+
+For the DSP-side counterparts of these tables — the bytecode-interpreter handler table
+`OFFSETS_14739` and the translator table `OFFSETS_14745` — see the
+[DSP Bytecode Interpreter]({{ site.baseurl }}/dsp-bytecode-interpreter/) page, and for the
+effect programs they dispatch into, the
+[DSP Effect Data Zone]({{ site.baseurl }}/dsp-effect-data-zone/).
+
 ## Dispatch Flow
 
 ```
@@ -228,20 +280,24 @@ CMD_PROCESSING_STATE check
 
 ## Code References
 
+Addresses re-verified 2026-08 against `symbols/subcpu_symbols_reference.txt` and against the
+raw pointer bytes at `0x00F46C` in `kn5000_subprogram_v142.rom`. **Eight of the entries in
+the previous revision of this table were stale** and are corrected here.
+
 | Symbol | Address | Purpose |
 |--------|---------|---------|
 | `CMD_DISPATCH_TABLE` | `0x00F46C` | 8-entry handler jump table |
 | `MICRODMA_CH0_HANDLER` | `0x020F1F` | Main command dispatcher |
-| `Audio_CmdHandler_00_1F` | `0x039640` | MIDI ring buffer writer |
-| `Audio_CmdHandler_20_3F` | `0x01FC7B` | No-op |
+| `Audio_CmdHandler_00_1F` | `0x034D5F` | MIDI ring buffer writer |
+| `Audio_CmdHandler_20_3F` | `0x01FC7C` | No-op |
 | `Audio_CmdHandler_40_5F` | `0x01FC7F` | Data drain |
-| `Audio_CmdHandler_60_7F` | `0x039896` | DSP streaming |
-| `Serial1_DataTransmit_Loop` | `0x01F226` | SC1 serial TX |
-| `Audio_CmdHandler_A0_BF` | `0x03D00D` | Tone gen control |
-| `Audio_CmdHandler_C0_FF` | `0x0200C6` | No-op |
-| `InterCPU_Latch_Setup` | `0x020B3B` | DMA and latch init |
+| `Audio_CmdHandler_60_7F` | `0x035893` | DSP streaming |
+| `Serial1_DataTransmit_Loop` | `0x01F890` | SC1 serial TX |
+| `Audio_CmdHandler_A0_BF` | `0x03CFEE` | Tone gen control |
+| `Audio_CmdHandler_C0_FF` | `0x020C12` | No-op |
+| `InterCPU_Latch_Setup` | `0x020C15` | DMA and latch init |
 | `MIDI_Dispatch` | `0x034D93` | MIDI message parser |
-| `Audio_CmdHandler_ConstData` | `0x039622` | Ring buffer write helper |
+| `Audio_CmdHandler_ConstData` | `0x034D47` | Ring buffer write helper |
 
 ## References
 
@@ -249,7 +305,9 @@ CMD_PROCESSING_STATE check
 - [MIDI Subsystem]({{ site.baseurl }}/midi-subsystem/) — MIDI message dispatch on Sub CPU
 - [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) — Sound generation and DSP
 - [SysEx Messages]({{ site.baseurl }}/sysex-messages/) — System Exclusive message handling
+- [SubCPU Payload Loading]({{ site.baseurl }}/subcpu-payload-loading/) — how the payload image (and these tables with it) reaches the Sub CPU
+- [DSP Effect Data Zone]({{ site.baseurl }}/dsp-effect-data-zone/) — the DSP effect programs the `0x60`-`0x7F` and effect-parameter paths ultimately drive
 
 ---
 
-*Last updated: March 2026*
+*Last updated: August 2026*

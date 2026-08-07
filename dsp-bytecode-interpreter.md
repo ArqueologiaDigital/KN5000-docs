@@ -8,7 +8,11 @@ permalink: /dsp-bytecode-interpreter/
 
 The KN5000's dual DSP chips (IC310 MN19413 and IC311 NEC uPD6383GF) are programmed via a two-level bytecode interpreter running on the SubCPU. This page documents the interpreter architecture, opcodes, and register write protocol.
 
-> **Status:** Architecture and opcode tables decoded from SubCPU firmware. Register-to-effect parameter mapping still incomplete.
+> **Status:** Architecture and opcode tables decoded from SubCPU firmware. The programs
+> themselves — every bytecode stream and parameter record for all 100 effect numbers — are
+> now carved and labelled in the disassembly (Wave 3a, 2026-08-07). Register-to-effect
+> parameter mapping is still incomplete: eight translator opcodes have measured semantics,
+> the rest are named from their code shape only.
 
 > **Note:** This page predates the identification of IC311. It formerly called the chip
 > "DS3613GF-3BA, a custom ASIC" — that was a transcription error; the part is the **NEC
@@ -17,27 +21,56 @@ The KN5000's dual DSP chips (IC310 MN19413 and IC311 NEC uPD6383GF) are programm
 > effect/parameter catalogue, see the newer
 > [Effects DSP (NEC uPD6383GF)]({{ site.baseurl }}/effects-dsp/) page.
 
+> **The programs this interpreter runs now have their own page.** The bytecode streams and
+> parameter record tables live in a 39,372-byte zone at Sub-CPU `0x0147B3`-`0x01E17E`,
+> carved block-by-block in 2026-08. Both stream grammars, the four 100-entry pointer
+> arrays and a per-effect address table are documented in
+> [DSP Effect Data Zone (Sub-CPU ROM)]({{ site.baseurl }}/dsp-effect-data-zone/).
+> Addresses on the present page were re-checked against that carve; the corrections are
+> marked inline.
+
 ## Architecture
 
 The interpreter has two levels:
 
 ### Level 1 — Low-level Bytecode Interpreter
 
-- **Entry:** `DSP_BytecodeInterpreter_Init` (subcpu line 42289)
-- **Called by:** `DSP_WriteGlobalConfig` and `DSP_WriteEFFConfig`
-- **Programs:** Stored in SubCPU DRAM (loaded from maincpu payload at boot)
-- **Format:** 2 bytes per opcode — high nibble = opcode, remaining 12 bits = count field
+- **Entry:** `DSP_BytecodeInterpreter_Init` (`0x03C259`); loop body
+  `DSP_BytecodeInterpreter_Loop` (`0x03C2CB`)
+- **Called by:** `DSP_WriteGlobalConfig` (`0x03C181`) and `DSP_WriteEFFConfig` (`0x03C161`)
+- **Programs:** the effect data zone at `0x0147B3`-`0x01E17E`, part of the Sub CPU payload
+  image the Main CPU ships at boot — so they are in Sub CPU RAM at run time, but they are
+  ROM content and are fully carved in the disassembly
+- **Format:** 2-byte header per instruction — high nibble of `b0` = opcode, and the
+  remaining 12 bits `((b0 & 0x0F) << 8) | b1` are the **total instruction length in bytes,
+  header included** (a big-endian 12-bit count, not an element count)
 
 ### Level 2 — Translator (Parameter Descriptor Engine)
 
-- **Entry:** `DSP_Translator_ReadOpcode` (subcpu line 42786)
-- **Called by:** `DSP_ParameterWriteEngine` (subcpu line 42654)
-- **Programs:** Parameter descriptors from maincpu program ROM (pointer table at 0xEE75F6)
-- **Format:** Single-byte opcodes (0x61-0x78), each followed by variable parameter data
+- **Entry:** `DSP_Translator_ReadOpcode` (`0x03CB18`); per-parameter walker
+  `DSP_PerParameterTranslator` (`0x03CAAE`)
+- **Called by:** `DSP_ParameterWriteEngine` (`0x03C9E6`)
+- **Programs:** parameter **value** records and **descriptor** records, both in the same
+  Sub CPU effect data zone. `DSP_WriteParam_Generic` (`0x03C20E`) fetches them from the two
+  100-entry `u32` arrays at `0x01F22C` (descriptors) and `0x01F09C` (values) — *corrected
+  2026-08*: an earlier revision of this page sourced them from the main-CPU table at
+  `0xEE75F6`; that table is a separate main-CPU-side DSP-config field table (its first
+  entries are `u32` pointers into `0xEE64DA`-`0xEE69E8`, i.e. main-CPU program ROM) and is
+  not this engine's program source
+- **Format:** records `[len_hi, len_lo, id, payload…]`, big-endian length covering the whole
+  record, `0xF0` as the end-of-table sentinel. Inside a value record the `id` byte is
+  dispatched as an opcode, then `{ id, field-index, operands }` repeat until `0x7A`
 
 ### Dispatch Router
 
-`DSP_DispatchCommand(wa=cmd_byte, bc=chip_id)` routes to DSP1 (chip=0, parallel bus) or DSP2 (chip=1, SPI serial). `DSP_DispatchData` similarly routes data bytes.
+`DSP_DispatchCommand(wa=cmd_byte, bc=chip_id)` (`0x036A2E`) routes to DSP1 (chip=0, IC311,
+parallel bus) or DSP2 (chip=1, IC310, SPI serial). `DSP_DispatchData` (`0x036A4F`) similarly
+routes data bytes.
+
+The chip id is not passed down from the caller — it is looked up per **effect slot** in the
+5-byte table at Sub-CPU `0x01ED6D`, whose contents are `00 00 01 01 01`: slots 0-1 are IC311,
+slots 2-4 are IC310. `DSP_WriteEFFConfig`, `EFF_Disconnect` and the parameter-write front
+door all do the same `byte(0x01ED6D + slot)` fetch.
 
 ## Level 1 Opcodes (Low-level)
 
@@ -53,7 +86,14 @@ The interpreter has two levels:
 | 0x0E | Op0E | DispatchCommand + DispatchData loop (register write) |
 | 0xFN | End | Terminate program |
 
-Handler dispatch table: `OFFSETS_14739` (6 entries in `subcpu_data_tables.s`). Handler code: 1,613 bytes of embedded machine code at `DSP_Bytecode_Programs` (line 42404).
+Opcodes `0x6`-`0xC` are consumed and ignored. Termination is by **peek**: the stream ends
+when the *next* byte's high nibble is `0xF`, so the `0xF0` terminator is not executed.
+
+Handler dispatch table: `OFFSETS_14739` at `0x014739` — 6 signed `u16` offsets relative to
+base `0x03C32E`, decoding to handlers at `0x03C32E`, `0x03C568`, `0x03C661`, `0x03C708`,
+`0x03C7A1`, `0x03C7BB`. Handler code: 1,613 bytes of embedded machine code at
+`DSP_Bytecode_Programs` (`0x03C32E`), still kept as raw bytes in the disassembly because of
+unsupported addressing modes.
 
 ## Level 2 Opcodes (Translator)
 
@@ -89,7 +129,17 @@ Handler dispatch table: `OFFSETS_14739` (6 entries in `subcpu_data_tables.s`). H
 | 0x7A | (end) | — | Terminate bytecode block |
 | 0xF0 | (separator) | — | Separator between parameter slots |
 
-Translator dispatch table: `OFFSETS_14745` (25 entries in `subcpu_data_tables.s`).
+Translator dispatch table: `OFFSETS_14745` at `0x014745` — 25 signed `u16` offsets relative
+to base `0x03CB8E`, indexed by `opcode - 0x61` for opcodes `0x61`-`0x79`. Opcodes `0x21`,
+`0x24` and `0x40` are special-cased *before* this table; anything else aborts via
+`DSP_Op_Unknown_Error`. Note that opcode `0x79` is a real entry (offset `0x88`, target
+`0x03CC16`) — the table covers `0x61`-`0x79`, not `0x61`-`0x78`.
+
+The **measured** semantics of the settled subset are on the
+[DSP Effect Data Zone]({{ site.baseurl }}/dsp-effect-data-zone/) page (`0x21` universal tail
+level, `0x62` CURVE_D volume law at 1.00 dB/step, `0x68` ms→DRAM words at 44.1 kHz, `0x69`
+degrees, `0x70` biquad, `0x72` compressor threshold/ratio). Where that page and the
+inferred descriptions in the table above disagree, the measured page wins.
 
 ## SPI Protocol (DSP2 Register Writes)
 
@@ -139,30 +189,65 @@ Registers use a structured addressing scheme:
 
 ### Effect Algorithm Types
 
-The firmware supports 12 algorithm types (indices 0-11), dispatched through tables at SubCPU DRAM 0x33812 (`DSP_AlgoType_Dispatch1_TableData`). These correspond to different reverb/chorus/delay/EQ algorithm structures.
+The firmware supports 12 algorithm types (indices 0-11). The Wave-3a carve of the sub-CPU
+data zones turned up the whole supporting table family, all of which agree on that count:
 
-Effect configurations are loaded by `DSP_WriteEFFConfig`, which looks up the algorithm type from a table at `0x1ED6D[wa]` and passes it to the bytecode interpreter along with the appropriate bytecode program pointer.
+| table | address | shape |
+|-------|---------|-------|
+| `AlgoJumpTable1` | `0x00FB66` | 12 × `u16` offsets, base `0x033812` (`DSP_AlgoType_Dispatch1_TableData`) |
+| `AlgoJumpTable2` | `0x00FB7E` | 12 × `u16`, base `0x0339DE` |
+| `AlgoJumpTable3` | `0x00FB96` | 12 × `u16`, base `0x033E44` |
+| `AlgoJumpTable4/5/6` | `0x00FBAE` / `0x00FBC0` / `0x00FBD2` | 9 × `u16`, bases `0x0340CC` / `0x0341BE` / `0x03429D` |
+| `DSP_EFFPARAM_APPLY_JUMPTABLE` | `0x00F99B` | 12 × `u16`, base `0x02F2D9` (`DSP_EffParam_Apply_By_AlgoType`) |
+| `DSP_AlgoChannel_SelectorRecords` | `0x010FCE` | 12 × 6 bytes — three 2-byte channel pairs per type, `0xFF` = no entry |
+| `DSP_AlgoDescriptor_Records` | `0x011E16` | 14 × 39-byte (`0x27`) records; types 12 and 13 are all zero |
+
+**Correction (2026-08).** An earlier revision of this page said `DSP_WriteEFFConfig` "looks
+up the algorithm type from a table at `0x1ED6D[wa]`". It does not: `0x01ED6D` is the 5-byte
+**chip-id** table described above (`00 00 01 01 01`, indexed by effect *slot*).
+`DSP_WriteEFFConfig` fetches that chip id, then calls
+`DSP_BytecodeInterpreter_Init(chip, slot, XDE = 0x014777, bytecode stream)`. `0x014777` is a
+run of 12-byte interpreter-frame descriptors indexed by slot (`+0`,`+2`,`+4`,`+6` are copied
+into the interpreter frame, `+8` is a long); the disassembly still carries the inherited ELF
+label **`ToneGen_WorkArea`** there, which is a misnomer — it is DSP program/parameter data,
+not a tone-generator work area. `DSP_WriteGlobalConfig` does the same with the sibling
+descriptor table at `0x0147B3` and program index 0.
 
 ## Key Functions (SubCPU)
 
-| Function | Line | Purpose |
-|----------|------|---------|
-| `DSP_BytecodeInterpreter_Init` | 42289 | Low-level interpreter entry |
-| `DSP_Bytecode_Programs` | 42404 | 1,613 bytes of handler machine code |
-| `DSP_ParameterWriteEngine` | 42654 | Translator entry point |
-| `DSP_Translator_ReadOpcode` | 42786 | Opcode decode + dispatch |
-| `DSP_DispatchCommand` | 34044 | Route command to DSP1/DSP2 |
-| `DSP_DispatchData` | — | Route data to DSP1/DSP2 |
-| `DSP2_Send_Command` | 32980 | SPI bit-bang: 9 SCLK rising edges |
-| `DSP2_SPI_BusIdle` | — | SPI CS deassert + state change |
-| `DSP_WriteGlobalConfig` | — | Global config via bytecode |
-| `DSP_WriteEFFConfig` | — | Effect config via bytecode (12 algo types) |
-| `DSP_WriteParamCmd30` | — | CMD 0x30 register write (5 SPI transactions) |
-| `DSP_WriteOscParam` | — | Write oscillator/effect parameter |
-| `DSP_WriteFreqParam` | — | Write frequency parameter |
+Addresses, not source line numbers — the disassembly moved from `.asm` to `.s` modules and
+the old line references were stale. These are the current entries in
+`symbols/subcpu_symbols_reference.txt`.
+
+| Function | Address | Purpose |
+|----------|---------|---------|
+| `DSP_BytecodeInterpreter_Init` | `0x03C259` | Low-level interpreter entry |
+| `DSP_BytecodeInterpreter_Loop` | `0x03C2CB` | Fetch/decode/dispatch loop |
+| `DSP_Bytecode_Programs` | `0x03C32E` | 1,613 bytes of handler machine code |
+| `DSP_Bytecode_NotifyStateChange` | `0x03C253` | Tail-jumps into the scheduler (yields between register groups) |
+| `DSP_ParameterWriteEngine` | `0x03C9E6` | Translator entry point |
+| `DSP_PerParameterTranslator` | `0x03CAAE` | Walks one value record to its `0x7A` |
+| `DSP_Translator_ReadOpcode` | `0x03CB18` | Opcode decode + dispatch |
+| `DSP_TableWalk_Search` | `0x03CF53` | Finds the descriptor record with a given id |
+| `DSP_TableWalk_SearchWithState` | `0x03CFA5` | Same, stateful variant |
+| `DSP_DispatchCommand` | `0x036A2E` | Route command to DSP1/DSP2 |
+| `DSP_DispatchData` | `0x036A4F` | Route data to DSP1/DSP2 |
+| `DSP2_Send_Command` | `0x03666B` | SPI bit-bang: 9 SCLK rising edges |
+| `DSP2_SPI_BusIdle` | `0x0364C4` | SPI CS deassert + state change |
+| `DSP_WriteGlobalConfig` | `0x03C181` | Global config via bytecode (descriptor table `0x0147B3`) |
+| `DSP_WriteEFFConfig` | `0x03C161` | Effect config via bytecode (descriptor table `0x014777`) |
+| `DSP_WriteParameter` | `0x03C190` | "Write parameter set N of effect M" front door |
+| `DSP_WriteParam_Generic` | `0x03C20E` | Generic arm: descriptors from `0x01F22C`, values from `0x01F09C` |
+| `DSP_MixerCoeff_Compute` | `0x03C067` | Two-stage mixer gain via `DSP_MixerGain_Curve` |
+| `DSP_WriteParamCmd30` | `0x038439` | CMD 0x30 register write (5 SPI transactions) |
+| `DSP_WriteOscParam` | `0x0387E6` | Write oscillator/effect parameter |
+| `DSP_WriteFreqParam` | `0x038539` | Write frequency parameter |
+| `DSP_Read_Status` | `0x0383F7` | Poll DSP1 ready via Port PH bit 0 |
+| `EFF_Change_WithDebug` | `0x0380EC` | Uploads algorithm then coefficients for one slot |
 
 ## Related Pages
 
+- [DSP Effect Data Zone (Sub-CPU ROM)]({{ site.baseurl }}/dsp-effect-data-zone/) — the data this interpreter executes: both grammars, the four pointer arrays, and a per-effect address map for all 100 effect-algorithm numbers
 - [Effects DSP (NEC uPD6383GF)]({{ site.baseurl }}/effects-dsp/) — the IC311 DSP chip itself: architecture, instruction word, decoded algorithms, effect/parameter catalogue
 - [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) — Overall audio architecture
 - [Tone Generator]({{ site.baseurl }}/tone-generator/) — IC303 wavetable synth

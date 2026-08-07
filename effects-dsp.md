@@ -8,8 +8,9 @@ permalink: /effects-dsp/
 
 The KN5000's primary effects processor is **IC311**, an **NEC uPD6383GF-3BA** — a
 24-bit fixed-point audio DSP with an external delay-DRAM controller. It runs the
-reverbs, choruses, delays, EQ and dynamics effects; a second, less-understood chip
-(IC310, an MN19413) handles additional effect units.
+reverbs, choruses, delays, EQ and dynamics effects; a second chip (IC310, an MN19413)
+runs **nine** of the 100 effect-algorithm numbers — see
+[Chip partition](#chip-partition-nine-effects-belong-to-ic310) below.
 
 This page is the reference distillation of the reverse-engineering of that chip. The
 narrative — how each result was found — is in the MAME development blog (Parts 78–84);
@@ -31,6 +32,13 @@ page remains correct about the **Sub CPU-side** bytecode interpreter (the mechan
 *uploads* configurations); everything it says about the DSP chip's own architecture is
 refined here. See also the [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/) for how
 the Sub CPU reaches the DSP in the first place.
+
+The **data** the Sub CPU uploads — the per-effect microprogram/coefficient bytecode
+streams and the parameter record tables, all 39,372 bytes of them — now has its own
+reference page:
+[DSP Effect Data Zone (Sub-CPU ROM)]({{ site.baseurl }}/dsp-effect-data-zone/). That
+page carries the block-by-block address map; this page states the conclusions drawn
+from it.
 
 ---
 
@@ -112,10 +120,17 @@ and stream its coefficients. A **36-bit instruction word is packed into 5 bytes*
 signed **Q0.23** for static program constants (the value `0x517CC1 = 2/π` recurs 53
 times). Parameter-path biquad coefficients are written per-word as Q1.22 or Q0.23 instead.
 
-There are **~40 distinct microprograms serving ~100 effects** — "one algorithm, many
-coefficient banks." The Sub CPU holds a 100-slot algorithm-pointer table and a matching
-parameter-pointer table (see the [Audio Subsystem]({{ site.baseurl }}/audio-subsystem/)
-tables at `0x1ED7C` / `0x1EF0C`).
+"One algorithm, many coefficient banks" is now an exact count. Reading the four 100-entry
+pointer arrays straight out of the payload image gives, across the 100 effect-algorithm
+numbers, **41 distinct algorithm bytecode streams**, **59 distinct coefficient streams**,
+**41 distinct parameter-descriptor tables** and **59 non-empty parameter-value tables**
+(the earlier "~40 microprograms" estimate was right). The arrays are at Sub-CPU
+`0x01ED7C` (algorithm), `0x01EF0C` (coefficients), `0x01F09C` (parameter values) and
+`0x01F22C` (parameter descriptors); the
+[DSP Effect Data Zone]({{ site.baseurl }}/dsp-effect-data-zone/) page lists every entry.
+The collapse from 100 to 41 comes from deliberate pointer sharing: the twelve standalone
+reverbs share one microprogram, ROCK ROTARY shares ROTARY SPEAKER's, the two IC310 groups
+share one each — and 42 effect numbers share a single **NO OPERATION** program (§6).
 
 ---
 
@@ -278,6 +293,14 @@ L/R, FEEDBACK L/R. Effects sharing an identical parameter list (FLANGER ≡ PHAS
 DISTORTION ≡ OVERDRIVE ≡ FUZZ, ROTARY ≡ ROCK ROTARY) differ only in DSP coefficients, not
 in the exposed parameter set.
 
+> The `#` column above is the **TYPE-selector position**, not the effect-algorithm number
+> used everywhere else on this page and in the ROM tables. The mapping is not the identity:
+> selector 14 (SLOW ATTACKER) is effect-algorithm **37**, selector 15 (PARAMETRIC EQ) is
+> effect **39**, and so on — the
+> [DSP Effect Data Zone]({{ site.baseurl }}/dsp-effect-data-zone/) table is indexed by the
+> algorithm number. Selector 14 / effect 37 is a **stub** (§6): the parameter page is real,
+> the program behind it is NO OPERATION.
+
 ### DIGITAL REVERB page (12 reverbs + 2 delays)
 
 All twelve standalone reverbs share **one** parameter list:
@@ -293,10 +316,62 @@ layouts rather than this array and are outside the 50-effect catalogue.
 
 ---
 
-## 6. What still needs real hardware
+## 6. Twelve named effects are stubs (ROM-VERIFIED)
+
+Of the 100 effect-algorithm numbers, **42 point all three of algorithm bytecode,
+coefficient bytecode and parameter descriptors at one shared trio** — the **NO OPERATION**
+program at Sub-CPU `0x017263` / `0x01735E` / `0x017425`, a dry pass-through that still
+runs a level detector. This is **pointer sharing, not duplication**: the 42 entries in the
+`0x01ED7C` array hold the identical value `0x017263`, and no second byte-identical copy of
+the program exists anywhere in the effect data zone.
+
+Twenty-nine of the 42 are the unnamed `----------` placeholders in the main-CPU effect-name
+table, which is unsurprising. The other thirteen carry real names — effect **0 NO
+OPERATION**, plus **twelve named effects that the firmware ships as a dry pass-through**:
+
+| # | name | # | name | # | name |
+|---|------|---|------|---|------|
+| 11 | MODULATION DELAY | 45 | CELM | 63 | STRING |
+| 37 | SLOW ATTACKER | 49 | PITCH SHIFTER | 69 | PEDAL WAH+DELAY |
+| 38 | NOISE FLANGER | 51 | PEDAL WAH | 80 | DS_D |
+| 44 | CEL | 55 | HARS EFFECT | 81 | OVER_D |
+
+Names are read from the main-CPU name table (`0x033568 - 18n`, stride 18 descending).
+Only one of the twelve — SLOW ATTACKER — appears in the TYPE-selector list captured in §5;
+the other eleven names are in the name table but were never seen offered by that selector.
+
+**Effect 37 SLOW ATTACKER is the interesting one.** It is the *only* member of the 42 with
+its own live parameter **value** table (`0x0173F2`) and a real 5-slot UI page — THRESHOLD /
+ATTACK RATE / RELEASE RATE / VOLUME / REV SEND — yet those parameter writes land on the
+dry pass-through program. That makes it the one stub worth testing on real hardware, and
+the prediction is falsifiable: it should be **indistinguishable from no effect**. If it
+audibly does something on a real KN5000, the algorithm-selection path substitutes a program
+the algorithm table does not name, and the model above is wrong.
+
+### Chip partition: nine effects belong to IC310
+
+**Nine** effect numbers are **IC310 (MN19413)** programs, not uPD6383 programs:
+**57 STANDARD, 58 PERCUSSIVE, 59 SYMPHONIC, 60 DEEP SPACE** (the ACOUSTIC ILLUSION types),
+**79 GEQ, 88 ROOM, 89 KARAOKE, 90 BATH ROOM, 91 STAGE**. The criterion is mechanical: their
+bytecode streams are the only ones carrying `0x0E`-opcode records whose first payload byte
+is the DSP2 register-write command `0x30`. Walking all 200 algorithm/coefficient streams
+with that test returns exactly that set of nine and nothing else.
+
+An earlier note counted **five** ("the malformed streams") — that count came from a
+uPD6383-shaped parser choking on five of them and is superseded. Their descriptor bytes are
+IC310 parameter-word addresses, *not* uPD6383 cell numbers, so nothing in §3 or §4 of this
+page applies to them; in the disassembly their labels carry a `DSP2_` prefix.
+
+Note that the chip a *slot* talks to is a separate lookup: the byte table at Sub-CPU
+`0x01ED6D` holds `0, 0, 1, 1, 1` for effect slots 0–4, i.e. slots 0–1 are IC311 and slots
+2–4 are IC310.
+
+---
+
+## 7. What still needs real hardware
 
 The reverse engineering is entirely **static** — nothing above was executed on the chip or
-in an emulator. Four things need a running core (a real uPD6383 or a MAME core, once one
+in an emulator. Five things need a running core (a real uPD6383 or a MAME core, once one
 exists) and are honestly OPEN:
 
 1. **The absolute pointer origin** — a single address-bus read on the first data access
@@ -307,6 +382,8 @@ exists) and are honestly OPEN:
 4. **Validation of the whole chain against a real impulse response** — the biquad and
    diffuser are proven against the firmware's own arithmetic, which is strong but is not
    the same as measuring the physical chip.
+5. **SLOW ATTACKER on a real KN5000** (§6) — the one stub that carries live parameter
+   values. Static analysis predicts "no audible effect"; only the instrument can settle it.
 
 A datasheet would retire most of the remaining inference in one stroke; none has been
 found, and the search is documented as exhausted.
@@ -315,6 +392,9 @@ found, and the search is documented as exhausted.
 
 ## Related pages
 
+- [DSP Effect Data Zone (Sub-CPU ROM)]({{ site.baseurl }}/dsp-effect-data-zone/) — the
+  block-by-block map of the 39,372-byte zone this page's conclusions are drawn from:
+  the four pointer arrays, both stream grammars, and a per-effect address table.
 - [Effects-DSP Program Flowcharts]({{ site.baseurl }}/effects-dsp/flowcharts/) — one
   structural signal-flow diagram per microprogram (the shared kernel + 38 effect bodies),
   synced from the disassembly tree and rendered as Mermaid.

@@ -16,7 +16,7 @@ After replacing the decompressed SubCPU payload ROMs with the compressed origina
 
 The firmware's `SubCPU_Send_Payload` function (address `0xEF068A`) is responsible for:
 
-1. Sending 5 x 64KB of config data from Table Data ROM (`0x830000`-`0x870000`) to SubCPU RAM
+1. Sending 5 x 64KB of **tone-database** data from Table Data ROM (`0x830000`-`0x870000`) to SubCPU RAM (see [What the two source regions actually hold](#what-the-two-source-regions-actually-hold) — this is *not* the Sub CPU's executable)
 2. Decompressing the compressed payload from `0x3E0000` to Main CPU RAM at `0x050000`
 3. Sending the decompressed data (preset data + entry point code) to SubCPU via E1 bulk transfers
 4. The last 256-byte E1 transfer writes to SubCPU address `0x000400`-`0x04FF`, which includes `SUBCPU_STATUS_FLAGS` at `0x04FE` -- when bit 6 of that byte is set by DMA, the boot ROM's polling loop triggers payload execution
@@ -68,11 +68,11 @@ The following 9 E1 blocks were confirmed in the MAME log with 524,358 total HDMA
 
 | Block | Source Address | SubCPU Dest | Size | Purpose |
 |-------|--------------|-------------|------|---------|
-| 1 | 0x830000 | 0x050000 | 64KB | Config data |
-| 2 | 0x840000 | 0x060000 | 64KB | Config data |
-| 3 | 0x850000 | 0x070000 | 64KB | Config data |
-| 4 | 0x860000 | 0x080000 | 64KB | Config data |
-| 5 | 0x870000 | 0x090000 | 64KB | Config data |
+| 1 | 0x830000 | 0x050000 | 64KB | Tone database, part 1 of 5 |
+| 2 | 0x840000 | 0x060000 | 64KB | Tone database, part 2 of 5 |
+| 3 | 0x850000 | 0x070000 | 64KB | Tone database, part 3 of 5 |
+| 4 | 0x860000 | 0x080000 | 64KB | Tone database, part 4 of 5 |
+| 5 | 0x870000 | 0x090000 | 64KB | Tone database, part 5 of 5 |
 | 6 | 0x050100 | 0x00F000 | 64KB | Decompressed payload part 1 |
 | 7 | 0x060100 | 0x01F000 | 64KB | Decompressed payload part 2 |
 | 8 | 0x070100 | 0x02F000 | 65280B | Decompressed payload part 3 |
@@ -137,6 +137,85 @@ The `0xE3` byte in the boot ROM's INT0 handler is a **regular data command byte*
 - This is used later during normal operation when the Main CPU sends audio data packets on channel 7
 - The boot ROM's E3 handler sets bit 6 of `SUBCPU_STATUS_FLAGS`, which also triggers payload execution
 - However, this E3 path is NOT used during normal boot -- the payload loading trigger comes from the DMA write to 0x04FE
+
+## What the transfer actually carries (2026-08 update)
+
+The nine E1 blocks above were established in 2026-02 from MAME logs, and the labels used
+then ("config data", "payload") were placeholders. The disassembly work of 2026-08 replaced
+both blobs with symbolic source, so the contents can now be stated exactly.
+
+### What the two source regions actually hold
+
+**`0x830000`-`0x87FFEF` (Table Data ROM) is the tone database — data, not code.** It is now
+fully symbolic source (`table_data/tone_database_directory.s`, `..._records.s`,
+`..._aux.s`): a directory of 4-byte slots at `0x830000`, bank-select maps and per-bank tone
+number tables, a **629-entry LE32 tone-record offset table at `0x831B00`**, then the
+variable-length tone/voice records from `0x8324D4`, and an auxiliary tail holding drum kits,
+percussion records, name lists, envelope data and drawbar presets. Every offset inside the
+database is *database-relative*, which is why the same numbers are equally valid as Sub CPU
+addresses once the base lands at `0x050000`: `DSP_System_Init` on the Sub CPU stores that
+base in `ToneDB_RelBase` (`0x045310`) and `ToneDB_RootPtr` (`0x045314`), and the Sub CPU
+disassembly therefore never mentions an `0x83xxxx` address.
+
+> **Retraction.** Project notes used to describe `0x830000` as holding the "Sub CPU firmware
+> payload" or the Sub CPU executable. That is **wrong** and is withdrawn: the region is the
+> tone database.
+>
+> Where the Sub CPU's executable comes from at run time is a *separate, still-open question*.
+> `SubCPU_Send_Payload` sources the code blocks (Sub CPU `0x400` and `0xF000`-`0x3EEFF`) from
+> a base in `XIZ`: the LZSS image at Custom Data Flash `0x3E0000` if it decompresses, and
+> table-data `0x800000` otherwise. **In the images this project holds, neither is the
+> payload.** Custom-data `0x3E0000` is erased — all `0xFF`, with no `SLIDE` magic anywhere in
+> the 1 MB dump — so no File Type 007 update was ever applied to the dumped unit; and no byte
+> of `kn5000_subprogram_v142.rom` appears anywhere in the table-data or custom-data dumps.
+> The executable is known only from its own ROM dump and from the compressed update-disc
+> images. This is flagged as unresolved, not explained.
+
+### The payload image's own address layout
+
+`kn5000_subprogram_v142.rom` is 196,608 bytes (`0x30000`) and is **not** a flat image of one
+address range. Its first 256 bytes are Sub CPU `0x000400`-`0x0004FF` (block 9 above, the
+entry point plus `SUBCPU_STATUS_FLAGS`); from file offset 256 onward it is Sub CPU
+`0x00F000`-`0x03EEFF` (blocks 6-8). The arithmetic closes exactly:
+`256 + 0x2FF00 = 0x30000`. Sub CPU `0x000500`-`0x00EFFF` is never transmitted — at run time
+that window is live DRAM holding the payload's variables (serial ring buffers at
+`0x000A00`/`0x000E16`, the inter-CPU command buffers at `0x0010F0`/`0x001116`/`0x00111C`,
+the voice-pool and channel record arrays at `0x00112D`/`0x001349`, and the DSP command ring
+at `0x003B60`).
+
+### Three data zones, now carved
+
+Three contiguous data zones account for 59,551 bytes of the 196,608-byte image — a little
+over 30 % of it. Until 2026-08 all three sat in the disassembly as long raw byte runs; the
+Wave-3a packages replaced them with individually labelled tables (commits `09a82ec`,
+`c5816ae`, `85ecca2` in the disassembly repository), and the rebuilt ROM is still
+byte-identical. Note that this is a *carve*, not a full explanation: several tables in
+zone A0 are named from their consumer's arithmetic rather than from understood semantics,
+and at least one block (`VoiceParamFinalize_HandlerParams`, `0x00FB3E`) has no located
+consumer at all.
+
+| zone | Sub CPU range | size | contents |
+|------|---------------|------|----------|
+| A0 | `0x00F7E6`-`0x012114` | 10,543 B | audio-command jump tables and opcode→case maps, TG power-up defaults, per-key bend/pan/level/EG curve families, the 12-row `DSP_ChanFreq_CurvePool` (`0x011016`), the 14 × 39-byte `DSP_AlgoDescriptor_Records` (`0x011E16`), TVF and envelope curves, two DSP1 image-header strings |
+| A | `0x012195`-`0x014738` | 9,636 B | `DSP_EQ_FreqHz_Table` (`0x012397`, 27 × f32 ISO ⅓-octave centres) and `DSP_EQ_Q_Table` (`0x012403`, 32 × f32), five Q23 coefficient ladders (`DSP_FreqParamCurve_Algo0/1/2` at `0x012483`/`0x012613`/`0x0127A3`, `DSP_OscParamCurve` at `0x0129A3`, `DSP_CoeffCurve_Op62` at `0x012B33`), `DSP_FP_ConstPool` (`0x012CD3`), `DSP_MixerGain_Curve` (`0x0131CF`), and the per-effect parameter metadata complex from `0x0133CF` — `EFF_ParamCount_Table` (`0x0143AD`), `EFF_ParamRanges_PtrTable` (`0x014411`), `EFF_ParamDefaults_PtrTable` (`0x0145A1`), plus the two interpreter offset tables `OFFSETS_14739` and `OFFSETS_14745` |
+| B | `0x0147B3`-`0x01E17E` | 39,372 B | the DSP effect program + parameter zone: bytecode streams and parameter record tables for all 100 effect-algorithm numbers — documented on its own page, [DSP Effect Data Zone]({{ site.baseurl }}/dsp-effect-data-zone/) |
+
+Two readings the earlier raw-blob banners carried were **refuted** by the carve and are
+withdrawn:
+
+* There is **no "exponential pitch table at `0x13318`"**. `0x13318` falls in the middle of
+  `DSP_MixerGain_Curve` at `0x0131CF`, a 128-entry `u32` piecewise-exponential **amplitude**
+  curve ending exactly at digital full scale (`0x7FFFFF00`), spanning 53.5 dB in four
+  segments. Its only proven consumer, `DSP_MixerCoeff_Compute` (`0x03C067`), uses entries as
+  gain, feeding the mixer-gain product written to DSP2 registers `0xD0`/`0xD3`. Read as
+  pitch, the middle segment would be 54.82 cents/step, which matches no musical law.
+* There are **no "two 128-byte tables at `0x00FF00` / `0x00FF80`"**. The "11 references
+  each" that produced that claim are `stiw_da 0x100002, 0xff00` / `0xff80` instructions —
+  immediate values written to the tone-generator address latch, not table addresses. No
+  table begins at either address.
+
+Zone A0's split points are all consumer-verified: every boundary is an address some
+instruction references, and the set tiles the span with no orphan bytes.
 
 ## Fixes Applied
 
@@ -605,3 +684,12 @@ The names had DMAC and DMAM swapped. Fixed in commit b4ed825 -- all macros now c
 | `subcpu/boot/kn5000_subcpu_boot.asm:1159` | `InterCPU_RX_Handler` (boot ROM INT0 handler) |
 | `subcpu/boot/kn5000_subcpu_boot.asm:718` | `INIT_DMA_SERIAL` (DMA setup) |
 | `subcpu/boot/kn5000_subcpu_boot.asm:405` | Main loop (payload ready polling) |
+
+> **Path note.** The `.asm` filenames and line numbers above are from the 2026-02
+> investigation. The disassembly has since moved to per-module `.s` files and the line
+> numbers no longer resolve. Current equivalents: `v10/maincpu/` (main CPU),
+> `v142/subcpu/kn5000_subprogram_v142.s` (payload code),
+> `v142/subcpu/subcpu_data_tables.s` (the three data zones described above),
+> `subcpu/kn5000_subcpu_boot.s` (boot ROM), and `table_data/tone_database_*.s`
+> (the `0x830000` region). Symbol addresses are in
+> `symbols/subcpu_symbols_reference.txt`.
