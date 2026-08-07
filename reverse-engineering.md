@@ -8,6 +8,26 @@ permalink: /reverse-engineering/
 
 Documented approaches for understanding undocumented aspects of the KN5000 system.
 
+## Working Method
+
+How a finding becomes committed source is documented separately, on the
+[Disassembly Workflow]({{ site.baseurl }}/disassembly-workflow/) page: the byte-match
+invariant, the audit that scopes each round of work, the evidence standard for calling a
+blob "code" (including the shifted-decode control), and the parallel-workers /
+single-integrator shape that let twenty-four conversion packages land in August 2026
+without the 100.00% gate ever slipping.
+
+Two rules from that page are worth repeating here, because they apply to any investigation
+on this hardware:
+
+- **A claim is not accepted because it looks right.** Every "this region is X" assertion is
+  checked against a control that should fail if the claim is wrong — a decode at the wrong
+  offset, a null measurement, a consumer census that must tile the region exactly.
+- **Corrections are published, not quietly dropped.** Several long-standing descriptions in
+  these pages were wrong (a "flash update handler" region that is really the bootloader's
+  FDC driver; an "exponential pitch table" that is really a mixer gain curve). Where that
+  has happened, the page says so.
+
 ## HDAE5000 Hard Disk Expansion
 
 The HD-AE5000 is an optional hard disk expansion that provides 1.08GB storage for music files. **See the [dedicated HDAE5000 page]({{ site.baseurl }}/hdae5000/) for complete documentation** including PPORT commands, entry points, and firmware analysis.

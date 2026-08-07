@@ -6,11 +6,24 @@ permalink: /rom-reconstruction/
 
 # ROM Reconstruction
 
-Goal: Rebuild all firmware ROMs from disassembled source with 100% byte accuracy.
+Goal: rebuild every KN5000 firmware image from disassembled source, byte for byte.
+
+`make all` assembles the LLVM sources and then runs `scripts/build/compare_roms.py`,
+which prints a similarity figure per verification section. As of August 2026 it reports
+**15 sections, all at 100.00%** — nine from the primary LLVM build and six from the
+archived ASL mirror build, which is still assembled and compared on every run.
+
+Byte-identity is the project's only acceptance criterion. Any change that drops a
+section below 100.00% is reverted, not explained away.
 
 ## Firmware Version History
 
 Official firmware updates were distributed on floppy disk. All versions are archived at [archive.org](https://archive.org/details/technics-kn5000-system-update-disks).
+
+> **Provenance note.** The release dates below are inherited from earlier revisions of this
+> page and come from the update-disc listing, not from anything inside the ROM images. The
+> 2026-08 conversion work did not verify them, and no corresponding dates exist in the
+> disassembly repository. Treat them as unconfirmed.
 
 ### Main Board Firmware
 
@@ -18,10 +31,10 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 |---------|--------------|-------|
 | v5 | 1997-11-12 | Earliest available |
 | v6 | 1998-01-16 | |
-| v7 | 1998-06-26 | |
+| v7 | 1998-06-26 | Source tree exists, builds 100% |
 | v8 | 1998-11-13 | |
-| v9 | 1999-01-26 | |
-| **v10** | 1999-08-02 | **Current disassembly target** |
+| v9 | 1999-01-26 | Source tree exists, builds 100% |
+| **v10** | 1999-08-02 | **Primary disassembly target** |
 
 ### HD-AE5000 Firmware
 
@@ -31,35 +44,223 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 | v1.15i | 1998-10-13 | |
 | v2.0i | 1999-01-15 | Added lyrics display |
 
-## Current Status
+## Verification Sections
 
-| ROM | Size | Match % | Bytes Off | Source File |
-|-----|------|---------|-----------|-------------|
-| Main CPU | 2MB | **100%** | 0 | `maincpu/kn5000_v10_program.s` |
-| Sub CPU Payload | 192KB | **100%** | 0 | `subcpu/kn5000_subprogram_v142.s` |
-| Sub CPU Boot | 128KB | **100%** | 0 | `subcpu/boot/kn5000_subcpu_boot.s` |
-| Table Data | 2MB | **100%** | 0 | `table_data/kn5000_table_data.s` |
-| Custom Data | 1MB | **100%** | 0 | `custom_data/kn5000_custom_data.s` |
-| HDAE5000 (HD Expansion) | 512KB | **100%** | 0 | `hdae5000/hd-ae5000_v2_06i.s` |
+### Primary build (LLVM)
 
-### Disassembly Status Visualization
+| Section | Original image | Size | Base | Top-level source |
+|---------|----------------|------|------|------------------|
+| maincpu v10 | `kn5000_v10_program.rom` | 2MB | 0xE00000 | `v10/maincpu/kn5000_v10_program.s` |
+| maincpu v9 | `kn5000_v9_program.rom` | 2MB | 0xE00000 | `v9/maincpu/kn5000_v9_program.s` |
+| maincpu v7 | `kn5000_v7_program.rom` | 2MB | 0xE00000 | `v7/maincpu/kn5000_v7_program.s` |
+| subcpu payload v142 | `kn5000_subprogram_v142.rom` | 192KB | 0x0400 | `v142/subcpu/kn5000_subprogram_v142.s` |
+| **subcpu v142 update image** | `kn5000_subprogram_v142_compressed.rom` | 93,203B | 0x3E0000 | *(compressed from the built payload — see below)* |
+| subcpu boot | `kn5000_subcpu_boot.ic30` | 128KB | 0xFE0000 | `subcpu/boot/kn5000_subcpu_boot.s` |
+| hdae5000 | `hd-ae5000_v2_06i.ic4` | 512KB | 0x280000 | `hdae5000/hd-ae5000_v2_06i.s` |
+| table data | `kn5000_table_data.rom` | 2MB | 0x800000 | `table_data/kn5000_table_data.s` |
+| custom data | `kn5000_custom_data.ic19` | 1MB | 0x300000 | `custom_data/kn5000_custom_data.s` |
 
-The diagram below shows the disassembly status of each ROM component. Colors indicate the type of content at each address:
+### Legacy ASL mirror build
+
+The project's original ASL sources are kept in `archive/asl/` and are still built and
+compared: maincpu, subcpu boot, subcpu payload, table data, custom data and hdae5000 —
+six more sections, all at 100.00%.
+
+The mirror is not a museum piece; it constrains the work. The ASL sources still
+`binclude` several data blobs *whole* (`initial_data.bin`, `icons_to_strings.bin`,
+`wallpaper1_to_icons.bin`, …), so those files must stay byte-identical on disk even
+after the LLVM sources stop referencing them. Conversions therefore slice with
+`.incbin "file", offset, length` rather than splitting a blob into new files.
+
+### The v1.42 sub-CPU firmware-update image
+
+New in August 2026: the sub-CPU payload is now verified in *both* of the forms it ships in.
+
+`original_ROMs/kn5000_subprogram_v142_compressed.rom` is the v1.42 payload as it appears
+on a firmware-update disk ("Program DATA FILE PCK", File Type 007, flashed to Custom Data
+`0x3E0000`). It is an 11-byte header — `"SLIDE4K"` + NUL, then a 24-bit **big-endian**
+decompressed size (`03 00 00` = 196,608) — followed by the LZSS stream.
+
+Because the payload itself is already source-built, recompressing the build output with
+the factory stream's own decisions must reproduce the update image exactly. The Makefile
+rule does that and then seals it with `cmp`:
+
+```make
+rebuilt_ROMs/kn5000_subprogram_v142_compressed.rom: \
+		rebuilt_ROMs/kn5000_subprogram_v142.llvm.rom \
+		original_ROMs/kn5000_subprogram_v142_compressed.rom
+	python3 scripts/build/compress_lzss.py $< $@ --strict --with-header \
+		--reference original_ROMs/kn5000_subprogram_v142_compressed.rom
+	cmp $@ original_ROMs/kn5000_subprogram_v142_compressed.rom
+```
+
+`--with-header` (added at the same time) emits and validates the SLIDE4K header;
+`--strict --reference` replays the factory encoder's match/literal decisions so the
+output is byte-identical rather than merely equivalent. The section appears in
+`compare_roms.py` as *subcpu v142 update image*.
+
+See [LZSS Compression]({{ site.baseurl }}/lzss-compression/) for the format, and
+[Sub-CPU Firmware Images]({{ site.baseurl }}/subcpu-firmware-images/) for what this means
+for the v1.40 and v1.41 payloads.
+
+### Generated data with its own verification targets
+
+Two families of compressed data are no longer bincluded as opaque payloads; they are
+rebuilt from checked-in sources and compared against factory slices.
+
+| Target | What it rebuilds | Check |
+|--------|------------------|-------|
+| `make verify-demo-presets` | 19 SLIDE4K demo-song presets, from `.mid` + `.yaml` sidecars | 19/19 byte-identical |
+| `make verify-help-databases` | 6 SLIDE8K help databases, recompressed from the checked-in decompressed database binaries | 6/6 byte-identical |
+
+**Demo presets.** All 19 presets (entries 0–17 at 0x9C4050–0x9F94CA plus the Feature
+Presentation at 0x8E0000) round-trip from a `.mid` file — the musical content, editable
+in any DAW — and a `.yaml` sidecar carrying everything MIDI cannot express: song header,
+cell topology, padding, stream order, running-status flags and the durations MIDI cannot
+represent. `compress_lzss.py --strict` aborts the build if any payload stops matching the
+factory stream, so an edit can never silently ship different music.
+
+**Help databases.** The five live multilingual help databases (English, German, French,
+Spanish, Indonesian) plus one stale sixth block are SLIDE8K — a previously undocumented
+8 KB-window LZSS variant. The firmware itself supports both widths: the main-CPU routine
+`SLIDE_Parse_Header` reads the digit in the magic and branches on it, `0x34` (`'4'`) to
+`SLIDE_Decompress_4K_Init` and `0x38` (`'8'`) to `SLIDE_Decompress_8K_Init`. Each database
+decompresses to exactly 0x9000 bytes.
+`compress_slide8k.py --strict --reference` replays the factory encoder's decisions,
+which is necessary because the final flag bytes carry nonzero unused bits that a plain
+re-encode would not reproduce.
+
+The sixth block, at ROM 0x983B3A, is a superseded German revision that nothing points at.
+It is **truncated, not merely corrupt**: its stream decodes identically to the live German
+database for exactly 0x55E0 output bytes, and the element that would produce output 0x55E0
+is the first to read past 0x985FFF — because the factory image wrote the two Music Stylist
+pointer tables at 0x986000/0x987000 straight over this obsolete block's tail. It is
+therefore kept as a byte-exact raw slice of the dump and is *not* rebuilt from source; a
+whole-extent reference slice is still round-trip-verified by `make verify-help-databases`
+to pin the bytes down.
+
+## What the August 2026 conversion waves changed
+
+The work was scoped by an audit of every binary include and compressed region in the
+repository (10 agents: 7 scanners and 3 adversarial verifiers). It inventoried **598
+`.incbin`/`binclude` directives**, of which **505 are honest build products** — compiled
+from C or assembly, or generated from documented data — and produced **55 findings** with
+**24 adversarial verdicts**. Four waves of conversion followed: **24 packages**, each
+gated on a full rebuild at 100.00%. The method is written up on the
+[Disassembly Workflow]({{ site.baseurl }}/disassembly-workflow/) page.
+
+### Table Data ROM: from opaque halves to labelled source
+
+Before the waves, the LLVM source for the 2 MB table-data ROM pulled **1,262,528 bytes —
+60% of the ROM — out of anonymous blob files**: `initial_data.bin` (524,271 B) and
+`icons_to_strings.bin` (520,920 B) each as a single unlabelled `.incbin`, plus
+`wallpaper1_to_icons.bin`, `icon_pixel_data.bin`, `icon_table.bin`, `wallpaper_gap.bin`,
+`hkst_55.ssf` and six `bootcode_*.bin` code blobs.
+
+Today that figure is **zero**. `initial_data.bin` is not referenced by the LLVM build at
+all; `icons_to_strings.bin` survives only as 13 labelled, explicitly sized slices
+(126,674 B: ten font glyph banks, the truncated German help block, the Composer factory
+memory image and one residue block); `wallpaper1_to_icons.bin` as 87 named bitmap slices;
+`icon_pixel_data.bin` as 177 named icon slices. Every remaining `.incbin` in the table-data
+sources carries a label, a length and a comment saying what it is.
+
+Symbol counts tell the same story: `symbols/table_data_symbols_reference.txt` went from
+**133 symbols to 4,153**. The sub-CPU payload's reference file went from 3,862 to 4,326.
+
+### Regions newly converted or identified
+
+| Region | ROM range | Now |
+|--------|-----------|-----|
+| Section directory + preset banks | 0x800000–0x82FFFF | `table_data/preset_banks.s` (+ generator) |
+| Tone database | 0x830000–0x87FFEF | three modules: directory/offset table, 579 tone records, aux tables |
+| UI bitmaps, frames, icon tables | 0x913000–0x944D77 | `table_data/ui_bitmaps.s`, symbolic descriptor tables |
+| Font descriptors + glyph banks | 0x945C00–0x950A5F | `table_data/fonts.s` (10 fonts) |
+| Music Stylist preset database | 0x951000–0x98156F | `table_data/style_records.s`, 1000 × 198 B records |
+| Help index, intro strings, help DBs | 0x988000–0x9999D2 | `table_data/help_databases.s` + source-built SLIDE8K |
+| Panel Memory factory presets | 0x99EC00–0x9ABF3F | `table_data/panel_memory_presets.s` |
+| Composer factory memory image | 0x9B4000–0x9C3FFF | `Composer_FactoryMemoryImage` — one labelled 64 KB include, layout documented in-source |
+| Boot FDC command-layer driver | 0x9FD8A5–0x9FEA9C | `table_data/boot_fdc_driver.s` (2,316 lines) |
+| Boot disk-format probe | 0x9FEB2B–0x9FEC6D | `table_data/boot_disk_probe.s` |
+| Boot CP-serial driver | 0x9FEC6E–0x9FFB2E | `boot_cpserial.s` + `_isr.s` + `_states.s` |
+| Boot C runtime (heap, memcmp, divide) | 0x9FFB2F–0x9FFE7F | `table_data/boot_clib.s` |
+| Boot debug group (NOP-patched out) | 0x9FFE80–0x9FFEDF | `table_data/boot_debug.s` |
+| Sub-CPU DSP data zones A0 / A / B | 0x00F7E6–0x01E17E | carved into labelled tables in `v142/subcpu/subcpu_data_tables.s` |
+
+Several long-standing descriptions were **corrected** by this work, not merely extended:
+
+- `bootcode_flash_handlers.bin` was never "flash update handlers" — it is the bootloader's
+  complete uPD72068 FDC command layer, a compact port of the maincpu FDC driver.
+- `bootcode_utils.bin` was not "motor control / VGA display / progress bar" — it is the
+  floppy disk-format probe plus the bootloader's own CP-serial driver, which is
+  **independent of** the runtime `CPanel_*` stack in the program ROM.
+- The incbin boundary at 0x9FC6F6 was splitting a five-byte `ld A,(0x160002)` in half. It
+  byte-matched, but only by accident; the instruction is now emitted whole.
+- There is no "exponential pitch table at 0x13318" in the sub-CPU payload. 0x13318 is the
+  middle of `DSP_MixerGain_Curve` (0x0131CF–0x0133CE), a 128-entry piecewise-exponential
+  **gain** curve ending at digital full scale 0x7FFFFF00; the only proven consumer,
+  `DSP_MixerCoeff_Compute`, treats its entries as amplitude.
+- The claim that the sub-CPU executable lives at table-data 0x830000 is wrong. That region
+  is the tone database; the runtime code payload's source path is a separate question.
+
+## Where the source still holds raw ROM slices
+
+Three wave-groups of work remain (hdae5000 + sub-CPU boot data; the v7 tree; a final
+sweep). Measured from the current sources — total bytes emitted by `.incbin` directives
+per ROM tree:
+
+| ROM tree | `.incbin` bytes | Character of what remains |
+|----------|-----------------|---------------------------|
+| `v10/maincpu` | 860,028 | Overwhelmingly `includes/generated/*.bin` — C-compiled screen/widget data, an honest build product |
+| `v9/maincpu` | 860,028 | Same shape as v10 |
+| `v7/maincpu` | 995,213 | **Raw ROM slices behind a `generated/` path** — see the note below |
+| `v142/subcpu` | 0 | No binary includes at all |
+| `subcpu/boot` | 656 | One blob, `subcpu_boot_data_8000.bin` — mixed code/data, needs a ≥5-way split |
+| `hdae5000` | 340,790 | Four slices of `code_29af2d_2fffff.bin`; despite the name it is graphics, palettes, text and pointer tables, including an unidentified boot-splash image at 0x2E61CE |
+| `table_data` | 1,113,121 | All labelled: BMPs, wallpapers, font glyph banks, icon/bitmap slices, and the source-built compressed payloads |
+| `custom_data` | 667,648 | Six factory-style-database sections; blob-level documentation judged adequate (this is one unit's user-data area, not firmware) |
+
+**The v7 tree deserves a warning.** `scripts/build/extract_v7_bins.py` runs at build time
+and `dd`-slices the v7 ROM into `v7/maincpu/includes/generated/`. Some of those slices are
+explicitly v7-specific (139 `v7_block_*`, 24 `v7_fix_*`, 16 `v7_data_*` and the transplant
+set — 136,775 bytes between them). The rest — 858,438 bytes under names shared with the v9
+tree (`naka_*`, `sound_data_*`, …) — are C-compile outputs that the script **overwrites**
+with raw ROM bytes whenever a >50%-similarity check fires. The v7 ROM therefore rebuilds
+byte-perfectly while much of its "source" is the ROM itself, and the similarity heuristic
+is a silent-corruption risk: a genuinely different block that happens to match at 51%
+would be silently accepted. Fixing this means parameterising the C sources per firmware
+version so compilation alone reproduces the v7 bytes, then deleting the overwrite. It is
+the single largest item left in the plan.
+
+Additional known-unfinished items:
+
+- **maincpu inline `.byte` regions have never been classified** — the audit puts it at
+  roughly 676 KB across the three trees (~460 KB in v7, ~108 KB in v9, the remainder in
+  v10). Some of it is labelled-but-undecoded tables, some is code stored as bytes, some is
+  v7 conversion residue. Separating the three is a whole wave of work on its own.
+- The sub-CPU boot ROM source still spells its erased region as **98,304 individual
+  `.byte 0xff` lines**; collapsing them to one `.fill` is queued.
+- The hdae5000 string table around 0x2A7736–0x2A8499 is currently **mis-decoded as
+  instructions** (runs of `nop` are the tables' 0x00 padding).
+- Seven of the thirteen `table_data/includes/bootcode_*.bin` files are now referenced by
+  no source file at all — orphans awaiting cleanup. (The other six are still bincluded by
+  the ASL mirror and must stay.)
+- The v1.41 sub-CPU payload has no source tree; see
+  [Sub-CPU Firmware Images]({{ site.baseurl }}/subcpu-firmware-images/).
+
+### Disassembly status diagram
 
 ![ROM Status Diagram]({{ "/assets/images/rom-status-diagram.png" | relative_url }})
 
-**Legend:**
-- **Green** = Disassembled code (symbolic instructions with meaningful labels)
-- **Blue** = Known data structures (documented tables, configs)
-- **Cyan** = String data (text, messages, labels)
-- **Light Green** = Pointer/jump tables (address references)
-- **Purple** = Binary includes (external files not yet analyzed)
-- **Red** = Raw bytes with unknown meaning (needs investigation)
-- **Orange** = Raw bytes known to be code (awaiting disassembly)
-- **Gray** = Padding/unused (0x00 or 0xFF fill)
-- **Yellow** = Undetermined (not yet categorized)
+**Legend:** green = disassembled code · blue = known data structures · cyan = strings ·
+light green = pointer/jump tables · purple = binary includes · red = raw bytes, unknown ·
+orange = raw bytes known to be code · gray = padding/unused · yellow = undetermined.
+Rectangle width is proportional to ROM size.
 
-The width of each rectangle is proportional to the ROM's file size. This visualization is automatically regenerated via `make website` to stay in sync with disassembly progress.
+> **This image is stale.** It was generated on 2026-02-07, before the source tree was
+> reorganised per firmware version, and `scripts/build/generate_rom_status_diagram.py`
+> still looks for the pre-split ASL paths (`maincpu/kn5000_v10_program.asm`, …) that no
+> longer exist. Treat the picture as historical until the generator is repointed at the
+> `.s` sources; the tables above are measured from the current tree.
 
 ## Original ROM Files
 
@@ -67,188 +268,94 @@ The original firmware dumps are stored in `original_ROMs/`:
 
 | File | Size | Description |
 |------|------|-------------|
-| `kn5000_v10_program.rom` | 2MB | Main CPU program ROM |
+| `kn5000_v10_program.rom` | 2MB | Main CPU program ROM (also v9, v7) |
 | `kn5000_subprogram_v142.rom` | 192KB | Sub CPU payload (sent by main CPU at boot) |
+| `kn5000_subprogram_v142_compressed.rom` | 93,203B | Same payload as shipped on update disks |
 | `kn5000_subcpu_boot.ic30` | 128KB | Sub CPU boot ROM |
-| `kn5000_table_data_rom_odd.ic1` | 1MB | Table data ROM (odd bytes) |
-| `kn5000_table_data_rom_even.ic3` | 1MB | Table data ROM (even bytes) |
+| `kn5000_table_data_rom_odd.ic1` | 1MB | Table data ROM (odd words) |
+| `kn5000_table_data_rom_even.ic3` | 1MB | Table data ROM (even words) |
 | `kn5000_custom_data.ic19` | 1MB | Custom data flash (user storage) |
 | `hd-ae5000_v2_06i.ic4` | 512KB | HDAE5000 hard disk expansion ROM |
+
+**ROM interleaving:** the table-data ROM uses 16-bit **word-level** interleaving across two
+physical chips. `kn5000_table_data.rom` is built by alternating 16-bit words from
+`odd.ic1` and `even.ic3`, not individual bytes.
 
 Reference disassembly files (`.unidasm`) are generated with MAME's `unidasm` tool for analysis.
 
 ## Assembler
 
-The project uses a **custom LLVM backend** (`llvm-mc -triple=tlcs900`) for assembly. All ~370,000 instructions are encoded natively — no workaround macros needed.
+The project uses a **custom LLVM backend** (`llvm-mc -triple=tlcs900`) for assembly. All
+instructions are encoded natively — no workaround macros needed.
 
-**Build Process:**
+**Build process:**
+
 1. `llvm-mc` assembles `.s` files to ELF object files
-2. `ld.lld` links with a linker script to set the ROM base address
+2. `ld.lld` links with a linker script that sets the ROM base address
 3. `llvm-objcopy` extracts the raw binary from the ELF
-4. `compare_roms.py` verifies byte-for-byte match against originals
+4. generated payloads (demo presets, help databases, the v142 update image) are
+   recompressed and `cmp`-checked
+5. `compare_roms.py` verifies every section byte-for-byte against the originals
 
-**History:** The project originally used ASL (Alfred Arnold's Macro Assembler), which only supported TMP96C141 — requiring 110+ workaround macros for TMP94C241F-specific instructions. The LLVM backend was developed to encode all TLCS-900/H2 instructions natively. ASL sources are archived in `archive/asl/` for reference.
+```bash
+cd kn5000-roms-disasm
+make all                              # build everything + compare
+python3 scripts/build/compare_roms.py # compare only
+make verify-demo-presets              # 19/19
+make verify-help-databases            # 6/6
+```
 
-## Milestone: 100% Byte-Matching ROMs
+**History:** the project originally used ASL (Alfred Arnold's Macro Assembler), which only
+supported TMP96C141 — requiring 110+ workaround macros for TMP94C241F-specific
+instructions. The LLVM backend was developed to encode all TLCS-900/H2 instructions
+natively. ASL sources are archived in `archive/asl/` and are still built and verified.
 
-As of March 2026, **all six ROMs** rebuild with 100% byte accuracy using LLVM assembly (~370,000 native instructions, 0 workaround macros):
+## Source Organisation
 
-- **Main CPU** (2MB) - Complete disassembly with symbolic labels (239,683 native instructions, 0 code .byte remaining)
-- **Sub CPU Payload** (192KB) - Full protocol implementation (35,747 instructions)
-- **Sub CPU Boot** (128KB) - Boot ROM with VGA initialization (1,357 instructions)
-- **Table Data** (2MB) - Feature demo, wallpapers, icons, bootloader (1,678 instructions)
-- **HDAE5000** (512KB) - Hard disk expansion firmware (502 instructions)
-- **Custom Data** (1MB) - User storage (data-only, byte-exact reconstruction)
+Each firmware version has its own tree (`v7/`, `v9/`, `v10/` for the maincpu; `v142/` for
+the sub-CPU payload), with `shared/` modules included by more than one ROM. Current
+measured sizes:
 
-## Source File Organization
+| Tree | `.s` files | Lines | Symbols in reference file |
+|------|-----------:|------:|--------------------------:|
+| `v10/maincpu` | 155 | 467,674 | 39,231 |
+| `v9/maincpu` | 155 | 467,666 | *(shares the maincpu reference)* |
+| `v7/maincpu` | 155 | 337,153 | *(shares the maincpu reference)* |
+| `v142/subcpu` | 5 | 69,520 | 4,326 |
+| `subcpu/boot` | 1 | 100,869 | 53 |
+| `hdae5000` | 7 | 78,359 | 223 |
+| `table_data` | 26 | 79,177 | 4,153 |
+| `custom_data` | 1 | 146 | — |
 
-### Main CPU
+The per-file breakdown lives on the [Source Code Map]({{ site.baseurl }}/source-map/) page.
 
-The Main CPU disassembly is organized into modular source files for maintainability:
+**Subsystem entry points (main CPU):**
 
-| File | Lines | Description |
-|------|-------|-------------|
-| `maincpu/kn5000_v10_program.s` | ~43,000 | Main source file (includes 94+ other files) |
-| `maincpu/gui_constants.s` | 57 | Display state variables, offscreen buffers |
-| `maincpu/fdc_constants.s` | 75 | FDC I/O addresses, commands, status bits |
-| `maincpu/fdc_routines.s` | 1,403 | FDC read/write/seek routines |
-| `maincpu/midi_encoder_constants.s` | 85 | MIDI CC and encoder RAM/ROM addresses |
-| `maincpu/midi_encoder_routines.s` | 268 | Encoder dispatch and MIDI CC processing |
-| `maincpu/cpanel_constants.s` | 164 | Control panel state, buffers, button/LED mappings |
-| `maincpu/cpanel_routines.s` | 1,506 | Control panel serial protocol handlers |
-| `maincpu/sysex_routines.s` | 239 | MIDI System Exclusive message handlers |
-| `maincpu/demo_routines.s` | 290 | Feature Demo mode handlers |
-| `maincpu/computer_interface_config.s` | 310 | Computer Interface connection configuration |
-| `maincpu/computer_interface_pcg.s` | 703 | Computer Interface PCG (Program Change) output |
-| `maincpu/midi_serial_routines.s` | 995 | MIDI serial communication (SC0) |
-| `maincpu/sound_editor_routines.s` | 629 | Sound Editor mode and title functions |
-| `maincpu/smf_playback.s` | 695 | SMF song playback routines |
-| `maincpu/smf_config_routines.s` | 3,263 | SMF configuration and slot parameters |
-| `maincpu/seq_step_routines.s` | 3,089 | Step-mode sequencer routines |
-| `maincpu/audio_cmd_encoder.s` | 3,100 | Audio command byte formatter |
-| `maincpu/semenu_routines.s` | 3,431 | Sound editor menu system |
-| `maincpu/setwall_routines.s` | 1,940 | Accompaniment style wall parser |
-| `maincpu/rhythm_routines.s` | 1,580 | Rhythm pattern processing |
-| `maincpu/accompseq_routines.s` | 1,961 | Accompaniment sequencer |
-| `maincpu/audioinit_routines.s` | 2,505 | Audio subsystem initialization |
-| `maincpu/bmdredit_routines.s` | 4,434 | Beat/drum editor |
-| `maincpu/drawing_primitives.s` | 4,567 | Line/box/frame/bitmap/string drawing |
-| `maincpu/bitmap_out_routines.s` | 4,347 | Bitmap output/display compositing |
-| `maincpu/rvari_routines.s` | 2,752 | Registration variation selection UI |
-| `maincpu/psgridbox_routines.s` | 1,138 | Performance settings grid box UI |
-| `maincpu/fdemotext_routines.s` | 2,334 | Feature demo text rendering |
-| `maincpu/sndparam_routines.s` | 2,042 | Sound parameter lookup/storage |
-| `maincpu/midipkt_routines.s` | 1,178 | MIDI packet construction |
-| `maincpu/msp_factory_defaults.s` | — | MSP factory default settings |
-| `maincpu/file_io/title_handlers.s` | 349 | File I/O title entry handlers |
-| `maincpu/file_io/disk_operations.s` | 1,297 | File copy, rename, format, disk info |
-| `maincpu/file_io/filename_password.s` | 807 | Filename and password UI |
-| `maincpu/file_io/composer_filters.s` | 968 | Composer load and filter operations |
-| `maincpu/file_io/smf_operations.s` | 1,312 | Standard MIDI File operations |
-| `maincpu/file_io/wallpaper.s` | 519 | Wallpaper loading |
-| `maincpu/file_io/single_load.s` | 2,298 | Single file load operations |
-| `maincpu/file_io/medley.s` | 4,690 | Medley playback (disk, internal, SMF, PD, doc) |
-| `maincpu/file_io/misc_ui.s` | 969 | Jump insert, priority, setup, filename box |
+- **FDC** — `storage/fdc_routines.s`: `FDC_COMMAND_DISPATCHER`, per-command handlers,
+  `Reset_Floppy_Disk_Controller`, `Check_for_Floppy_Disk_Change`;
+  `fdc_constants.s` holds the 0x110000-base I/O addresses, uPD765-compatible command
+  codes and status-bit definitions.
+- **MIDI / encoders** — `midi/midi_encoder_routines.s`: `CPanel_EncoderDispatch`,
+  `Encoder_ProcessModwheel` / `Volume` / `Breath` / `Foot` / `Expression`.
+- **Control panel** — `ui/cpanel_routines.s`: serial state machine (`CPanel_SM_*`),
+  packet processors (`CPanel_RX_*`), LED control, buffer management.
+- **SysEx** — `midi/sysex_routines.s`: `ExcSendFunc`, `ExcPmemFunc`, `ExcSmemFunc`,
+  `ExcCompFunc`, `ExcSeqFunc`, `ExcMspFunc`.
+- **Feature demo** — `demo/demo_routines.s`, `demo/fdemotext_routines.s`.
+- **Computer interface** — `midi/computer_interface_config.s`,
+  `midi/computer_interface_pcg.s`.
+- **File I/O** — `file_io/`: title handlers, disk operations, filename/password UI,
+  composer filters, SMF operations, wallpaper loading, single load, medley, misc UI.
+- **GUI constants** — `gui_constants.s`: display dirty flags (0x0205E4), offscreen buffer
+  addresses (0x043C00, 0x056800, 0x05FE00, 0x069400), 320×240 @ 8bpp.
 
-| `maincpu/accompaniment_engine.s` | 32,516 | Accompaniment, auto-play, pedal, style engine |
-| `maincpu/sequencer_engine.s` | 32,056 | Sequencer part/play, note editing |
-| `maincpu/note_voice_mapping.s` | 26,090 | Note mapping, voice management, MIDI routing |
-| `maincpu/ui_widget_defs.s` | 19,616 | UI widget definitions, screen/window/view IDs |
-| `maincpu/sound_editor_ui.s` | 16,567 | Sound editor menus and grids |
-| `maincpu/drawbar_panel_ui.s` | 15,526 | Drawbar, accordion, panel memory UI |
-| `maincpu/sequencer_ui.s` | 14,292 | Sequencer playback/edit UI |
-| `maincpu/mode_screens.s` | 12,905 | MSA mode, panel memory, effect mode screens |
-| `maincpu/midi_voice_routing.s` | 11,498 | MIDI dispatch, voice routing |
-| `maincpu/scoop_display.s` | 10,363 | Display update manager |
-| `maincpu/naka_dispatch.s` | 9,746 | Central dispatch, UI state |
-| `maincpu/naka_descriptors.s` | 9,324 | Descriptor tables, bitmap data |
-| `maincpu/file_demo_proc.s` | 8,355 | File I/O, demo processing |
-| `maincpu/style_data_init.s` | 8,246 | Style data, task scheduling |
-| `maincpu/voice_synth.s` | 8,042 | Sound generation, voice synthesis |
-| `maincpu/dsp_config_sysex.s` | 5,881 | DSP config, SysEx handlers |
-| `maincpu/naka_style_bitmap.s` | 5,909 | Style groups, bitmap data |
-| `maincpu/tonegen_voice_ctrl.s` | 5,185 | Tone generator, voice control |
-| `maincpu/voice_midi_buf.s` | 4,202 | Voice MIDI buffers |
+## Sub CPU Boot ROM
 
-**Total extracted code: ~384,000 lines across 94 include files (90% of main CPU source)**
+The 128 KB sub-CPU boot ROM rebuilds at 100.00%. Routines identified include the tone
+generator init loop (`SUB_8437`), register-pair writers, `COPY_WORDS`/`FILL_WORDS`,
+`CHECKSUM_CALC`, the inter-CPU handler set, and the debug/diagnostic tail at 0xFFFE80.
 
-**Subsystem Descriptions:**
-
-**FDC (Floppy Disk Controller):**
-- `fdc_constants.s`: Memory-mapped I/O addresses (0x110000 base), command codes (uPD765-compatible), status register bit definitions
-- `fdc_routines.s`: Complete FDC handler including `FDC_COMMAND_DISPATCHER`, `FDC_HANDLER_01` through `FDC_HANDLER_11`, `Reset_Floppy_Disk_Controller`, `Check_for_Floppy_Disk_Change`
-
-**MIDI/Encoder:**
-- `midi_encoder_constants.s`: MIDI CC value storage, raw encoder inputs, lookup table addresses
-- `midi_encoder_routines.s`: `CPanel_EncoderDispatch`, `Encoder_ProcessModwheel`, `Encoder_ProcessVolume`, `Encoder_ProcessBreath`, `Encoder_ProcessFoot`, `Encoder_ProcessExpression`
-
-**Control Panel:**
-- `cpanel_constants.s`: State machine variables, RX/TX buffers, button state arrays with bit mappings, LED row/pattern mappings
-- `cpanel_routines.s`: Serial protocol handlers (`CPanel_SM_*`), packet processors (`CPanel_RX_*`), LED control, buffer management
-
-**SysEx (System Exclusive):**
-- `sysex_routines.s`: `ExcSendFunc`, `ExcPmemFunc` (Panel Memory), `ExcSmemFunc` (Sound Memory), `ExcCompFunc` (Composer), `ExcSeqFunc` (Sequence), `ExcMspFunc` (MSP)
-
-**Feature Demo:**
-- `demo_routines.s`: `DemoModeFunc`, `DemoStyleTtlFunc`, `DemoSoundTtlFunc`, `DemoRhyTtlFunc`
-
-**Computer Interface:**
-- `computer_interface_config.s`: `TtComputerConnection`, `MdCmptCnctFunc`, `MdPcgModeFunc`, `MdDrumTypeFunc`, `MdSetupLoadFunc`
-- `computer_interface_pcg.s`: `TtMdPcgOut`, `AcPcgOutGridBoxProc`, `PcgOutGridCheck`, `PcgOutSendFunc`, `MainPcgOutSend`
-
-**MIDI Serial (SC0):**
-- `midi_serial_routines.s`: `INTTX0_HANDLER`, `INTRX0_HANDLER`, `READ_COM_SELECT_SWITCH`, SC0 initialization
-
-**Sound Editor:**
-- `sound_editor_routines.s`: 32 Sound Editor functions including `SeMenuModeFunc`, `SeMenuTitleFunc`, `SeEasyTitleFunc`, `SeTonTon1/2TitleFunc`, `SePitPit1TitleFunc`, `SeAmpAmp1/2TitleFunc`, `SeFilLpq1TitleFunc`, `SeDigEffTitleFunc`, `SeCtr2/3TitleFunc`, `SeCopyTitleFunc`, `SeWrtMemTitleFunc`, `SeWrtSndTitleFunc`
-
-**File I/O & Disk Operations** (in `maincpu/file_io/` subdirectory):
-- `title_handlers.s`: Entry handlers (`LoadTtlJgFunc`, `SaveTtlJgFunc`, `SetupFlashFunc`, `FmmUtilityTitleFunc`)
-- `disk_operations.s`: File operations (`FileCopyFunc`, `FileRenameFunc`, `FmmFormatFunc`, `DiskNameFunc`, `DiskInfoFunc`)
-- `filename_password.s`: UI routines (`FmmPasswordFunc`, `FmmFileNameFunc`)
-- `composer_filters.s`: Composer and filters (`FmmComposerLoadFunc`, `FmmLoadFilterFunc`, `FmmSaveFilterFunc`)
-- `smf_operations.s`: Standard MIDI File (`FmmSmfLoadTitleFunc`, `SmfLoadAsFunc`, `FmmSmfFileNameFunc`)
-- `wallpaper.s`: Wallpaper loading (`FmmWallpaperLoadFunc`)
-- `single_load.s`: Single file load (`SingleLoadModeFunc`, `SingleLoadSrcFunc`, `SingleLoadDstFunc`)
-- `medley.s`: All medley modes (`FmmIntMedleyFunc`, `FmmDiskMedley*Func`, `FmmSmfMedleyFunc`, `FmmDocMedleyFunc`)
-- `misc_ui.s`: Utilities (`JumpInsertFunc`, `SetupOkFunc`, `PsFileNameBoxProc`)
-
-**Sequencer (Reference Only):**
-- `sequencer_reference.s`: Documents 61 sequencer functions scattered across the ROM (not extracted due to interleaving with other code)
-
-**GUI Constants:**
-- `gui_constants.s`: Display dirty flags (0x0205E4), offscreen buffer addresses (0x043C00, 0x056800, 0x05FE00, 0x069400), screen dimensions (320x240 @ 8bpp)
-
-**Palettes:**
-
-Two color palettes have been extracted as binary includes:
-- **Palette 1** at 0xEB37DE - first palette (inline in sequential section)
-- **Palette 2** at 0xEEFAF0 - second palette (`Palette_8bit_RGBA_2.bin`)
-
-### Sub CPU Boot (100% COMPLETE!)
-
-The Sub CPU boot ROM has achieved **100% byte-perfect reconstruction!**
-
-**All routines fully disassembled:**
-- `SUB_8437` (0xFF8437) - Tone generator initialization loop
-- `SUB_850E` (0xFF850E) - Multi-register push/call wrapper
-- `SUB_853A` (0xFF853A) - Write register pairs to tone generator
-- `COPY_WORDS` (0xFF858B) - Word block copy using `ldirw`
-- `FILL_WORDS` (0xFF8594) - Memory fill with word values
-- `CHECKSUM_CALC` (0xFF859B) - Calculate checksum over memory range
-- `SUB_8B37` (0xFF8B37) - LED/output bit manipulation routine
-- `SUB_8B89` (0xFF8B89) - Inter-CPU communication handler (reads from 0x110000 latches)
-- `SUB_8BD2` (0xFF8BD2) - Note/velocity calculation with lookup tables
-- `SUB_8C75` (0xFF8C75) - Hardware register write helper (0x100000)
-- `SUB_8C80` (0xFF8C80) - Hardware calibration routine with timeout loop
-- `SUB_8D0A` (0xFF8D0A) - Hardware parameter write (21 param pairs)
-- `SUB_8F57` (0xFF8F57) - Hardware write with delay
-- `SUB_FE80-FEC1` (0xFFFE80) - Debug/diagnostic routines (hex output, string output)
-- Vector trampolines and interrupt handlers
-
-**DMA Transfer Routines (0xFF8604-0xFF881E):**
-
-These routines handle DMA-based data transfer between the Sub CPU and Main CPU:
+**DMA transfer routines (0xFF8604–0xFF881E):**
 
 | Routine | Address | Size | Description |
 |---------|---------|------|-------------|
@@ -258,108 +365,86 @@ These routines handle DMA-based data transfer between the Sub CPU and Main CPU:
 | `SendParams_E2` | 0xFF86DC | 112 bytes | Wait for DMA, then send E2 command |
 | `TwoPhase_Transfer` | 0xFF874C | 211 bytes | Two-phase DMA with E1 command, 200-cycle delays |
 
-**Inter-CPU Communication Protocol:**
-- Uses handshaking via `INTERCPU_STATUS` register at 0x34:
-  - Bit 0: Sub CPU ready flag (set when ready, cleared when starting transfer)
-  - Bit 1: Completion signal from interrupt handler
-  - Bit 2: Gate for command processing in InterCPU_RX_Handler
-  - Bit 4: Main CPU ready flag (polled by sub CPU)
-- Commands sent via `INTER_CPU_LATCH` at 0x120000:
-  - E1 command: Multi-stage DMA transfer (two-phase with 200-cycle delays)
-  - E2 command: Payload transfer (10-byte parameter block)
-  - E3 command: Payload ready signal (sets bit 6 of SUBCPU_STATUS_FLAGS)
-  - Other: Low 5 bits = byte count-1, high 3 bits = handler index from table
+Still open here: `subcpu_boot_data_8000.bin` (656 bytes at 0xFF8000) is a mixed
+code/data blob that code references at six or more internal addresses; it needs to be
+split and its 8-entry dispatch table emitted as symbolic `.long`s.
 
-**Key memory locations discovered:**
-- `DMA_BURST_CTRL` (0x0102) - DMA burst mode configuration register
-- `PAYLOAD_LOADED_FLAG` (0x04FE) - Payload ready indication flag
-- `DMA_SETUP_PARAMS` (0x0502) - DMA parameter storage (XWA, XDE, BC)
-- `E1_XFER_PARAMS` (0x050C) - E1 command transfer parameters (two-phase phase 1)
-- `DMA_XFER_STATE` (0x0516) - DMA transfer state: 0=idle, 1=single xfer, 2=two-phase
-- `E2_XFER_PARAMS` (0x053E) - E2 command transfer parameters (two-phase phase 2)
-- `AUDIO_HW_BASE` (0x100000) - Audio hardware registers (DSP/DAC)
+## Table Data ROM
 
-**Encoding fixes applied:**
-- `jrl T` (3-byte relative long jump) vs `jp` (4-byte absolute)
-- `ldir` encoding: TMP94C241 uses `83 11`, ASL generates `85 11`
-- `ld r, imm8` encoding: TMP94C241 uses different opcodes for A, D, E, L, W
-- `ld (XIX/XHL), imm16` encoding: 4-byte vs 3-byte
-- `ld (24-bit addr), imm16` encoding: 7-byte `LD_MEM24_IMM16` macro
+The table-data ROM holds the first-stage bootloader plus almost all factory data. See
+[Table Data ROM]({{ site.baseurl }}/table-data-rom/) for the region-by-region reference
+and [Memory Map]({{ site.baseurl }}/memory-map/) for the current layout.
 
-This marks the second 100% complete ROM in the project, after Sub CPU Payload!
+**First-stage bootloader (0x9FB496–0x9FFFFF).** All of it is now symbolic assembly. At
+reset the table-data ROM is mapped at 0xE00000–0xFFFFFF, so ROM address 0x9Fxxxx executes
+at boot-time alias 0xFFxxxx (+0x600000) until `Boot_Init` reprograms the memory
+controller. Source labels are at ROM addresses; the 0xFFxxxx aliases appear in comments,
+and the handful of `CALL`-absolute sites that must stay numeric are marked as such.
 
-### Table Data (66.70% incorrect)
+| Component | Address range | Module |
+|-----------|---------------|--------|
+| FDC dispatch offset tables | 0x9FB496–0x9FB4D1 | `kn5000_table_data.s` (three tables) |
+| `Boot_BitMaskTable` + `Boot_InitParams` | 0x9FB4D2–0x9FB4E7 | `kn5000_table_data.s` |
+| `Boot_Init`, halt handler, `Boot_ClearRAM` | 0x9FB4E8–0x9FB7F1 | `kn5000_table_data.s`, `shared/` |
+| HDAE5000 boot-flash tail | 0x9FC6F6–0x9FC8C1 | `kn5000_table_data.s` (was `bootcode_hdae_to_lzss.bin`) |
+| LZSS decoder suite | 0x9FC8C2–0x9FCC29 | `kn5000_table_data.s` (872 bytes, five routines) |
+| FDC command-layer driver | 0x9FD8A5–0x9FEA9C | `boot_fdc_driver.s` |
+| Disk-format probe | 0x9FEB2B–0x9FEC6D | `boot_disk_probe.s` |
+| CP-serial driver (polling half) | 0x9FEC6E–0x9FF228 | `boot_cpserial.s` |
+| CP-serial ISRs | 0x9FF229–0x9FF2F1 | `boot_cpserial_isr.s` |
+| CP-serial state handlers/codecs | 0x9FF2F2–0x9FFB2E | `boot_cpserial_states.s` |
+| Boot C runtime | 0x9FFB2F–0x9FFE7F | `boot_clib.s` |
+| Debug group (disabled) | 0x9FFE80–0x9FFEDF | `boot_debug.s` |
+| `RESET_HANDLER` + IVT | 0x9FFEE0–0x9FFFFF | `kn5000_table_data.s` |
 
-The Table Data ROM contains the first-stage bootloader, Feature Demo presentation data, and various lookup tables.
-
-**First-Stage Bootloader (100% matching):**
-
-The boot code section (0x9FB4D2-0x9FFFFF, 19,246 bytes) is now **100% byte-matching**. This includes:
-
-| Component | Address Range | Size | Description |
-|-----------|---------------|------|-------------|
-| `Boot_BitMaskTable` | 0x9FB4D2-0x9FB4E7 | 22 bytes | Initialization data tables |
-| `Boot_Init` | 0x9FB4E8-0x9FB704 | 540 bytes | CPU/memory controller initialization |
-| `Boot_EnterHalt` | 0x9FB705-0x9FB73F | 59 bytes | HALT handler and interrupt dispatcher |
-| `Boot_ClearRAM` | 0x9FB740-0x9FB7F1 | 178 bytes | RAM initialization and data copy |
-| Boot routines (pre-LZSS) | 0x9FB7F2-0x9FC8C1 | 4,304 bytes | Flash update, FDC, display utilities |
-| **LZSS Decoder Suite** | 0x9FC8C2-0x9FCA4F | 872 bytes | Complete decompression subsystem |
-| Boot routines (post-LZSS) | 0x9FCC2A-0x9FFEE0 | 12,982 bytes | Remaining boot utilities |
-| `RESET_HANDLER` | 0x9FFEE0-0x9FFEFF | 32 bytes | Entry vector (JP to Boot_Init) |
-| Interrupt vectors | 0x9FFF00-0x9FFFFF | 256 bytes | TMP94C241F vector table |
-
-**LZSS Decoder Routines (fully disassembled):**
+The LZSS decoder is SLIDE4K (4 KB sliding window, 12-bit offset, 4-bit length) and is
+invoked during flash firmware updates:
 
 | Routine | Address | Size | Purpose |
 |---------|---------|------|---------|
 | `LZSS_ReadByte` | 0x9FC8C2 | 115 bytes | Read from compressed stream with sector buffering |
 | `LZSS_OutputByte` | 0x9FC935 | 63 bytes | Write decompressed bytes with 32-bit batching |
 | `LZSS_OutputByte_Alt` | 0x9FC974 | 63 bytes | Alternative output for flash update mode |
-| `LZSS_ParseHeader` | 0x9FC9B3 | 157 bytes | Parse/validate firmware header, setup source |
+| `LZSS_ParseHeader` | 0x9FC9B3 | 157 bytes | Parse/validate firmware header, set up source |
 | `LZSS_Decompress` | 0x9FCA50 | 474 bytes | Main decompression loop with sliding window |
 
-The LZSS decoder uses the SLIDE4K format (4KB sliding window, 12-bit offset, 4-bit length) and is invoked during flash firmware updates to decompress packed firmware files.
+(The 4 KB/8 KB *variant* dispatch lives in the main-CPU firmware, not here — see the help
+database note above.)
 
-**Key discovery:** The interrupt vector table contains boot-time addresses (0xFFxxxx) because at reset the table_data ROM is mapped at 0xE00000-0xFFFFFF, not 0x800000-0x9FFFFF. The bootloader reconfigures the memory controller to remap the ROMs.
+**System update bitmaps (shared with the main CPU).** Eight 1-bit monochrome images
+(224×22 px, 616 bytes each) at 0x9FA156, byte-identical to the main-CPU copies; both ROMs
+`.incbin` the same files.
 
-**System Update Bitmaps (shared with Main CPU):**
+| Address | Image |
+|---------|-------|
+| 0x9FA156 | Flash Memory Update |
+| 0x9FA3BE | Now Erasing |
+| 0x9FA626 | FD to Flash Memory |
+| 0x9FA88E | Completed |
+| 0x9FAAF6 | Please Wait |
+| 0x9FAD5E | Change FD 2 of 2 |
+| 0x9FAFC6 | Illegal Disk |
+| 0x9FB22E | Turn On AGAIN |
 
-The Table Data ROM contains 8 system update message bitmaps at `0x9FA156`. These are 1-bit monochrome images (224x22 pixels, 616 bytes each) that are **byte-identical** to the Main CPU versions. The disassembly source shares the same bitmap files between both ROMs.
+**Key discovery (still valid):** the interrupt vector table holds boot-time addresses
+(0xFFxxxx) precisely because of the reset-time mapping described above.
 
-| Address | Image | Purpose |
-|---------|-------|---------|
-| 0x9FA156 | Flash Memory Update | Update in progress |
-| 0x9FA3BE | Now Erasing | Flash erase in progress |
-| 0x9FA626 | FD to Flash Memory | Copying from floppy |
-| 0x9FA88E | Completed | Operation complete |
-| 0x9FAAF6 | Please Wait | Processing |
-| 0x9FAD5E | Change FD 2 of 2 | Multi-disk prompt |
-| 0x9FAFC6 | Illegal Disk | Invalid disk error |
-| 0x9FB22E | Turn On AGAIN | Restart instruction |
+### Shared source with the Main CPU
 
-**ROM Interleaving:** The Table Data ROM uses 16-bit **word-level** interleaving across two physical chips (odd.ic1 and even.ic3). The combined ROM file `kn5000_table_data.rom` is created by alternating 16-bit words from each chip, not individual bytes.
+Several bootloader routines are byte-identical or semantically identical to main-CPU
+utilities — both ROMs were built from common source. The disassembly now uses real shared
+modules in `shared/`:
 
-**Shared Code with Main CPU (bootloader routines):**
+| File | Description |
+|------|-------------|
+| `shared/vga_constants.s` | VGA register addresses and constants |
+| `shared/vga_init.s` | VGA initialization data + completion code |
+| `shared/vga_io.s` | VGA register I/O routines (byte-identical between ROMs) |
+| `shared/boot_call_init_handlers.s` | Init handler dispatch (conditional assembly) |
+| `shared/boot_routines.s` | Boot initialization routines + LZSS decoder |
+| `shared/macros.s`, `shared/sfr_tmp94c241.s` | Macros and SFR definitions |
 
-Analysis revealed that several bootloader routines in the Table Data ROM are **byte-identical** or **semantically identical** to utility routines in the Main CPU ROM. This indicates both ROMs were built from common source code.
-
-**Shared Source Files (in `shared/` directory):**
-
-The disassembly now uses actual shared source files that are included by both ROMs:
-
-| File | Lines | Description |
-|------|-------|-------------|
-| `shared/vga_constants.s` | 58 | VGA register addresses and constants |
-| `shared/vga_init.s` | 135 | VGA initialization data tables |
-| `shared/vga_init.s` | 28 | VGA init completion code |
-| `shared/vga_io.s` | 51 | VGA register I/O routines (byte-identical) |
-| `shared/boot_call_init_handlers.s` | 87 | Init handler dispatch (conditional assembly) |
-| `shared/boot_routines.s` | 630 | Boot initialization routines |
-| `shared/boot_routines.s` | 85 | LZSS compression decoder |
-
-**Total shared source: 1,074 lines across 7 files**
-
-**Shared Routine Mapping:**
+**Shared routine mapping:**
 
 | Table Data | Main CPU | Size | Routine |
 |------------|----------|------|---------|
@@ -369,57 +454,28 @@ The disassembly now uses actual shared source files that are included by both RO
 | 0x9FBC3C-0x9FBECF | 0xEF3CE0-0xEF3F73 | 660 bytes | Boot utility routines |
 | 0x9FB4F2-0x9FB622 | 0xEF03D0-0xEF0500 | 305 bytes | Boot initialization code |
 
-**Conditional Assembly:**
-
-Some shared routines have minor encoding differences between ROMs (e.g., byte vs word comparison, different helper addresses). These are handled with conditional assembly:
-
-```asm
-; Example from boot_call_init_handlers.s
-IF INIT_FLAG_COMPARE_WORD
-  ; table_data: CP (0xFFFEEE), 0xFFFF (7 bytes)
-  db 0D2h, 0EEh, 0FEh, 0FFh, 03Fh, 0FFh, 0FFh
-ELSE
-  ; maincpu: CP (0xFFFEEE), 0xFF (6 bytes)
-  db 0C2h, 0EEh, 0FEh, 0FFh, 03Fh, 0FFh
-ENDIF
-```
-
-Each ROM defines the required parameters before including the shared file.
-
-**Compressed Data Identified:**
-
-| Address | Contents | Format |
-|---------|----------|--------|
-| 0x8E0000 | Compressed preset/parameter data | SLIDE4K LZSS (~33KB decompressed) |
-| 0x9FA000 | Update file type headers | "SLIDE" markers |
-
-**Note:** The LZSS data at 0x8E0000 decompresses to ~33KB of parameter data, NOT the ~192KB Sub CPU executable. See [LZSS Compression](lzss-compression.md) for analysis.
-
-**Reference disassembly:** `original_ROMs/table_data_bootcode.unidasm` (6,704 lines)
-
-**Remaining work:**
-- Feature Demo XML and BMP images (documented but not all extracted)
-- Analysis of decompressed parameter data from 0x8E0000
-- Trace Sub CPU payload transfer path during boot
-- Various lookup tables and data structures
-- Boot routines in `bootcode_pre_lzss.bin` and `bootcode_post_lzss.bin`
+Where the two ROMs differ in encoding (byte vs word compare, different helper addresses),
+conditional assembly handles it — each ROM defines the required parameters before
+including the shared file.
 
 ## Technical Notes
 
 ### TMP94C241F vs TMP96C141
 
-Instructions unique to TMP94C241F that require macro workarounds:
+Instructions unique to TMP94C241F that required macro workarounds under ASL:
+
 - Memory-to-memory `LD` (not supported by TLCS-900)
 - Certain shift/rotate variants
 - Some MUL/DIV variants
 - LDI, LDIR, LDD, LDDR block transfer instructions
 - DMA control register access (`LDC` with DMAS/DMAD/DMAC/DMAM registers)
 
+The LLVM backend encodes all of these natively; the macro tables below document the
+archived ASL mirror, which is still built.
+
 ### ASL Macro Workarounds (tmp94c241.inc)
 
-The `tmp94c241.inc` file contains macros that emit raw byte sequences for unsupported instructions.
-
-**DMA Register Macros:**
+**DMA register macros:**
 
 | Macro | Encoding | Description |
 |-------|----------|-------------|
@@ -435,7 +491,7 @@ The `tmp94c241.inc` file contains macros that emit raw byte sequences for unsupp
 | `LDC_DMAC2_BC` | `d9 2e 48` | Load DMA count 2 from BC |
 | `LDC_DMAC2_WA` | `d8 2e 48` | Load DMA count 2 from WA |
 
-**Additional Sub CPU Boot ROM Macros:**
+**Additional sub CPU boot ROM macros:**
 
 | Macro | Encoding | Description |
 |-------|----------|-------------|
@@ -457,7 +513,7 @@ The `tmp94c241.inc` file contains macros that emit raw byte sequences for unsupp
 | `LD_pXHL_IMM16 value` | `b3 02 LL HH` | Store 16-bit imm to (XHL) |
 | `LD_MEM24_IMM16 addr,val` | `f2 LL MM HH 02 VV WW` | Store 16-bit to 24-bit addr |
 
-**Stack Frame and Register Macros (DMA routines):**
+**Stack frame and register macros (DMA routines):**
 
 | Macro | Encoding | Description |
 |-------|----------|-------------|
@@ -470,7 +526,7 @@ The `tmp94c241.inc` file contains macros that emit raw byte sequences for unsupp
 | `EXTZ_WA` | `d8 12` | Zero-extend A to WA |
 | `EXTZ_BC` | `d9 12` | Zero-extend C to BC |
 
-**Stack-Relative Addressing Macros:**
+**Stack-relative addressing macros:**
 
 | Macro | Encoding | Description |
 |-------|----------|-------------|
@@ -494,90 +550,35 @@ ASL sometimes chooses different (but functionally equivalent) encodings than the
 | `ld A, imm8` | `21 nn` | Different | Use `LD_A` macro |
 | `ld D, imm8` | `24 nn` | Different | Use `LD_D` macro |
 
-These encoding differences cause byte mismatches even when the code is functionally correct.
+## Earlier Milestones
 
-### Build Process
+### March 2026: complete `LABEL_XXXXXX` elimination
 
-```bash
-cd kn5000-roms-disasm
-make all              # Build all ROMs
-python compare_roms.py # Verify against originals
-```
+Every address-based placeholder label was analysed and renamed to a descriptive name —
+roughly 10,000 labels across the main-CPU sources alone, with zero `LABEL_XXXXXX`
+remaining in any ROM directory. All renames were verified with a full
+`make clean && make all` + `compare_roms.py`.
 
-## Recent Improvements
+### March 2026: raw-byte code elimination
 
-### March 2026: Sound Data C Struct Conversion and Code Quality
+All executable code across the ROM set uses native TLCS-900 mnemonics; no code remains as
+`.byte` sequences. Remaining `.byte` directives are data — tables, strings, bitmaps,
+interpreter bytecode and padding. See
+[Raw Byte Code Elimination]({{ site.baseurl }}/raw-byte-code-elimination/).
 
-**15 sound data files converted to C structs** — Raw byte arrays in `maincpu/audio/sound_data/` converted to typed C struct arrays with named fields, section labels, and `_Static_assert` size verification. Files include piano, guitar, strings/vocal, organ, brass, flute, sax/reed, mallet/orch perc, drum kits, and more. The `sepaout_config.s` data was also converted to a C struct with separator/output configuration fields.
+### March 2026: C struct conversion, R+d16 addressing, waveform ROM
 
-**1,398 generic labels renamed to semantic names** — Remaining hex-suffixed parameter labels, `.set` aliases, and address-based labels across all source files replaced with sequential or descriptive names.
+15 sound-data files in `audio/sound_data/` were converted from raw byte arrays to typed C
+structs with named fields and `_Static_assert` size checks; 357 `R+d16` `.byte` fallbacks
+became native mnemonics once the LLVM backend gained SRI-prefix support; all 26 NAKA
+widget C files moved to named-struct format with symbol-resolved pointer tables; and the
+IC307 waveform ROM format was decoded (16-bit signed PCM at 32 kHz, 512-entry sample
+table). See [Waveform ROM Format]({{ site.baseurl }}/waveform-rom-format/).
 
-**LLVM backend improvements** — Misaligned memory access fix, D7 prevbank disassembler fix, SRI prefix encoding fix for R+d16 addressing, F0 8-bit direct memory support, auto-increment addressing, round-trip assembly tests, `.word`/`.hword` directive support, and `calr` relative call fix. Backend documentation added.
+### Binary include splitting policy
 
-**MAME driver style audit passed** — All upstream PR branches reviewed for MAME code style compliance.
-
-### March 2026: Complete LABEL_XXXXXX Elimination
-
-**All address-based labels replaced with semantic names across the entire ROM set.** Every `LABEL_XXXXXX` placeholder (e.g., `FileIO_ValidateWithExtHeader`) has been analyzed and renamed to a meaningful, descriptive name reflecting its purpose (e.g., `FileIO_ValidateWithExtHeader`, `SeqByteBlock_DispatchJumpTable`). This represents the completion of a major project goal:
-
-- **~10,000 labels renamed** across 94+ source files in maincpu alone
-- **0 LABEL_XXXXXX remaining** in any ROM directory (maincpu, subcpu, hdae5000, table_data, custom_data)
-- All renames verified with full `make clean && make all` + `compare_roms.py` (100% byte match maintained)
-- Cross-file references updated atomically to prevent broken symbol errors
-
-This milestone significantly improves codebase navigability and makes the disassembly a true semantic representation of the firmware, not just a mechanical address-to-instruction translation.
-
-### March 2026: R+d16 Addressing, Semantic Naming, Symbolic Handlers, Waveform ROM
-
-**357 R+d16 .byte instructions converted to native mnemonics** — With new LLVM backend support for R+d16 source memory addressing (C3/D3/E3 SRI prefix), 357 `.byte` fallbacks across maincpu and subcpu ROMs were converted to native assembly. Largest contributors: midi_dispatch_handlers (173), subprogram (26), sequencer_ui (25), scoop_display (23), graphics_text_vga (22). All 6 ROMs maintain 100% byte match.
-
-**16 NAKA UI widget files renamed to semantic names** — Previously opaque address-based filenames (e.g., `ui_widgets_EBxxxx.s`) renamed to descriptive names based on reverse engineering research (e.g., `technichord_string_data.s`, `sound_editor_widgets.s`), improving codebase navigability.
-
-**All 26 NAKA widget C files converted to named struct format** — Raw `unsigned char data[N] = { 0xNN, ... }` byte arrays replaced with packed C structs using named fields, `NAKA_HDR()` type headers, `NAKA_ADDR()` pointer symbol resolution, and `_Static_assert` size verification. Pointer tables have 800+ external symbols resolved via ELF symbol table. Named regions derived from `.equ` offsets in assembly wrappers provide clear structural decomposition of widget descriptors, string tables, bitmap data, palette entries, and handler configuration.
-
-**All C screen data `.handler` fields now use symbolic references** — 52 handler symbols across 2 linker scripts (`maincpu.ld`, `ctlonly.ld`) replace raw numeric addresses in the C-compiled screen data structures, enabling cross-reference navigation and maintaining the link between C UI definitions and assembly handler routines.
-
-**IC307 waveform ROM format fully decoded** — The waveform ROM (IC307, 4MB) format has been fully reverse-engineered: 16-bit signed PCM samples at 32kHz, organized as a sample table (512 entries with start/end/loop addresses) followed by raw sample data. See [Waveform ROM Format]({{ site.baseurl }}/waveform-rom-format/) for full documentation.
-
-### Binary Include Splitting
-
-Per project policy, binary includes are split when code references internal addresses. This ensures:
-- Cross-references use symbolic labels instead of hardcoded addresses
-- Smaller binary files are easier to analyze
-- Data structure boundaries are explicitly marked
-
-**Recently split:**
-- `e02510_e06baf.bin` split into three parts:
-  - `e02510_e0458f.bin` - Instrument category data (PIANO, ORGAN, etc.)
-  - `e04590_e04b2f.bin` - GUITAR data
-  - `e04b30_e06baf.bin` - STRINGS & VOCAL data
-- `e06f30_e0adcf.bin` split into four parts:
-  - `e06f30_e078f1.bin` - FLUTE sound data
-  - `e078f2_e08baf.bin` - Additional FLUTE data
-  - `e08bb0_e0914f.bin` - SAX & REED sound data
-  - `e09150_e0adcf.bin` - MALLET & ORCH PERC sound data
-- `e0bb90_e0e974.bin` split into seven parts for instrument data tables
-- `e0b250_e0ba60.bin` split into nineteen parts for orchestral pad data (many internal cross-references)
-
-### Control Panel Protocol Naming
-
-Significant naming improvements applied to the control panel serial protocol code (0xFC3E00-0xFC7FFF):
-
-**Packet Processing:**
-- `CPanel_RX_ProcessWithFlag` / `CPanel_RX_Process` - Entry points
-- `CPanel_RX_ParseNext` - Main packet processing loop
-- `CPanel_RX_PacketHandlers` - Jump table for packet type dispatch
-
-**Packet Type Handlers:**
-- `CPanel_RX_ButtonPacket` - Button state packets (types 0, 1)
-- `CPanel_RX_EncoderPacket` - Rotary encoder data (type 2)
-- `CPanel_RX_SyncPacket` - Sync/ack packets (types 3, 4, 5)
-- `CPanel_RX_MultiBytePacket` - Multi-byte packets (types 6, 7)
-
-**LED and Initialization:**
-- `CPanel_UpdateLEDs` - LED state transmission
-- `CPanel_InitLEDBuffer` - Serial/LED initialization
-- `CPanel_InitButtonState` - Button state array setup
-
-**Variables:**
-- `CPANEL_RX_PACKET_BYTE_1` / `CPANEL_RX_PACKET_BYTE_2` - Incoming packet bytes (formerly `CPANEL_UNUSED_2/3`)
+Binary includes are split whenever code references an address inside them, so that
+cross-references use symbolic labels instead of hardcoded addresses and structure
+boundaries are explicit. Since the August 2026 waves the rule is stronger: a slice must
+also carry a label, a length and a comment saying what it holds — an unnamed whole-file
+`.incbin` is treated as an unfinished conversion.
