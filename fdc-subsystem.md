@@ -353,7 +353,7 @@ FDC_MODE_CONFIG:            ; F97984
     CALR FDC_INTERRUPT_HANDLER
     CP (8A24h), 0
     JRL NZ, FDC_MC_EXIT
-    CALR FDC_SeekRecalibrate
+    CALR FDC_CmdRecalibrate      ; formerly FDC_SeekRecalibrate
     CP (8A24h), 0
     JRL NZ, FDC_MC_EXIT
     LD A, (8A6Ch)           ; Load FDC mode
@@ -497,6 +497,26 @@ FDC_IH_EXIT:                ; F97CC6
     RET
 ```
 
+### FDC_ByteTransfer_PIO (0xF97DEE) - PIO Fallback Transfer and the '+2 Quirk'
+
+Non-DMA fallback used from the INT4 path when DMA channel 3 is not armed:
+it moves ONE byte per call between the uPD72068 DMA-acknowledge data port
+(`0x120000`) and the caller's buffer, decrementing the remaining-byte count
+(`0x8A1C`). Request command 3 reads (port to buffer), command 4 writes
+(buffer to port); any other command has no PIO path.
+
+**uPD72068 PIO '+2 quirk'** (found during the bootloader FDC-driver
+disassembly, `table_data/boot_fdc_driver.s`, routines `FDC_PIO_ReadTransfer`
+/ `FDC_PIO_WriteTransfer`): in both drivers the running buffer pointer is
+kept at **+2 into the 32-bit buffer field** of the request block. The
+maincpu driver keeps its pointer at `0x8A4E` while the request's buffer
+field is the 32-bit word at `0x8A4C`; the bootloader twin keeps its pointer
+at `0x0C7C` while its buffer field is the 32-bit word at `0x0C7A`. The same
+off-by-two displacement appearing in both independently assembled drivers
+looks like a latent defect inherited from a common source. It is harmless
+in practice because the DMA path is what ships; the PIO fallback is only
+reached when DMA3 is not armed.
+
 ---
 
 ## Handler Dispatch Table (0xF97D8D)
@@ -506,7 +526,7 @@ The FDC uses a handler dispatch table starting at 0xF97D8D:
 | Index | Address | Handler Name | Description |
 |-------|---------|--------------|-------------|
 | 0 | F97D8D | DISPATCH_BASE | Basic handler (calls F97639) |
-| 1 | F97D93 | HANDLER_01 | CMD_ENABLE + FDC_SeekRecalibrate |
+| 1 | F97D93 | HANDLER_01 | CMD_ENABLE + FDC_CmdRecalibrate (formerly FDC_SeekRecalibrate) |
 | 2 | F97D99 | HANDLER_02 | CMD_ENABLE + STATUS_HANDLER |
 | 3 | F97D9F | HANDLER_03 | CMD_ENABLE + CMD_EXEC |
 | 4 | F97DA5 | HANDLER_04 | CMD_ENABLE + SECTOR_XFER |
@@ -537,6 +557,7 @@ All handlers end by jumping to FDC_Handler_ExitStatus which sets the status flag
 | `FDC_STATUS_COPY` | `0xF97C54` | Copy cached status register |
 | `FDC_OUTPUT_CTRL` | `0xF97C5B` | FDC output enable/disable control |
 | `FDC_INTERRUPT_HANDLER` | `0xF97C7C` | Main FDC interrupt handler |
+| `FDC_ByteTransfer_PIO` | `0xF97DEE` | PIO fallback byte transfer (see the '+2 quirk' above) |
 | `FDC_ReadSectors` | `0xF96E00` | Read sectors from floppy disc |
 | `FDC_WriteSectors` | `0xF97000` | Write sectors to floppy disc |
 | `Check_for_Floppy_Disk_Change` | `0xEF4F5E` | Detect disc insertion/removal (Port D bit 6) |

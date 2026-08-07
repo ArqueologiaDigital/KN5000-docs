@@ -1910,7 +1910,7 @@ The FDC handler dispatch table (`FDC_HANDLER_OFFSETS` at 0xEA98CA) calls helper 
 | `FDC_OUTPUT_CTRL` | 0xF97C5B | Raw bytes | FDC_HANDLER_09 |
 | `FDC_CMD_DISPATCH_SUB` | 0xF96D95 | Raw bytes | FDC_HANDLER_10 |
 
-These routines are in `FDC_SeekRecalibrate` raw byte block (lines 336862-336929).
+These routines are in the `FDC_CmdRecalibrate` (formerly `FDC_SeekRecalibrate`) raw byte block (lines 336862-336929).
 
 ### Finding Jump Tables
 
