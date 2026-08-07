@@ -15,34 +15,47 @@ The KN5000 firmware uses LZSS compression (SLIDE4K format) for storing preset an
 | Property | Value |
 |----------|-------|
 | **ROM Component** | table_data |
-| **Label** | `Compressed_Preset_Data_LZSS` |
-| **Start Address** | `0x08E0000` (ROM offset) / `0x3E0000` (CPU address) |
-| **End Address** | `0x08E6D40` |
-| **Header Size** | 14 bytes |
-| **Compressed Data Size** | 27,953 bytes |
+| **Label** | `Compressed_Preset_Data_LZSS` (a.k.a. `DemoSongPreset18`) |
+| **Start Address** | `0x8E0000` (CPU address) / `0xE0000` (offset in `kn5000_table_data.rom`) |
+| **End Address** | `0x8E6D3E` (last payload byte; 0xFF padding starts at `0x8E6D3F`) |
+| **Header Size** | 11 bytes |
+| **Compressed Payload Size** | 27,956 bytes (27,881-byte LZSS stream + 75 verbatim tail bytes) |
 | **Total Size** | 27,967 bytes |
-| **Decompressed Size** | ~32,910 bytes |
-| **Binary File** | `table_data/includes/preset_data_compressed.bin` |
+| **Decompressed Size** | 38,144 bytes (0x9500, exact — declared by the header size field) |
+| **Binary File** | `table_data/includes/demo_presets/demo_preset_18_compressed.bin` |
 
-**Header Structure:**
+**Header Structure (11 bytes):**
 ```
 Offset  Size  Content
 ------  ----  -------
-0x00    7     "SLIDE4K" (format signature)
-0x07    1     0x00 (null terminator)
-0x08    1     0x00
-0x09    1     0x95
-0x0A    1     0x00
-0x0B    2     "}Z" (0x7D, 0x5A)
-0x0D    1     0xEE
+0x00    8     "SLIDE4K", 0x00  (NUL-terminated format signature)
+0x08    3     Decompressed size, 24-bit BIG-ENDIAN
+              (here: 00 95 00 = 0x009500 = 38,144 bytes)
 ```
+
+The LZSS stream begins immediately at offset 0x0B. The bytes `7D 5A EE` at
+offsets 0x0B-0x0D — previously documented as three extra header metadata bytes
+of a supposed 14-byte header — are actually the first flag byte and the first
+two payload bytes of the compressed stream.
+
+**Endianness evidence:** the v142 Sub-CPU update image
+(`kn5000_subprogram_v142_compressed.rom`) carries size field `03 00 00`;
+big-endian that is 0x030000 = 196,608, exactly the decompressed size of the
+Sub-CPU program. Read little-endian it would be 3. (The preset block's
+`00 95 00` is endian-symmetric and cannot discriminate.)
+
+The decoder stops as soon as the declared output size (38,144 bytes) is
+reached, which happens at ROM address `0x8E6CF4` after consuming 27,881 stream
+bytes. The remaining 75 bytes up to `0x8E6D3E` are real (non-0xFF) ROM content
+that the decoder never reads; they are preserved verbatim so the rebuilt ROM
+stays byte-identical.
 
 **Important Clarification:**
 
-> **This compressed region does NOT contain the Sub CPU ROM.** Decompression yields ~33KB of parameter-like data, not the 192KB executable code found in `kn5000_subprogram_v142.rom`.
+> **This compressed region does NOT contain the Sub CPU ROM.** Decompression yields 38,144 bytes (~37KB) of parameter-like data, not the 192KB executable code found in `kn5000_subprogram_v142.rom`.
 
 **Decompressed Data Characteristics:**
-- Size: 32,910 bytes (0x808E) (vs 196,608 bytes for Sub CPU ROM)
+- Size: 38,144 bytes (0x9500) (vs 196,608 bytes for Sub CPU ROM)
 - Content: Parameter/preset data structure, not executable code
 - Most bytes are in MIDI range (0-127)
 - Contains repeating structural patterns (e.g., `0x80 XX` flags, `00 03` record markers)
@@ -124,8 +137,12 @@ While the 0x3E0000 address is now understood, some aspects of the preset data tr
 | Main CPU Header | 0x0000-0x00AF | 176 bytes | Main CPU only (word at 0x100 → RAM 0x0404) |
 | Sub CPU Audio Params | 0x00B0-0x808D | 32,734 bytes | Sub CPU address 0xF000+ (uncertain) |
 
+*Note: this breakdown was derived from a truncated 32,910-byte decompression;
+the true output is 38,144 bytes (0x9500), so the section boundaries above need
+re-derivation.*
+
 **Outstanding questions:**
-- The bulk transfers send 64KB blocks (much larger than the ~33KB of meaningful data)
+- The bulk transfers send 64KB blocks (much larger than the ~37KB of meaningful data)
 - The fallback to `TABLE_DATA_ROM__BASE_ADDR` (0x800000) produces mostly 0xF7 padding bytes
 - The exact purpose of the preset parameters at Sub CPU 0xF000+ is not fully understood
 
@@ -165,7 +182,7 @@ The following questions remain open regarding where the LZSS preset data actuall
 
 1. **What does 0x3E0000 actually map to?** The memory bank configuration during boot needs investigation.
 2. **Are there other ~33KB transfers?** Search for data transfers matching the preset data size.
-3. **What happens to the "extra" bytes?** The 64KB transfer vs ~33KB data discrepancy is suspicious.
+3. **What happens to the "extra" bytes?** The 64KB transfer vs ~37KB data discrepancy is suspicious.
 4. **Why does fallback produce 0xF7 bytes?** This suggests the fallback path may never be intended to work.
 
 **Open Questions - Sub CPU Payload Transfer:**
@@ -193,9 +210,9 @@ SLIDE4K is a variant of LZSS (Lempel-Ziv-Storer-Szymanski) compression with the 
 |-----------|-------|
 | **Sliding Window Size** | 4,096 bytes (4KB) |
 | **Window Offset Bits** | 12 bits (0x000 - 0xFFF) |
-| **Match Length Bits** | 4 bits (encoded length + 2) |
-| **Minimum Match Length** | 2 bytes |
-| **Maximum Match Length** | 17 bytes (15 + 2) |
+| **Match Length Bits** | 4 bits (encoded length + 3) |
+| **Minimum Match Length** | 3 bytes |
+| **Maximum Match Length** | 18 bytes (15 + 3) |
 | **Window Pre-fill** | First 4,078 bytes (0xFEE) filled with 0x00 |
 
 ### Encoding Format
@@ -214,7 +231,7 @@ The compressed data consists of flag bytes followed by literal bytes or back-ref
    Byte 2: [High 4 bits of offset][4-bit length]
 
    offset = (byte2 & 0xF0) << 4 | byte1
-   length = (byte2 & 0x0F) + 2
+   length = (byte2 & 0x0F) + 3
    ```
 
 ### Decompression Algorithm
@@ -251,7 +268,7 @@ def decompress_slide4k(data):
                 i += 2
 
                 offset = ((high & 0xF0) << 4) | low
-                length = (high & 0x0F) + 2
+                length = (high & 0x0F) + 3
 
                 for _ in range(length):
                     byte = window[offset]
