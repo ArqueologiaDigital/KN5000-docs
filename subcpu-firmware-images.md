@@ -11,11 +11,16 @@ The KN5000's sub-CPU has a 128 KB boot ROM of its own (`kn5000_subcpu_boot.ic30`
 the inter-CPU link at every boot by `SubCPU_Send_Payload` (see
 [SubCPU Payload Loading]({{ site.baseurl }}/subcpu-payload-loading/)).
 
-**Where the main CPU reads it from is still unresolved.** The routine's two source bases are
-the LZSS image at Custom Data flash `0x3E0000` and, on failure, table-data `0x800000` — and
-in the images this project holds neither contains the payload: the custom-data dump is erased
-at `0x3E0000`, and the table-data ROM's `0x830000` region is the
-[tone database]({{ site.baseurl }}/tone-database/), not a copy of the executable.
+**Where the main CPU is *supposed* to read it from is now settled; where our dumps put it
+is not.** The routine takes one of two source bases: the SLIDE4K image at Custom Data flash
+`0x3E0000`, or — only when that fails its magic check — table-data `0x800000`. The first is
+the live path on every firmware version we hold, and a File Type 007 update disc is proven
+to write the compressed payload there verbatim. But in our IC19 dump that region is 131,072
+bytes of `0xFF` with no `SLIDE` magic anywhere in the image, and the table-data fallback at
+`0x800100` is `0xF7` filler behind a pointer table. A machine matching our dumps could not
+start its sub-CPU. That is a **dump-provenance** problem, not a firmware one; the full
+evidence and the measurements that would settle it are on
+[Sub-CPU Payload Provenance]({{ site.baseurl }}/subcpu-payload-provenance/).
 
 Three revisions of that payload survive, and they survive in two different shapes — which
 turns out to matter for preservation.
@@ -28,16 +33,59 @@ form the disassembly reconstructs and the form `compare_roms.py` checks.
 **Firmware-update image (~93 KB).** What ships on a system-update floppy: an 11-byte
 header — `"SLIDE4K"` + NUL, then the decompressed size as a 24-bit **big-endian** value
 (`03 00 00` = 196,608) — followed by the LZSS stream. The update handler for File Type 007
-("Technics KN5000 Program DATA FILE PCK") writes it into Custom Data flash at `0x3E0000`;
-on the next boot the main CPU decompresses from there instead of taking the
-`SubCPU_Send_Payload` fallback branch that points at table-data `0x830000`. That region is
-the [tone database]({{ site.baseurl }}/tone-database/), **not** a copy of the sub-CPU
-payload, and what the machine would do with tone-database bytes on that path has not been
-analysed. See [LZSS Compression]({{ site.baseurl }}/lzss-compression/).
+("Technics KN5000 Program DATA FILE PCK") writes it into Custom Data flash at `0x3E0000`
+**verbatim**, exactly `0x20000` bytes, after erasing the two sectors there. It is not a
+transient staging area: the main CPU decompresses it afresh on **every** boot.
+
+The `SubCPU_Send_Payload` fallback branch points at table-data `0x800000` (not `0x830000`,
+which is the start of the five *unconditional* tone-database transfers that run whichever
+source is chosen). `0x800100` onward is preset-bank filler, so the fallback would ship
+garbage. See [LZSS Compression]({{ site.baseurl }}/lzss-compression/).
 
 All three compressed images in the repository were extracted from the
 [system update floppy disk images](https://archive.org/details/technics-kn5000-system-update-disks)
 on the Internet Archive.
+
+## Dump provenance
+
+### The compressed images are carved artifacts, not tool output
+
+`kn5000_subprogram_v142_compressed.rom` is byte-identical to bytes `[0x0F03A9, +93203)` of
+`kn5000_v10_disk.img` (sha1 `a892bedc…`) — it was cut out of that floppy. Recompressing the
+payload with this project's own encoder produces 93,171 bytes, a different length, so the
+file cannot be a tool output. Decoding the two SLIDE4K streams that disc carries reproduces
+`kn5000_v10_program.rom` (2,097,152 B) and `kn5000_subprogram_v142.rom` (196,608 B) exactly,
+which makes the **v10 ↔ v1.42 pairing a measured fact**.
+
+The v1.41 → v7/v8 and v1.40 → v5/v6 pairings that MAME's BIOS options assert are **not**
+measured — only the v10 update disc is available to this project. They rest on filename
+inference and should be treated as such until a v5–v9 disc turns up.
+
+### The boot ROM `kn5000_subcpu_boot.ic30` is only 11% dumped
+
+**Owner testimony (Felipe, 2026-08-08).** IC30 was dumped **partially and deliberately**.
+The tooling could copy only small chunks at a time, so he read the regions that appeared to
+hold the boot code needed to make the emulator work, analysed that code, and — as far as he
+could assess at the time — found no references into the regions he had not read. He
+concluded the rest was very likely `0xFF`. **He calls this an educated guess, not a
+measurement**, and intends a full dump when he regains physical access to the instrument
+(it is in storage in another country).
+
+Measured: 14,336 bytes were read (10.9% of the chip); **116,736 bytes, 89.1%, are `0xFF` by
+assumption**; and only **4,352 bytes of the whole 128 KB chip — 3.3% — are real data**, in
+three blocks at CPU `0xFF8000-0xFF904C`, `0xFFFE80-0xFFFFB3` and `0xFFFFF0-0xFFFFFF`.
+
+The guess holds up well under test: a structure-aware census over the byte-identical
+disassembly found 220 ROM-address references, all in dumped windows and none in an undumped
+range, and the loaded v1.42 payload calls back into IC30 at only two addresses, both dumped.
+The one counter-example (`ROM_CHECKSUM` reading 2 KB past the dumped window) is
+content-independent and does not run in a normal boot. See
+[ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/#dump-provenance) for the full
+figures, and note that a full IC30 dump would *not* answer the payload-source question —
+the payload is larger than the entire chip and IC30 is not in the main CPU's address space.
+
+MAME flags the file `BAD_DUMP` and states the assumption inline. That flag should stay until
+the chip is read in full.
 
 ## Status of each revision
 

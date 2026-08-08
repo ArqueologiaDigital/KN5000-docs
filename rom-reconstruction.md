@@ -281,6 +281,111 @@ The original firmware dumps are stored in `original_ROMs/`:
 physical chips. `kn5000_table_data.rom` is built by alternating 16-bit words from
 `odd.ic1` and `even.ic3`, not individual bytes.
 
+## Dump Provenance
+
+Byte-identity of a rebuild says nothing about whether the *original* file is a complete,
+faithful image of the physical part. Two of the files above are known not to be, and this
+section records what is measured versus what is assumed. It matters because everything
+downstream inherits the assumption.
+
+### `kn5000_subcpu_boot.ic30` — partially dumped, deliberately
+
+**Owner testimony (Felipe, 2026-08-08), which is ground truth about what was physically
+done.** IC30 was dumped in small chunks, because the tooling could only copy a limited
+amount at a time. He read the regions that appeared to hold the boot code needed to make
+the emulator work, analysed that code, and — as far as he could assess at the time — found
+no references to addresses in the regions he had not read. He concluded the remainder was
+very likely `0xFF`. **He calls this an educated guess, not a fact**, and intends a full
+dump when he regains physical access to the instrument (it is currently in storage in
+another country).
+
+What is measured in the file today:
+
+| Quantity | Value |
+|---|---|
+| File size | 131,072 bytes (`sha1 d29429a9…`) |
+| Bytes that are not `0xFF` | **4,352 — 3.3% of the chip** |
+| Non-`0xFF` content, block 1 | file `0x18000-0x1904C` = CPU `0xFF8000-0xFF904C`, 4,173 B |
+| Non-`0xFF` content, block 2 | file `0x1FE80-0x1FFB3` = CPU `0xFFFE80-0xFFFFB3`, 308 B |
+| Non-`0xFF` content, block 3 | file `0x1FFF0-0x1FFFF` = CPU `0xFFFFF0-0xFFFFFF`, 16 B |
+| Windows actually read | `0xFE0000-0xFE07FF`, `0xFF7800-0xFF97FF`, `0xFFF000-0xFFFFFF` — 14,336 B, 10.9% of the chip |
+| Bytes never read | **116,736 — 89.1%**, present in the file as assumed `0xFF` |
+
+The three window sizes are corroborated by the driver's own comment and by the owner's
+dump script, whose chunking constant is `0x800`. But note that **the window boundaries are
+documentary, not measurable**: a byte that was read and came back blank is
+byte-indistinguishable from a byte that was never read. Roughly 10 KB of the ranges the
+driver comment says *were* dumped are also `0xFF`.
+
+MAME flags the file `BAD_DUMP` and states the assumption inline. A full re-dump would
+convert 116,736 assumed bytes into measured ones and let that flag be removed.
+
+**What the educated guess survives.** A structure-aware reference census over the
+disassembled boot ROM — which rebuilds byte-identically, so the census is over ground
+truth rather than a linear-decode guess — found **220 ROM-address operand references, all
+in dumped windows, none in an undumped range**. The 45 live interrupt-vector entries, the
+45 ROM trampolines, and the one indirect `CALL T,XWA` (bounded by an 8-entry table) all
+resolve into dumped space, as do the only two callbacks the loaded v1.42 payload makes
+into IC30 (`0xFFFEA1`, `0xFFFE86`). There is one honest counter-example, `ROM_CHECKSUM`
+(`0xFF8AB4`), which reads 2 KB past the dumped window at `0xFE0000`; it is
+content-independent and its only caller returns immediately unless a strap is asserted.
+
+The code island also does not run up against a dump boundary anywhere: 2,048 blank bytes
+precede it, 1,971 follow it, and the chip's first 2,048 bytes were read and came back
+blank.
+
+**What it cannot settle.** A full IC30 dump would *not* answer the sub-CPU payload
+question. The payload is 196,608 bytes; the entire chip is 131,072; the undumped part is
+116,736; the boot ROM has no decompressor; and IC30 is not in the main CPU's address space
+at all. See
+[Sub-CPU Payload Provenance]({{ site.baseurl }}/subcpu-payload-provenance/).
+
+### `kn5000_custom_data.ic19` — real content, but missing the payload region
+
+The image is a genuine chip read — the 77,824-byte block of `0x00` at chip `0x0C0000` is
+actively programmed content, and flash erases to `0xFF`, so it cannot be padding. Ten
+independent structural anchors land exactly where the firmware's own hardcoded pointers
+say they should, which rules out any rotated, offset or wrapped read.
+
+But the last non-`0xFF` byte is at chip `0x0D344F`, and chip `0x0E0000-0x0FFFFF`
+(CPU `0x3E0000-0x3FFFFF`) — the sub-CPU payload staging area — is entirely blank. Since
+every dumped firmware version reaches that source, **a machine matching this image could
+not start its sub-CPU**. Whether the region was never programmed on that unit, or an
+install was interrupted, or the dump is truncated and `0xFF`-padded, is **unresolved**:
+the three are byte-indistinguishable in the file. The full argument, and the two free
+measurements that would decide, are on
+[Sub-CPU Payload Provenance]({{ site.baseurl }}/subcpu-payload-provenance/).
+
+The MAME driver papers over the gap with a `ROMX_LOAD` overlay of the compressed payload
+carved from a genuine update floppy. That composite is a **reconstruction**, and nothing
+in the ROM definition marks it as one.
+
+> Note also that `/home/fsanches/compartilhado/kn5000_custom_data_with_preset.ic19` is
+> **not** independent chip evidence: it is byte-identical to the canonical dump except for
+> a 27,967-byte SLIDE4K blob grafted at chip `0x0E0000` — a different, smaller blob than
+> the 93,203-byte v1.42 subprogram.
+
+### `kn5000_v10_program.rom` versus the physical program flash
+
+A reasonable worry, given the KN7000 precedent — where the "program ROM" we hold turned out
+to be the *update payload*, leaving the resident updater at the top of the chip neither
+shipped nor dumped — is whether the KN5000 main-program image has the same blind spot.
+
+**It does not.** The v10 update floppy's `HKMSPRG.SLD` carries a SLIDE4K stream whose
+header declares a decompressed size of `0x200000` — the **full 2 MB** — and decoding it
+reproduces `kn5000_v10_program.rom` byte for byte (2,097,152/2,097,152, consuming
+965,545/965,545 input bytes; independently reproduced twice with separately written
+decoders). The type 001h and 007h handlers chip-erase the pair before writing, so an
+update rewrites the entire device and no region is left uncovered.
+
+That identity does not by itself prove *how* the file was acquired — a chip read of a
+v10-updated machine and a decompression of the disc must agree — but it makes the
+distinction moot for preservation purposes.
+
+The same measurement establishes the v10 ↔ v1.42 pairing as fact rather than inference:
+both images come off the same floppy. The v141 → v7/v8 and v140 → v5/v6 pairings that
+MAME's BIOS options assert are **not** measured — only the v10 disc is available here.
+
 Reference disassembly files (`.unidasm`) are generated with MAME's `unidasm` tool for analysis.
 
 ## Assembler
