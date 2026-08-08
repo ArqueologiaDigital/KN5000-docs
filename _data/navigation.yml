@@ -108,6 +108,8 @@
       url: /subcpu-payload-loading/
     - title: Sub-CPU Payload Provenance
       url: /subcpu-payload-provenance/
+    - title: MEMORY DUMP Screen (built-in hex viewer)
+      url: /memory-dump-screen/
     - title: Sub-CPU Firmware Images
       url: /subcpu-firmware-images/
     - title: ROM Reconstruction
