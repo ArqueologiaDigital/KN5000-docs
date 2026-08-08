@@ -14,16 +14,16 @@ Image rep **algo 10** &middot; slots 10 &middot; **unit 0** (I-RAM load 84) &mid
 
 > multi-tap delay: panning taps (partial-cursor-rewind idiom, effect-map 5.1)
 
-**68 words**, 18 class-A coefficient multiplies (11 named), 33 instructions still opaque. Landmarks detected: 2 DRAM tap bracket(s).
+**68 words**, 18 class-A coefficient multiplies (11 named), 23 instructions still opaque. Landmarks detected: 2 DRAM read/write word(s).
 
 ```mermaid
 flowchart TD
     N0["Stereo input (L / R)"]
-    N1["External delay line (DRAM)<br/>2 tap bracket(s) (880.1.60/20)"]
+    N1["External delay line (DRAM)<br/>2 read/write word(s) (880.1.60 = READ, 880.1.20 = WRITE)"]
     N0 --> N1
     N2["controls: DELAY 1, DELAY 2, DELAY 3, DELAY 4, FEEDBACK, HIGH DAMP GAIN"]
     N1 -.-> N2
-    N3["Undecoded core<br/>33 of 68 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N3["Undecoded core<br/>23 of 68 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N1 --> N3
     N4["VOLUME<br/>output level"]
     N3 --> N4

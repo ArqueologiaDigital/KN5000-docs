@@ -12,22 +12,22 @@ permalink: /effects-dsp/flowcharts/prog16_room_reverb_1/
 
 Image rep **algo 16** &middot; slots 16,17,18,19,20,21,22,23,24,25,26,27 &middot; **unit 1** (I-RAM load 200) &middot; family **reverb** &middot; confidence **SOLVED**.
 
-> reverb tank: two ladders of 5 all-pass diffusers + damping (decoded to the bit); the ONLY unit-1 image, shared by the 12 reverb presets algos 16-27
+> reverb tank: all-pass diffuser ladders of 5 and 4 stages + damping (algorithm decoded to the bit; the per-word roles of the 6-word core are narrowed to two surviving assignments); the ONLY unit-1 image, shared by the 12 reverb presets algos 16-27
 
-**133 words**, 33 class-A coefficient multiplies (33 named), 17 instructions still opaque. Landmarks detected: 4 envelope/damping word(s), 13 DRAM tap bracket(s), 9 all-pass marker(s).
+**133 words**, 33 class-A coefficient multiplies (33 named), 7 instructions still opaque. Landmarks detected: 4 C-format immediate load(s), 13 DRAM read/write word(s), 9 all-pass marker(s).
 
 ```mermaid
 flowchart TD
     N0["Stereo input (L / R)"]
     N1["Input scaling triple<br/>C-RAM[0x90..92] = 0.250 0.500 0.500"]
     N0 --> N1
-    N2["Pre-delay + delay buffers (external DRAM)<br/>13 tap bracket(s); lengths tiled in the param stream"]
+    N2["Pre-delay + delay buffers (external DRAM)<br/>13 read/write word(s); lengths tiled in the param stream"]
     N1 --> N2
     N3["controls: REVERB TIME, PRE DELAY"]
     N2 -.-> N3
     N4["Damping one-pole filter #1<br/>C-RAM[0x93..95] (op 0x76)"]
     N2 --> N4
-    N5["Diffuser ladder A &mdash; 5 all-pass<br/>C-RAM[0x98..9C] descending gains 0.75&hellip;0.50<br/>w = x + g&middot;d ; y = d &minus; g&middot;w"]
+    N5["Diffuser ladder A &mdash; 5 all-pass<br/>C-RAM[0x98..9C] descending gains 0.75&hellip;0.40<br/>one-multiplier all-pass, software-pipelined"]
     N4 --> N5
     N6["REVERB TIME sets the ladder gains"]
     N5 -.-> N6
@@ -41,7 +41,7 @@ flowchart TD
     N9 --> N10
     N11["controls: HIGH DAMP GAIN, ER.LEVEL, VOLUME"]
     N10 -.-> N11
-    N12["Undecoded core<br/>17 of 133 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N12["Undecoded core<br/>7 of 133 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N10 --> N12
     N13["Output (the only unit-1 image; shared by all 12 reverb presets)"]
     N12 --> N13

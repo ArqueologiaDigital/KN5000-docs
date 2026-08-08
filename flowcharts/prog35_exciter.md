@@ -14,7 +14,7 @@ Image rep **algo 35** &middot; slots 35 &middot; **unit 0** (I-RAM load 84) &mid
 
 > harmonic exciter: LUT -> band-pass -> +dry
 
-**69 words**, 22 class-A coefficient multiplies (18 named), 28 instructions still opaque. Landmarks detected: 2 biquad DF-I section(s), 2 waveshaper LUT selector(s), 2 class-8 post-sum step(s).
+**69 words**, 22 class-A coefficient multiplies (18 named), 24 instructions still opaque. Landmarks detected: 2 biquad DF-I section(s), 2 waveshaper LUT selector(s), 2 class-8 post-sum step(s).
 
 ```mermaid
 flowchart TD
@@ -27,7 +27,7 @@ flowchart TD
     N1 --> N3
     N4["controls: HIGH EMPHASIS FC, EMPHASIS GAIN"]
     N3 -.-> N4
-    N5["Undecoded core<br/>28 of 69 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N5["Undecoded core<br/>24 of 69 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N3 --> N5
     N6["VOLUME<br/>output level"]
     N5 --> N6

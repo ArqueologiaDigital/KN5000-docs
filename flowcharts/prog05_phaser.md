@@ -14,7 +14,7 @@ Image rep **algo 5** &middot; slots 5 &middot; **unit 0** (I-RAM load 84) &middo
 
 > phaser: LFO-swept first-order all-pass chain (~0.438 +/-0.025), 0.3 feedback
 
-**106 words**, 14 class-A coefficient multiplies (9 named), 39 instructions still opaque. Landmarks detected: 2 LFO phase word(s), 2 waveshaper LUT selector(s), 2 all-pass marker(s).
+**106 words**, 14 class-A coefficient multiplies (9 named), 33 instructions still opaque. Landmarks detected: 2 LFO phase word(s), 2 waveshaper LUT selector(s), 2 all-pass marker(s).
 
 ```mermaid
 flowchart TD
@@ -27,7 +27,7 @@ flowchart TD
     N1 --> N3
     N4["controls: RESONANCE, MANUAL, PHASE"]
     N3 -.-> N4
-    N5["Undecoded core<br/>39 of 106 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N5["Undecoded core<br/>33 of 106 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N3 --> N5
     N6["VOLUME<br/>output level"]
     N5 --> N6

@@ -14,7 +14,7 @@ Image rep **algo 96** &middot; slots 96 &middot; **unit 0** (I-RAM load 84) &mid
 
 > PEQ + compressor + distortion
 
-**90 words**, 30 class-A coefficient multiplies (16 named), 31 instructions still opaque. Landmarks detected: 2 biquad DF-I section(s), 4 envelope/damping word(s), 2 waveshaper LUT selector(s), 2 class-8 post-sum step(s).
+**90 words**, 30 class-A coefficient multiplies (16 named), 28 instructions still opaque. Landmarks detected: 2 biquad DF-I section(s), 4 C-format immediate load(s), 2 waveshaper LUT selector(s), 2 class-8 post-sum step(s).
 
 ```mermaid
 flowchart TD
@@ -27,9 +27,9 @@ flowchart TD
     N1 --> N3
     N4["controls: DRIVE, ADJUST"]
     N3 -.-> N4
-    N5["One-pole smoother / level detector (C40) &times;4"]
+    N5["C-format immediate loads (C40/C41)<br/>destination register UNKNOWN &mdash; the old 'envelope detector' reading is WITHDRAWN &times;4"]
     N3 --> N5
-    N6["Undecoded core<br/>31 of 90 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N6["Undecoded core<br/>28 of 90 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N5 --> N6
     N7["VOLUME<br/>output level"]
     N6 --> N7
@@ -47,8 +47,8 @@ flowchart TD
     class N0,N9 io;
     class N1 measured;
     class N2,N4,N7,N8 ctrl;
-    class N3,N5 inferred;
-    class N6 open;
+    class N3 inferred;
+    class N5,N6 open;
 ```
 
 **UI parameters** (MEASURED, `notes/kn5000-dsp-paramlist.md`): BAND EMPHASIS FC, BAND EMPHASIS Q, BAND EMPHASIS G, THRESHOLD, RATIO, ATTACK SENS., RELEASE SENS., DRIVE, ADJUST, VOLUME, REV SEND.

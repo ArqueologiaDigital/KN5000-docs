@@ -14,7 +14,7 @@ Image rep **algo 73** &middot; slots 73 &middot; **unit 0** (I-RAM load 84) &mid
 
 > 1-band flat PEQ + flanger
 
-**91 words**, 32 class-A coefficient multiplies (26 named), 33 instructions still opaque. Landmarks detected: 2 biquad DF-I section(s), 2 LFO phase word(s), 1 DRAM tap bracket(s), 2 waveshaper LUT selector(s), 2 class-8 post-sum step(s).
+**91 words**, 32 class-A coefficient multiplies (26 named), 23 instructions still opaque. Landmarks detected: 2 biquad DF-I section(s), 2 LFO phase word(s), 1 DRAM read/write word(s), 2 waveshaper LUT selector(s), 2 class-8 post-sum step(s).
 
 ```mermaid
 flowchart TD
@@ -29,9 +29,9 @@ flowchart TD
     N3 --> N4
     N5["controls: DEPTH, LFO SPEED, RESONANCE, MANUAL, PHASE, LFO WAVEFORM"]
     N4 -.-> N5
-    N6["External delay line (DRAM)<br/>1 tap bracket(s) (880.1.60/20)"]
+    N6["External delay line (DRAM)<br/>1 read/write word(s) (880.1.60 = READ, 880.1.20 = WRITE)"]
     N4 --> N6
-    N7["Undecoded core<br/>33 of 91 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N7["Undecoded core<br/>23 of 91 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N6 --> N7
     N8["VOLUME<br/>output level"]
     N7 --> N8

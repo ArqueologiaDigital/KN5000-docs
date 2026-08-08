@@ -14,16 +14,16 @@ Image rep **algo 9** &middot; slots 9 &middot; **unit 0** (I-RAM load 84) &middo
 
 > single delay: 0.5 mix, 0.15/0.3 feedback
 
-**48 words**, 18 class-A coefficient multiplies (18 named), 19 instructions still opaque. Landmarks detected: 3 DRAM tap bracket(s).
+**48 words**, 18 class-A coefficient multiplies (18 named), 13 instructions still opaque. Landmarks detected: 3 DRAM read/write word(s).
 
 ```mermaid
 flowchart TD
     N0["Stereo input (L / R)"]
-    N1["External delay line (DRAM)<br/>3 tap bracket(s) (880.1.60/20)"]
+    N1["External delay line (DRAM)<br/>3 read/write word(s) (880.1.60 = READ, 880.1.20 = WRITE)"]
     N0 --> N1
     N2["controls: DELAY L, DELAY R, FEEDBACK L, FEEDBACK R, HIGH DAMP GAIN"]
     N1 -.-> N2
-    N3["Undecoded core<br/>19 of 48 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N3["Undecoded core<br/>13 of 48 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N1 --> N3
     N4["VOLUME<br/>output level"]
     N3 --> N4

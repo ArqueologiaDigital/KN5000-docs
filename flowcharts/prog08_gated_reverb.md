@@ -14,20 +14,20 @@ Image rep **algo 8** &middot; slots 8 &middot; **unit 0** (I-RAM load 84) &middo
 
 > gated reverb: all-pass ring + hold gate
 
-**102 words**, 22 class-A coefficient multiplies (7 named), 22 instructions still opaque. Landmarks detected: 2 envelope/damping word(s), 10 DRAM tap bracket(s), 6 all-pass marker(s).
+**102 words**, 22 class-A coefficient multiplies (7 named), 15 instructions still opaque. Landmarks detected: 2 C-format immediate load(s), 10 DRAM read/write word(s), 6 all-pass marker(s).
 
 ```mermaid
 flowchart TD
     N0["Stereo input (L / R)"]
-    N1["External delay line (DRAM)<br/>10 tap bracket(s) (880.1.60/20)"]
+    N1["External delay line (DRAM)<br/>10 read/write word(s) (880.1.60 = READ, 880.1.20 = WRITE)"]
     N0 --> N1
     N2["controls: HIGH DAMP GAIN"]
     N1 -.-> N2
     N3["All-pass / phaser chain<br/>6 marker(s); g&middot;d &plusmn; feedback (stage count OPEN)"]
     N1 --> N3
-    N4["One-pole smoother / level detector (C40) &times;2"]
+    N4["C-format immediate loads (C40/C41)<br/>destination register UNKNOWN &mdash; the old 'envelope detector' reading is WITHDRAWN &times;2"]
     N3 --> N4
-    N5["Undecoded core<br/>22 of 102 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N5["Undecoded core<br/>15 of 102 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N4 --> N5
     N6["VOLUME<br/>output level"]
     N5 --> N6
@@ -43,9 +43,9 @@ flowchart TD
     classDef open fill:#eeeeee,stroke:#888,stroke-width:1px,color:#333,stroke-dasharray:5 5;
     classDef ctrl fill:#f3e8fb,stroke:#6a1b9a,stroke-width:1px,color:#111;
     class N0,N8 io;
-    class N1,N3,N4 inferred;
+    class N1,N3 inferred;
     class N2,N6,N7 ctrl;
-    class N5 open;
+    class N4,N5 open;
 ```
 
 **UI parameters** (MEASURED, `notes/kn5000-dsp-paramlist.md`): GATE TIME, HIGH DAMP GAIN, THRESHOLD, MASK TIME, VOLUME, REV SEND.

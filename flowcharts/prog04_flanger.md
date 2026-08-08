@@ -14,7 +14,7 @@ Image rep **algo 4** &middot; slots 4 &middot; **unit 0** (I-RAM load 84) &middo
 
 > flanger: swept all-pass chain, 0.3 feedback, wet mix
 
-**65 words**, 18 class-A coefficient multiplies (12 named), 27 instructions still opaque. Landmarks detected: 2 LFO phase word(s), 1 DRAM tap bracket(s), 2 waveshaper LUT selector(s).
+**65 words**, 18 class-A coefficient multiplies (12 named), 22 instructions still opaque. Landmarks detected: 2 LFO phase word(s), 1 DRAM read/write word(s), 2 waveshaper LUT selector(s).
 
 ```mermaid
 flowchart TD
@@ -23,9 +23,9 @@ flowchart TD
     N0 --> N1
     N2["controls: DEPTH, LFO SPEED, RESONANCE, MANUAL, PHASE, LFO WAVEFORM"]
     N1 -.-> N2
-    N3["External delay line (DRAM)<br/>1 tap bracket(s) (880.1.60/20)"]
+    N3["External delay line (DRAM)<br/>1 read/write word(s) (880.1.60 = READ, 880.1.20 = WRITE)"]
     N1 --> N3
-    N4["Undecoded core<br/>27 of 65 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N4["Undecoded core<br/>22 of 65 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N3 --> N4
     N5["VOLUME<br/>output level"]
     N4 --> N5

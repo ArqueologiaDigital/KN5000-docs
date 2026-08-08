@@ -14,7 +14,7 @@ Image rep **algo 32** &middot; slots 32 &middot; **unit 0** (I-RAM load 84) &mid
 
 > distortion: AGC waveshaper, curve A
 
-**42 words**, 6 class-A coefficient multiplies (4 named), 19 instructions still opaque. Landmarks detected: 2 waveshaper LUT selector(s).
+**42 words**, 6 class-A coefficient multiplies (4 named), 17 instructions still opaque. Landmarks detected: 2 waveshaper LUT selector(s).
 
 ```mermaid
 flowchart TD
@@ -23,7 +23,7 @@ flowchart TD
     N0 --> N1
     N2["controls: DRIVE, ADJUST"]
     N1 -.-> N2
-    N3["Undecoded core<br/>19 of 42 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N3["Undecoded core<br/>17 of 42 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N1 --> N3
     N4["VOLUME<br/>output level"]
     N3 --> N4

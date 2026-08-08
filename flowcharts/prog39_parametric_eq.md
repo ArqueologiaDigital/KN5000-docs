@@ -14,7 +14,7 @@ Image rep **algo 39** &middot; slots 39 &middot; **unit 0** (I-RAM load 84) &mid
 
 > parametric EQ: 5 bands x 2 channels, Direct-Form-I bilinear biquad (decoded to the bit); the reference program
 
-**105 words**, 60 class-A coefficient multiplies (60 named), 10 instructions still opaque. Landmarks detected: 10 biquad DF-I section(s), 10 class-8 post-sum step(s).
+**105 words**, 60 class-A coefficient multiplies (60 named), 8 instructions still opaque. Landmarks detected: 10 biquad DF-I section(s), 10 class-8 post-sum step(s).
 
 ```mermaid
 flowchart TD

@@ -14,7 +14,7 @@ Image rep **algo 6** &middot; slots 6 &middot; **unit 0** (I-RAM load 84) &middo
 
 > ensemble: multi-voice chorus
 
-**96 words**, 15 class-A coefficient multiplies (6 named), 53 instructions still opaque. Landmarks detected: 1 LFO phase word(s), 3 DRAM tap bracket(s), 4 waveshaper LUT selector(s).
+**96 words**, 15 class-A coefficient multiplies (6 named), 39 instructions still opaque. Landmarks detected: 1 LFO phase word(s), 3 DRAM read/write word(s), 4 waveshaper LUT selector(s).
 
 ```mermaid
 flowchart TD
@@ -23,9 +23,9 @@ flowchart TD
     N0 --> N1
     N2["controls: DEPTH, LFO SPEED, LFO WAVEFORM"]
     N1 -.-> N2
-    N3["External delay line (DRAM)<br/>3 tap bracket(s) (880.1.60/20)"]
+    N3["External delay line (DRAM)<br/>3 read/write word(s) (880.1.60 = READ, 880.1.20 = WRITE)"]
     N1 --> N3
-    N4["Undecoded core<br/>53 of 96 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N4["Undecoded core<br/>39 of 96 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N3 --> N4
     N5["VOLUME<br/>output level"]
     N4 --> N5

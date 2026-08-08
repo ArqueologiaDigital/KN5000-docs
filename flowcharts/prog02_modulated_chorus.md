@@ -14,7 +14,7 @@ Image rep **algo 2** &middot; slots 2 &middot; **unit 0** (I-RAM load 84) &middo
 
 > modulated chorus: dual-rate ensemble
 
-**85 words**, 25 class-A coefficient multiplies (5 named), 29 instructions still opaque. Landmarks detected: 2 LFO phase word(s), 4 envelope/damping word(s), 1 DRAM tap bracket(s), 3 waveshaper LUT selector(s).
+**85 words**, 25 class-A coefficient multiplies (5 named), 22 instructions still opaque. Landmarks detected: 2 LFO phase word(s), 4 C-format immediate load(s), 1 DRAM read/write word(s), 3 waveshaper LUT selector(s).
 
 ```mermaid
 flowchart TD
@@ -23,11 +23,11 @@ flowchart TD
     N0 --> N1
     N2["controls: DEPTH, SLOW LFO SPEED, FAST LFO SPEED, LFO WAVEFORM"]
     N1 -.-> N2
-    N3["External delay line (DRAM)<br/>1 tap bracket(s) (880.1.60/20)"]
+    N3["External delay line (DRAM)<br/>1 read/write word(s) (880.1.60 = READ, 880.1.20 = WRITE)"]
     N1 --> N3
-    N4["One-pole smoother / level detector (C40) &times;4"]
+    N4["C-format immediate loads (C40/C41)<br/>destination register UNKNOWN &mdash; the old 'envelope detector' reading is WITHDRAWN &times;4"]
     N3 --> N4
-    N5["Undecoded core<br/>29 of 85 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N5["Undecoded core<br/>22 of 85 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N4 --> N5
     N6["VOLUME<br/>output level"]
     N5 --> N6
@@ -45,8 +45,8 @@ flowchart TD
     class N0,N8 io;
     class N1 measured;
     class N2,N6,N7 ctrl;
-    class N3,N4 inferred;
-    class N5 open;
+    class N3 inferred;
+    class N4,N5 open;
 ```
 
 **UI parameters** (MEASURED, `notes/kn5000-dsp-paramlist.md`): DEPTH, SLOW LFO SPEED, FAST LFO SPEED, FAST LFO BALANCE, LFO WAVEFORM, VOLUME, REV SEND.

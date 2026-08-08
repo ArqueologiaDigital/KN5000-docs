@@ -14,18 +14,18 @@ Image rep **algo 70** &middot; slots 70 &middot; **unit 0** (I-RAM load 84) &mid
 
 > auto wah + single delay
 
-**105 words**, 21 class-A coefficient multiplies (13 named), 56 instructions still opaque. Landmarks detected: 1 envelope/damping word(s), 3 DRAM tap bracket(s), 2 class-8 post-sum step(s).
+**105 words**, 21 class-A coefficient multiplies (13 named), 35 instructions still opaque. Landmarks detected: 1 C-format immediate load(s), 3 DRAM read/write word(s), 2 class-8 post-sum step(s).
 
 ```mermaid
 flowchart TD
     N0["Stereo input (L / R)"]
-    N1["External delay line (DRAM)<br/>3 tap bracket(s) (880.1.60/20)"]
+    N1["External delay line (DRAM)<br/>3 read/write word(s) (880.1.60 = READ, 880.1.20 = WRITE)"]
     N0 --> N1
     N2["controls: DELAY DRY/WET, DELAY L, DELAY R, FEEDBACK L, FEEDBACK R"]
     N1 -.-> N2
-    N3["One-pole smoother / level detector (C40) &times;1"]
+    N3["C-format immediate loads (C40/C41)<br/>destination register UNKNOWN &mdash; the old 'envelope detector' reading is WITHDRAWN &times;1"]
     N1 --> N3
-    N4["Undecoded core<br/>56 of 105 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N4["Undecoded core<br/>35 of 105 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N3 --> N4
     N5["VOLUME<br/>output level"]
     N4 --> N5
@@ -41,9 +41,9 @@ flowchart TD
     classDef open fill:#eeeeee,stroke:#888,stroke-width:1px,color:#333,stroke-dasharray:5 5;
     classDef ctrl fill:#f3e8fb,stroke:#6a1b9a,stroke-width:1px,color:#111;
     class N0,N7 io;
-    class N1,N3 inferred;
+    class N1 inferred;
     class N2,N5,N6 ctrl;
-    class N4 open;
+    class N3,N4 open;
 ```
 
 **UI parameters** (MEASURED, `notes/kn5000-dsp-paramlist.md`): RESONANCE, MANUAL, SWEEP RANGE, DELAY DRY/WET, DELAY L, DELAY R, FEEDBACK L, FEEDBACK R, VOLUME, REV SEND.

@@ -14,16 +14,16 @@ Image rep **algo 52** &middot; slots 52 &middot; **unit 0** (I-RAM load 84) &mid
 
 > auto wah: envelope-swept resonator
 
-**72 words**, 13 class-A coefficient multiplies (6 named), 41 instructions still opaque. Landmarks detected: 1 envelope/damping word(s), 2 class-8 post-sum step(s).
+**72 words**, 13 class-A coefficient multiplies (6 named), 30 instructions still opaque. Landmarks detected: 1 C-format immediate load(s), 2 class-8 post-sum step(s).
 
 ```mermaid
 flowchart TD
     N0["Stereo input (L / R)"]
-    N1["Envelope-swept control (C40) &times;1"]
+    N1["C-format immediate loads (C40/C41)<br/>destination register UNKNOWN &mdash; the old 'envelope detector' reading is WITHDRAWN &times;1"]
     N0 --> N1
-    N2["controls: RESONANCE, MANUAL, SWEEP RANGE"]
+    N2["nearby controls: RESONANCE, MANUAL, SWEEP RANGE"]
     N1 -.-> N2
-    N3["Undecoded core<br/>41 of 72 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N3["Undecoded core<br/>30 of 72 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N1 --> N3
     N4["VOLUME<br/>output level"]
     N3 --> N4
@@ -39,9 +39,8 @@ flowchart TD
     classDef open fill:#eeeeee,stroke:#888,stroke-width:1px,color:#333,stroke-dasharray:5 5;
     classDef ctrl fill:#f3e8fb,stroke:#6a1b9a,stroke-width:1px,color:#111;
     class N0,N6 io;
-    class N1 inferred;
+    class N1,N3 open;
     class N2,N4,N5 ctrl;
-    class N3 open;
 ```
 
 **UI parameters** (MEASURED, `notes/kn5000-dsp-paramlist.md`): RESONANCE, MANUAL, SWEEP RANGE, VOLUME, REV SEND.

@@ -14,7 +14,7 @@ Image rep **algo 33** &middot; slots 33 &middot; **unit 0** (I-RAM load 84) &mid
 
 > overdrive: waveshaper + smoother + 4kHz Butterworth tone
 
-**63 words**, 18 class-A coefficient multiplies (4 named), 22 instructions still opaque. Landmarks detected: 2 biquad DF-I section(s), 2 waveshaper LUT selector(s), 2 class-8 post-sum step(s).
+**63 words**, 18 class-A coefficient multiplies (4 named), 18 instructions still opaque. Landmarks detected: 2 biquad DF-I section(s), 2 waveshaper LUT selector(s), 2 class-8 post-sum step(s).
 
 ```mermaid
 flowchart TD
@@ -25,7 +25,7 @@ flowchart TD
     N1 -.-> N2
     N3["Biquad tone/EQ<br/>2 Direct-Form-I sections (1 band(s) &times; 2 ch)<br/>b1,b0,b2,&minus;a1,&minus;a2, make-up"]
     N1 --> N3
-    N4["Undecoded core<br/>22 of 63 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N4["Undecoded core<br/>18 of 63 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N3 --> N4
     N5["VOLUME<br/>output level"]
     N4 --> N5

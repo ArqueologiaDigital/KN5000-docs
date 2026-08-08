@@ -12,16 +12,16 @@ permalink: /effects-dsp/flowcharts/prog36_compressor/
 
 Image rep **algo 36** &middot; slots 36 &middot; **unit 0** (I-RAM load 84) &middot; family **dynamics** &middot; confidence **medium**.
 
-> compressor: envelope detector (C40) + gain-computer (THRESHOLD/RATIO)
+> compressor: level detector + gain-computer (THRESHOLD/RATIO).  NOTE: the old 'hi12=0xC40 = envelope detector' reading is WITHDRAWN -- C40/C41 is a 13-bit immediate load (analysis/k5-output-stage.md); the detector is here on other grounds
 
-**40 words**, 10 class-A coefficient multiplies (1 named), 19 instructions still opaque. Landmarks detected: 4 envelope/damping word(s).
+**40 words**, 10 class-A coefficient multiplies (1 named), 19 instructions still opaque. Landmarks detected: 4 C-format immediate load(s).
 
 ```mermaid
 flowchart TD
     N0["Stereo input (L / R)"]
-    N1["Envelope / level detector (C40)<br/>gain computed arithmetically (no compare op) &times;4"]
+    N1["C-format immediate loads (C40/C41)<br/>destination register UNKNOWN &mdash; the old 'envelope detector' reading is WITHDRAWN &times;4"]
     N0 --> N1
-    N2["controls: THRESHOLD, RATIO, ATTACK SENS., RELEASE SENS."]
+    N2["nearby controls: THRESHOLD, RATIO, ATTACK SENS., RELEASE SENS."]
     N1 -.-> N2
     N3["Undecoded core<br/>19 of 40 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N1 --> N3
@@ -39,9 +39,8 @@ flowchart TD
     classDef open fill:#eeeeee,stroke:#888,stroke-width:1px,color:#333,stroke-dasharray:5 5;
     classDef ctrl fill:#f3e8fb,stroke:#6a1b9a,stroke-width:1px,color:#111;
     class N0,N6 io;
-    class N1 inferred;
+    class N1,N3 open;
     class N2,N4,N5 ctrl;
-    class N3 open;
 ```
 
 **UI parameters** (MEASURED, `notes/kn5000-dsp-paramlist.md`): THRESHOLD, RATIO, ATTACK SENS., RELEASE SENS., VOLUME, REV SEND.

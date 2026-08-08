@@ -14,7 +14,7 @@ Image rep **algo 74** &middot; slots 74 &middot; **unit 0** (I-RAM load 84) &mid
 
 > 1-band flat PEQ + vibrato
 
-**77 words**, 26 class-A coefficient multiplies (16 named), 23 instructions still opaque. Landmarks detected: 2 biquad DF-I section(s), 2 LFO phase word(s), 2 envelope/damping word(s), 1 DRAM tap bracket(s), 2 waveshaper LUT selector(s), 2 class-8 post-sum step(s).
+**77 words**, 26 class-A coefficient multiplies (16 named), 17 instructions still opaque. Landmarks detected: 2 biquad DF-I section(s), 2 LFO phase word(s), 2 C-format immediate load(s), 1 DRAM read/write word(s), 2 waveshaper LUT selector(s), 2 class-8 post-sum step(s).
 
 ```mermaid
 flowchart TD
@@ -29,11 +29,11 @@ flowchart TD
     N3 --> N4
     N5["controls: DEPTH, LFO SPEED, PHASE, LFO WAVEFORM"]
     N4 -.-> N5
-    N6["External delay line (DRAM)<br/>1 tap bracket(s) (880.1.60/20)"]
+    N6["External delay line (DRAM)<br/>1 read/write word(s) (880.1.60 = READ, 880.1.20 = WRITE)"]
     N4 --> N6
-    N7["One-pole smoother / level detector (C40) &times;2"]
+    N7["C-format immediate loads (C40/C41)<br/>destination register UNKNOWN &mdash; the old 'envelope detector' reading is WITHDRAWN &times;2"]
     N6 --> N7
-    N8["Undecoded core<br/>23 of 77 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N8["Undecoded core<br/>17 of 77 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N7 --> N8
     N9["VOLUME<br/>output level"]
     N8 --> N9
@@ -51,8 +51,8 @@ flowchart TD
     class N0,N11 io;
     class N1,N4 measured;
     class N2,N5,N9,N10 ctrl;
-    class N3,N6,N7 inferred;
-    class N8 open;
+    class N3,N6 inferred;
+    class N7,N8 open;
 ```
 
 **UI parameters** (MEASURED, `notes/kn5000-dsp-paramlist.md`): BAND EMPHASIS FC, BAND EMPHASIS Q, BAND EMPHASIS G, DEPTH, LFO SPEED, PHASE, LFO WAVEFORM, VOLUME, REV SEND.

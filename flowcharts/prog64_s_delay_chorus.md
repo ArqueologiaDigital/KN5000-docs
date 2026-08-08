@@ -14,7 +14,7 @@ Image rep **algo 64** &middot; slots 64 &middot; **unit 0** (I-RAM load 84) &mid
 
 > single delay + chorus
 
-**95 words**, 23 class-A coefficient multiplies (14 named), 34 instructions still opaque. Landmarks detected: 1 LFO phase word(s), 4 envelope/damping word(s), 3 DRAM tap bracket(s), 2 waveshaper LUT selector(s).
+**95 words**, 23 class-A coefficient multiplies (14 named), 20 instructions still opaque. Landmarks detected: 1 LFO phase word(s), 4 C-format immediate load(s), 3 DRAM read/write word(s), 2 waveshaper LUT selector(s).
 
 ```mermaid
 flowchart TD
@@ -25,13 +25,13 @@ flowchart TD
     N1 --> N2
     N3["controls: DEPTH, LFO SPEED, LFO WAVEFORM"]
     N2 -.-> N3
-    N4["External delay line (DRAM)<br/>3 tap bracket(s) (880.1.60/20)"]
+    N4["External delay line (DRAM)<br/>3 read/write word(s) (880.1.60 = READ, 880.1.20 = WRITE)"]
     N2 --> N4
     N5["controls: DELAY DRY/WET, DELAY L, DELAY R, FEEDBACK L, FEEDBACK R"]
     N4 -.-> N5
-    N6["One-pole smoother / level detector (C40) &times;4"]
+    N6["C-format immediate loads (C40/C41)<br/>destination register UNKNOWN &mdash; the old 'envelope detector' reading is WITHDRAWN &times;4"]
     N4 --> N6
-    N7["Undecoded core<br/>34 of 95 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N7["Undecoded core<br/>20 of 95 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N6 --> N7
     N8["VOLUME<br/>output level"]
     N7 --> N8
@@ -47,10 +47,10 @@ flowchart TD
     classDef open fill:#eeeeee,stroke:#888,stroke-width:1px,color:#333,stroke-dasharray:5 5;
     classDef ctrl fill:#f3e8fb,stroke:#6a1b9a,stroke-width:1px,color:#111;
     class N0,N10 io;
-    class N1,N4,N6 inferred;
+    class N1,N4 inferred;
     class N2 measured;
     class N3,N5,N8,N9 ctrl;
-    class N7 open;
+    class N6,N7 open;
 ```
 
 **UI parameters** (MEASURED, `notes/kn5000-dsp-paramlist.md`): DELAY DRY/WET, DELAY L, DELAY R, FEEDBACK L, FEEDBACK R, CHORUS DRY/WET, DEPTH, LFO SPEED, LFO WAVEFORM, VOLUME, REV SEND.

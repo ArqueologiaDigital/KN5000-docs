@@ -14,24 +14,24 @@ Image rep **algo 3** &middot; slots 3 &middot; **unit 0** (I-RAM load 84) &middo
 
 > enhancer: phase/emphasis shaping
 
-**99 words**, 26 class-A coefficient multiplies (18 named), 39 instructions still opaque. Landmarks detected: 2 envelope/damping word(s), 1 DRAM tap bracket(s), 4 all-pass marker(s).
+**99 words**, 26 class-A coefficient multiplies (18 named), 32 instructions still opaque. Landmarks detected: 2 C-format immediate load(s), 1 DRAM read/write word(s), 4 all-pass marker(s).
 
 ```mermaid
 flowchart TD
     N0["Stereo input (L / R)"]
-    N1["Envelope-swept control (C40) &times;2"]
+    N1["C-format immediate loads (C40/C41)<br/>destination register UNKNOWN &mdash; the old 'envelope detector' reading is WITHDRAWN &times;2"]
     N0 --> N1
-    N2["controls: MANUAL"]
+    N2["nearby controls: MANUAL"]
     N1 -.-> N2
     N3["All-pass / phaser chain<br/>4 marker(s); g&middot;d &plusmn; feedback (stage count OPEN)"]
     N1 --> N3
     N4["controls: MANUAL"]
     N3 -.-> N4
-    N5["External delay line (DRAM)<br/>1 tap bracket(s) (880.1.60/20)"]
+    N5["External delay line (DRAM)<br/>1 read/write word(s) (880.1.60 = READ, 880.1.20 = WRITE)"]
     N3 --> N5
     N6["controls: DELAY L, DELAY R"]
     N5 -.-> N6
-    N7["Undecoded core<br/>39 of 99 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N7["Undecoded core<br/>32 of 99 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N5 --> N7
     N8["VOLUME<br/>output level"]
     N7 --> N8
@@ -47,9 +47,9 @@ flowchart TD
     classDef open fill:#eeeeee,stroke:#888,stroke-width:1px,color:#333,stroke-dasharray:5 5;
     classDef ctrl fill:#f3e8fb,stroke:#6a1b9a,stroke-width:1px,color:#111;
     class N0,N10 io;
-    class N1,N3,N5 inferred;
+    class N1,N7 open;
     class N2,N4,N6,N8,N9 ctrl;
-    class N7 open;
+    class N3,N5 inferred;
 ```
 
 **UI parameters** (MEASURED, `notes/kn5000-dsp-paramlist.md`): MANUAL, LOW MIX, HIGH MIX, DELAY L, DELAY R, VOLUME, REV SEND.

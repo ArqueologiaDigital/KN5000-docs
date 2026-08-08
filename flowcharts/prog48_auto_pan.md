@@ -14,7 +14,7 @@ Image rep **algo 48** &middot; slots 48 &middot; **unit 0** (I-RAM load 84) &mid
 
 > auto pan: quadrature LFO amplitude panner
 
-**50 words**, 8 class-A coefficient multiplies (2 named), 26 instructions still opaque. Landmarks detected: 2 LFO phase word(s), 2 waveshaper LUT selector(s).
+**50 words**, 8 class-A coefficient multiplies (2 named), 24 instructions still opaque. Landmarks detected: 2 LFO phase word(s), 2 waveshaper LUT selector(s).
 
 ```mermaid
 flowchart TD
@@ -23,7 +23,7 @@ flowchart TD
     N0 --> N1
     N2["controls: DEPTH, LFO SPEED, PHASE, LFO WAVEFORM"]
     N1 -.-> N2
-    N3["Undecoded core<br/>26 of 50 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N3["Undecoded core<br/>24 of 50 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N1 --> N3
     N4["VOLUME<br/>output level"]
     N3 --> N4

@@ -14,7 +14,7 @@ Image rep **algo 99** &middot; slots 99 &middot; **unit 0** (I-RAM load 84) &mid
 
 > PEQ + overdrive + delay (4 biquad sections: 2 flat PEQ + 2 copies of OVERDRIVE, byte-for-byte)
 
-**104 words**, 40 class-A coefficient multiplies (26 named), 30 instructions still opaque. Landmarks detected: 4 biquad DF-I section(s), 3 DRAM tap bracket(s), 2 waveshaper LUT selector(s), 4 class-8 post-sum step(s).
+**104 words**, 40 class-A coefficient multiplies (26 named), 21 instructions still opaque. Landmarks detected: 4 biquad DF-I section(s), 3 DRAM read/write word(s), 2 waveshaper LUT selector(s), 4 class-8 post-sum step(s).
 
 ```mermaid
 flowchart TD
@@ -27,11 +27,11 @@ flowchart TD
     N1 --> N3
     N4["controls: DRIVE, ADJUST"]
     N3 -.-> N4
-    N5["External delay line (DRAM)<br/>3 tap bracket(s) (880.1.60/20)"]
+    N5["External delay line (DRAM)<br/>3 read/write word(s) (880.1.60 = READ, 880.1.20 = WRITE)"]
     N3 --> N5
     N6["controls: DELAY DRY/WET, DELAY L, DELAY R, FEEDBACK L, FEEDBACK R"]
     N5 -.-> N6
-    N7["Undecoded core<br/>30 of 104 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
+    N7["Undecoded core<br/>21 of 104 instructions<br/>(hand-unrolled, straight-line &mdash; see the .dsm)"]
     N5 --> N7
     N8["VOLUME<br/>output level"]
     N7 --> N8
