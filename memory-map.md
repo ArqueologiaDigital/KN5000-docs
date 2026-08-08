@@ -23,9 +23,17 @@ permalink: /memory-map/
 | `0xE00000` | 2MB | Program Flash (Main ROM) |
 
 At reset the Table Data ROM is mapped at `0xE00000-0xFFFFFF` (overlapping the Program
-Flash) so that its first-stage bootloader can run; `Boot_Init` reprograms the memory
-controller and the ROM moves to `0x800000`. Bootloader routines therefore have two
-addresses: a ROM address `0x9Fxxxx` and a boot-time alias `0xFFxxxx` (+0x600000).
+Flash) so that its first-stage bootloader can run; the bootloader later reprograms one
+chip-select register and the ROM moves to `0x800000`. Bootloader routines therefore have
+two addresses: a ROM address `0x9Fxxxx` and a boot-time alias `0xFFxxxx` (+0x600000).
+
+> The swap is a **single store**, `MSAR2 := 0x80` at table-data `0x9FB6D3`, three
+> instructions before the jump into the program flash — not part of the earlier
+> memory-controller init block, which sets `MSAR2 = 0xC0`. The table below is the map
+> *after* that store. See
+> [TMP94C241 Memory Controller]({{ site.baseurl }}/tmp94c241-memory-controller/) for the
+> six chip-select blocks, the measured register values, and the caveat that the exact
+> MSAR/MAMR decode rule is reconstructed rather than documented.
 
 ## Table Data ROM Internal Layout
 

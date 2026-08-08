@@ -93,6 +93,8 @@
       url: /cpu-subsystem/
     - title: Memory Map
       url: /memory-map/
+    - title: TMP94C241 Memory Controller
+      url: /tmp94c241-memory-controller/
     - title: Display Subsystem
       url: /display-subsystem/
 

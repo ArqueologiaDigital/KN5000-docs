@@ -158,6 +158,18 @@ Detailed hardware documentation extracted from the service manual schematics.
 | IC19 | QV1GFKN5KAX1 | ROM | 8Mbit | Custom Data |
 | IC21 | - | SRAM | 1Mbit | Backup (battery) |
 
+> **Where each chip appears in the address space is set by software.** The TMP94C241 has
+> six programmable chip-select blocks, and on top of them service-manual page 32 shows a
+> discrete decode network (IC11 `TC74VHC138F` on A16–A18, IC12 `T7W139F` on A19, IC13
+> `TC74VHC139F` on A19/A20/A22) that sub-divides each block. The address ranges quoted on
+> this page are the post-boot steady state; they are different while the first-stage
+> bootloader runs. See
+> [TMP94C241 Memory Controller]({{ site.baseurl }}/tmp94c241-memory-controller/).
+>
+> Note also that IC1/IC3 are listed here as "ROM" from the parts list, but the firmware
+> contains erase/program/verify handlers targeting `0x800000` and the update discs include
+> "Table DATA FILE" types — so whether they are mask ROM or flash is **unresolved**.
+
 #### ROM Interleaving Formats
 
 The KN5000 uses different data organization depending on the ROM:

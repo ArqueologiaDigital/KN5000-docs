@@ -116,6 +116,12 @@ The TMP94C241F is a Toshiba 32-bit microcontroller from the TLCS-900/H2 family.
 
 See [Memory Map]({{ site.baseurl }}/memory-map/) for complete details.
 
+> **This map is software-defined and it changes once during boot.** The TMP94C241 decodes
+> external addresses through six programmable chip-select blocks; the table above is the
+> state *after* the bootloader's `MSAR2 := 0x80` handover store. Before it, the table-data
+> ROM occupies the top of memory and the program flash sits at `0x800000`. See
+> [TMP94C241 Memory Controller]({{ site.baseurl }}/tmp94c241-memory-controller/).
+
 ### Firmware Structure
 
 The 2MB Main CPU ROM is organized as:
@@ -257,6 +263,7 @@ As of March 2026, **all executable code across all 6 ROMs uses native TLCS-900 i
 
 - [System Overview]({{ site.baseurl }}/system-overview/) - Overall architecture
 - [Memory Map]({{ site.baseurl }}/memory-map/) - Address space details
+- [TMP94C241 Memory Controller]({{ site.baseurl }}/tmp94c241-memory-controller/) - Chip selects and the boot-time remap
 - [Boot Sequence]({{ site.baseurl }}/boot-sequence/) - Startup process
 - [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) - Communication details
 - [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/) - Physical components
