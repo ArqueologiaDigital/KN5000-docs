@@ -162,7 +162,7 @@ The full analysis is on the dedicated [Techni-chord]({{ site.baseurl }}/kn7000-t
 | [Feature-demo / SSF presentation system]({{ site.baseurl }}/feature-demo/) | 🟡 demo slideshows extracted as JPEGs; `<SLIDESHOW>` markup seen | decode the demo/presentation scripting |
 | [Another World VM]({{ site.baseurl }}/another-world-vm/) style homebrew port | ⬜ | long-term, once a toolchain + emulator exist |
 | [Service manual](/) PDF | 🔒 | source a KN7000 service manual for board/IC/pinout ground truth |
-| [Cross-version diffs]({{ site.baseurl }}/cross-version-diff-guidebook/) | 🔒 | only one KN7000 program version (v16 / internal 941) is in hand; more releases needed |
+| [Cross-version diffs]({{ site.baseurl }}/cross-version-diff-guidebook/) | 🔒 | only one KN7000 program version (v16 / internal 941) is in hand; a second, **earlier** one is known to exist but is undumped — a real instrument reports [`PROGRAM : 893` / `TABLE : 80`]({{ site.baseurl }}/kn7000-soft-version/) |
 
 ## Suggested order of work
 

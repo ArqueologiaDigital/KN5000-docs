@@ -66,11 +66,16 @@ to those:
 
 | Component | Value | Where |
 |-----------|-------|-------|
-| PROGRAM | **941** | 32-bit value at file `0x33660C`, shown by `PROGRAM : %4d` (`0x1D67E0`) |
+| PROGRAM | **941** | `u16` at file `0x33660C` (the loader reads 32 bits but keeps only the low half), shown by `PROGRAM : %4d` (`0x1D67E0`) |
 | TABLE | **84** | ASCII `"84\n"` at table file `0x139EE8`, reached via the pointer at table offset `0x1C` |
 
 RHYTHM and PICTURE versions are read from flash regions not covered by these
 updates (the rhythm ROM and the `0x57800000` picture flash).
+
+All four numbers are what the instrument's hidden **SOFT VERSION** screen
+prints. At least one surviving KN7000 reports `PROGRAM : 893` / `TABLE : 80` —
+an earlier, **unpreserved** pair of images; see the
+[SOFT VERSION screen]({{ site.baseurl }}/kn7000-soft-version/).
 
 ### Notable strings
 
