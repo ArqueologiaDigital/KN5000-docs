@@ -248,6 +248,8 @@
       url: /reverse-engineering/
     - title: MAME Pull Requests
       url: /mame-pull-requests/
+    - title: MAME Emulation Gaps
+      url: /mame-emulation-gaps/
     - title: Help Wanted
       url: /help-wanted/
     - title: Open Questions

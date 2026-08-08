@@ -93,16 +93,31 @@ LD (MAMR4), 0xFF    ; Block 4 mask
 LD (MAMR5), 0xFF    ; Block 5 mask
 
 ; DRAM Controller initialization
-LD (DRAM1REF), 0x81
+LD (DRAM1REF), 0x81      ; then 0x71
 LD (DRAM1CRL), 0x8B
 LD (DRAM1CRH), 0x58
-LD (PMEMCR), 0xF1
+RES 4, (PMEMCR)          ; a one-bit RMW -- NOT "LD (PMEMCR), 0xF1";
+                         ; the 0xF1 is the opcode prefix, not the operand
 ```
 
-After this configuration:
-- **Table Data ROM** is remapped to 0x800000-0x9FFFFF
+Also programmed in the same block, and omitted from earlier versions of this page: the
+twelve wait-state/bus-width bytes `B0-5CSL = 11 33 11 22 11 22` and
+`B0-5CSH = 80 81 C2 8A 82 81`.
+
+> **This block does *not* perform the remap.** It sets `MSAR2 = 0xC0`. The swap happens
+> later and separately, in `Boot_PrepareJump`, as a single store `MSAR2 := 0x80` three
+> instructions before the jump — see below and
+> [TMP94C241 Memory Controller]({{ site.baseurl }}/tmp94c241-memory-controller/).
+
+After the handover store:
+- **Table Data ROM** is reachable at 0x800000-0x9FFFFF
 - **Program ROM** becomes visible at 0xE00000-0xFFFFFF
-- The bootloader jumps to the Program ROM's `RESET_HANDLER` at 0xEF03C6
+- The bootloader jumps to `0xFFFEDC`, a 4-byte slot that exists **only in the program
+  flash** (`1B 0F 05 EF` = `JP 0xEF050F`), landing at **`Boot_InitIOPorts` (0xEF050F)** —
+  *not* at the program ROM's own `RESET_HANDLER` (0xEF03C6). The handover deliberately
+  skips the program flash's duplicate copy of the hardware-init block, which has just been
+  run, and the four SC0 serial-setup instructions at 0xEF0500-0xEF050E.
+  (MAME, which starts at 0xEF03C6, therefore runs both.)
 
 #### Boot_ClearRAM Routine (0xFFB740)
 
@@ -599,6 +614,23 @@ If implementing dynamic remapping is complex, a workaround might be to:
 
 However, this violates the project's strict accuracy policy and may cause issues with code that expects the original boot sequence.
 
+> **Update (August 2026).** What MAME does today is effectively the second workaround
+> without the patch: it maps the program flash at the top, so reset reads
+> `program[0x1FFF00]` and starts at `0xEF03C6`. The static map equals the post-handover
+> steady state, so this is *accidentally* correct rather than wrong — but everything
+> reachable only through the bootloader is dead code under emulation.
+>
+> Two refinements to the "required fix" above. First, only **one** register changes at
+> runtime (`MSAR2`), so a two-state `memory_view` reproduces the behaviour without
+> implementing a full chip-select decoder — which is just as well, because the exact
+> `MSAR`/`MAMR` decode rule is **not established**. Second, the interrupt vector table is
+> ROM-resident at `0xFFFF00` and swaps identity with the ROM, so code and vectors must
+> switch atomically.
+>
+> See [MAME Emulation Gaps]({{ site.baseurl }}/mame-emulation-gaps/) for the dependency
+> order, and [TMP94C241 Memory Controller]({{ site.baseurl }}/tmp94c241-memory-controller/)
+> for the measured register values.
+
 ### SubCPU_Send_Payload Details
 
 The `SubCPU_Send_Payload` routine at **0xEF068A** is responsible for transferring the Sub CPU firmware during boot. This section provides implementation details; see [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/#subcpu_send_payload-0xef068a) for full code examples.
@@ -613,10 +645,18 @@ When `SubCPU_Send_Payload` is called, the memory map has been configured by the 
 |----------|-------|-------------------|
 | MSAR0 | 0x1E | Block 0 starts at 0x1E0000 (SRAM) |
 | MSAR1 | 0x10 | Block 1 starts at 0x100000 (I/O) |
-| MSAR2 | 0xC0 | Block 2 starts at 0xC00000 |
+| MSAR2 | 0xC0 → **0x80** | Block 2 — moved by `Boot_PrepareJump` |
 | MSAR3 | 0x00 | Block 3 starts at 0x000000 (DRAM) |
-| MSAR4 | 0x80 | Block 4 starts at 0x800000 (Table Data ROM) |
+| MSAR4 | 0x80 | Block 4 starts at 0x800000 |
 | MSAR5 | 0x00 | Block 5 starts at 0x000000 |
+
+> **Caveat.** The right-hand column reads `MSAR` literally as a base address and ignores
+> the `MAMR` mask, which determines block *size* and how many address bits are compared.
+> That is safe enough for blocks whose start is size-aligned but is not a decode. The exact
+> mask semantics are **not established** — see
+> [TMP94C241 Memory Controller]({{ site.baseurl }}/tmp94c241-memory-controller/), where
+> the measured values, the reconstruction and its limits are recorded. Note also that by
+> the time `SubCPU_Send_Payload` runs, `MSAR2` has already been changed to `0x80`.
 
 **Effective Memory Map:**
 
@@ -642,21 +682,27 @@ Two bytes in Program ROM control the payload transfer behavior:
 | Address | ROM Offset | Value | Effect |
 |---------|------------|-------|--------|
 | 0xFFFEEF | 0x1FFEEF | **0xFF** | Payload transfer proceeds |
-| 0xFFFEED | 0x1FFEED | **0xFF** | LZSS decompression is attempted |
+| 0xFFFEEE | 0x1FFEEE | **0x00** | `Boot_CallInitHandlers` is *disabled* (would need 0xFF) |
+| 0xFFFEED | 0x1FFEED | **0xFF** | LZSS decompression from 0x3E0000 is attempted |
 
-Both flags are 0xFF in the factory ROM, meaning:
-1. The full payload transfer executes
-2. The LZSS decompression from 0x3E0000 is attempted
+Measured `FF FF FF 00 FF` at 0x1FFEEB-0x1FFEEF in **v7, v9 and v10** — the chooser does not
+differ across firmware versions.
 
 #### Transfer Sequence
 
 | Step | Source Address | Destination | Size | Notes |
 |------|----------------|-------------|------|-------|
-| 1-5 | 0x830000-0x870000 | Sub CPU 0x050000-0x090000 | 5 × 64KB | Tone database from Table Data ROM (data) |
-| 6 | 0x3E0000 | Decompressed buffer | ~33KB | Optional LZSS preset data (see below) |
+| 1-5 | 0x830000-0x870000 | Sub CPU 0x050000-0x090000 | 5 × 64KB | Tone database from Table Data ROM (data), sent unconditionally |
+| 6 | 0x3E0000 | Main CPU DRAM 0x050000 | 192KB out | SLIDE4K decompression of the **sub-CPU payload** |
 | 7 | Buffer + 0x100 | Main CPU 0x0404 | 2 bytes | Copies word to Main CPU RAM |
-| 8-10 | Buffer/Fallback | Sub CPU 0x00F000-0x02F000 | 3 × 64KB | Additional data blocks |
-| 11 | Buffer | Sub CPU 0x000400 | 256 bytes | Entry point area |
+| 8-10 | Buffer/Fallback | Sub CPU 0x00F000-0x02F000 | 0x10000 + 0x10000 + 0xFF00 | The executable |
+| 11 | Buffer + 0x000 | Sub CPU 0x000400 | 256 bytes | 45 jump trampolines — overwrites the boot ROM's own |
+
+> Step 6 previously read "~33 KB of optional LZSS preset data". It is not preset data and
+> it is not optional on any dumped firmware: it is the 192 KB sub-CPU executable, and steps
+> 8-11 total exactly `0x30000` = 196,608 bytes. Where that image actually comes from is a
+> live question — see
+> [Sub-CPU Payload Provenance]({{ site.baseurl }}/subcpu-payload-provenance/).
 
 #### Timing
 
