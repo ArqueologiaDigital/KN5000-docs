@@ -1117,7 +1117,7 @@ The correct approach is to identify what hardware behavior MAME gets wrong that 
 |----------|--------|--------|
 | **Waveform ROMs IC304-IC306** | NO GOOD DUMP KNOWN (12MB missing) | Tone gen produces silence; sequencer voice completion may differ |
 | **Waveform ROM IC307** | Dumped (4MB) | Partial waveform data available |
-| **SubCPU boot ROM** | NEEDS REDUMP | Potential data corruption in undumped ranges |
+| **SubCPU boot ROM** | PARTIAL DUMP (10.9% read; 89.1% assumed 0xFF) | See note below — the undumped ranges are *unread*, not corrupt, and no reference reaches them |
 | **Tone gen device** | Simplified emulation | Voice status readback (`data_r()`) returns 0x8100/0x7E00 based on key_on and hold timer; may not accurately model real hardware state transitions |
 | **DSP1 (IC311)** | Stub (accepts writes, no processing) | Ready signal fixed (Port H bit 0); no audio effects |
 | **DSP2 (IC310)** | Not emulated | GPIO serial interface not connected |
@@ -1189,7 +1189,17 @@ The accompaniment engine generates note events based on:
 
 If any of these inputs is missing or incorrect due to an emulation gap, the accompaniment engine has no material to work with and produces silence.
 
-**Most likely emulation issue:** The SubCPU is responsible for sequencer timing and pattern playback. The SubCPU boot ROM "NEEDS REDUMP" (potential corruption in undumped ranges 0xFE0800-0xFF7800 and 0xFF9800-0xFFF000). If the SubCPU's sequencer timer or pattern reader code is in the corrupted ROM range, it would explain why the sequencer starts but produces no events.
+**Most likely emulation issue:** The SubCPU is responsible for sequencer timing and pattern playback.
+
+> **Retracted (August 2026).** This section previously blamed "corruption in the undumped
+> ranges 0xFE0800-0xFF7800 and 0xFF9800-0xFFF000" of the SubCPU boot ROM. Those ranges are
+> **unread, not corrupt** — IC30 was deliberately dumped in part, and the missing bytes are
+> `0xFF` by assumption. More to the point, they are almost certainly irrelevant here: a
+> structure-aware census over the byte-identical disassembly found 220 ROM-address operand
+> references, **all in dumped windows and none in an undumped range**, and the loaded v1.42
+> payload calls back into IC30 at only two addresses, both dumped. The sequencer runs in the
+> *payload*, which is fully dumped, not in the boot ROM. Look elsewhere. See
+> [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/#dump-provenance).
 
 Alternatively, the accompaniment chord data may be sent from MainCPU to SubCPU via the inter-CPU latch mechanism, and some aspect of this communication may be failing in MAME.
 
@@ -1493,7 +1503,9 @@ f=2494 acc=0x5C61 cnt=23649 bpm=90 play=6 parts=0x0000 pending=0xFFFF  ← parts
 - Song data loading: ❌ **BROKEN** — no SMF data loaded for song preset 18
 
 **The root cause is now narrowed to the song data loading path.** The firmware should load SMF data from the Table Data ROM into DRAM for the sequencer to read, but the data position stays at 0. This could be caused by:
-1. **SubCPU boot ROM corruption** (NEEDS REDUMP) — if the SubCPU is responsible for loading song data, corrupted code in the undumped ROM ranges could prevent loading
+1. ~~**SubCPU boot ROM corruption** (NEEDS REDUMP)~~ — **ruled out.** The undumped IC30
+   ranges are unread rather than corrupt, no reference in the disassembly reaches them, and
+   song loading runs in the fully-dumped payload rather than in the boot ROM.
 2. **Song preset lookup failure** — song index 18 may reference data that requires SubCPU cooperation to load
 3. **Missing hardware response** — the song loading path may depend on a hardware acknowledgment that never arrives
 

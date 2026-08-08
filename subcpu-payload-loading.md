@@ -162,15 +162,23 @@ disassembly therefore never mentions an `0x83xxxx` address.
 > payload" or the Sub CPU executable. That is **wrong** and is withdrawn: the region is the
 > tone database.
 >
-> Where the Sub CPU's executable comes from at run time is a *separate, still-open question*.
+> Where the Sub CPU's executable comes from at run time is a *separate* question.
 > `SubCPU_Send_Payload` sources the code blocks (Sub CPU `0x400` and `0xF000`-`0x3EEFF`) from
 > a base in `XIZ`: the LZSS image at Custom Data Flash `0x3E0000` if it decompresses, and
 > table-data `0x800000` otherwise. **In the images this project holds, neither is the
-> payload.** Custom-data `0x3E0000` is erased — all `0xFF`, with no `SLIDE` magic anywhere in
-> the 1 MB dump — so no File Type 007 update was ever applied to the dumped unit; and no byte
-> of `kn5000_subprogram_v142.rom` appears anywhere in the table-data or custom-data dumps.
-> The executable is known only from its own ROM dump and from the compressed update-disc
-> images. This is flagged as unresolved, not explained.
+> payload.** Custom-data `0x3E0000` is 131,072 bytes of `0xFF` with no `SLIDE` magic anywhere
+> in the 1 MB dump, and no byte of `kn5000_subprogram_v142.rom` appears anywhere in the
+> table-data or custom-data dumps.
+>
+> **Update (August 2026): the mechanism is now closed; only the dump provenance is open.**
+> A File Type 007 update disc is proven to write the compressed payload to `0x3E0000`
+> verbatim, and the compressed file MAME overlays there was carved from a genuine v10 update
+> floppy whose two SLIDE4K streams decode byte-exactly to `kn5000_v10_program.rom` and
+> `kn5000_subprogram_v142.rom`. What remains unresolved is why *our* IC19 image lacks that
+> region — never programmed, interrupted install, or truncated dump are
+> byte-indistinguishable. Note that the earlier inference "so no File Type 007 update was
+> ever applied to the dumped unit" is **not** supported by the file. See
+> [Sub-CPU Payload Provenance]({{ site.baseurl }}/subcpu-payload-provenance/).
 
 ### The payload image's own address layout
 
