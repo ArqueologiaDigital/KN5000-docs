@@ -106,6 +106,8 @@
       url: /boot-sequence/
     - title: SubCPU Payload Loading
       url: /subcpu-payload-loading/
+    - title: Sub-CPU Payload Provenance
+      url: /subcpu-payload-provenance/
     - title: Sub-CPU Firmware Images
       url: /subcpu-firmware-images/
     - title: ROM Reconstruction

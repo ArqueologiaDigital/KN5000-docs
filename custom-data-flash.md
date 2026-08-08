@@ -6,11 +6,39 @@ permalink: /custom-data-flash/
 
 # Custom Data Flash Organization
 
-The Custom Data Flash is a **1MB AMD AM29LV800B** flash ROM at IC19, mapped at **0x300000-0x3FFFFF**. It stores user-writable data: custom accompaniment styles, registration memory, LCD wallpaper screenshots, and serves as a staging area for SubCPU firmware updates.
+The Custom Data Flash is a 1 MB flash device at IC19, mapped at **0x300000-0x3FFFFF**. It stores user-writable data: custom accompaniment styles, registration memory, LCD wallpaper screenshots, and the SubCPU payload staging area.
 
 ## Hardware
 
-The firmware identifies the flash chip via the AMD unlock command sequence (`0xAAAA`/`0x5555` writes) and checks device IDs `0x2223` (AM29LV800B-T) and `0x22AB` (AM29LV800B-B). The chip is programmed from the "initial data disk" during factory setup.
+The firmware identifies the chip via the AMD unlock command sequence and accepts
+manufacturer ID `0x0001` (AMD) or `0x0004` (Fujitsu) with any of four device IDs:
+
+| Device ID | Part | Size | Boot block |
+|---|---|---|---|
+| `0x2223` | AM29F400BT | 4 Mbit | top |
+| `0x22AB` | AM29F400BB | 4 Mbit | bottom |
+| `0x22D6` | AM29F800BT | 8 Mbit | top |
+| `0x2258` | AM29F800BB | 8 Mbit | bottom |
+
+> **Correction (August 2026).** This page and the disassembly source previously named the
+> part **AM29LV800B** and listed only the two 4 Mbit IDs. Both are wrong: `0x2223`/`0x22AB`
+> are the 4 Mbit **AM29F400B**, the two 8 Mbit IDs were omitted, and the family is the 5 V
+> AM29F400/800B rather than the 3.3 V AM29LV. The service-manual parts list gives IC19 as
+> 8 Mbit (house number `QV1GFKN5KAX1`), which matches the 1 MB window exactly — the largest
+> supported population fills it, so no bank switching is possible or needed.
+
+IC19 is a single ×16 device on the 16-bit bus: the firmware's unlock writes go to
+`base + 0xAAAA` and `base + 0x5554`, i.e. 2 × the word address. (Contrast the `0x800000`
+ROM pair, whose unlock cycles at `0x815554`/`0x80AAA8` are 4 × the word address —
+two ×16 dies interleaved on a 32-bit bus.)
+
+**Region-4 boards populate the slot with two 512 KB devices** at `0x300000` and
+`0x380000`. Every flash command routine adds `0x80000` to its *command base* when the
+target is ≥ `0x380000`; data reads and program-word writes stay linear across the whole
+`0x300000-0x3FFFFF`. This is a per-die command base, **not** a bank window. MAME's `AREA`
+dip switch offers no Region 4 setting, so that path has never run under emulation.
+
+The chip is programmed from the "initial data disk" during factory setup.
 
 ## ROM Layout
 
@@ -29,9 +57,9 @@ The firmware identifies the flash chip via the AMD unlock command sequence (`0xA
 | `0x3C0000-0x3D2FFF` | 78KB | LCD Wallpaper/Screenshot Storage |
 | `0x3D3000-0x3D3FFF` | 4KB | Registration Memory |
 | `0x3D4000-0x3DFFFF` | 48KB | Unused (erased) |
-| `0x3E0000-0x3FFFFF` | 128KB | SubCPU Payload Staging Area |
+| `0x3E0000-0x3FFFFF` | 128KB | SubCPU Payload Staging Area — **blank in our dump**, see below |
 
-The 8KB gaps between style sections correspond to flash boot block sector boundaries. The AM29LV800B has non-uniform sector sizes near the bottom of its address range.
+The 8KB gaps between style sections correspond to flash boot block sector boundaries. The AM29F400/800B family has non-uniform sector sizes at whichever end carries the boot block.
 
 ## Section Pointer Table
 
@@ -186,7 +214,23 @@ The Panel Memory UI is managed by `PmemModeBoxProc` and `IvPmemWindowPageCtlProc
 
 ## SubCPU Payload Staging (0x3E0000)
 
-The 128KB region at 0x3E0000-0x3FFFFF is used during firmware updates to stage the compressed SubCPU executable payload. The `SubCPU_Send_Payload` routine reads from this address during boot if the LZSS decompression path from the Table Data ROM is used as a fallback source. Empty (0xFF fill) in factory-programmed state.
+The 128 KB region at `0x3E0000-0x3FFFFF` is where a File Type 007 ("Program DATA FILE
+PCK") update disc writes the compressed SubCPU executable payload — verbatim, as a raw
+SLIDE4K stream, exactly `0x20000` bytes after erasing the two sectors. It is **not** a
+transient staging area: `SubCPU_Send_Payload` decompresses it on **every** boot, and the
+table-data `0x800000` source is only a fallback taken when the `SLIDE` magic check fails.
+
+> **In the IC19 dump this project holds, this entire region is `0xFF`** — 131,072 blank
+> bytes, and the string `SLIDE` appears nowhere in the 1 MB image. Since every dumped
+> firmware version reaches this branch (marker byte `0xFFFEED` = `0xFF` in v7, v9 and
+> v10), a machine matching our dumps could not start its sub-CPU. Whether the region was
+> never programmed on that unit or the dump is simply incomplete is **unresolved** — see
+> [Sub-CPU Payload Provenance]({{ site.baseurl }}/subcpu-payload-provenance/) for the
+> evidence and for the two free measurements that would settle it.
+>
+> The MAME driver supplies the missing bytes with a `ROMX_LOAD` overlay of the compressed
+> payload carved from a genuine v10 update floppy. Address, form and content all match
+> what a real install writes; only the acquisition path is indirect.
 
 ## Flash Programming
 

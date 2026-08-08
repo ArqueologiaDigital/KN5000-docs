@@ -178,13 +178,32 @@ The firmware update is triggered at boot when the firmware version byte at `0xFF
 
 | Type | Handler Address | Destination | Method |
 |------|-----------------|-------------|--------|
-| 7 (Program PCK) | 0xEF47FA | Custom Data Flash 0x3E0000 | LZSS decompress from floppy |
-| 8 (Table PCK) | — | Table Data ROM 0x800000 | LZSS decompress from floppy |
-| 6 (HDAE5000) | — | Extension ROM 0x280000 | Direct copy from floppy |
-| 1/2 (Program) | — | Table Data ROM 0x800000 | Direct copy (2-disc set) |
-| 3/4 (Table) | — | Table Data ROM 0x800000 | Direct copy (2-disc set) |
+| 1/2 (Program) | `0xEF4784` | the `0x800000` flash pair, 1 MB + 1 MB | chip-erase, then direct copy (2-disc set) |
+| 3/4 (Table) | — | the `0x800000` flash pair, 1 MB + 1 MB | chip-erase, then direct copy (2-disc set) |
+| 5 (CMPCUSTOMDATA) | — | Custom Data Flash `0x300000`, all 1 MB | chip-erase, then verbatim write of the whole image |
+| 6 (HDAE5000) | — | Extension ROM `0x280000`, 512 KB | chip-erase bank 2, then direct copy |
+| 7 (Program PCK) | `0xEF47FA` | **both**: the `0x800000` pair *and* Custom Data Flash `0x3E0000` | see below |
+| 8 (Table PCK) | — | the `0x800000` pair | SLIDE4K decompress from floppy |
 
-For type 7, the compressed program ROM is written to Custom Data Flash at `0x3E0000`. On next boot, the decompressor reads from this staging area and programs the actual Program Flash at `0xE00000`. See [Flash Programming](flash-programming.md) for details.
+**Type 7 in detail** — a `.SLD` file holding *two* concatenated SLIDE4K streams:
+
+1. stream 1 (the 2 MB main-program image) is decompressed straight into the `0x800000`
+   window during the install;
+2. IC19 sectors `0x3E0000` and `0x3F0000` are erased and stream 2 (the compressed
+   **sub-CPU payload**) is written there **verbatim**, exactly `0x20000` bytes.
+
+> **Correction (August 2026).** This page previously said that type 7 stages the
+> *compressed program ROM* at `0x3E0000` and that a later boot programs the program flash
+> from it. That is wrong on both counts. `0x3E0000` holds the compressed **sub-CPU
+> payload**, it is a permanent staging area read on **every** boot by
+> `SubCPU_Send_Payload`, and the main program is programmed during the install itself.
+> See [Sub-CPU Payload Provenance]({{ site.baseurl }}/subcpu-payload-provenance/).
+
+Note that the `0x800000` window is the target for both program and table images. Which
+physical chip pair answers there depends on which of the two updater copies is running —
+the bootloader's or the program flash's — because the memory map differs between them.
+See [TMP94C241 Memory Controller]({{ site.baseurl }}/tmp94c241-memory-controller/).
+See also [Flash Programming](flash-programming.md).
 
 ---
 
