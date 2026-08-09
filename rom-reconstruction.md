@@ -183,6 +183,16 @@ memory image and one residue block); `wallpaper1_to_icons.bin` as 87 named bitma
 `icon_pixel_data.bin` as 177 named icon slices. Every remaining `.incbin` in the table-data
 sources carries a label, a length and a comment saying what it is.
 
+`icons_to_strings.bin` was then audited end to end (commit `6ab2b5d`): all 742,024 bytes
+are accounted for — 126,674 B in those 13 slices, 394,246 B that this build emits from
+source but the ASL mirror still takes from the blob, and a 221,104-byte dead tail
+(ROM `0x9C4050-0x9F9FFF`) that no build reads and that is a stale duplicate of the
+now-source-built demo-song presets. It was documented rather than deleted, because the
+file is a checked-in dump slice whose hash the audit quotes and because giving those bytes
+a second source would be a byte-match trap. `make audit-icons-blob` re-derives the map
+from the tree and the factory dump and fails if any of it drifts. Details on the
+[Table Data ROM]({{ site.baseurl }}/table-data-rom/) page.
+
 Symbol counts tell the same story: `symbols/table_data_symbols_reference.txt` went from
 **133 symbols to 4,161**. The sub-CPU payload's reference file went from 3,862 to 4,338,
 the HD-AE5000's from 223 to 532, and the sub-CPU boot ROM's from 53 to 63.
@@ -206,7 +216,7 @@ the HD-AE5000's from 223 to 532, and the sub-CPU boot ROM's from 53 to 63.
 | Boot debug group (NOP-patched out) | 0x9FFE80–0x9FFEDF | `table_data/boot_debug.s` |
 | Sub-CPU DSP data zones A0 / A / B | 0x00F7E6–0x01E17E | carved into labelled tables in `v142/subcpu/subcpu_data_tables.s` |
 | Sub-CPU boot data region | 0xFF8000–0xFF828F | eight objects in `subcpu/boot/kn5000_subcpu_boot.s`: an 8-entry command-handler jump table, a RAM-test descriptor and the tone-generator velocity/touch front end |
-| DSP effect + parameter name tables (maincpu) | 0xE32418, 0xE324C4, 0xE32A7A | `DspParamUnit_Table` (86 × 2), `DspParamName_Table` (86 × 17) and `DspEffectName_PtrTable` (128 × u32) in `ui_widgets/widget_descriptors.s` |
+| DSP effect + parameter name tables (maincpu) | 0xE32418–0xE33579 | `DspParamUnit_Table` (86 × 2), `DspParamName_Table` (86 × 17), `DspEffectName_PtrTable` (128 × u32) and `DspEffectName_Strings` (128 × 18) in `ui_widgets/widget_descriptors.s` ([DSP Name Tables]({{ site.baseurl }}/dsp-name-tables/)) |
 | HD-AE5000 UI object + name tables | 0x2A5D2C–0x2A8499 | two index-parallel 790-entry pointer arrays and the name pool they index, in `hdae5000/hdae5000_data_tables.s` |
 | HD-AE5000 initialised `.data` image | 0x2F94B2–0x2FA133 | `hdae5000/hdae5000_init_data.s` — nine tables, 96 code pointers and 166 string pointers, all named from the firmware's own registration calls |
 | HD-AE5000 graphics bank | 0x2A858E–0x2F8DCD | re-split into eleven regions: five palette + bitmap pairs at the boundaries hard-coded in `HDAE5000_Register_Frame`, plus a string head |

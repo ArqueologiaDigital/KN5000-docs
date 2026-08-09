@@ -454,7 +454,13 @@ The category offset in DRAM[0x021098] selects the row: 0x00 for distortion/dynam
 
 ### Complete DSP Parameter Name Catalog (ROM 0xE324C4)
 
-The parameter name table has **86 entries × 17 bytes** (16-char name + null terminator). Key entries:
+The parameter name table has **86 entries × 17 bytes**: 16 display characters followed by
+a `:` separator — **not** a null terminator (the firmware `Strncpy`s exactly 17 bytes).
+Slot 0 and slot 85 are blank spares carrying no colon. Both this table and the unit table
+below are now carved and labelled in the disassembly as `DspParamName_Table` /
+`DspParamUnit_Table`; the full 86-slot listing, their consumers and the effect-name
+tables that sit beside them are on
+[DSP Name Tables (Main CPU)]({{ site.baseurl }}/dsp-name-tables/). Key entries:
 
 | Index | Name | Typical Unit | Used by |
 |-------|------|-------------|---------|
@@ -473,7 +479,7 @@ The parameter name table has **86 entries × 17 bytes** (16-char name + null ter
 | 0x26-0x27 | PITCH L / PITCH R | - | Pitch shifter |
 | 0x28-0x2D | THRESHOLD / RATIO / ATTACK / RELEASE / SENS. / RATE | - | Compressor/Gate |
 
-A companion unit suffix table at **0xE32418** (86 entries × 2 bytes ASCII) provides the display unit for each parameter (e.g., "s\0", "ms", "Hz").
+A companion unit suffix table at **0xE32418** (86 entries × 2 bytes ASCII, one index shared with the name table) provides the display unit for each parameter. Only four values occur in the whole table: `"  "` (55 slots), `"Hz"` (13), `"ms"` (11) and `"s "` (7) — the one-character units are padded with a trailing **space**, not a NUL.
 
 ### Reverb Preset Table — Complete Data (ROM 0xEDA6EC)
 
@@ -622,8 +628,8 @@ The pointer table at 0xE32A7A actually contains **80 entries** (not just 40), co
 |---------|-----|---------|
 | 0xE324C4 | Main (ROM) | DSP parameter name table (86 × 17 bytes) |
 | 0xE32418 | Main (ROM) | DSP parameter unit suffix table (86 × 2 bytes) |
-| 0xE32A7A | Main (ROM) | DSP algorithm ID → name pointer table (80 × 4 bytes) |
-| 0xE331E4 | Main (ROM) | Effect name string table (51 × 18 bytes) |
+| 0xE32A7A | Main (ROM) | `DspEffectName_PtrTable` — effect number → name pointer (**128** × 4 bytes) |
+| 0xE32C7A | Main (ROM) | `DspEffectName_Strings` — effect names (**128** × 18 bytes, stored in *descending* effect order; the address `0xE331E4` quoted in earlier revisions is where effect 50 lands, i.e. the tail half of the same block) |
 | 0xE34DA4 | Main (ROM) | DspItem0CngFunc dispatch table (17 × 2 bytes) |
 | 0xE4465C | Main (ROM) | DSP1 master parameter list (128 bytes) |
 | 0xE446DC | Main (ROM) | DSP1 per-category parameter name indices (128 bytes) |

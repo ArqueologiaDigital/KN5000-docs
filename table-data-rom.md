@@ -225,6 +225,10 @@ are generated and git-ignored. Two errata worth recording from that verification
 
 See [LZSS Compression]({{ site.baseurl }}/lzss-compression/) for the codec.
 
+Entries 0-17 also survive verbatim, header and payload, in the dead tail of
+`table_data/includes/icons_to_strings.bin` — a pre-conversion duplicate that no build
+reads. See *The backing blob* below before treating it as a second copy of anything.
+
 > **Superseded:** earlier revisions of this page called `0x9C4000` a "Waveform Sample
 > Table" pointing at PCM samples. It is the demo-song preset pointer table; the KN5000's
 > PCM waveforms live in the dedicated wave ROMs, not here.
@@ -506,6 +510,54 @@ See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for the system-level view
 [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) for the *runtime*
 serial stack this boot driver must not be confused with.
 
+## The backing blob (icons_to_strings.bin)
+
+One artefact predates the whole conversion and still sits in the tree:
+`table_data/includes/icons_to_strings.bin`, **742,024 bytes**, sha256
+`0df126455434ccc35a9f40609ec26dc68edc2a170910de602a6fbe814f31379d`. It is a **verbatim
+slice of the factory dump** — file offset 0 is ROM `0x944D78` and its last byte is ROM
+`0x9F9FFF` — and as of commit `6ab2b5d` every one of those bytes is accounted for.
+
+| Part | File offsets | ROM | Size | Status |
+|:---|:---|:---|---:|:---|
+| Read by the LLVM build | 13 sized `.incbin` slices | — | 126,674 B | live (17.1 % of the file) |
+| Source-built here, still `binclude`d whole by the ASL mirror | remainder below `0x7F2D8` | `0x944D78-0x9C404F` | 394,246 B | live for the mirror only |
+| Dead tail | `0x7F2D8-0xB5287` | `0x9C4050-0x9F9FFF` | 221,104 B | read by nothing |
+
+The 13 live slices are the ten font glyph banks (`fonts.s`), the Music Stylist residue
+block (`style_records.s`), the truncated stale German help block (`help_databases.s`) and
+the 64 KB Composer factory memory image (`kn5000_table_data.s`). Every one lies inside the
+extent the archived ASL mirror bincludes as a single block
+(`binclude "includes/icons_to_strings.bin", 0, 07F2D8h`), which is why the file may not be
+rewritten, re-sliced or truncated on disk even though the LLVM build now emits most of the
+region from real source. The 80 bytes at file `0x7F288-0x7F2D7` (ROM `0x9C4000-0x9C404F`)
+are the last thing the mirror still takes from the blob that this build emits from source:
+`DemoSongPreset_PointerTable`'s 19 pointers plus its null terminator.
+
+**The dead tail is a stale duplicate of the demo-song presets.** The 221,104 bytes past the
+ASL extent are eighteen SLIDE4K blocks laid end to end — presets 0-17, one `0xFF`
+alignment byte after preset 00 (ROM `0x9C9017`) and 2,869 bytes of `0xFF` fill after
+preset 17's block ends at `0x9F94CA` — byte-identical to the reference payloads in
+`original_ROMs/demo_preset_NN_compressed.original.bin`. Nothing reads them: not the LLVM
+build, not the ASL mirror, not the bootstrap extraction (`make decompress-demo-presets`
+reads `original_ROMs/kn5000_table_data.rom`, not this file). The ROM's live copy of those
+bytes is rebuilt from `includes/demo_presets/midi/*.mid` plus its YAML sidecars.
+
+The tail was **documented rather than removed**. Deleting it would save 221 KB and break
+neither build, but it would rewrite a checked-in dump artefact whose hash is quoted in
+`analysis/binclude-audit-2026-08-07/`; and re-slicing the region would give the
+demo-preset bytes a *second* source, which is a byte-match trap. One practical
+consequence: sweeping this file for the `SLIDE4K` magic finds eighteen headers past
+`0x7F2D8` that are residue, not a newly discovered compressed region.
+
+`make audit-icons-blob` (`scripts/analysis/audit_icons_blob_coverage.py`) re-derives the
+whole map from the tree and the factory dump on every run and fails if any of it drifts.
+It checks four invariants: that the blob is still byte-identical to
+`original_ROMs/kn5000_table_data.rom` over its extent; that the ASL mirror still
+bincludes exactly `0, 0x7F2D8`; that no LLVM slice reaches past that extent; and that the
+dead tail is still exactly the eighteen preset blocks plus `0xFF` fill. It is not part of
+`make all`.
+
 ## What is still open
 
 The ROM is byte-complete in source form, but understanding lags behind location in several
@@ -520,13 +572,12 @@ places:
   settled; most parameter payloads inside them are still undecoded MIDI-range values.
 * **Tone-record fields.** The record framing is exact; several fixed-value fields have no
   established meaning yet (see the tone-database page).
-* **Housekeeping.** The tail of `includes/icons_to_strings.bin` beyond file offset
-  `0x7F2D8` (= ROM `0x9C4050`) is dead weight duplicating the now source-built preset
-  region, and **seven** orphaned `bootcode_*.bin` files remain in `table_data/includes/`
-  outside the build (`_debug`, `_division`, `_free2`, `_interrupts`, `_post_clearram`,
-  `_pre_clearram`, `_pre_lzss`; the other six of the thirteen are still bincluded by the
-  archived ASL mirror and must stay). Both are queued for the clean-up wave.
+* **Housekeeping — settled.** Both items previously listed here are closed. The seven
+  orphaned `bootcode_*.bin` files were deleted along with 25 other unreferenced
+  extraction artefacts (commit `7280bce`; six `bootcode_*` remain because the archived
+  ASL mirror still bincludes them). The dead tail of `includes/icons_to_strings.bin` was
+  measured, explained and left in place on purpose — see *The backing blob* above.
 
-Work on the wider disassembly is also unfinished: three wave-groups remain (the HD-AE5000
-data ROM and Sub-CPU boot data; the v7 firmware tree; and a final sweep including the
-Main-CPU inline `.byte` audit). Those do not affect the table-data ROM's own coverage.
+Work on the wider disassembly is also unfinished: the v7 firmware tree has not been
+converted, and the Main-CPU inline `.byte` audit is still pending. Neither affects the
+table-data ROM's own coverage.

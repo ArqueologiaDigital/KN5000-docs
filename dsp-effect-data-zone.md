@@ -15,7 +15,9 @@ individually labeled; the reconstruction is byte-identical).
 
 Companion pages: [Effects DSP (NEC uPD6383GF)]({{ site.baseurl }}/effects-dsp/) for the
 DSP chip itself, [DSP Bytecode Interpreter]({{ site.baseurl }}/dsp-bytecode-interpreter/)
-for the Sub-CPU-side interpreter that consumes this zone.
+for the Sub-CPU-side interpreter that consumes this zone, and
+[DSP Name Tables (Main CPU)]({{ site.baseurl }}/dsp-name-tables/) for the main-CPU tables
+that supply the effect and parameter *names* quoted throughout this page.
 
 ## Indexing: four parallel pointer arrays
 
@@ -72,8 +74,13 @@ kn7000_mame tooling's; the assembly source labels them `DSP_FreqParamCurve_Algo0
 (`0x012483`), `DSP_FreqParamCurve_Algo1` (`0x012613`), `DSP_FreqParamCurve_Algo2`
 (`0x0127A3`), `DSP_OscParamCurve` (`0x0129A3`) and `DSP_CoeffCurve_Op62` (`0x012B33`) —
 five ladders, not four; the CURVE_x scheme skips `0x0129A3` entirely. The user-facing
-parameter *names* live on the **main CPU** (85-entry table at `0x0324D5`, units at
-`0x03241A`); the per-effect ordered name list was captured live per effect
+parameter *names* live on the **main CPU**: an 86-slot × 17-byte name table at ROM
+`0xE324C4` (file offset `0x0324C4`) with its 86-slot × 2-byte unit table at `0xE32418`
+(`0x032418`), both now carved and labelled in source — see
+[DSP Name Tables (Main CPU)]({{ site.baseurl }}/dsp-name-tables/). *(Earlier revisions of
+this page gave `0x0324D5` / `0x03241A` and a count of 85; those addresses are slot **1**
+of each table. Slot 0 and slot 85 are blank spares.)* The per-effect ordered name list
+was captured live per effect
 (`kn7000_mame/notes/kn5000-dsp-paramlist.md`) and is quoted in the per-effect banners of
 `subcpu_data_tables.s`. The two trailing UI controls of every effect are VOLUME and
 REV SEND, landing on cells `0x90`/`0x06` (which is which is not forced by record order).
@@ -93,7 +100,13 @@ Do not feed them to a uPD6383-shaped parser.
 42 effect numbers point all three of algorithm/coefficient/descriptor at one shared
 **NO OPERATION** trio (`DSP_Eff00_Algo_Bytecode` `0x017263` / `DSP_Eff00_Coef_Bytecode`
 `0x01735E` / `DSP_Eff00_Param_Descriptors` `0x017425`) -- a dry pass-through program
-(it still runs a level detector). Besides the `----------` placeholders, **twelve named
+(it still runs a level detector). Those 42 are 40 pure stubs plus two special cases:
+effect 0, which *owns* the trio, and effect 37, which owns a parameter-value table but no
+program of its own. The main-CPU name table now counts the same partition from the other
+side -- 60 of the 100 effect numbers carry a cross-reference to at least one Sub-CPU
+block, the other 40 are marked stubs (see
+[DSP Name Tables (Main CPU)]({{ site.baseurl }}/dsp-name-tables/)).
+Besides the `----------` placeholders, **twelve named
 effects are stubs**: 11 MODULATION DELAY, 37 SLOW ATTACKER, 38 NOISE FLANGER, 44 CEL,
 45 CELM, 49 PITCH SHIFTER, 51 PEDAL WAH, 55 HARS EFFECT, 63 STRING,
 69 PEDAL WAH+DELAY, 80 DS_D, 81 OVER_D. Verified from the ROM: all twelve share the trio
@@ -194,6 +207,8 @@ one IC310 microprogram and descriptor table; all stubs share the NO OPERATION tr
 * Grammar recovered from the dispatch code in `v142/subcpu/kn5000_subprogram_v142.s`
   (`DSP_BytecodeInterpreter_Loop`, `DSP_TableWalk_Search`, `DSP_ParameterWriteEngine`,
   `DSP_PerParameterTranslator`).
-* Effect names: main CPU ROM name table (`0x033568 - 18*n`, stride 18 descending).
+* Effect names: main CPU `DspEffectName_PtrTable` (`0xE32A7A`), whose entry *n* is
+  `0xE33568 - 18*n` — ROM file offset `0x033568 - 18*n`, stride 18 descending. Now carved
+  in source: [DSP Name Tables (Main CPU)]({{ site.baseurl }}/dsp-name-tables/).
 * UI parameter lists: measured live (`kn7000_mame/notes/kn5000-dsp-paramlist.md`).
 * IC310 partition: `dsp/analysis/second-dsp-and-ready.md` finding B1.
