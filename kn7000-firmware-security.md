@@ -140,6 +140,11 @@ show a *smaller* integer — and **that integer is the revision identifier.** Th
 screen and reads it off the LCD; no tools, no risk, no disassembly. Once a unit is dumped by any means,
 the same `u16` at the equivalent of `0x4873660C` re‑identifies the build.
 
+This has already found an unpreserved firmware: a real instrument reports `PROGRAM : 893`
+and `TABLE : 80`. For where each of the four numbers comes from — only PROGRAM is a
+compiled-in constant; TABLE, RHYTHM and PICTURE are parsed as ASCII decimal out of their
+own flash devices — see the [SOFT VERSION screen]({{ site.baseurl }}/kn7000-soft-version/).
+
 ### 4.2 The ROM device test checks integrity, but shows no fingerprint
 
 Service diagnostic **§8.1 "ROM device test"** (`MainRomTestFunc` `0x4849FDF8`, reached by holding

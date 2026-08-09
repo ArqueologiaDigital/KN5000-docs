@@ -384,4 +384,11 @@ All ROMs are built with `make all` from the repository root:
 llvm-mc -triple=tlcs900  →  ld.lld  →  llvm-objcopy  →  raw binary
 ```
 
-Each ROM is verified against the original dump using `python scripts/compare_roms.py`, which reports byte-level similarity (target: 100.00% for all 6 ROMs).
+Each ROM is verified against the original dump using `python3 scripts/build/compare_roms.py`,
+which reports byte-level similarity per **verification section**. The target is 100.00% on
+all **fifteen** sections — nine from the primary LLVM build and six from the archived ASL
+mirror, over nine distinct ROM images. Run the full gate
+(`make clean-all && make all && make asl-all`) before believing the figure: the script
+silently skips any section whose built file is missing, so a short build prints nine
+sections that all read 100.00%. See
+[Disassembly Workflow]({{ site.baseurl }}/disassembly-workflow/).

@@ -50,7 +50,7 @@ All previously missing instruction encodings have been implemented in the LLVM T
 
 ### HDAE5000: Complete
 
-The HDAE5000 extension ROM's 502 native instructions cover all identified code regions. Remaining `.byte` directives (~15,900 lines) are exclusively **data tables** (FAT16 filesystem templates, string constants, UI bitmaps, etc.) — not executable code.
+The HDAE5000 extension ROM's 502 native instructions cover all identified code regions. Remaining `.byte` directives (~15,900 lines) are exclusively **data tables** (custom-filesystem templates — the HD-AE5000 filesystem is *not* FAT16 — string constants, UI bitmaps, etc.) — not executable code.
 
 ## Original Audit Results (Historical)
 
@@ -132,7 +132,8 @@ Newly disassembled code may reveal previously unidentified jump tables or call t
 
 ### Step 13: Final Verification & Website Sync
 
-1. Full `make clean && make all` + `compare_roms.py` (100% byte match on all 6 ROMs)
+1. Full `make clean-all && make all && make asl-all` + `compare_roms.py` (100.00% on all
+   fifteen sections — see the note under *Verification* below)
 2. Run `scripts/sync_docs_labels.py --apply` to update any new labels on the website
 3. Update `rom-reconstruction.md` with the milestone
 4. Update issue tracker — edit `kn5000_project/.beads/issues.jsonl` by hand to mark completed issues closed. Do **not** run `bd close` against `kn5000_project` (see `FSanches/beads-usage-policy.md`).
@@ -152,9 +153,15 @@ Step 12 is iterative and may cycle back through Steps 3-11.
 ## Verification
 
 After each step:
-- `cd kn5000-roms-disasm && make clean && make all`
-- `python scripts/compare_roms.py` — must show 100% match on all 6 ROMs
+- `cd kn5000-roms-disasm && make clean-all && make all && make asl-all`
+- `python3 scripts/build/compare_roms.py` — must show 100.00% on all **fifteen** sections
 - LLVM tests: `cd llvm-project && build/bin/llvm-lit llvm/test/CodeGen/TLCS900/`
+
+> **Section count matters more than the percentages.** This page was written in March 2026,
+> when the shorter `make clean && make all` was the habit. That form never assembles the six
+> ASL mirror sections, and `compare_roms.py` skips a missing section silently — so it prints
+> nine sections, all reading `100.00%`, and looks identical to a passing full run. Count the
+> sections. See [Disassembly Workflow]({{ site.baseurl }}/disassembly-workflow/).
 
 ## Policy Compliance
 
