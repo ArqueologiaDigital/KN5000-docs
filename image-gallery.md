@@ -163,7 +163,26 @@ These images show keyboard split point notes displayed when configuring the keyb
 
 These images were extracted from the HD-AE5000 hard disk expansion ROM. The images are 8-bit indexed color, displayed on the KN5000's LCD during HD-AE5000 operations.
 
-**Palette discovery**: Disassembly analysis found the boot code at `0x28f585` loads palette data from ROM offset `0x65dce`. The icon uses a separate Windows halftone-style palette at `0x6158e`.
+**Palette rule** *(corrected, August 2026)*: every bitmap in this ROM is immediately preceded, with no padding, by **its own** 1,024-byte RGBX palette. There are six palette/bitmap pairs. The palette at ROM offset `0x65dce` that the boot code loads into the VGA DAC belongs to the boot splash, not to the other images; the earlier note that the "main images" use it was wrong.
+
+| Bitmap | Its palette | Geometry |
+|--------|-------------|----------|
+| Product logo (0x2898e) | 0x2858e | 320×240 |
+| Drive mechanism (0x3b98e) | 0x3b58e | 320×240 |
+| File panel (0x4e98e) | 0x4e58e | 320×240 |
+| Hard disk icon (0x6198e) | 0x6158e (Windows halftone) | 27×27, 28-byte stride |
+| STORE button (0x63464) | 0x63064 (greyscale ramp) | 42×15 |
+| Boot splash (0x661ce) | 0x65dce | 320×240 |
+
+> **Render caveat.** `convert_images.py` currently hands the boot-splash palette to *all* HD-AE5000 images, so the four renders below other than the splash are mis-coloured — the logo and drive-mechanism photographs in particular are greyscale images being drawn through the wrong ramp. Regenerating them per-palette is a queued fix in the disassembly repo.
+
+### HD-AE5000 Boot Splash
+
+![HDAE5000 boot splash]({{ "/assets/images/gallery/HDAE5000_SplashScreen.png" | relative_url }})
+
+*320x240, 8-bit indexed color - ROM offset: 0x661ce (CPU: 0x2E61CE)*
+
+"HD-AE5000 / Version 2 / Start-up ! / Please wait . . ." over a photograph of an opened hard disk. This is the first thing an HD-AE5000-equipped KN5000 puts on screen, and it went **unidentified until August 2026** — the ROM slice that contains it was labelled "VGA palette data" and ran 0x13000 bytes, so a whole 320×240 picture was hiding behind a 1KB palette. `HDAE5000_Boot_Init` blits it into VRAM at `0x1A0000` as two 0x9600-byte halves. See [HDAE5000]({{ site.baseurl }}/hdae5000/#the-boot-splash-at-0x2e61ce).
 
 ### HD-AE5000 Product Logo
 
@@ -171,15 +190,15 @@ These images were extracted from the HD-AE5000 hard disk expansion ROM. The imag
 
 *320x240, 8-bit indexed color - ROM offset: 0x2898e (CPU: 0x2A898E)*
 
-Shows the HD-AE5000 product name with a stylized hard disk drive graphic.
+The "HD-AE5000" wordmark embossed over a photograph of a bare hard-disk mechanism. Its palette (0x2858e) is byte-identical to the next image's — the two are the two frames of one title sequence.
 
-### Hands Operating HD-AE5000
+### Drive Mechanism (was "Hands Operating HD-AE5000")
 
 ![HDAE5000 Hands]({{ "/assets/images/gallery/HDAE5000_Hands.png" | relative_url }})
 
 *320x240, 8-bit indexed color - ROM offset: 0x3b98e (CPU: 0x2BB98E)*
 
-Promotional image showing hands operating the HD-AE5000 unit connected to a KN5000 keyboard.
+The same drive-mechanism photograph as the logo image, **without** the wordmark — the second frame of the title sequence. The old caption was wrong: there are no hands in this picture. The filename `HDAE5000_Hands.bin` is kept for continuity with the extraction tooling.
 
 ### File Selection Panel
 
@@ -187,15 +206,23 @@ Promotional image showing hands operating the HD-AE5000 unit connected to a KN50
 
 *320x240, 8-bit indexed color - ROM offset: 0x4e98e (CPU: 0x2CE98E)*
 
-UI panel showing file selection interface with textured button areas.
+The file-selection panel background: three sunken list wells over a blue stone fill, with a grey scroll strip along the bottom. Its palette holds only 110 distinct colours — a long grey ramp plus the stone texture.
 
 ### Hard Disk Icon
 
 ![HDAE5000 Icon]({{ "/assets/images/gallery/HDAE5000_Icon.png" | relative_url }})
 
-*28x28, 8-bit indexed color - ROM offset: 0x6198e (CPU: 0x2E198E)*
+*27x27 with a 28-byte row stride (756 bytes), 8-bit indexed color - ROM offset: 0x6198e (CPU: 0x2E198E)*
 
-Small icon depicting a hard disk with magnetic head, used in UI elements.
+Small icon depicting a hard disk with magnetic head, used in UI elements. Its resource descriptor (`0x280395`, registered under the firmware's own name `BitmapHdd_icon`) answers 27 for both width and height, and the last byte of each of the 27 rows is 0x00 — a pad column.
+
+> **Extraction caveat.** `HDAE5000_Icon.bin` in the disassembly repo is 784 bytes, i.e. 28×28. The extra 28 bytes are not image data: they are the first 28 bytes of `HDAE5000_Config_Strings` at `0x2E1C82`, which begins with the ASCII "V2.06i". Re-cutting the asset at 756 bytes is queued.
+
+### STORE Button
+
+*42x15, 8-bit indexed color - ROM offset: 0x63464 (CPU: 0x2E3464)* — not yet extracted as an asset.
+
+A raised button reading "STORE", provided by `HDAE5000_BitmapButt01` (0x28B527, registered as `BitmapButt01`) with its own greyscale-ramp palette at `0x2E3064`. It sits inside the range the disassembly still labels `HDAE5000_Path_Strings` / `HDAE5000_UI_Icons`, which is why those "strings" read as runs of `)BBBB…`, `BZZZZ…` and repeated brace characters — those are pixel values (0x29, 0x42, 0x5A, 0x7B), not text.
 
 ---
 
@@ -313,7 +340,7 @@ Most icons have bounding box `0x18` × `0x18` (24×24). The `DrawIcons` routine 
 
 - **Table Data BMP**: Standard Windows BMP format, 8-bit indexed color
 - **Main CPU raw**: Custom format, raw pixel data without headers, uses RGBA palette at `0xEB37DE`
-- **HDAE5000 raw**: Raw pixel data, main images use palette at ROM offset `0x65dce`, icon uses halftone palette at `0x6158e`
+- **HDAE5000 raw**: Raw pixel data. Each bitmap has its own 1,024-byte RGBX palette in the 1,024 bytes immediately before it (see the table above); the fourth byte of every palette entry is 0x00. Only the boot-splash palette (`0x65dce`) reaches the VGA DAC at start-up — the others travel with their bitmap into `OFFSCREEN_BUFFER_4` (0x69400) and are installed when that screen is drawn
 - **1-bit bitmaps**: Monochrome, 224x22 pixels (28 bytes per row) - shared between Main CPU and Table Data ROMs
 - **8-bit bitmaps**: 256-color indexed, dimensions vary by image
 - **LCD resolution**: 320x240 pixels (QVGA)

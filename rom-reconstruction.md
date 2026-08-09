@@ -263,7 +263,7 @@ emitted by `.incbin` directives per ROM tree:
 | `v7/maincpu` | 995,213 | **Raw ROM slices behind a `generated/` path** — see the note below |
 | `v142/subcpu` | 0 | No binary includes at all |
 | `subcpu/boot` | 0 | The 656-byte blob was carved into source; the ASL mirror still `binclude`s the file, so it stays on disk |
-| `hdae5000` | 313,076 | Ten labelled slices of `code_29af2d_2fffff.bin` — five palette + bitmap pairs. Despite the file's name none of it is code |
+| `hdae5000` | 313,076 | Ten labelled slices of `code_29af2d_2fffff.bin`, and **all ten are pixel or palette data**: five 1,024-byte RGBX palettes, four 320×240 bitmaps and one 756-byte icon. Despite the file's name none of it is code. The four old slices cut pictures in half; the 2026-08 re-split (`b7752bc`) moved the boundaries onto the real palette/bitmap edges, retired the false `HDAE5000_Font_Data` label, and identified the boot splash at 0x2E61CE that had been sitting unnamed behind a 1KB palette |
 | `table_data` | 1,113,121 | All labelled: BMPs, wallpapers, font glyph banks, icon/bitmap slices, and the source-built compressed payloads |
 | `custom_data` | 667,648 | Six factory-style-database sections; blob-level documentation judged adequate (this is one unit's user-data area, not firmware) |
 

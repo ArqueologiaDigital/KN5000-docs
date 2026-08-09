@@ -131,15 +131,19 @@ These are **request/action events** that reach the record function directly. The
 | **`0x01C00008`** | **`EVT_ACTIVATE`** | Button press | Sent by firmware when user selects a DISK MENU entry via LCD panel button. **This is the event to intercept for button-press activation.** |
 | **`0x01E0009C`** | **`EVT_POST_ACTIVATE`** | PostEvent injection | Sent by `FileIO_DiskRemoved` via `PostEvent(0x00600002, 0x01E0009C, 0)`. Used for programmatic activation. Falls through ClassProc → ObjectProc → InheritedProc chain. |
 
-### Display/Memory Allocation Events
+### Bitmap Resource Query Events
 
-Used by `Alloc_Memory` functions to query display parameters:
+Used by the HD-AE5000's bitmap resource descriptors — the routines named `Alloc_Memory*`
+in the disassembly, which despite the name allocate nothing and simply answer three
+constant queries about one bitmap:
 
 | Code | Name | Return Value | Description |
 |------|------|-------------|-------------|
-| `0x01E000A1` | `EVT_ALLOC_DATA_PTR` | ROM pointer | Returns palette/graphics data pointer |
-| `0x01E000A2` | `EVT_ALLOC_WIDTH` | 0x140 (320) | Returns display width |
-| `0x01E000A3` | `EVT_ALLOC_HEIGHT` | 0xF0 (240) | Returns display height |
+| `0x01E000A1` | `EVT_ALLOC_DATA_PTR` | ROM pointer | Returns the **bitmap's** ROM base address. (The older reading, "palette pointer", was retracted in August 2026: the firmware's own registry name for the descriptor at 0x280395 is `BitmapHdd_icon`.) |
+| `0x01E000A2` | `EVT_ALLOC_WIDTH` | 0x140 (320), or 0x1B / 0x2A | Returns the bitmap width — 320 for the three full-screen images and the boot splash, 27 for the HD icon, 42 for the STORE button |
+| `0x01E000A3` | `EVT_ALLOC_HEIGHT` | 0xF0 (240), or 0x1B / 0x0F | Returns the bitmap height — 240, 27 or 15 respectively |
+
+See [HDAE5000 — Embedded Graphics]({{ site.baseurl }}/hdae5000/#embedded-graphics-rewritten) for the six descriptors and the bitmaps they describe.
 
 ### Grid/Check Widget Events (0x01E4xxxx)
 

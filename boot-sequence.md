@@ -1227,11 +1227,11 @@ The boot initialization performs these steps:
 
 | Step | Action | Details |
 |------|--------|---------|
-| 1 | Store workspace | Save workspace pointer (0x027ED2) at 0x23A1A2 |
-| 2 | Clear work buffer | Zero 62KB at 0x22A000, copy 3KB init data to 0x23952A |
-| 3 | Register 12 handlers | Via `workspace[0x0E0A][0x00E4]` (handler registration function) |
+| 1 | Clear work buffer | Zero 0xF52A bytes at 0x22A000, copy the 0x0C82-byte initialised `.data` image from ROM 0x2F94B2 to 0x23952A |
+| 2 | Store workspace | Save workspace pointer (0x027ED2) at 0x23A1A2 |
+| 3 | Register 11 handlers | Via `workspace[0x0E0A][0x00E4]` (`RegisterObjectTable`), plus one final call through dispatch offset 0x0270 |
 | 4 | Load palette | Load 256-entry VGA palette from ROM at 0x2E5DCE |
-| 5 | Allocate + copy VRAM | Copy 76,800 bytes to 0x1A0000 and 0x1A9600 |
+| 5 | Blit the boot splash | Copy the 320×240 8bpp splash at ROM 0x2E61CE into VRAM as two 0x9600-byte halves, to 0x1A0000 and 0x1A9600 — this is the "HD-AE5000 / Version 2 / Start-up ! / Please wait . . ." screen |
 | 6 | Register callback | Via `workspace[0x0E0A][0x02C4]` with ID 0x00600002 |
 | 7 | Init handler pointers | 3 functions from handler table B (offsets 0x0108, 0x0100, 0x0104) |
 | 8 | Check HD presence | Detect hard disk, store result at 0x230EDA |

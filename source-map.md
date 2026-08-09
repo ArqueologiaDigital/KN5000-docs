@@ -23,7 +23,7 @@ This page describes every source file in the [disassembly repository](https://gi
 | [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 154 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
 | [Sub CPU Payload](#sub-cpu-payload-192kb) | 192KB | `subcpu/kn5000_subprogram_v142.s` | 3 | Audio engine — tone generation, voice management, DSP |
 | [Sub CPU Boot](#sub-cpu-boot-128kb) | 128KB | `subcpu/boot/kn5000_subcpu_boot.s` | 0 | Sub CPU bootstrap — receives the payload over the inter-CPU link |
-| [HDAE5000](#hdae5000-extension-512kb) | 512KB | `hdae5000/hd-ae5000_v2_06i.s` | 5 | Hard disk expansion — IDE/ATA driver, FAT16, file manager UI |
+| [HDAE5000](#hdae5000-extension-512kb) | 512KB | `hdae5000/hd-ae5000_v2_06i.s` | 7 | Hard disk expansion — IDE/ATA driver, custom filesystem, file manager UI |
 | [Table Data](#table-data-2mb) | 2MB | `table_data/kn5000_table_data.s` | 7 | Accompaniment style patterns, rhythm data |
 | [Custom Data](#custom-data-1mb) | 1MB | `custom_data/kn5000_custom_data.s` | 0 | User-modifiable flash storage (factory defaults) |
 
@@ -336,16 +336,27 @@ The Sub CPU runs the real-time audio engine. It receives commands from the Main 
 
 ## HDAE5000 Extension (512KB)
 
-The HD-AE5000 is an optional hard disk expansion board. Its firmware provides IDE/ATA disk access, a FAT16 filesystem, and a file manager UI that integrates with the main keyboard interface.
+The HD-AE5000 is an optional hard disk expansion board. Its firmware provides IDE/ATA disk
+access, a [custom proprietary filesystem]({{ site.baseurl }}/hdae5000-filesystem/) (FSB/FGB/FEB —
+**not** FAT16, despite one "FAT read error" string in the ROM), and a file manager UI that
+integrates with the main keyboard interface.
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `hd-ae5000_v2_06i.s` | 4,101 | **Core**: ROM header, entry vectors, handler registration, memory allocation, event handling |
-| `hdae5000_hd_driver.s` | 5,994 | IDE/ATA hard disk driver: drive setup, identify, seek, read/write, error handling, CHS calculation, partition management |
-| `hdae5000_filesystem.s` | 5,058 | FAT16 filesystem: initialization, FSB (filesystem block) read/write, directory scanning, entry lookup |
-| `hdae5000_ui_display.s` | 24,517 | File manager UI: menu registration, display scrolling, cell rendering, palette setup, event dispatch |
-| `hdae5000_utilities.s` | 2,043 | Utility functions: memory copy/compare, multiply, divide (signed/unsigned), string operations |
-| `hdae5000_data_tables.s` | 36,736 | UI configuration, record tables, page titles, graphics resources, fonts, localization strings, palette data |
+| `hd-ae5000_v2_06i.s` | 4,137 | **Core**: ROM header, entry vectors, handler registration, bitmap resource descriptors, `Register_Frame` and its bitmap/palette copy code |
+| `hdae5000_hd_driver.s` | 6,067 | IDE/ATA hard disk driver: drive setup, identify, seek, read/write, error handling, CHS calculation, partition management |
+| `hdae5000_filesystem.s` | 5,111 | Custom filesystem: initialization, FSB (File System Block) read/write, directory scanning, entry lookup |
+| `hdae5000_ui_display.s` | 24,532 | File manager UI: menu registration, display scrolling, cell rendering, palette setup, event dispatch |
+| `hdae5000_utilities.s` | 1,641 | Utility functions: memory copy/compare, multiply, divide (signed/unsigned), string operations, and the 1,252-byte registered-object name pool at 0x29BAFC |
+| `hdae5000_data_tables.s` | 33,022 | UI configuration, class records, the 790-entry UI object and name tables, localization strings, and the six palette/bitmap slices |
+| `hdae5000_init_data.s` | 670 | The initialised `.data` image at 0x2F94B2 — nine pointer tables copied to RAM 0x23952A at boot (included from `hdae5000_data_tables.s`) |
+| `shared/event_codes.s` | 46 | Shared event-code constants |
+
+Eight files, 75,226 lines in total.
+
+There is **no font data** in this ROM: the label `HDAE5000_Font_Data` was retired in August
+2026 after it was shown to start 0x11818 bytes inside a bitmap. See
+[HDAE5000]({{ site.baseurl }}/hdae5000/#embedded-graphics-rewritten).
 
 ---
 

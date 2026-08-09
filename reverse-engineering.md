@@ -782,10 +782,14 @@ The ROMs contain icons, UI elements, and splash screens for the LCD display.
 - Additional UI assets
 
 **HDAE5000 ROM:**
-- Product logo, promotional images, UI panels (320×240, 8-bit indexed)
-- Hard disk icon (28×28, 8-bit indexed)
-- Main palette at `0x65dce` (256 colors × 4 bytes RGBA)
-- Icon palette at `0x6158e` (Windows halftone-style)
+- Four full-screen images (320×240, 8-bit indexed): the title logo, the same drive-mechanism
+  photograph without the wordmark, the file-selection panel, and the **boot splash** at
+  `0x661ce` — the last of these went unidentified until August 2026
+- Hard disk icon (27×27 with a 28-byte row stride, 8-bit indexed) and a 42×15 "STORE" button
+- **Six** palettes, not two: every bitmap is immediately preceded by its own 1,024-byte RGBX
+  palette. `0x65dce` is the boot-splash palette (the one the boot code loads into the DAC),
+  `0x6158e` is the Windows halftone palette that pairs with the icon
+- Together the pixels and palettes are 314,730 bytes — 60% of this 512KB ROM
 
 ### Image Format
 
@@ -821,7 +825,9 @@ lda XWA, 0x2e5dce    ; Palette address (ROM offset 0x65dce)
 calr 0x28f8e0        ; Palette load routine
 ```
 
-The load routine at `0x28f8e0` shifts each RGB component right by 4 bits before writing to the 6-bit VGA DAC.
+The load routine at `0x28f8e0` shifts each RGB component right by 4 bits before writing it to the VGA DAC (with a round-up when bit 3 of the source byte is set and the byte is below 0xF0).
+
+**Caveat learned the hard way on this ROM:** finding *the* palette this way finds only the palette the boot code installs. The HD-AE5000 has six, one per bitmap, each sitting in the 1,024 bytes immediately before its picture; the other five are copied to an offscreen buffer at display time rather than loaded at boot. Assuming one global palette is what makes the non-splash renders in this site's gallery come out mis-coloured. See [HDAE5000 — Embedded Graphics]({{ site.baseurl }}/hdae5000/#embedded-graphics-rewritten).
 
 ### Current Progress
 
