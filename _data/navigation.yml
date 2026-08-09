@@ -15,6 +15,8 @@
       url: /kn7000-system-update-discs/
     - title: Firmware Images
       url: /kn7000-firmware/
+    - title: SOFT VERSION Screen
+      url: /kn7000-soft-version/
     - title: Tasks & Scheduler
       url: /kn7000-task-scheduler/
     - title: Event & Dispatch System
@@ -104,6 +106,8 @@
       url: /firmware-flowchart/
     - title: Boot Sequence
       url: /boot-sequence/
+    - title: Sub-CPU Boot ROM (IC30)
+      url: /subcpu-boot-rom/
     - title: SubCPU Payload Loading
       url: /subcpu-payload-loading/
     - title: Sub-CPU Payload Provenance
@@ -149,6 +153,8 @@
       url: /effects-dsp/flowcharts/
     - title: DSP Effect Data Zone
       url: /dsp-effect-data-zone/
+    - title: DSP Name Tables (Main CPU)
+      url: /dsp-name-tables/
     - title: Tone Generator
       url: /tone-generator/
     - title: Tone Database
@@ -201,6 +207,8 @@
   pages:
     - title: HDAE5000 Overview
       url: /hdae5000/
+    - title: Resources & Object Registry
+      url: /hdae5000-resources/
     - title: Disk Interface
       url: /hdae5000-disk-interface/
     - title: Filesystem
