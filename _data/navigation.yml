@@ -17,6 +17,8 @@
       url: /kn7000-firmware/
     - title: SOFT VERSION Screen
       url: /kn7000-soft-version/
+    - title: MEMORY DUMP Screen (hidden hex viewer)
+      url: /kn7000-memory-dump-screen/
     - title: Tasks & Scheduler
       url: /kn7000-task-scheduler/
     - title: Event & Dispatch System
