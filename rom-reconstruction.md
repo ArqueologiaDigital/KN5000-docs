@@ -8,13 +8,25 @@ permalink: /rom-reconstruction/
 
 Goal: rebuild every KN5000 firmware image from disassembled source, byte for byte.
 
-`make all` assembles the LLVM sources and then runs `scripts/build/compare_roms.py`,
-which prints a similarity figure per verification section. As of August 2026 it reports
-**15 sections, all at 100.00%** — nine from the primary LLVM build and six from the
-archived ASL mirror build, which is still assembled and compared on every run.
+`scripts/build/compare_roms.py` prints a similarity figure per verification section. As of
+August 2026 a complete run reports **15 sections, all at 100.00%** — nine from the primary
+LLVM build and six from the archived ASL mirror build.
 
 Byte-identity is the project's only acceptance criterion. Any change that drops a
 section below 100.00% is reverted, not explained away.
+
+> **Run the whole gate, and count the sections.** The full command is
+>
+> ```
+> make clean-all && make all && make asl-all && python3 scripts/build/compare_roms.py
+> ```
+>
+> `make all` builds only the LLVM targets (`all: llvm-all`), while `make clean-all` deletes
+> the six ASL `*.rebuilt.rom` files — and `compare_roms.py` skips any section whose built
+> file is missing, silently. The short form therefore prints **nine** sections instead of
+> fifteen, all of them reading `100.00%`, having never assembled the mirror. Fifteen is the
+> number to check; see [Disassembly Workflow]({{ site.baseurl }}/disassembly-workflow/) for
+> why the full clean is also what defeats stale object files.
 
 ## Firmware Version History
 
@@ -64,7 +76,9 @@ Official firmware updates were distributed on floppy disk. All versions are arch
 
 The project's original ASL sources are kept in `archive/asl/` and are still built and
 compared: maincpu, subcpu boot, subcpu payload, table data, custom data and hdae5000 —
-six more sections, all at 100.00%.
+six more sections, all at 100.00%. They are built by `make asl-all`, which is **not** a
+dependency of `make all`; that is the whole reason the gate command has to name it
+explicitly.
 
 The mirror is not a museum piece; it constrains the work. The ASL sources still
 `binclude` several data blobs *whole* (`initial_data.bin`, `icons_to_strings.bin`,
@@ -145,8 +159,13 @@ The work was scoped by an audit of every binary include and compressed region in
 repository (10 agents: 7 scanners and 3 adversarial verifiers). It inventoried **598
 `.incbin`/`binclude` directives**, of which **505 are honest build products** — compiled
 from C or assembly, or generated from documented data — and produced **55 findings** with
-**24 adversarial verdicts**. Four waves of conversion followed: **24 packages**, each
-gated on a full rebuild at 100.00%. The method is written up on the
+**24 adversarial verdicts**. Five rounds of conversion followed — waves 0, 1, 2, 3a and a
+combined 3b + 5 — landing **33 packages out of 35 launched**, each gated on a full rebuild
+at fifteen sections × 100.00%. Neither of the two that did not land was a byte-match
+failure: one worker stalled and was re-run, and one package was withdrawn because its
+comment would have asserted something the dump does not support. A sixth wave was an
+investigation into the boot path and dump provenance rather than a conversion round, so it
+contributed findings and documentation but no packages. The method is written up on the
 [Disassembly Workflow]({{ site.baseurl }}/disassembly-workflow/) page.
 
 ### Table Data ROM: from opaque halves to labelled source
@@ -165,7 +184,8 @@ memory image and one residue block); `wallpaper1_to_icons.bin` as 87 named bitma
 sources carries a label, a length and a comment saying what it is.
 
 Symbol counts tell the same story: `symbols/table_data_symbols_reference.txt` went from
-**133 symbols to 4,153**. The sub-CPU payload's reference file went from 3,862 to 4,326.
+**133 symbols to 4,161**. The sub-CPU payload's reference file went from 3,862 to 4,338,
+the HD-AE5000's from 223 to 532, and the sub-CPU boot ROM's from 53 to 63.
 
 ### Regions newly converted or identified
 
@@ -185,6 +205,11 @@ Symbol counts tell the same story: `symbols/table_data_symbols_reference.txt` we
 | Boot C runtime (heap, memcmp, divide) | 0x9FFB2F–0x9FFE7F | `table_data/boot_clib.s` |
 | Boot debug group (NOP-patched out) | 0x9FFE80–0x9FFEDF | `table_data/boot_debug.s` |
 | Sub-CPU DSP data zones A0 / A / B | 0x00F7E6–0x01E17E | carved into labelled tables in `v142/subcpu/subcpu_data_tables.s` |
+| Sub-CPU boot data region | 0xFF8000–0xFF828F | eight objects in `subcpu/boot/kn5000_subcpu_boot.s`: an 8-entry command-handler jump table, a RAM-test descriptor and the tone-generator velocity/touch front end |
+| DSP effect + parameter name tables (maincpu) | 0xE32418, 0xE324C4, 0xE32A7A | `DspParamUnit_Table` (86 × 2), `DspParamName_Table` (86 × 17) and `DspEffectName_PtrTable` (128 × u32) in `ui_widgets/widget_descriptors.s` |
+| HD-AE5000 UI object + name tables | 0x2A5D2C–0x2A8499 | two index-parallel 790-entry pointer arrays and the name pool they index, in `hdae5000/hdae5000_data_tables.s` |
+| HD-AE5000 initialised `.data` image | 0x2F94B2–0x2FA133 | `hdae5000/hdae5000_init_data.s` — nine tables, 96 code pointers and 166 string pointers, all named from the firmware's own registration calls |
+| HD-AE5000 graphics bank | 0x2A858E–0x2F8DCD | re-split into eleven regions: five palette + bitmap pairs at the boundaries hard-coded in `HDAE5000_Register_Frame`, plus a string head |
 
 Several long-standing descriptions were **corrected** by this work, not merely extended:
 
@@ -201,12 +226,25 @@ Several long-standing descriptions were **corrected** by this work, not merely e
   `DSP_MixerCoeff_Compute`, treats its entries as amplitude.
 - The claim that the sub-CPU executable lives at table-data 0x830000 is wrong. That region
   is the tone database; the runtime code payload's source path is a separate question.
+- `HDAE5000_GFX_DATA_1`, "graphics data block 1", is neither graphics nor code: all 3,160
+  bytes of it group into valid little-endian pointers — 769 into the UI descriptor pool,
+  20 into sub-CPU work RAM, and one NULL terminator. The "graphics data" reading was
+  retracted in six places, and the accompanying "size = 789 bytes" comment was wrong too:
+  0x315 is an *entry count*.
+- `HDAE5000_Font_Data` has been retired. The region holds no font, and the label's start
+  address fell 0x11818 bytes *inside* a 320×240 bitmap.
+- The 320×240 boot splash at 0x2E61CE was previously hidden inside a slice labelled "VGA
+  palette data (256 entries)" that ran for 0x13000 bytes — 0x400 of palette followed by a
+  whole picture nobody had identified.
+- The sub-CPU boot ROM's 96 KB of `0xFF` is **not erased flash**. It was never dumped: only
+  4,352 of the chip's 131,072 bytes have ever been read. Any "the sub-CPU boot ROM is ~99%
+  disassembled" figure computed over the whole file is meaningless.
 
 ## Where the source still holds raw ROM slices
 
-Three wave-groups of work remain (hdae5000 + sub-CPU boot data; the v7 tree; a final
-sweep). Measured from the current sources — total bytes emitted by `.incbin` directives
-per ROM tree:
+The HD-AE5000 and sub-CPU boot packages have now landed; what remains is the v7 tree and
+the unfinished half of the closing sweep. Measured from the current sources — total bytes
+emitted by `.incbin` directives per ROM tree:
 
 | ROM tree | `.incbin` bytes | Character of what remains |
 |----------|-----------------|---------------------------|
@@ -214,10 +252,16 @@ per ROM tree:
 | `v9/maincpu` | 860,028 | Same shape as v10 |
 | `v7/maincpu` | 995,213 | **Raw ROM slices behind a `generated/` path** — see the note below |
 | `v142/subcpu` | 0 | No binary includes at all |
-| `subcpu/boot` | 656 | One blob, `subcpu_boot_data_8000.bin` — mixed code/data, needs a ≥5-way split |
-| `hdae5000` | 340,790 | Four slices of `code_29af2d_2fffff.bin`; despite the name it is graphics, palettes, text and pointer tables, including an unidentified boot-splash image at 0x2E61CE |
+| `subcpu/boot` | 0 | The 656-byte blob was carved into source; the ASL mirror still `binclude`s the file, so it stays on disk |
+| `hdae5000` | 313,076 | Ten labelled slices of `code_29af2d_2fffff.bin` — five palette + bitmap pairs. Despite the file's name none of it is code |
 | `table_data` | 1,113,121 | All labelled: BMPs, wallpapers, font glyph banks, icon/bitmap slices, and the source-built compressed payloads |
 | `custom_data` | 667,648 | Six factory-style-database sections; blob-level documentation judged adequate (this is one unit's user-data area, not firmware) |
+
+> **What that table does and does not say.** These are bytes that the LLVM build pulls in
+> as opaque binary. A slice that is labelled, sized and commented is *not* the same thing as
+> disassembled code or a decoded structure — it is a boundary that someone has proved. The
+> HD-AE5000 bitmaps, for instance, are fully identified and still 313,076 raw bytes, exactly
+> as they should be.
 
 **The v7 tree deserves a warning.** `scripts/build/extract_v7_bins.py` runs at build time
 and `dd`-slices the v7 ROM into `v7/maincpu/includes/generated/`. Some of those slices are
@@ -237,15 +281,27 @@ Additional known-unfinished items:
   roughly 676 KB across the three trees (~460 KB in v7, ~108 KB in v9, the remainder in
   v10). Some of it is labelled-but-undecoded tables, some is code stored as bytes, some is
   v7 conversion residue. Separating the three is a whole wave of work on its own.
-- The sub-CPU boot ROM source still spells its erased region as **98,304 individual
-  `.byte 0xff` lines**; collapsing them to one `.fill` is queued.
-- The hdae5000 string table around 0x2A7736–0x2A8499 is currently **mis-decoded as
-  instructions** (runs of `nop` are the tables' 0x00 padding).
-- Seven of the thirteen `table_data/includes/bootcode_*.bin` files are now referenced by
-  no source file at all — orphans awaiting cleanup. (The other six are still bincluded by
-  the ASL mirror and must stay.)
+- The sub-CPU boot ROM source still spells its blank region as **98,304 individual
+  `.byte 0xff` lines**. Collapsing them to one `.fill` was proposed, drafted and then
+  **withdrawn**: the change is byte-safe, but the region is undumped rather than known to be
+  erased, and a single `.fill` directive would assert a fact about the physical chip that
+  the dump does not support.
+- The HD-AE5000 UI descriptor pool at 0x29DC12–0x2A5D2B is one 769-entry array currently cut
+  into five pieces at non-boundaries — the next honest-data package.
+- `symbols/maincpu_symbols_reference.txt` is a pre-rename generation: **35,924 of its 39,449
+  rows are still `LABEL_*`**, while the built ELF has none. The file needs regenerating.
 - The v1.41 sub-CPU payload has no source tree; see
   [Sub-CPU Firmware Images]({{ site.baseurl }}/subcpu-firmware-images/).
+
+Three items on this list were closed by the August waves. The HD-AE5000 string table around
+0x2A5D2C–0x2A8499 is no longer mis-decoded as instructions; the orphaned
+`table_data/includes/bootcode_*.bin` slices are gone, along with 25 other unreferenced
+artifacts, each recorded in `analysis/orphans-2026-08-08/README.md` with the `dd` that
+regenerates it byte-for-byte (six `bootcode_*.bin` files remain because the ASL mirror still
+`binclude`s them); and `icons_to_strings.bin` is now fully accounted for by
+`make audit-icons-blob`, which reports 126,674 bytes in thirteen labelled LLVM slices,
+615,350 bytes unreferenced by the LLVM build, and a 221,104-byte dead tail beyond file
+offset 0x7F2D8 that duplicates the source-built demo-preset region and is read by nothing.
 
 ### Disassembly status diagram
 
@@ -404,10 +460,15 @@ instructions are encoded natively — no workaround macros needed.
 
 ```bash
 cd kn5000-roms-disasm
-make all                              # build everything + compare
-python3 scripts/build/compare_roms.py # compare only
+
+# the full gate: expect FIFTEEN sections, all 100.00%
+make clean-all && make all && make asl-all && python3 scripts/build/compare_roms.py
+
+make all                              # LLVM sections only (nine) + compare
+python3 scripts/build/compare_roms.py # compare whatever is already built
 make verify-demo-presets              # 19/19
 make verify-help-databases            # 6/6
+make audit-icons-blob                 # coverage report for icons_to_strings.bin
 ```
 
 **History:** the project originally used ASL (Alfred Arnold's Macro Assembler), which only
@@ -423,13 +484,13 @@ measured sizes:
 
 | Tree | `.s` files | Lines | Symbols in reference file |
 |------|-----------:|------:|--------------------------:|
-| `v10/maincpu` | 155 | 467,674 | 39,231 |
-| `v9/maincpu` | 155 | 467,666 | *(shares the maincpu reference)* |
-| `v7/maincpu` | 155 | 337,153 | *(shares the maincpu reference)* |
-| `v142/subcpu` | 5 | 69,520 | 4,326 |
-| `subcpu/boot` | 1 | 100,869 | 53 |
-| `hdae5000` | 7 | 78,359 | 223 |
-| `table_data` | 26 | 79,177 | 4,153 |
+| `v10/maincpu` | 155 | 467,833 | 39,449 |
+| `v9/maincpu` | 155 | 467,825 | *(shares the maincpu reference)* |
+| `v7/maincpu` | 155 | 337,289 | *(shares the maincpu reference)* |
+| `v142/subcpu` | 5 | 69,520 | 4,338 |
+| `subcpu/boot` | 1 | 101,124 | 63 |
+| `hdae5000` | 8 | 75,226 | 532 |
+| `table_data` | 26 | 79,230 | 4,161 |
 | `custom_data` | 1 | 146 | — |
 
 The per-file breakdown lives on the [Source Code Map]({{ site.baseurl }}/source-map/) page.
@@ -470,9 +531,17 @@ generator init loop (`SUB_8437`), register-pair writers, `COPY_WORDS`/`FILL_WORD
 | `SendParams_E2` | 0xFF86DC | 112 bytes | Wait for DMA, then send E2 command |
 | `TwoPhase_Transfer` | 0xFF874C | 211 bytes | Two-phase DMA with E1 command, 200-cycle delays |
 
-Still open here: `subcpu_boot_data_8000.bin` (656 bytes at 0xFF8000) is a mixed
-code/data blob that code references at six or more internal addresses; it needs to be
-split and its 8-entry dispatch table emitted as symbolic `.long`s.
+**The 656-byte data region at 0xFF8000–0xFF828F is now source.** A single `.incbin` was
+hiding eight cross-referenced objects: an 8-entry command-handler jump table of `.long`
+code pointers, a RAM-test region descriptor, and the tone generator's velocity/touch front
+end. The last six of those objects also exist, byte-identical, in the v1.42 payload, so
+they carry the payload's own names. The tree now contains no `.incbin` at all — the blob
+file stays on disk only because the ASL mirror still `binclude`s it.
+
+Bear in mind what "rebuilds at 100.00%" means for this particular image: **116,736 of its
+131,072 bytes were never read off the chip** and are present in the file as assumed `0xFF`,
+and only 4,352 bytes in the whole image are not `0xFF`. Reproducing assumed bytes is not an
+achievement. See the dump-provenance section above.
 
 ## Table Data ROM
 

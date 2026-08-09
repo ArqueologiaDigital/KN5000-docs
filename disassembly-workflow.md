@@ -6,23 +6,62 @@ permalink: /disassembly-workflow/
 
 # Disassembly Workflow
 
-Between 6 and 7 August 2026 the disassembly repository absorbed twenty-four conversion
-packages across four waves — the tone database, the bootloader's FDC and CP-serial
-drivers, the Music Stylist and Panel Memory factory data, the fonts and UI bitmaps, the
-help databases, the sub-CPU DSP data zones — and the byte-match gate never once dropped
-below 100.00%.
+Between 6 and 8 August 2026 the disassembly repository absorbed thirty-three conversion
+packages across five integration rounds — the tone database, the bootloader's FDC and
+CP-serial drivers, the Music Stylist and Panel Memory factory data, the fonts and UI
+bitmaps, the help databases, the sub-CPU DSP data zones, the sub-CPU boot ROM's data
+region, the HD-AE5000 object and string tables — and the byte-match gate never once
+dropped below 100.00%.
 
 That is not luck, and the process is worth writing down because it is reusable. This page
-describes it.
+describes it, including the two places where the gate itself nearly failed silently.
 
 ## The invariant
 
-> `make all` + `compare_roms.py` at **100.00% byte-match on every section, after every
-> merge.**
+> ```
+> make clean-all && make all && make asl-all && python3 scripts/build/compare_roms.py
+> ```
+> **100.00% on all fifteen sections, after every merge.**
 
 Everything else in the workflow exists to protect that one line. A package that cannot
 demonstrate it does not land — it is reverted, and the reason is recorded rather than
 argued away.
+
+### The gate command is part of the gate
+
+The invariant used to be written as "`make all` + `compare_roms.py`". That short form is
+**unsafe**, and a Wave 3b integration manager found out the hard way. Three facts combine:
+
+- `make all` builds only the primary LLVM targets — the rule is literally `all: llvm-all`,
+  followed by the comparison. It never invokes `asl-all`.
+- `make clean-all` is `clean` + `clean-asl`, and `clean-asl` deletes the six
+  `rebuilt_ROMs/*.rebuilt.rom` files that the archived ASL mirror build produces.
+- `compare_roms.py` **skips a section whose built file is missing**, silently: each of its
+  fifteen table entries is guarded by `if not os.path.exists(...): continue`. There is no
+  warning, and the exit status does not change.
+
+So `make clean-all && make all && python3 scripts/build/compare_roms.py` prints **nine**
+sections instead of fifteen, every one of them reading `100.00%` — and a manager who is
+reading percentages has just passed a gate that never assembled the ASL mirror at all.
+
+> **Count the sections, not the percentages.** Fifteen is the number: nine from the primary
+> LLVM build, six from the ASL mirror. A run that prints nine has tested nothing about the
+> mirror, however green it looks.
+
+Dropping `clean-all` is not an option either, because the incremental build is not sound.
+Most object files list only the top-level `.s` of their ROM as a prerequisite, even though
+that file `.include`s dozens of others:
+
+| Object file | Prerequisites declared in the Makefile | `.s` files in that tree |
+|---|---|---|
+| `hd-ae5000_v2_06i.llvm.o` | `hdae5000/hd-ae5000_v2_06i.s` | 8 |
+| `kn5000_v10_program.llvm.o` | `v10/maincpu/kn5000_v10_program.s`, the original ROM, `$(C_DATA_BINS)` | 155 |
+| `kn5000_table_data.llvm.o` | seven of the tree's `.s` files, plus the generated payloads | 26 |
+| `kn5000_subcpu_boot.llvm.o` | `subcpu/boot/kn5000_subcpu_boot.s` | 1 |
+
+Edit `hdae5000/hdae5000_data_tables.s` and run `make all`, and `make` correctly concludes
+that nothing it knows about has changed. The full-clean rebuild is what makes the
+comparison mean anything.
 
 ## Step 0: audit before touching anything
 
@@ -66,14 +105,31 @@ It corrected the scanners repeatedly rather than rubber-stamping them:
   inline `.byte` regions, orphaned reference slices, the v1.41 payload with no build
   coverage, binaries under `dsp/` that a "clean sweep" claim had missed).
 
-The waves then refuted two claims the plan itself had carried forward: there is no
-"exponential pitch table at 0x13318" (it is the middle of a mixer *gain* curve), and a
-banner claiming two 128-byte tables at 0x00FF00/0x00FF80 was retracted — those addresses
-are immediate values written to a hardware address latch, not table pointers.
+The waves then refuted several claims the plan itself had carried forward: there is no
+"exponential pitch table at 0x13318" (it is the middle of a mixer *gain* curve); a banner
+claiming two 128-byte tables at 0x00FF00/0x00FF80 was retracted (those addresses are
+immediate values written to a hardware address latch, not table pointers); the HD-AE5000
+"graphics data" at 0x2A5D2C is two 790-entry pointer arrays and a string pool; and the
+sub-CPU boot ROM's 96 KB of `0xFF` is **undumped**, not erased.
 
 ## The wave shape
 
-Each wave is one run with the same three-part structure.
+Each wave is one run with the same three-part structure. Five rounds have been integrated
+so far, and the ledger records the count for each:
+
+| Round | Scope | Landed |
+|---|---|---:|
+| Wave 0 | foundations, SLIDE8K tooling, the tone database | 7 / 7 |
+| Wave 1 | bootcode disassembly, help-database round-trip, the v1.42 update image | 6 / 7 |
+| Wave 2 | table-data conversion (fonts, style records, preset banks, panel memory…) | 8 / 8 |
+| Wave 3a | the sub-CPU DSP data zones A0 / A / B | 3 / 3 |
+| Waves 3b + 5 | HD-AE5000, sub-CPU boot data, maincpu name tables, orphan cleanup | 9 / 10 |
+| **Total** | | **33 / 35** |
+
+A sixth wave ran in between, but it was an investigation rather than a conversion: it
+proved the runtime memory remap, re-read the service manual's address-decode logic, and
+turned the sub-CPU payload question into a dump-provenance question. It produced findings
+and documentation, not packages, so it does not appear in the count.
 
 ### 1. Parallel read-only workers
 
@@ -94,24 +150,117 @@ integration, someone has already proved it reproduces the ROM.
 ### 2. One integration manager — the only writer
 
 A single agent owns the branch and applies packages **one at a time**. After each package:
-a full `make all` and `compare_roms.py`. On 100.00% it commits (one commit per package,
-succinct message, toolchain-provenance line). On anything less it reverts — by hand,
-surgically, never with `git checkout`/`reset`/`stash`, because those would take
+the full gate command above. On fifteen sections at 100.00% it commits (one commit per
+package, succinct message, toolchain-provenance line). On anything less it reverts — by
+hand, surgically, never with `git checkout`/`reset`/`stash`, because those would take
 uncommitted work with them.
 
 Serial integration is the expensive-looking part and the reason the gate held. Parallel
 drafting is safe because drafts are text in a scratch directory; parallel *merging* would
 make a byte mismatch impossible to attribute.
 
-Where packages overlapped — several of the Wave 2 workers touched the same banner comments
-in `kn5000_table_data.s` — the manager hand-merged later hunks over earlier text and
-re-verified, rather than letting a later package overwrite an earlier one's work.
-
 ### 3. Ledger
 
 The manager appends one row per wave to a status file: what launched, what landed, the
 commit hashes, what was adapted during integration, and what was deferred. The deferred
 list is not a wish list; it is the input to the next wave.
+
+## Workers draft against a tree that is already moving
+
+The subtlest integration hazard is not a bad package — it is a *stale* one. Workers in a
+wave all read the tree as it stood when the wave launched, but the manager has been
+committing their siblings' work ever since. By the time package six is applied, the file it
+edits may no longer be the file it read.
+
+Wave 3b hit this repeatedly, and the discipline that came out of it is:
+
+- **Apply a worker's diffs, not its whole files**, whenever an earlier package in the same
+  wave touched the same file. Two HD-AE5000 packages shipped complete replacement files
+  that predated a landed sibling; taking them whole would have silently reverted it.
+- **Expect overlap to be real work.** In Wave 2 several workers rewrote the same banner
+  comments in `kn5000_table_data.s`; the manager hand-merged later hunks over earlier text
+  and re-verified rather than letting the last package win.
+- **Re-derive machine-generated artifacts instead of trusting the worker's copy.** One
+  package's symbol-table hunk shipped uppercase-mangled names for labels that exist in
+  MixedCase, and rows for C struct members that are not assembler labels at all; the
+  manager rebuilt that hunk from the linked ELF.
+- **Take the part of a package that is still true.** When a package's core edit had already
+  landed via a sibling, only its remaining pieces — an extracted image asset, a metadata
+  entry, a path bug fix, corrected comments — were applied, renamed to the labels that
+  actually got committed.
+
+None of this is visible in the final diff, which is exactly why it is worth writing down.
+
+## What grep does not tell you
+
+Two of the waves' larger corrections started as a search that came back empty and was
+briefly believed. In this repository a negative grep result is weak evidence — and a
+positive one is not much better. There are at least four independent traps.
+
+**1. grep will not read some of the sources at all.** Five `.s` files in the v7 tree contain
+an 8-bit byte inside an `.ascii` string — `.ascii "89:;<=\x9e"` at
+`v7/maincpu/audio/sound_editor_ui.s:3519`, for instance. That makes the file invalid UTF-8,
+and the `grep` installed here (ugrep 7.5.0, in a UTF-8 locale) treats such a file as binary:
+it prints **nothing** and exits **1**, which is indistinguishable from "no match". Other
+greps differ only in the detail — GNU grep announces `Binary file … matches` instead of
+listing the lines — so either way the hits vanish from a line-oriented pipeline. The cost is
+not marginal: `grep -rn '\.incbin' v7/maincpu` reports 228 matching lines, while
+`grep -ran` reports 364. The 136 invisible lines are all in those five files. Pass `-a`, or
+set `LC_ALL=C`, or use a parser.
+
+**2. The disassembler writes numbers in a different base than the datasheet.** An early
+scouting pass searched for writes to the TMP94C241's memory-controller registers, found
+none, and concluded the firmware never programs them. All twenty-four registers are in fact
+programmed, in one block at `table_data/shared/boot_hw_init.s:85-134` — but they are emitted
+as direct SFR addresses in **decimal**, so MSAR0 (`0x143`) appears as `stdi8 (323), 30`.
+Searching for the *name* is no better: `shared/sfr_tmp94c241.s:210` defines
+`.equ MSAR0, 0x143`, so a grep for `MSAR0` returns exactly one hit — the definition — and
+zero writes. See [TMP94C241 Memory Controller]({{ site.baseurl }}/tmp94c241-memory-controller/)
+for what those writes do.
+
+**3. Text is not always stored as text.** The DSP effect-name and parameter-name tables were
+believed to be absent from the sources because a string grep never found them. They were
+there all along, as raw `uint16_t` array members inside the C-compiled
+`naka_widget_descriptors.c` blob. They are now carved into named tables
+(`DspParamUnit_Table`, `DspParamName_Table`, `DspEffectName_PtrTable`), identical in v7, v9
+and v10.
+
+**4. A hit is not a reference.** The reverse error is just as easy. The orphaned slices under
+`original_ROMs/demo_preset_compressed_refs/` share their basenames with *live* build
+products under `table_data/includes/demo_presets/`, and the build's `--reference` argument
+actually names a third set of files, `original_ROMs/demo_preset_NN_compressed.original.bin`.
+A bare-basename grep reports the orphans as "referenced" and is wrong about every one of
+them. In the other direction, ASL is invoked as `asl -i table_data …`, so a
+`binclude "includes/foo.bin"` in the mirror is a path relative to that include directory —
+grepping for the repository-root path finds nothing while the file is very much in use.
+
+The general rule: **a search proves something only when you have shown the search could
+have found it.** Construct a positive control — grep for something you know is there, in the
+same notation, in the same files — before believing a zero.
+
+## Deleting things safely
+
+Wave 5 retired 32 tracked binaries that participated in no build. Deletion is the one
+irreversible operation in the workflow, so it got its own standard, and every condition was
+re-verified by the manager independently of the worker:
+
+1. The file is named by no `.s`, no `.asm`, no Makefile rule and no script — checked with
+   the false-positive traps above in mind, including ASL's `-i` search paths.
+2. The file is a **byte-exact slice of a ROM that remains tracked**, so no information is
+   destroyed.
+3. The exact `dd` that regenerates it is written down before it goes.
+
+That last point is what makes the deletion reviewable rather than merely asserted:
+`analysis/orphans-2026-08-08/README.md` lists every retired file with its size, its source
+ROM, its CPU address and a one-line `dd` that reproduces it byte-for-byte from the
+repository root.
+
+The same instinct produced a permanent check for the opposite problem — bytes that are
+present but unexplained. `make audit-icons-blob` accounts for all 742,024 bytes of
+`icons_to_strings.bin`: 126,674 in thirteen labelled LLVM slices, 615,350 unreferenced by
+the LLVM build in six runs, and a 221,104-byte dead tail beyond file offset 0x7F2D8 that is
+a stale duplicate of the demo-preset region and is read by nothing. A coverage tool that can
+report an unexplained gap is worth more than a comment claiming there is none.
 
 ## House constraints that keep the gate honest
 
@@ -132,36 +281,78 @@ Some of these look like bureaucracy until you notice what each one prevents.
 
 ## What went wrong (and what that cost)
 
-Two failures in twenty-four packages, neither of them a byte-match failure:
+Thirty-five packages were launched and thirty-three landed. **Neither of the two that did
+not land was a byte-match failure**, and one whole wave survived being cut in half:
 
 - One worker stalled and returned nothing. Because workers cannot write to the repository,
   the cost was exactly one package's delay: it was re-run in the next wave and landed.
-- A session usage limit interrupted a wave mid-flight, after three workers had finished
-  but before the manager ran. Nothing had been integrated, so the repository was untouched;
-  the run resumed later, replaying the finished workers from cache and running the rest
-  live.
+- A session usage limit interrupted a wave mid-flight, after three workers had finished but
+  before the manager ran. Nothing had been integrated, so the repository was untouched; the
+  run resumed later, replaying the finished workers from cache and running the rest live.
+  All eight of that wave's packages landed.
+- One package was **withdrawn on evidence**. `subcpu-fill` was to collapse 98,304 lines of
+  `.byte 0xff` in the sub-CPU boot ROM source into a single `.fill`. The change is
+  byte-safe, and the worker returned scratch files byte-identical to the live ones — but
+  the audit had described that region as erased flash, and it is not: it is **undumped**.
+  Only 4,352 of the chip's 131,072 bytes were ever read. Writing one `.fill` directive
+  would have stated something about the physical part that the dump does not support, so
+  the region keeps all 98,304 of its per-byte lines and the plan carries the correction
+  instead.
 
-Both failure modes are survivable *because* the only writer is the manager and the only
-acceptance criterion is mechanical. There is no state to reconcile if a drafting agent
-disappears.
+Rejecting a byte-safe change because its *comment* would be a false claim is the healthiest
+thing that happened in these waves. The gate protects the bytes; only the reviewer protects
+the meaning.
 
 ## Why the byte-match never broke
 
 Three properties, in order of importance:
 
-1. **The acceptance criterion cannot be argued with.** 100.00% or revert. No reviewer
-   judgement is involved, so no reviewer fatigue can erode it.
+1. **The acceptance criterion cannot be argued with.** Fifteen sections at 100.00%, or
+   revert. No reviewer judgement is involved, so no reviewer fatigue can erode it — provided
+   the section count is checked, which is the whole point of the trap above.
 2. **Verification happens twice, in different places** — once by the worker against a ROM
    slice, once by the manager against the whole ROM set. The first catches almost
    everything; the second catches interactions between packages.
 3. **Serial integration keeps attribution exact.** When something does mismatch, exactly
    one package changed, so the diff points at the cause instead of at a merge.
 
+## The documentation half has its own gate
+
+Byte-identity says nothing about whether a sentence on this site is true, so the
+documentation refresh that followed the waves was put through its own adversarial pass.
+Every writer recorded the claims it made and the evidence it cited — 292 claims — and two
+independent verifier passes graded them against the repository:
+
+| Pass | Verdicts | Confirmed | Refuted | Unverifiable |
+|---|---:|---:|---:|---:|
+| Addresses and structure | 24 | 12 | 12 | 0 |
+| Behaviour, provenance and overclaiming | 58 | 47 | 9 | 2 |
+
+All 82 verdicts were applied before publishing. The refutations were not cosmetic: one
+boundary address had been stated four different ways across four pages, a claim about the
+sub-CPU payload's location was retracted in four places, and a section headed "RESOLVED"
+was downgraded to "under investigation".
+
+One process lesson came out of it. Both passes carried all ~292 claims into a single large
+structured return at the end of a long run; one took two attempts to deliver, and a
+completed result was briefly mistaken for a stall. Verification work should be split so each
+agent returns a small result — the same reasoning that makes the workers' per-package
+self-check reliable.
+
 ## Remaining work
 
-Three wave-groups are planned and not started: the HD-AE5000 data slices plus the sub-CPU
-boot data blob; the v7 maincpu tree (the largest — its `includes/generated/` directory is
-populated at build time by a script that `dd`-slices the v7 ROM, so hundreds of kilobytes
-of undocumented binary hide behind a "generated" path); and a closing sweep that includes
-the never-classified inline `.byte` regions in the maincpu trees. Current status per ROM
-is on the [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) page.
+The conversion is not finished, and the parts that are left are the large ones.
+
+- **The v7 maincpu tree** (Wave 4, not started) is the biggest single item. Its
+  `includes/generated/` directory is populated at build time by a script that `dd`-slices
+  the v7 ROM, so hundreds of kilobytes of undocumented binary hide behind a "generated"
+  path — including 858,438 bytes that silently *overwrite* C-compile output whenever a
+  50%-similarity heuristic fires.
+- **The maincpu inline `.byte` regions** have still never been classified — roughly 676 KB
+  across the three trees.
+- **A final completeness re-audit** against `findings.json`, plus the deferred backlog the
+  ledger has accumulated (the HD-AE5000 UI descriptor pool at 0x29DC12–0x2A5D2B is the next
+  honest-data package; several extraction and naming follow-ups are listed behind it).
+
+Current status per ROM is on the [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/)
+page.

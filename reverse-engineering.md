@@ -14,15 +14,24 @@ How a finding becomes committed source is documented separately, on the
 [Disassembly Workflow]({{ site.baseurl }}/disassembly-workflow/) page: the byte-match
 invariant, the audit that scopes each round of work, the evidence standard for calling a
 blob "code" (including the shifted-decode control), and the parallel-workers /
-single-integrator shape that let twenty-four conversion packages land in August 2026
-without the 100.00% gate ever slipping.
+single-integrator shape that let thirty-three conversion packages land in August 2026
+without the byte-match gate ever slipping.
 
-Two rules from that page are worth repeating here, because they apply to any investigation
-on this hardware:
+Three rules from that page are worth repeating here, because they apply to any
+investigation on this hardware:
 
 - **A claim is not accepted because it looks right.** Every "this region is X" assertion is
   checked against a control that should fail if the claim is wrong — a decode at the wrong
   offset, a null measurement, a consumer census that must tile the region exactly.
+- **A search proves something only once you have shown it could have found the thing.** Two
+  of the larger corrections in these pages began as an empty grep that was briefly believed:
+  all twenty-four memory-controller registers *are* programmed, but the disassembler writes
+  their addresses in decimal (`stdi8 (323), 30`, never `0x143`); and the DSP effect-name
+  strings were never missing from the sources, they were `uint16_t` members inside a
+  C-compiled blob. A third trap needs no history to be dangerous: `grep` declines to read
+  five of the v7 sources at all, because a high byte inside an `.ascii` string makes them
+  invalid UTF-8, and reports no matches with exit status 1. Build a positive control before
+  believing a zero.
 - **Corrections are published, not quietly dropped.** Several long-standing descriptions in
   these pages were wrong (a "flash update handler" region that is really the bootloader's
   FDC driver; an "exponential pitch table" that is really a mixer gain curve). Where that
