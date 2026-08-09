@@ -390,6 +390,20 @@ The code island also does not run up against a dump boundary anywhere: 2,048 bla
 precede it, 1,971 follow it, and the chip's first 2,048 bytes were read and came back
 blank.
 
+**What the guess does not yet survive: a rigorous check.** The adversarial re-verification
+that closed wave 6 graded the educated guess **UNDECIDED**, not corroborated. Its objection
+is method: the enumeration it asks for — the targets of real `JP`/`JR`/`CALL`/`CALR`
+instructions plus the vector-table entries, taken out of a disassembly — has never been run
+and committed as an auditable artifact, and raw byte scans *do* turn up candidates. Two
+concrete ones: the little-endian long at `0xFF8C44` is `0x00FF42A3` and the one at
+`0xFF8C4A` is `0x00FFCFEB`, both pointing into never-read space. Neither survives contact
+with the source — both fall inside the black-key comparison chain of
+`NOTE_VELOCITY_LOOKUP_CALCULATE`, and neither constant appears as an operand anywhere in
+the assembly — which is exactly the point: at this data volume raw scans manufacture
+coincidences, so only a structure-aware enumeration counts. Redoing the check properly is
+cheap and is still outstanding. See
+[Sub-CPU Boot ROM (IC30)]({{ site.baseurl }}/subcpu-boot-rom/) for the full record.
+
 **What it cannot settle.** A full IC30 dump would *not* answer the sub-CPU payload
 question. The payload is 196,608 bytes; the entire chip is 131,072; the undumped part is
 116,736; the boot ROM has no decompressor; and IC30 is not in the main CPU's address space
@@ -517,9 +531,12 @@ The per-file breakdown lives on the [Source Code Map]({{ site.baseurl }}/source-
 
 ## Sub CPU Boot ROM
 
-The 128 KB sub-CPU boot ROM rebuilds at 100.00%. Routines identified include the tone
-generator init loop (`SUB_8437`), register-pair writers, `COPY_WORDS`/`FILL_WORDS`,
-`CHECKSUM_CALC`, the inter-CPU handler set, and the debug/diagnostic tail at 0xFFFE80.
+The 128 KB sub-CPU boot ROM rebuilds at 100.00% — against a file that is 97% `0xFF` and
+89% never read, so read that number together with [Dump Provenance](#dump-provenance)
+above and with [Sub-CPU Boot ROM (IC30)]({{ site.baseurl }}/subcpu-boot-rom/). Routines
+identified include the tone generator init loop (`SUB_8437`), register-pair writers,
+`COPY_WORDS`/`FILL_WORDS`, `CHECKSUM_CALC`, the inter-CPU handler set, and the
+debug/diagnostic tail at 0xFFFE80.
 
 **DMA transfer routines (0xFF8604–0xFF881E):**
 
@@ -536,7 +553,8 @@ hiding eight cross-referenced objects: an 8-entry command-handler jump table of 
 code pointers, a RAM-test region descriptor, and the tone generator's velocity/touch front
 end. The last six of those objects also exist, byte-identical, in the v1.42 payload, so
 they carry the payload's own names. The tree now contains no `.incbin` at all — the blob
-file stays on disk only because the ASL mirror still `binclude`s it.
+file stays on disk only because the ASL mirror still `binclude`s it. Full breakdown:
+[Sub-CPU Boot ROM (IC30)]({{ site.baseurl }}/subcpu-boot-rom/#4-the-656-byte-data-region-at-0xff8000).
 
 Bear in mind what "rebuilds at 100.00%" means for this particular image: **116,736 of its
 131,072 bytes were never read off the chip** and are present in the file as assumed `0xFF`,

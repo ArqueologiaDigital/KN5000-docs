@@ -452,6 +452,13 @@ Bits 4-0: Data length minus 1 (0-31 → 1-32 bytes)
 
 Example: Command `0x45` = handler 2 (`0x45 >> 5 = 2`), 6 bytes (`(0x45 & 0x1F) + 1 = 6`)
 
+The table at `0xFF8000` is `CmdHandler_Table` in the boot ROM, and **all eight of its
+entries are `lds hl,0 / ret` stubs** — the boot loader accepts and acknowledges the whole
+command set without implementing any of it. The working handlers arrive with the payload,
+as `CMD_DISPATCH_TABLE` at `0x00F46C`
+([SubCPU Command Format]({{ site.baseurl }}/subcpu-command-format/),
+[Sub-CPU Boot ROM (IC30)]({{ site.baseurl }}/subcpu-boot-rom/#the-command-handler-jump-table-at-0xff8000)).
+
 ### Communication Flow
 
 **Main CPU → Sub CPU (Command):**

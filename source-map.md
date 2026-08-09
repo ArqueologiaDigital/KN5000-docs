@@ -22,7 +22,7 @@ This page describes every source file in the [disassembly repository](https://gi
 |-----|------|-----------------|---------------|---------|
 | [Main CPU](#main-cpu-2mb) | 2MB | `maincpu/kn5000_v10_program.s` | 154 | Primary firmware — UI, audio, sequencer, MIDI, file I/O |
 | [Sub CPU Payload](#sub-cpu-payload-192kb) | 192KB | `subcpu/kn5000_subprogram_v142.s` | 3 | Audio engine — tone generation, voice management, DSP |
-| [Sub CPU Boot](#sub-cpu-boot-128kb) | 128KB | `subcpu/boot/kn5000_subcpu_boot.s` | 0 | Sub CPU bootstrap and payload decompression |
+| [Sub CPU Boot](#sub-cpu-boot-128kb) | 128KB | `subcpu/boot/kn5000_subcpu_boot.s` | 0 | Sub CPU bootstrap — receives the payload over the inter-CPU link |
 | [HDAE5000](#hdae5000-extension-512kb) | 512KB | `hdae5000/hd-ae5000_v2_06i.s` | 5 | Hard disk expansion — IDE/ATA driver, FAT16, file manager UI |
 | [Table Data](#table-data-2mb) | 2MB | `table_data/kn5000_table_data.s` | 7 | Accompaniment style patterns, rhythm data |
 | [Custom Data](#custom-data-1mb) | 1MB | `custom_data/kn5000_custom_data.s` | 0 | User-modifiable flash storage (factory defaults) |
@@ -330,7 +330,7 @@ The Sub CPU runs the real-time audio engine. It receives commands from the Main 
 
 | File | Lines | Description |
 |------|-------|-------------|
-| `boot/kn5000_subcpu_boot.s` | 100,869 | Sub CPU bootstrap ROM: hardware initialization, LZSS decompressor for payload, DMA transfer setup. Large file due to extensive data tables (waveform ROM address maps, voice parameter defaults) |
+| `boot/kn5000_subcpu_boot.s` | 101,124 | Sub CPU bootstrap ROM: hardware init, inter-CPU command dispatch, DMA transfer setup, and the eight data objects at `0xFF8000`. It contains **no decompressor** — the main CPU decompresses the payload and pushes it over the link. The file is large because 98,304 of its lines are a bare `.byte 0xff`: that part of IC30 was never dumped (see [Sub-CPU Boot ROM (IC30)]({{ site.baseurl }}/subcpu-boot-rom/)) |
 
 ---
 

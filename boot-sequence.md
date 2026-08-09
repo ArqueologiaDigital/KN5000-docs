@@ -988,6 +988,11 @@ Bits 7-5: Handler index (0-7) from jump table at 0xFF8000
 Bits 4-0: Data length - 1 (so 0x00 = 1 byte, 0x1F = 32 bytes)
 ```
 
+That jump table is `CmdHandler_Table`, and every one of its eight entries is a
+`lds hl,0 / ret` stub: before the payload arrives the sub-CPU acknowledges the entire
+command set and implements none of it. See
+[Sub-CPU Boot ROM (IC30)]({{ site.baseurl }}/subcpu-boot-rom/#the-command-handler-jump-table-at-0xff8000).
+
 ### Handshaking Signals (INTERCPU_STATUS at 0x34)
 
 | Bit | Direction | Meaning |

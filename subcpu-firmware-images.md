@@ -72,17 +72,28 @@ measurement**, and intends a full dump when he regains physical access to the in
 (it is in storage in another country).
 
 Measured: 14,336 bytes were read (10.9% of the chip); **116,736 bytes, 89.1%, are `0xFF` by
-assumption**; and only **4,352 bytes of the whole 128 KB chip — 3.3% — are real data**, in
-three blocks at CPU `0xFF8000-0xFF904C`, `0xFFFE80-0xFFFFB3` and `0xFFFFF0-0xFFFFFF`.
+assumption**; a further 9,984 bytes were read and came back `0xFF`; and only **4,352 bytes
+of the whole 128 KB chip — 3.3% — are real data**. Turned round, **97% of the chip is
+`0xFF`, and most of that is assumed rather than measured**. The content sits in two blocks,
+CPU `0xFF8000-0xFF904C` and `0xFFFE80-0xFFFFFF`; the second contains a 60-byte blank gap at
+`0xFFFFB4-0xFFFFEF` between the interrupt vector table and the four reserved words at the
+very top, which is why some pages count three blocks rather than two.
 
-The guess holds up well under test: a structure-aware census over the byte-identical
-disassembly found 220 ROM-address references, all in dumped windows and none in an undumped
-range, and the loaded v1.42 payload calls back into IC30 at only two addresses, both dumped.
-The one counter-example (`ROM_CHECKSUM` reading 2 KB past the dumped window) is
-content-independent and does not run in a normal boot. See
-[ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/#dump-provenance) for the full
-figures, and note that a full IC30 dump would *not* answer the payload-source question —
-the payload is larger than the entire chip and IC30 is not in the main CPU's address space.
+The guess has been tested, but it has not been settled. A structure-aware census over the
+byte-identical disassembly found 220 ROM-address references, all in dumped windows and none
+in an undumped range, and the loaded v1.42 payload calls back into IC30 at only two
+addresses, both dumped; the one counter-example (`ROM_CHECKSUM` reading past the dumped
+window at `0xFE0000`) is content-independent and does not run in a normal boot. Against
+that, the adversarial re-verification that closed wave 6 graded the guess **UNDECIDED**:
+the enumeration it asks for — control-flow targets and vector entries taken out of a
+disassembly, not byte scans — has never been run as an auditable artifact, and raw byte
+scans do turn up candidate pointers into undumped space (most of them coincidences at this
+data volume, but that is the point). See
+[Sub-CPU Boot ROM (IC30)]({{ site.baseurl }}/subcpu-boot-rom/) for the carved contents and
+the full provenance record, and
+[ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/#dump-provenance) for the
+figures. Note that a full IC30 dump would *not* answer the payload-source question — the
+payload is larger than the entire chip and IC30 is not in the main CPU's address space.
 
 MAME flags the file `BAD_DUMP` and states the assumption inline. That flag should stay until
 the chip is read in full.

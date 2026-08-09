@@ -402,7 +402,7 @@ The 128KB boot ROM (`kn5000_subcpu_boot.ic30`) initializes the sub CPU hardware 
 | 0x00000-0x007FF | 0xFE0000-0xFE07FF | 2KB | Dumped, blank |
 | 0x00800-0x177FF | 0xFE0800-0xFF77FF | 92KB | **Not dumped** — assumed 0xFF |
 | 0x17800-0x17FFF | 0xFF7800-0xFF7FFF | 2KB | Dumped, blank |
-| 0x18000-0x1828F | 0xFF8000-0xFF828F | 656B | Data tables (mixed code/data blob) |
+| 0x18000-0x1828F | 0xFF8000-0xFF828F | 656B | Eight data objects, no code — [carved]({{ site.baseurl }}/subcpu-boot-rom/#4-the-656-byte-data-region-at-0xff8000) |
 | 0x18290-0x1904C | 0xFF8290-0xFF904C | ~3.5KB | Boot code and routines |
 | 0x1904D-0x197FF | 0xFF904D-0xFF97FF | ~2KB | Dumped, blank |
 | 0x19800-0x1EFFF | 0xFF9800-0xFFEFFF | 22KB | **Not dumped** — assumed 0xFF |
@@ -412,10 +412,13 @@ The 128KB boot ROM (`kn5000_subcpu_boot.ic30`) initializes the sub CPU hardware 
 | 0x1FF00-0x1FFEF | 0xFFFF00-0xFFFFEF | 240B | Interrupt vector table (45 live entries) |
 | 0x1FFF0-0x1FFFF | 0xFFFFF0-0xFFFFFF | 16B | `41 b1 62 1b` × 4 — unexplained |
 
-The non-`0xFF` content occupies exactly three blocks: `0xFF8000-0xFF904C` (4,173 B),
-`0xFFFE80-0xFFFFB3` (308 B) and `0xFFFFF0-0xFFFFFF` (16 B). Note that roughly 10 KB of the
-ranges recorded as "dumped" also came back blank, so in the file itself a
-dumped-and-blank byte is indistinguishable from an assumed-blank one.
+The non-`0xFF` content occupies three extents: `0xFF8000-0xFF904C` (4,173 B),
+`0xFFFE80-0xFFFFB3` (308 B) and `0xFFFFF0-0xFFFFFF` (16 B) — two, if the 60-byte blank gap
+at `0xFFFFB4-0xFFFFEF` inside the vector-table page is not counted as a separation. Those
+are extents, not runs: they contain 145 interior `0xFF` bytes between them, so they span
+4,497 bytes while the actual non-`0xFF` count is 4,352. Note also that roughly 10 KB of
+the ranges recorded as "dumped" came back blank, so in the file itself a dumped-and-blank
+byte is indistinguishable from an assumed-blank one.
 
 ### Boot Sequence (Confirmed)
 

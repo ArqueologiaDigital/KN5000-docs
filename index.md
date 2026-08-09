@@ -191,6 +191,10 @@ Choose based on your goal:
 | Custom Data | 1MB | **100%** | Binary data (no code) |
 | HDAE5000 ROM | 512KB | **100%** | 502 native instructions |
 
+*Byte-perfect means byte-identical to the dump files we hold. For the sub-CPU boot ROM
+that file is a `BAD_DUMP`: 89% of IC30 was never read and is present in the file as assumed
+`0xFF`. See [Sub-CPU Boot ROM (IC30)]({{ site.baseurl }}/subcpu-boot-rom/).*
+
 ### Homebrew Development
 
 A [homebrew SDK]({{ site.baseurl }}/hdae5000-homebrew/) is available for writing custom HDAE5000 extension ROMs. Features a Quick Start guide, C + assembly build pipeline, and a fully playable [Minesweeper game](https://github.com/ArqueologiaDigital/Mines/tree/kn5000_port/platforms/kn5000) as a working example.

@@ -268,9 +268,16 @@ These tables had meaningful semantic labels before the documentation sprint.
 | # | Label | File | Line | Table Base | Index Source | Entries | Type |
 |---|-------|------|------|-----------|-------------|---------|------|
 | 21 | SubCPU cmd dispatch | subprogram_v142.s | 11322 | 0x00F46C | latch[7:5] | 8 | call (xwa) |
-| 22 | SubCPU boot dispatch | subcpu_boot.s | 99596 | 0xFF8000 | latch[7:5] | 8 | call (xwa) |
+| 22 | `CmdHandler_Table` | subcpu_boot.s | 99847 | 0xFF8000 | latch[7:5] | 8 | call (xwa) |
 | 23 | `Voice_SystemMsg_DispatchJump` | subprogram_v142.s | 25730 | 0x00F74F | bc (<=0x16) | 23 | jp_dri |
 | 24 | `CmdHandler2C_JumpDispatch` | subprogram_v142.s | 40501 | 0x0121BD | wa (<=0xE) | 15 | jp_dri |
+
+Entry 22 is the boot ROM's own copy of entry 21's dispatch: same 3-bit selector, same
+sharing of slots 6 and 7. All eight of its targets are `lds hl,0 / ret` stubs, so the boot
+loader acknowledges every command and implements none until the payload installs the real
+table. Since August 2026 it is emitted as symbolic `.long`s rather than hidden inside a
+binary include — see
+[Sub-CPU Boot ROM (IC30)]({{ site.baseurl }}/subcpu-boot-rom/#the-command-handler-jump-table-at-0xff8000).
 
 ### HDAE5000
 

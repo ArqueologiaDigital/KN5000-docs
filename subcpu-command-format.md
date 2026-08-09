@@ -49,6 +49,11 @@ Note: Ranges 6 and 7 share the same no-op handler. Special E1/E2/E3 commands byp
 This is the **whole** Main CPU → Sub CPU command surface: eight ranges, one 3-bit selector,
 nothing else.
 
+The boot ROM implements the same shape before the payload arrives — `CmdHandler_Table` at
+`0xFF8000`, eight `.long` entries, indices 6 and 7 sharing a target — except that **all
+eight of its targets are `lds hl,0 / ret` stubs**. See
+[Sub-CPU Boot ROM (IC30)]({{ site.baseurl }}/subcpu-boot-rom/#the-command-handler-jump-table-at-0xff8000).
+
 ## Handler Details
 
 ### 0x00-0x1F: MIDI/Audio Ring Buffer (`Audio_CmdHandler_00_1F`)

@@ -181,7 +181,7 @@ See [Memory Map]({{ site.baseurl }}/memory-map/) for complete details.
 | Subsystem | Status | Notes |
 |-----------|--------|-------|
 | Main CPU Firmware | 100% | Byte-perfect match (239,683 native instructions) |
-| Sub CPU Boot ROM | 100% | Complete disassembly |
+| Sub CPU Boot ROM | 100% | Byte-exact rebuild of a dump that is 97% `0xFF` and 89% never read — see [Sub-CPU Boot ROM (IC30)]({{ site.baseurl }}/subcpu-boot-rom/) |
 | Sub CPU Payload | 100% | Complete disassembly |
 | Control Panel Protocol | Documented | HLE in progress for MAME |
 | HDAE5000 | 100% | ROM complete, protocol documented |
