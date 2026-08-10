@@ -32,6 +32,15 @@ this project holds**.
 > Recorded as owner testimony, read off the instrument's own LCD. No photograph
 > of the screen is in the repository yet, and the numbers have not been
 > independently re-read.
+>
+> **Since then, 9,472 bytes of build 893 have been read back off that
+> instrument** — by photographing its
+> [built-in MEMORY DUMP viewer]({{ site.baseurl }}/kn7000-memory-dump-screen/) and
+> transcribing the hex by hand. Those bytes place 941 and 893 in a specific
+> relationship (several insertions totalling 6,451 bytes) and corroborate the
+> version reading from an entirely different direction. It is a **transcription,
+> not a dump**: see
+> [Recovering build 893]({{ site.baseurl }}/kn7000-build-893-recovery/).
 
 ## Reaching the screen
 
@@ -146,14 +155,18 @@ three-instruction function that returns the constant `0x00100000`; the
 firmware's developer symbol tables carry the matching tags `TtSoftver`,
 `_TT_SOFTVER` and the window class `IvMpVerWinProc`.
 
-> **What is *not* claimed here.** The chord itself has **not** been traced
-> through the firmware. We know the screen exists, we know its title ID and its
-> four handlers, and we know from the owner that columns 1 + 6 + 8 open it — but
-> the panel-chord decoder that turns six held caps into that title ID has not
-> been located in the KN7000 disassembly, which still carries roughly 82% of the
-> program image as raw `.incbin_range` byte slices. The KN5000 equivalent *has*
-> been traced (a held-switch accumulator value of `0xA1`); the KN7000 one is
-> open work.
+> **Update — the chord decoder has since been traced.** When this page was first
+> written, the panel-chord decoder that turns six held caps into a title ID had
+> not been located, and the paragraph here said so. It has now been found and
+> disassembled: the balance-button handler accumulates a both-held column mask and
+> the dispatcher compares it for equality against exactly three constants.
+> Columns 1 + 6 + 8 give **`0xA1`** — the SOFT VERSION case, the same constant as
+> on the KN5000. The other two cases are `0x99` (columns 1, 4, 5, 8 → the
+> [MEMORY DUMP viewer]({{ site.baseurl }}/kn7000-memory-dump-screen/)) and
+> `0x110000` (an LCD-capture chord whose physical caps are still unidentified). A
+> byte scan for the accumulator's address finds no second comparison site
+> anywhere in the 4 MB image, so those three are the only chords this handler
+> implements.
 
 ## Why program 893 matters
 
@@ -189,7 +202,16 @@ disk, and the update path is write-only. Capturing build 893 therefore means
 reading the chips: the
 [in-circuit clip read of IC16/IC17]({{ site.baseurl }}/kn7000-program-rom-clip-read/)
 is the least invasive route currently mapped, and the table flash would have to
-be read the same way to capture table 80.
+be read the same way to capture table 80. (Both halves live on the *same* 8 MB
+flash pair, so one clip session can capture both.)
+
+There is one route that needs no clip at all, because the instrument's hidden hex
+viewer paints any address it can reach and the rear composite VIDEO OUT carries
+whatever it paints:
+[reading the ROM back out of the screen]({{ site.baseurl }}/kn7000-rom-from-the-screen/).
+It reaches 99.87 % byte accuracy on emulator frames and currently **refuses every
+real composite frame** it has been given, which is the correct failure — it
+declines rather than inventing bytes.
 
 ## Check your own instrument
 
@@ -217,9 +239,15 @@ caps on the part-volume row open a factory *Panel Simulator*, from which a
 SOFT VERSION screen is the harmless **calibration step** for the same chord
 mechanism (columns 1, 6, 8 → SOFT VERSION; columns 1, 5, 8 → Panel Simulator).
 
-The obvious question is whether the KN7000 has the same escalation, and it is
-**under investigation**. Two things are known and they point in opposite
-directions:
+The obvious question is whether the KN7000 has the same escalation. When this
+page was first written it was open; **it has since been answered — yes.** The
+KN7000's hex viewer opens on a normally booted machine by holding the UP *and*
+DOWN caps of mixer columns **1, 4, 5 and 8** together (the dispatcher tests the
+held-switch accumulator for exactly `0x99`; one extra column kills it), and it is
+fully documented at
+[MEMORY DUMP Screen]({{ site.baseurl }}/kn7000-memory-dump-screen/). The two
+observations that framed the question at the time still stand and are worth
+keeping, because they are what made the search worth doing:
 
 * **The debug widgets exist in the KN7000 firmware.** The program image carries
   a `DbMemoryDumpProc` at CPU `0x484878AC`, alongside `DbMemoProc`,
@@ -230,18 +258,20 @@ directions:
 * **The KN5000 chord does not open them.** The owner tried the KN5000's
   columns 1 + 5 + 8 combination on his KN7000 and **no debug screen appeared.**
 
-So the KN7000 almost certainly *has* an equivalent debug/memory-dump screen, but
-its entry path is different and is not yet known. Note also that the two
-instruments are not opcode-compatible in any case — the KN7000's main CPU is a
-Panasonic **MN10300/AM33**, not the KN5000's Toshiba TLCS-900 — so nothing about
-the KN5000's chord decoding transfers automatically; only the *UI framework
-lineage* does.
+The negative result was not a dead end but a clue: the mechanism carried over,
+the *constant* did not. Columns 1 + 5 + 8 give `0x91`, the KN5000's Panel
+Simulator value, and the KN7000 dispatcher has no case for `0x91` — it falls
+through and returns. The two instruments are not opcode-compatible in any case
+(the KN7000's main CPU is a Panasonic **MN10300/AM33**, not the KN5000's Toshiba
+TLCS-900), so only the *UI framework lineage* transfers, never the encoding.
 
-Finding the KN7000's chord decoder would be worth real effort. On the KN5000
-the memory-dump screen reads any address in the CPU's space; a KN7000 equivalent
-would let an owner spot-check program flash **without touching the board**, and
-would turn "what is in build 893?" from a soldering problem into a
-photographing problem.
+Finding that chord paid exactly the dividend it was expected to. The viewer reads
+any address in the CPU's space, so an owner can spot-check program flash
+**without touching the board** — which turned "what is in build 893?" from a
+soldering problem into a photographing problem, and then, with a capture card,
+into [a video problem]({{ site.baseurl }}/kn7000-rom-from-the-screen/). The first
+9,472 bytes are already transcribed:
+[Recovering build 893]({{ site.baseurl }}/kn7000-build-893-recovery/).
 
 ## Provenance of the numbers on this page
 
@@ -258,6 +288,9 @@ photographing problem.
 
 ## Related pages
 
+- [Recovering build 893]({{ site.baseurl }}/kn7000-build-893-recovery/) — the photographic transcription, the four-step drift profile, and what to photograph next
+- [Reading ROM out of the screen]({{ site.baseurl }}/kn7000-rom-from-the-screen/) — the video-grabber route to a full capture
+- [MEMORY DUMP Screen]({{ site.baseurl }}/kn7000-memory-dump-screen/) — the hidden hex viewer, found after this page was first written
 - [Firmware Images]({{ site.baseurl }}/kn7000-firmware/) — the two flash images, their layout, and the version fields in context
 - [Firmware Robustness & ROM Archival]({{ site.baseurl }}/kn7000-firmware-security/) — why the instrument cannot dump itself
 - [Program-ROM Clip Read (IC16/IC17)]({{ site.baseurl }}/kn7000-program-rom-clip-read/) — the practical route to capturing build 893

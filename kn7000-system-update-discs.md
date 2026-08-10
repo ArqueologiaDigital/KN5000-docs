@@ -75,9 +75,8 @@ combined image — a `@`-prefixed hex value per line:
 ```
 
 The target flash is nominally 4 MB (16 × `0x40000`); the Program update ships
-`0x3F6F01` bytes, deliberately omitting the top `0x90FF` of the part (an
-info/version block the resident updater fills in). Both extracted images verify
-perfectly against these manifests:
+`0x3F6F01` bytes, deliberately omitting the top `0x90FF` of the part. Both
+extracted images verify perfectly against these manifests:
 
 | Image | Total sum | Blocks |
 |-------|-----------|--------|
@@ -90,6 +89,18 @@ The `kn7000_extraction` tool decompresses the `.SLD` files, concatenates the two
 disks of each set, and verifies the result against the `.INF` manifest before
 writing `kn7000_program.rom` and `kn7000_table.rom`. It reuses the same LZSS
 decompressor used for the KN5000 (`pylzss`, 4 KB window, zero-initialized).
+
+> **What that omitted `0x90FF` is *not*.** An earlier reading took it as the home
+> of the resident flash updater — the block the payload cannot overwrite because
+> the updater is running out of it. **That is refuted.** On a real instrument the
+> top of the program flash (`0x487F55CF`–`0x487FFFFF`) reads as one unbroken block
+> of `0xFF`, so nothing resident lives there. The payload's omission is real and
+> still worth recording; the explanation for it is now open. See
+> [Where does the flash updater live?]({{ site.baseurl }}/kn7000-firmware-security/#45-where-does-the-flash-updater-live-unresolved).
+>
+> The only never-read part of the IC16/IC17 pair is at the *other* end of the
+> address space: **`0x483E94D4`–`0x483FFFFF`**, immediately above where the table
+> payload stops.
 
 See the [Firmware Images]({{ site.baseurl }}/kn7000-firmware/) page for what the extracted images
 contain.

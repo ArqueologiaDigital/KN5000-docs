@@ -448,8 +448,12 @@ in the ROM definition marks it as one.
 ### `kn5000_v10_program.rom` versus the physical program flash
 
 A reasonable worry, given the KN7000 precedent — where the "program ROM" we hold turned out
-to be the *update payload*, leaving the resident updater at the top of the chip neither
-shipped nor dumped — is whether the KN5000 main-program image has the same blind spot.
+to be the *update payload*, which deliberately omits the top `0x90FF` of the part and so
+leaves it neither shipped nor dumped — is whether the KN5000 main-program image has the same
+blind spot. (On the KN7000 that gap was for a while assumed to hold the resident updater;
+[that assumption is refuted]({{ site.baseurl }}/kn7000-firmware-security/#45-where-does-the-flash-updater-live-unresolved)
+— real hardware reads the region as erased — but the *payload is not the whole chip* point
+stands, which is what makes the worry reasonable.)
 
 **It does not.** The v10 update floppy's `HKMSPRG.SLD` carries a SLIDE4K stream whose
 header declares a decompressed size of `0x200000` — the **full 2 MB** — and decoding it

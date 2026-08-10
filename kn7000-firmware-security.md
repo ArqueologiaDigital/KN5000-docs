@@ -172,6 +172,8 @@ dumpable. The firmware can **identify** the revision but not **reproduce** it.
 | **SOFTWARE VERSION screen** | yes — read `PROGRAM : NNNN` off the LCD | ✅ identifies the revision now, zero risk |
 | **§8.1 ROM device test** | yes — OK/NG integrity | ✅ confirms the flash reads cleanly |
 | **In‑circuit clip read of IC16** (CPU held in reset) | yes — reading doesn't modify the chip | pragmatic path to full contents; extends the [ROM‑dumping roadmap]({{ site.baseurl }}/rom-dumping-roadmap/) |
+| **[Video capture of the MEMORY DUMP screen]({{ site.baseurl }}/kn7000-rom-from-the-screen/)** | yes — the viewer cannot write and cannot export; it only paints | 99.87 % byte‑exact **in emulation**; **refuses every real composite frame so far**. ~50 min of held button per 4 MB. No hardware capture has been attempted |
+| **[Photographing the MEMORY DUMP screen]({{ site.baseurl }}/kn7000-build-893-recovery/)** | yes | done, partially: 37 screenfuls = 9,472 bytes of build 893 transcribed by hand. ~16,000 photographs would be needed for a whole chip, so this is a *calibration* method, not an archival one |
 | **Code‑execution dumper** (CPU runs a small flash reader → observable port) | yes | the only *firmware‑only* route to full contents; uncertain — no proven corruption→PC path exists |
 | **Desolder + programmer** | no (risks the part) | the route this whole investigation exists to avoid |
 
@@ -179,14 +181,122 @@ The first step costs nothing and should be done first: photograph the Version sc
 §8.1 result. The full dump then follows by clip read (recommended) or, if a path is ever found, by a
 firmware‑only dumper.
 
+A third route now exists on paper and is measured in emulation but has never met hardware: the
+instrument cannot *export* bytes, but it can **display** them, and the rear composite VIDEO OUT
+carries whatever the hidden hex viewer shows. See
+[Reading ROM out of the screen]({{ site.baseurl }}/kn7000-rom-from-the-screen/). And 9,472 bytes of
+build 893 have already been recovered the slow way, by transcribing photographs of that screen —
+[Recovering build 893]({{ site.baseurl }}/kn7000-build-893-recovery/).
+
+### 4.5 Where does the flash updater live? (unresolved)
+
+The KN7000 unquestionably *has* a flash updater — holding PANEL MEMORY 1+2+3+4 at power‑on enters
+Flash Memory Update, and the public update disks work. The question is which device the updater code
+sits in, because that device is the one place a program‑flash update cannot erase, and it is
+therefore where a *rescue* or *dump* routine would have to be found.
+
+> **This section replaces `rom-backup-and-update-format.md` §2.2, which is refuted.** That section
+> concluded the resident updater lives in the un‑dumped top `0x90FF` of the program flash
+> (`0x487F6F01`–`0x487FFFFF`). **It does not.**
+
+**What killed it.** An owner hardware read on 2026‑08‑09, via the instrument's own
+[MEMORY DUMP screen]({{ site.baseurl }}/kn7000-memory-dump-screen/) on a PROGRAM 893 machine:
+**`0x487F55CF`–`0x487FFFFF` is one unbroken block of `0xFF`**, with code immediately below it. A
+factory‑programmed resident block would be build‑independent, so that null applies to build 941 too.
+
+| Hypothesis | Verdict |
+|---|---|
+| H1 — a resident block in the top `0x90FF` of program flash | **REFUTED** (the region is erased on real hardware) |
+| H2 — the update writes the payload and leaves the rest erased | **SUPPORTED** — but it describes the *payload*, and says nothing about where the machinery lives |
+| H3 — the updater is somewhere in the dumped 8 MB, unidentified | **REFUTED** for uncompressed forms |
+| H4 — the updater is loaded from the update floppy | **REFUTED** for the disks we hold |
+| H5 — the updater is in another device | **SUPPORTED** — the only survivor; *which* device is undecided |
+
+**The cross‑reference evidence behind §2.2 was a byte‑misframing artifact.** It rested partly on "33
+dword cross‑references into `0x487Fxxxx`, several past the dump end". Two independent kills:
+
+1. **Noise floor.** Scanning 4,157,185 unaligned positions for a 37,119‑byte window has an expected
+   *random* yield of ~36 hits. The scan finds 12 — **below chance**.
+2. **Mechanism identified.** At `0x485D6860` there is an 8‑byte‑record `{u32 id, u32 handler}` table.
+   Every real pointer in it (`0x48487E00`, `0x48487FA7`, `0x48487FBC`, `0x48487FEA`, `0x48487E60`) is
+   **inside** the dumped image. Read three bytes early, they become the phantoms `0x487FA700`,
+   `0x487FBC00` and `0x487FEA00`×6 — and the "individually improbable" six‑fold repeat is simply one
+   default handler slot occurring six times.
+
+An opcode‑anchored `imm32` scan (28,000+ sites) finds **zero** references into
+`0x487F6F01`–`0x48800000`, and a linear disassembly of `0x48400000`–`0x4858FFFF` yielding 128,781
+branch targets finds **zero** real branches above `0x487F6F00`.
+
+**H3 was tested four ways, each with a measured control.** The AMD unlock idiom scores 4 hits in the
+program image and 1 in the table image, while three control constant pairs with comparable load
+counts score 0/0/0 in both — and the only real flash driver in the whole 8 MB is
+`0x4847E7C0`–`0x4847FB96`, hardwired to absolute `0x9680AAAA` / `0x96805554` — that is the KN7000's
+**custom‑data flash IC21**, **not** IC16/IC17. Command sequences
+stored as data tables: 0 hits in the KN7000 program image, 0 in the table image, 0 in the KN5000
+program image. The uncached write alias (proven by the firmware's own boot, which writes work RAM
+through `0x90000000`) puts the program flash's command window at **`0x88400000`** — and `imm32` loads
+with high byte `0x88` number **zero** in both images. A per‑64 KB code‑density map shows the table
+half contains no MN10300 code at all (max 1 hit per 64 KB across 63 blocks, versus 103–970 in program
+code blocks), where a relocatable blob would spike.
+
+Stated honestly: a **packed or compressed** updater cannot be excluded by any of those tests. Nothing
+supports one, and the KN5000 analogue is not packed.
+
+**The KN5000 template says where to look.** De‑interleaving the KN5000's table‑data ROM pair gives, at
+CPU `0x9FA000`, the update‑disk signature records (`Technics KN5000 Program  DATA FILE 1/2`, …) in a
+block running **`0x9FA000`–`0x9FFFCF` — the top `0x6000` of the 2 MB table‑data mask ROM** — with a
+real flash driver inside it and its own interrupt vector table at `0x9FFF00`. Decisively, the KN5000's
+*resident* firmware cannot write its own program flash either. **The updater lives in a device no
+update can erase.** That is the pattern to look for on the KN7000.
+
+**Where the KN7000's positional analogue is.** IC16 + IC17 are **one 8 MB pair spanning
+`0x48000000`–`0x487FFFFF`** — 21 address lines (A2–A22) on a 32‑bit bus, corroborated by the
+firmware's own §8.1 ROM test at `0x4849FC54` sweeping `0x200000` iterations of a 4‑byte stride under
+the row `PROGRAM ROM: IC16 = , IC17 = `. So the "table ROM" is the **lower half of the same flash
+pair**, and there is no unread upper half at `0x48800000`. That leaves exactly one never‑read region:
+
+> ### ★ The unread hole: `0x483E94D4` – `0x483FFFFF` (93,484 bytes)
+>
+> The top of the lower half, immediately above where our table image ends
+> (`kn7000_table.rom` is `0x3E94D4` bytes). It is the exact positional analogue of the KN5000's
+> `0x9FA000`. **Probe `0x483FFF00` first.**
+
+| # | Address to dial | Why | What would be interesting |
+|---|---|---|---|
+| 1 | **`0x483FFF00`** | top of the lower half; the KN5000 positional analogue; the only unread part of the 8 MB | dense code, a vector table, or ASCII signature records — or `0xFF` |
+| 2 | `0x40000000` | IC18 rhythm window; the firmware's prober `strncmp`s `Technics Rhythms` at region_base+`0x10000`, so the first 64 KB is *not* rhythm data | anything non‑`0xFF` means a device is there |
+| 3 | `0x97800000` | IC19 picture ROM (64 Mbit mask): **no update disk targets it**, so it survives every flash operation by construction — exactly the KN5000 property | graphics data, or better |
+| 4 | `0x97FFFF00` | top of IC19 — the KN5000 template position translated | code / vectors / `0xFF` / a mirror of probe 3 |
+| 5 | `0x483E9400` | bounds the hole from below on a build‑80 table | our build 84 ends at `0x483E94D3` |
+
+**Size: unknown.** We cannot yet say the updater exists in *any* reachable flash. For scale, the
+KN5000's analogous block is `0x6000` = 24,576 bytes ≈ 96 screenfuls at 256 bytes per screen.
+
+> ⚠ **Do not dial `0x88400000`.** The `+0x40000000` uncached‑alias convention is real, so that is the
+> program flash's *command* window, and the viewer repaints the address it is parked on.
+>
+> ⚠ **If probe 1 shows real content, do not run a TABLE update on that instrument** until the region
+> is dumped — the table payload ends at `0x483E94D3` and erase‑sector geometry may take the block
+> with it.
+>
+> ★ A preservation risk found on the way: the shipped firmware **can erase and fully rewrite the 2 MB
+> custom‑data flash IC21** — `0x4847FB68` is a whole‑chip programmer.
+>
+> ⚠ Do not re‑run raw byte‑pattern searches for addresses in `0x487Fxxxx` / `0x483Fxxxx` without
+> computing a noise floor first. That is the error this section corrects.
+
 ---
 
 ## Sources & related pages
 
+- [SOFT VERSION Screen]({{ site.baseurl }}/kn7000-soft-version/) · [MEMORY DUMP Screen]({{ site.baseurl }}/kn7000-memory-dump-screen/)
+- [Recovering build 893]({{ site.baseurl }}/kn7000-build-893-recovery/) · [Reading ROM out of the screen]({{ site.baseurl }}/kn7000-rom-from-the-screen/)
+- [Program‑ROM Clip Read (IC16/IC17)]({{ site.baseurl }}/kn7000-program-rom-clip-read/)
 - [ROM Dumping Roadmap]({{ site.baseurl }}/rom-dumping-roadmap/) · [Wave‑ROM Dump Tutorial]({{ site.baseurl }}/kn7000-wave-rom-dump/)
 - [Expansion Bus & Wave‑ROM Dump]({{ site.baseurl }}/kn7000-expansion-and-wave-dump/) · [Storage & File System]({{ site.baseurl }}/kn7000-storage-subsystem/)
 - Findings notes (project repo): `FINDINGS-expansion-buses-and-code-exec.md`,
-  `FINDINGS-sd-media-codeexec-and-parsers.md`, `FINDINGS-program-rom-version-and-dump-paths.md`.
+  `FINDINGS-sd-media-codeexec-and-parsers.md`, `FINDINGS-program-rom-version-and-dump-paths.md`,
+  `FINDINGS-updater-location-2026-08-09.md`.
 
 *This page is preservation reverse engineering of hardware the project maintains. The memory‑safety
 observations are documented so that emulation stays faithful; they are not exploitation instructions.*

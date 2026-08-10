@@ -77,6 +77,15 @@ prints. At least one surviving KN7000 reports `PROGRAM : 893` / `TABLE : 80` —
 an earlier, **unpreserved** pair of images; see the
 [SOFT VERSION screen]({{ site.baseurl }}/kn7000-soft-version/).
 
+9,472 bytes of that earlier pair have since been transcribed by hand from
+photographs of the instrument's own hex viewer. They put build 941 at build 893
+**plus several insertions totalling 6,451 bytes** in the program half, and plus a
+single 3-byte insertion in the table half. It is a transcription and **not a
+dump**, and no reconstructed image exists — see
+[Recovering build 893]({{ site.baseurl }}/kn7000-build-893-recovery/), and
+[Reading ROM out of the screen]({{ site.baseurl }}/kn7000-rom-from-the-screen/)
+for the capture route meant to replace hand photography.
+
 ### Notable strings
 
 - Version screen: `SOFT VERSION` (`0x1D5AD8`), `--- SOFTWARE VERSION ---` (`0x1D5D9C`), `PROGRAM : %4d` / `TABLE   : %4d` / `RHYTHM  : %4d` / `PICTURE : %4d` (`0x1D67E0`+)
@@ -109,6 +118,14 @@ baseline JPEGs** (built-in demo slideshows, all verified decodable, 160×80 up t
 640×240) and 27 tagged data chunks whose first bytes are an ASCII type tag
 (`TCMP`, `TPAD`, `JK`, …). Two 4-byte segments hold the ASCII strings `"84\n"`
 (the table version) and a `"ZZZ\n"` placeholder.
+
+> **Where the image stops is not where the chip stops.** IC16 + IC17 are one
+> 8 MB flash pair spanning `0x48000000`–`0x487FFFFF`, with this table image as the
+> lower half and the program image as the upper half. The table payload ends at
+> `0x483E94D3`, which leaves **`0x483E94D4`–`0x483FFFFF` (93,484 bytes) that no
+> update disk ships and nobody has ever read** — the exact positional analogue of
+> the KN5000's resident updater block. See
+> [Where does the flash updater live?]({{ site.baseurl }}/kn7000-firmware-security/#45-where-does-the-flash-updater-live-unresolved).
 
 ## Byte-exact disassembly project
 

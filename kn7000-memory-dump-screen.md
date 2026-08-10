@@ -308,6 +308,16 @@ For what it would actually take to capture PROGRAM 893, see
 [Firmware Robustness & ROM Archival]({{ site.baseurl }}/kn7000-firmware-security/)
 and the [in-circuit clip read of IC16/IC17]({{ site.baseurl }}/kn7000-program-rom-clip-read/).
 
+**But the screen is still an output.** It cannot *export* bytes, yet it can
+*display* them, and the rear composite VIDEO OUT carries whatever it displays. A
+capture card plus the auto-repeating page rocker turns 16384 screenfuls from a
+photography problem into about fifty minutes of held button — see
+[Reading ROM out of the screen]({{ site.baseurl }}/kn7000-rom-from-the-screen/),
+which measures 99.87 % byte accuracy on emulator frames and, so far, refuses every
+real composite frame it has been given. Thirty-seven screenfuls of build 893 have
+already been read the slow way, by hand, from photographs:
+[Recovering build 893]({{ site.baseurl }}/kn7000-build-893-recovery/).
+
 ## What real hardware has already confirmed
 
 Two independent facts, both from the project owner's instrument running the
@@ -442,7 +452,7 @@ prints them, and those label strings are in the image we hold (at CPU
 
 | Firmware's label | Window to dial | Preservation status |
 |---|---|---|
-| `PROGRAM ROM: IC16 = , IC17 = ` | `0x48400000`–`0x487FFFFF` (4 MB) | **Dumped** for build 941, from the update disks — but the top `0x90FF` (the resident flash updater) was never shipped in an update payload and is missing. **Your build is the archival target.** |
+| `PROGRAM ROM: IC16 = , IC17 = ` | `0x48000000`–`0x487FFFFF` (**8 MB**: the table image is the *lower* half, the program image the upper half) | **Dumped** for build 941/84 from the update disks, except one hole: **`0x483E94D4`–`0x483FFFFF` (93,484 bytes)**, the top of the lower half, which no update payload ships and nobody has ever read. **Your build is the archival target.** |
 | `RHYTHM ROM: IC18 (IC20) = ` | not directly CPU-mapped in our model | **Undumped.** MAME substitutes a clearly-labelled synthetic name resource at `0x54E00000`, a genuine firmware probe window. Anything you see there *in the emulator* is synthetic. |
 | `PICTURE ROM: IC19 = ` | `0x57800000`–`0x57FFFFFF` (4 firmware references) | **Undumped**, and unmapped in MAME (reads `0x00` there). On real hardware it has content. |
 | `CUSTOM FLASH: IC21 = ` | read view `0x56000000` (170 refs); ⛔ command/write view `0x96800000` | A real, writable Fujitsu MBM29LV160B holding your own custom data. **Never park the repainting viewer on `0x96800000`** — that is the flash command window. |
@@ -454,13 +464,19 @@ and the `0x4C000000` library/kernel window — which is **not a chip at all**: t
 boot loader copies it into RAM out of the program flash, so it is already
 preserved inside the IC16/IC17 dump.
 
-> **One thing this inventory does not settle.** The firmware's own ROM-test
-> labels say `IC18` = RHYTHM and `IC19` = PICTURE, while this project's
-> extraction notes assign `IC18`/`IC19` to the two chips holding the 4 MB
-> "table" image at `0x48000000`. Those two statements cannot both be right. The
-> firmware strings are the harder evidence, so the designators for the *table*
-> pair should be treated as **open**, and any older note calling the custom-data
-> flash "IC18" is wrong — the firmware calls it IC21.
+> **An architectural correction, 2026-08-09.** The firmware's own ROM-test labels
+> say `IC18` = RHYTHM and `IC19` = PICTURE, while older extraction notes assigned
+> `IC18`/`IC19` to the chips holding the "table" image at `0x48000000`. Those two
+> statements cannot both be right, and the current reading is that the older notes
+> were wrong: **IC16 + IC17 are one 8 MB pair spanning `0x48000000`–`0x487FFFFF`**,
+> with the table image as its lower half and the program image as its upper half.
+> The evidence is 21 address lines (A2–A22) on a 32-bit bus, corroborated by the
+> firmware's own service ROM test at `0x4849FC54` — `0x200000` iterations of a
+> 4-byte stride = 8 MB — printed under the screen row
+> `PROGRAM ROM: IC16 = , IC17 = `. Two consequences: there is **no** separate
+> unread upper half at `0x48800000`, and the only never-read part of the pair is
+> `0x483E94D4`–`0x483FFFFF`. Any older note calling the custom-data flash "IC18"
+> is wrong either way — the firmware calls it IC21.
 
 ## ⛔ DANGER — power-on combinations that erase or reprogram flash
 
@@ -484,12 +500,19 @@ executed in MAME, and none should be attempted on an instrument holding an
 unpreserved image. Do not confuse any of them with the runtime chord on this
 page, which touches nothing.
 
-> **A retraction.** An earlier pass of this investigation concluded from a
-> string sweep that "no KN5000-style Flash Memory Update exists on the KN7000".
-> That conclusion was **wrong and is withdrawn**. The updater lives in the top
-> `0x90FF` of the flash, which the public update payloads do not ship, which is
-> precisely why no updater strings appear in the image we hold. Absence from
-> our bytes was not absence from the machine.
+> **Two retractions, stacked.** An earlier pass concluded from a string sweep
+> that "no KN5000-style Flash Memory Update exists on the KN7000". That was
+> **wrong and is withdrawn** — on the KN5000, where we hold genuine chip dumps,
+> the updater's UI is *bitmaps*, so those ASCII strings are absent from a genuine
+> dump too. Absence from our bytes was never absence from the machine.
+>
+> The replacement explanation — that the updater lives in the top `0x90FF` of the
+> program flash — is **also withdrawn, as of 2026-08-09**. That region is one
+> unbroken block of `0xFF` on real hardware. Where the updater actually lives is
+> **unresolved**; see
+> [Where does the flash updater live?]({{ site.baseurl }}/kn7000-firmware-security/#45-where-does-the-flash-updater-live-unresolved).
+> Retracting it does not make the combinations in this table any less
+> destructive: the update path demonstrably runs.
 
 ## Caveats
 
@@ -598,6 +621,8 @@ at `0x485AFA4B`, `0x485AFA36` and `0x485AFAD8`.
 ## Related
 
 - [SOFT VERSION Screen — and an unpreserved KN7000 firmware]({{ site.baseurl }}/kn7000-soft-version/) — the zero-risk chord, and why PROGRAM 893 matters
+- [Recovering build 893]({{ site.baseurl }}/kn7000-build-893-recovery/) — 9,472 bytes read off this screen by hand, and what they say about how 893 and 941 differ
+- [Reading ROM out of the screen]({{ site.baseurl }}/kn7000-rom-from-the-screen/) — turning a video capture of this screen back into bytes
 - [Firmware Robustness & ROM Archival]({{ site.baseurl }}/kn7000-firmware-security/) — why the instrument cannot hand over its own bytes
 - [Program-ROM Clip Read (IC16/IC17)]({{ site.baseurl }}/kn7000-program-rom-clip-read/) — the route that actually captures a build
 - [Control Panel Protocol]({{ site.baseurl }}/kn7000-control-panel/) — the part-mixer buttons and their event codes
