@@ -208,9 +208,10 @@ There is **no checksum anywhere in this loop** — the service ROM test reports
 PASS/FAIL, not a value. With no oracle, verification has to come from agreement
 between independent readings.
 
-## 6. On real captures it refuses every frame — so far
+## 6. The batch tool refuses every real capture — correctly
 
-This is the current state, and the refusal is the correct behaviour.
+The refusal is the correct behaviour, and it is what motivated the live camera
+reader in [§7](#7-the-answer-was-a-camera-and-an-operator-kn7000live).
 
 The shipped `dumpgrab.py` **declines every real composite frame tried to date**:
 on the best of them it recovers only 4 of the 16 address rows and puts 237 of 256
@@ -278,7 +279,95 @@ table page **`0x48019000`**, captured in both modes
 > over the 75 non-`0x77` cells. Conveniently, `0x77` is ASCII `'w'`, so the hex and
 > ASCII columns are independently checkable there.
 
-## 7. Standing rule for this work
+## 7. The answer was a camera and an operator (`kn7000live`)
+
+Section 6 says the composite path loses the information and a hand-held photograph
+needs a real four-corner homography. Both of those point the same way, and
+`kn7000_mame/tools/dumpgrab/kn7000live/` is what they point at: **a camera aimed at
+the instrument's own LCD, decoding continuously, with the operator in the loop.**
+An optical path is not band-limited the way the composite chain is; the font is
+5×7 pixels, so all that matters is how many camera pixels land on a character.
+
+    python3 -m kn7000live live --source v4l2:/dev/video0 --store ~/kn7000-dump \
+                               --seed-address 48019000
+
+Committed bytes turn green on top of the video and are never read again; a page is
+finished when the block is green; everything lands in a store keyed by absolute CPU
+address, with an append-only journal, so a sweep accumulates across sessions.
+
+**Why the batch decoder could not simply be reused.** Its blind grid fit assumes the
+panel fills the frame. Measured, it lands off the text on every real capture, and
+the emulator-trained atlas decodes 31 % of a page whose answer is known. So the
+registration here is four draggable corners plus a homography re-solved every frame
+(the camera is hand-held: an affine correction cannot follow a changing perspective),
+and the templates are learned live from the address ladder, through the operator's
+own blur.
+
+### Four gates, and why each exists
+
+| Gate | What it catches |
+|---|---|
+| the 16-row address ladder | a grid slipped by a character, a smeared frame, a half-drawn repaint |
+| far-right match strength | the ladder is the left eighth of the block and cannot see the far end sliding off |
+| a re-read at a **displaced** grid | a fraction-of-a-cell error, which voting cannot see |
+| the viewer's **colour legend** | `F0`/`F7`/`FF`, stated a second time in a channel the glyph classifier cannot influence |
+
+The third and fourth are the ones worth remembering, because each was added after a
+measured failure rather than designed in.
+
+**Cross-frame voting protects against noise, not against a misplaced grid.** A grid
+a fraction of a cell out of place yields the *same* wrong answer in every frame, at
+high confidence: the wrongly-committed bytes scored a mean 0.91 against 0.99 for the
+correct ones, and raising the confidence threshold from 0.02 to 0.08 removed one
+wrong byte at the cost of eleven right ones. A warm-up (commit nothing until the fit
+has been complete for several consecutive frames) plus the jitter re-read fixed it.
+
+**Training on committed bytes is a feedback loop with no brake.** Committed bytes are
+a far better balanced teacher than the address column — which supplies `B`, `E` and
+`F` once per frame against 657 samples of `0` — but a byte committed wrongly becomes
+a labelled example of the wrong glyph, and the template drifts towards it. One `F`/`E`
+confusion grew until a page of erased flash read as **88 bytes of `EE`**. Erased flash
+is the worst case by construction: a run of `FF` is a long run of identical characters
+(where a whole-cell shift is invisible even to the jitter check), the least
+naturally-trained class, and a pair differing by one stroke of a 5×7 font. A committed
+byte may now teach only if the colour channel or the current frame still agrees with
+it; 92 wrong bytes on a three-page run became 18, with the well-resolved page at
+200/200 and none wrong.
+
+### Measured
+
+Calibration page, 60 frames a page, 12 camera pixels per character, corners placed
+1.5 px out:
+
+| Condition | Committed | **Wrong** |
+|---|---|---|
+| camera still | 215/256 | **0** |
+| hand movement | 171/256 | **0** |
+| heavier movement, 12° tilt, 9 px/char, 2× blur, or 3× noise | 0 | **0** |
+
+Five of the seven conditions commit nothing, and none commits a wrong byte. That is
+the deliberate trade, and it moved *towards* refusal during development: an earlier
+build committed 150–180 bytes in four of those conditions by training on its own
+output. Coverage is recoverable — the store accumulates — and a wrong byte is not.
+
+On the real composite frame of §6 the tool commits **0 bytes and gets 0 wrong**.
+
+### Operating notes
+
+- **Take your time aiming.** Until a lit, text-covered region is in view the tool does
+  nothing but look for one (3 ms a frame) and says so. Getting that check right needed
+  a correction: judged at 1/8 scale a six-pixel character is gone and only sensor noise
+  is left, so the first version found a photograph of a wall interesting and made
+  everything *slower*. It now judges **anisotropy** at half resolution — hex digits are
+  mostly vertical strokes, walls and noise are isotropic.
+- **Brace the camera** if you can, and frame the 57-character block to span at least
+  ~500 px. Those two things separate the first row of the table from the third.
+- **Tap the page rocker, do not hold it.** A page needs two to three seconds to fill;
+  auto-repeat runs at ~5.4 pages/s, some fifty times too fast.
+- **Sweep twice into two stores and diff them** for anything that matters. Every commit
+  is journalled with the evidence behind it.
+
+## 8. Standing rule for this work
 
 > **No model reads images.** The image-analysis loop was stopped on 2026-08-10
 > because it burned tokens far out of proportion to what it produced. All further
@@ -293,7 +382,7 @@ jointly), the ASCII column as a second channel, and the capture side itself. Onl
 the last of the four reported before the stop; the rest is unreviewed code of
 unknown quality and should be treated as raw material, not as a result.
 
-## 8. What is still unknown
+## 9. What is still unknown
 
 - **The analog chain is unassessed.** The only prediction available is a
   degradation *simulation* whose fidelity is unverified, and two of whose axes are
