@@ -328,6 +328,12 @@ by what each item unblocks, each with: exact setup, exact takes *including the m
 control*, the pre-registered prediction with the artefact that computed it, and the acceptance
 criterion that would make the take void.
 
+★ **New device found 2026-08-14:** the KN2400/KN2600/PR54 family has a **separate table/font
+ROM that nobody has dumped** — the firmware reads `0x48000000` 164,300 times from t=0.84 s, and
+because the driver leaves that region empty every glyph returns `0xFF`, so text renders as solid
+blocks while icons draw correctly. It was previously recorded as "reads nothing there". Add it to
+the undumped inventory; it is the single cheapest fidelity win available for those two models.
+
 Highest-value parked items: re-dump **IC14** (should hash to `aa4917ce`); dump **IC304/305/306**
 (~75 % of KN5000 sounds, the largest single audible defect); re-read **KN1500 IC15** (lane census
 shows 8.5 % vs 54.3 % `0xFF` — against 0.8 %/1.9 % on the known-good IC307); the KN7000 build-893
