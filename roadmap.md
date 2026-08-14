@@ -100,9 +100,15 @@ and **identical literal-reference counts** across four independently built firmw
 peripheral-driver source recompiled per model.
 
 **And it reaches outside the arranger line entirely.** The SX-WSA1 — an acoustic-modelling synth
-with a completely different audio architecture — runs **dual TMP95C061** and shares *three custom
-parts* with the KN5000: the M37471M2196S panel MCU, the **TC183C230002 tone generator**, and the
-**uPD6383GF-3BA effects DSP**. Its panel is scanned the same way, over the same SIN/SOUT link.
+with a completely different audio architecture — runs **dual TMP95C061** and shares custom parts
+with the KN5000: the **M37471M2196S panel MCU** and the **uPD6383GF-3BA effects DSP**, both read
+straight from its parts list. Its panel is scanned the same way, over the same SIN/SOUT link.
+
+⚠ A third shared part, the **TC183C230002 tone generator**, is *probable but not yet safe to
+assert*: the WSA1R parts list OCR prints it both as `TC183C230002` (matching the KN5000's IC303)
+and as `TC1830230002`. If it holds, a physical-modelling synth carries the KN5000's PCM tone
+generator with the modelling engine bolted alongside — a significant claim, so corroborate it
+against the schematic page image before repeating it.
 
 Measured asset sharing (`technics_roms/tools/wsa1_kinship.py`):
 
@@ -117,6 +123,19 @@ instead of the MN89304 VGA controller, and a proprietary disk format. The model 
 and shared assets, separate application framework*. The KN1500 sits similarly outside MILK while
 still sharing a 1,658-byte Composer data block with the KN5000 — so the **accompaniment data layer
 predates the toolkit**.
+
+**The source-tree lineage is legible in the binaries.** Both the KN7000 and the KN2400 carry the
+string `Panel Simulator for IK` — the **KN6000's** project code — and no `for JK` exists anywhere.
+So the two last-generation models are forks of the KN6000 tree rather than independent branches,
+which predicts where their code will agree when the cross-model aligner runs.
+
+**A third-party extension ABI was ported across the CPU change.** Key Soft Service shipped hard-disk
+expansions for three generations: HD-MEC 2000 (KN2000), HD-AE5000 (KN5000, TLCS-900 code at
+`0x280000`) and HD-SX6 (KN6000/KN6500, **MN10300** code at `0x97800000`). The HD-SX6 image we hold
+disassembles as clean MN10300 and its pointer census shows 4,930 references into the KN6000 program
+flash — so it **runs on the host CPU**, not a board-local one. The host-side hooks `_TT_HDDEXT` and
+`_TT_EXTAPR` are present in the KN7000 and KN2400 too, but their UI is absent. This is a whole
+cross-model subsystem the project had not recognised as one.
 
 **Practical consequence:** panel, inter-CPU, storage and asset work should be built as
 **cross-model devices and tools from the start**. A parameterised `technics_cpanel_device` would
@@ -306,9 +325,11 @@ cost a stranger minutes and are worth months here:
 1. **A photograph of the service-mode ROM DEVICE TEST screen** — a free per-device checksum oracle
    for any model, including ones nobody here owns.
 2. **Raw images of original Panasonic disks** (a PC task, not bench time).
-3. **Any unrecognised `.SLD`/`.AST` payload** from a dealer CD. The container magic is sequential by
-   generation — KN5000 `H`, KN6000 `I`, KN7000 `J`, KN2400 `L` — so an unfamiliar magic is a
-   fingerprint of a model we have not catalogued.
+3. **Any unrecognised `.SLD`/`.AST` payload** from a dealer CD. Every model carries a two- or
+   three-letter **project code** that keys its container magic, its user-data file signature and its
+   internal `Panel Simulator for <code>` string — `HK` = KN5000, `IK` = KN6000/KN6500, `JK` =
+   KN7000, `LKG` = KN2400/KN2600/PR54, `LKE` = KN1500 — so magics read `IKPRG4K`, `JKPRG4K`,
+   `LKGP14K`. **An unfamiliar project code is a fingerprint of a model nobody has catalogued.**
 4. **A TMP94C241F hardware manual**, and any datasheet for the uPD6383 or uPD93083.
 
 Panasonic's own `TECHNICS.HDD` enumerates twelve KN6000 update payload classes, and **six are types
