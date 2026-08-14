@@ -152,18 +152,22 @@ Nothing else is safe until this is done, because these are the only **unrecovera
 1. **Rescue evidence living outside version control.** `kn7000-emulator/` is not a git repository
    and holds `money.lua` — the reverb/keybed oracle quoted as the regression gate in at least six
    notes — plus the EG sweeps and the DSP unit-role captures. Other load-bearing scripts exist only
-   under `KN7000/tmp-dir/`. *(Started: the KN1500 IC15 dump and the WSA1 OS are now in
-   `technics_roms`; the rest remains.)*
+   under `KN7000/tmp-dir/`. **✅ Done 2026-08-14**: 95 rigs rescued to
+   `kn7000_mame/tools/rigs/`, the KN1500 IC15 dump and the WSA1 OS into `technics_roms`. The
+   oracle was re-run — see the re-baselining note below. Remaining: `KN7000/tmp-dir/`.
 2. **Decide the fate of the untracked manuals.** `KN7000/service_manual/` (31 MB, 227 files) holds
    the only copies of the KN7000 service manual **and** the complete KN2400/KN2600 manuals with
    schematics. The KN7000 repo has a *public* remote and these are copyrighted Panasonic documents,
    so they need a local, remote-less home — not a push.
-3. **Fix provenance lies.** Three fabricated files ship under real chip filenames
-   (`kn5000_waveform_rom.ic304/305/306`, a pure sine); `technics_roms/README.md` calls them genuine
-   dumps; the KN6000/KN6500 drivers declare the **KN7000's** table ROM as `BAD_DUMP` when the
-   honest flag is `NO_DUMP` — `BAD_DUMP` asserts "this chip, read badly", not "a different chip".
-   Rename, re-flag, and make `publish-binary.sh` refuse to publish anything matching `*_rom.ic*`
-   that is not in the verified manifest.
+3. **Fix provenance lies.** **✅ Mostly done 2026-08-14.** The three fabricated files
+   (`kn5000_waveform_rom.ic304/305/306` — 83.4 % `0xFF` against IC307's 1.3 %) are renamed out of
+   chip-name space, `technics_roms/README.md` no longer calls them genuine dumps,
+   `extract_kn5000_waves.py` refuses unverified donors by CRC instead of merely labelling them,
+   and `publish-binary.sh` now quarantines any `*_rom.ic*` whose **basename and md5** are not both
+   in the manifest. **Still open:** the KN6000/KN6500 drivers declare the **KN7000's** table ROM as
+   `BAD_DUMP` when the honest flag is `NO_DUMP` — `BAD_DUMP` asserts "this chip, read badly", not
+   "a different chip entirely". Flipping it is a *behaviour* change (those models render no text
+   without a valid table header), so it needs a decision, not a quiet edit.
 4. **Correct false completeness claims** on the three pages a newcomer reads first. `help-wanted.md`
    states all `.byte` code is eliminated (507 `.byte` lines still carry instruction comments, one of
    them a called function) and all `LABEL_*` symbols are replaced (35,924 of 39,451 rows are still
@@ -173,6 +177,15 @@ Nothing else is safe until this is done, because these are the only **unrecovera
    cron loop's handoff file stops at a July tick, so it re-derives a month-old world state every run.
 
 **Exit:** no quoted number in the project has an untracked producer; no file misrepresents what it is.
+
+> **Re-baselining the audio oracle (2026-08-14).** `money.lua` was rescued and re-run. It is
+> bit-deterministic — two identical runs, identical hash — but **both recorded baselines are stale
+> and disagree with each other** (`44b09b9d…` in one note, `c3b67ea7…` in three others); neither
+> reproduces. The driver moved under them unnoticed, which is what an unrun gate does. New baseline
+> `780de131e33a4a0c99d092b57a074247`, with the invocation and binary identity pinned beside it in
+> `tools/rigs/README.md`. It was also checked against the project's own rule that a gate must be
+> able to fail: rms **0.0** with no stimulus, **165.7** on the held note, plus a decaying reverb
+> tail. It remains a *regression* hash — it says nothing changed, never that anything is correct.
 
 ### Phase 1 — Instrumentation · *2–3 weeks*
 
