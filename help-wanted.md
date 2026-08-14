@@ -22,7 +22,22 @@ If you have a KN5000 and can dump ROMs, please reach out!
 
 ### ROM Disassembly Improvements
 
-All ROMs achieve 100% byte-perfect match. All `LABEL_XXXXXX` address-based labels have been replaced with semantic names (completed March 2026). All NAKA widget C data files have been converted from raw byte arrays to named packed structs. All executable `.byte` code has been eliminated — 279,441 native instructions across all 6 ROMs with zero code `.byte` fallbacks. 15 sound data files have been converted to C structs with named fields.
+All ROMs achieve 100% byte-perfect match, and all NAKA widget C data files have been converted from
+raw byte arrays to named packed structs. 15 sound data files have been converted to C structs with
+named fields.
+
+⚠ **Two claims that stood here since March 2026 were measured false on 2026-08-14 and are corrected:**
+
+| claim as it stood | measured |
+|---|---|
+| "All `LABEL_XXXXXX` labels have been replaced with semantic names" | **35,924 of 39,451 rows (91 %)** in `symbols/maincpu_symbols_reference.txt` are still `LABEL_*` |
+| "All executable `.byte` code has been eliminated … zero code `.byte` fallbacks" | **at least 303** `.byte` lines still carry an instruction comment, e.g. `v7/maincpu/kn5000_v7_program.s:1160` — `.byte 0x1d, 0x31, 0x04, 0xff ; call Math_DivideSigned32` |
+
+Reproduce: `grep -rc 'LABEL_' symbols/maincpu_symbols_reference.txt` and
+`grep -rn '^\s*\.byte' --include='*.s' . | grep -E ';.*\b(ld|jp|call|ret|push|pop)\b' | wc -l`
+in `kn5000-roms-disasm`. Note that 100 % byte-match is true and always will be — it is preserved by
+construction and says nothing about how much of the build is real source rather than `.incbin`
+passthrough. Both figures above are *the honest remaining backlog*, and both are places to help.
 
 ### HDAE5000 ROM Disassembly
 
