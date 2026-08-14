@@ -6,6 +6,14 @@ permalink: /kn7000-roadmap/
 
 # KN7000 Roadmap — porting the KN5000 effort
 
+> **Forward planning has moved.** This page is now a *per-model status* record for the KN7000.
+> For what happens next across the whole project — every model, the phase structure, and the
+> definition of done — see the **[Project Roadmap]({{ site.baseurl }}/roadmap/)** (2026-08-14).
+>
+> ⚠ The "UPDATE …" paragraphs at the foot of this page are an append-only work log in which later
+> entries silently retract earlier ones. Read to the end before believing any of it, and prefer the
+> Project Roadmap where the two disagree.
+
 This page is a thorough plan of what was accomplished for the
 [KN5000]({{ site.baseurl }}/system-overview/) and how each piece maps onto the
 [KN7000]({{ site.baseurl }}/kn7000/). It exists to guide the KN7000 work and to make the scope of

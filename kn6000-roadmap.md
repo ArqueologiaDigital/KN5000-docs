@@ -6,6 +6,9 @@ permalink: /kn6000-roadmap/
 
 # KN6000 / KN6500 — preservation plan
 
+> Project-wide planning now lives in the **[Project Roadmap]({{ site.baseurl }}/roadmap/)**.
+> This page remains the KN6000/KN6500 status record.
+
 Goal: reproduce, for the Technics **SX-KN6000** and **SX-KN6500**, everything the
 project achieved for the [KN5000]({{ site.baseurl }}/system-overview/) and
 [KN7000]({{ site.baseurl }}/kn7000-roadmap/) — extraction, ROM reconstruction, a byte-exact
