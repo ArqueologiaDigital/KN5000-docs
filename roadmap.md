@@ -154,7 +154,10 @@ Nothing else is safe until this is done, because these are the only **unrecovera
    notes — plus the EG sweeps and the DSP unit-role captures. Other load-bearing scripts exist only
    under `KN7000/tmp-dir/`. **✅ Done 2026-08-14**: 95 rigs rescued to
    `kn7000_mame/tools/rigs/`, the KN1500 IC15 dump and the WSA1 OS into `technics_roms`. The
-   oracle was re-run — see the re-baselining note below. Remaining: `KN7000/tmp-dir/`.
+   oracle was re-run — see the re-baselining note below. `KN7000/tmp-dir/` triaged: of 3,252
+   scratch files the three named evidence scripts were rescued to `kn5000-roms-disasm/dsp/tools/`;
+   two still reproduce and **`h0_verify_effectchipmap.py` is rotted**, so the gate-H0 table and the
+   "12 of 12 effects are stubs" figure are currently unreproducible.
 2. **Decide the fate of the untracked manuals.** `KN7000/service_manual/` (31 MB, 227 files) holds
    the only copies of the KN7000 service manual **and** the complete KN2400/KN2600 manuals with
    schematics. The KN7000 repo has a *public* remote and these are copyrighted Panasonic documents,
@@ -172,9 +175,11 @@ Nothing else is safe until this is done, because these are the only **unrecovera
    states all `.byte` code is eliminated (507 `.byte` lines still carry instruction comments, one of
    them a called function) and all `LABEL_*` symbols are replaced (35,924 of 39,451 rows are still
    `LABEL_*`). `issues.md` was last built **2026-03-27**.
-5. **Fix the two standing autonomous authorisations**, which are steering on bad inputs *right now*:
-   `coverage_score.py` over-reports KN7000 source coverage as 18.03 % when it is **3.64 %**, and the
-   cron loop's handoff file stops at a July tick, so it re-derives a month-old world state every run.
+5. **Fix the two standing autonomous authorisations. ✅ Done 2026-08-14.** `coverage_score.py` now
+   evaluates expression operands and asserts both that every directive parsed and that source bytes
+   per instruction line fall in the 1–7 band MN10300 allows — the first assertion caught a bug in
+   the fix itself. History rows annotated, not rewritten. `AUTONOMOUS-STATUS.md` gained a
+   current-state header above the July ticks.
 
 **Exit:** no quoted number in the project has an untracked producer; no file misrepresents what it is.
 
