@@ -197,8 +197,14 @@ Nothing else is safe until this is done, because these are the only **unrecovera
 Build the things that make every later phase checkable. The project's leading cause of retraction is
 rig error, and every hard-won rule currently lives as prose in a different file, enforced by nothing.
 
-- **`tools/gate.sh`** — per model: `-validate`, `-listxml`, `-verifyroms`, a headless timed boot
-  asserting a liveness signal, and the audio oracle hash. There is no CI in any of the seven repos.
+- **`tools/gate.sh`** — ✅ **built 2026-08-14.** Per model: `-validate`, `-listxml`, `-verifyroms`,
+  a liveness probe asserting the machine actually drew a UI, and the `money.lua` oracle against its
+  pinned md5. `--static` runs the no-emulator half in seconds. Fault-injected: removing one ROM
+  turns that model red and exits 1. Liveness floors were measured per model — and the measurement
+  itself is a finding: **kn2400 and kn2600 sit at 4 distinct pixel values against kn5000's 20**,
+  and produce an *identical* screen hash, matching their known "renders no text" defect. kn1500 has
+  no MAME screen device (SVG/HD44780) so it reports SKIP rather than a misleading FAIL.
+  Still to add: wiring it to a cron tick and publishing the result as a committed status file.
 - **`tools/rig.sh` + `rig_lib.lua`** — encode every hazard once: explicit cfg directory with a loud
   banner, NVRAM handling, timeout wrapper, visible video, correct skip flag, Lua taps held in
   globals, and a run manifest recording binary mtime, git HEAD and ROM hashes.
