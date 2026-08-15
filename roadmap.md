@@ -204,10 +204,26 @@ rig error, and every hard-won rule currently lives as prose in a different file,
   itself is a finding: **kn2400 and kn2600 sit at 4 distinct pixel values against kn5000's 20**,
   and produce an *identical* screen hash, matching their known "renders no text" defect. kn1500 has
   no MAME screen device (SVG/HD44780) so it reports SKIP rather than a misleading FAIL.
+  ✅ **Second audio arm added 2026-08-15**: a KN5000 demo-audio oracle, because the gate passed
+  16/16 on a KN5000 tone-generator change it structurally could not see — `money.lua` is the wrong
+  machine and the KN5000 liveness probe sits at the home screen with no notes playing. It carries
+  two fault-injected preconditions (the demo needs `DEMO → LEFT 4 → LEFT 2`, and channel 0 is
+  always silent so level is measured on ch1/ch2), each corresponding to a mistake that had already
+  been made here. Full run 2026-08-15: **17 passed, 0 failed, 1 skipped.**
   Still to add: wiring it to a cron tick and publishing the result as a committed status file.
-- **`tools/rig.sh` + `rig_lib.lua`** — encode every hazard once: explicit cfg directory with a loud
-  banner, NVRAM handling, timeout wrapper, visible video, correct skip flag, Lua taps held in
-  globals, and a run manifest recording binary mtime, git HEAD and ROM hashes.
+- **`tools/rig.sh`** — ✅ **built 2026-08-15.** One entry point for all 117 rigs, encoding the
+  hazards once: absolute rig path, throwaway cfg/NVRAM with a loud banner (and `--user-cfg` to
+  reproduce the *user's* environment, per RULE 20), timeout wrapper, visible video, correct skip
+  flag, machine inferred from a `rig-machine:` header. It prints the exact command it ran, so a
+  number a rig produces can be quoted beside its recipe. Fault-injected: a broken rig exits 1 with
+  a named diagnosis (`tools/tests/test_rig_sh.sh`).
+  It exists because fourteen rig headers documented a `-autoboot_script tools/rigs/…` path that
+  cannot work — `run.sh` cd's to the emulator directory. Alongside it, `tools/gen_rig_index.py`
+  indexes every rig from its own header and *counts* header defects rather than estimating them;
+  as of 2026-08-15 descriptions missing are **0** (was 20), copy-pasted headers naming another
+  script **0** (was 5 — the README had claimed two while listing four).
+  Still to add: `rig_lib.lua` for the shared in-Lua helpers, and a run manifest recording binary
+  mtime, git HEAD and ROM hashes.
 - **The service-diagnostic suite** — one Lua driver per model that walks all ~17 factory tests and
   records the firmware's own verdict. Expect and document honest failures: WAVE ROM will report NG
   on the KN7000 (synthetic waves) and the KN5000. That is the point — it converts "which parts are
@@ -329,10 +345,32 @@ control*, the pre-registered prediction with the artefact that computed it, and 
 criterion that would make the take void.
 
 ★ **New device found 2026-08-14:** the KN2400/KN2600/PR54 family has a **separate table/font
-ROM that nobody has dumped** — the firmware reads `0x48000000` 164,300 times from t=0.84 s, and
-because the driver leaves that region empty every glyph returns `0xFF`, so text renders as solid
-blocks while icons draw correctly. It was previously recorded as "reads nothing there". Add it to
-the undumped inventory; it is the single cheapest fidelity win available for those two models.
+ROM that nobody has dumped** — the firmware reads `0x48000000` 164,300 times from t=0.84 s, all
+of them between t=0 and t=6, then never again. It was previously recorded as "reads nothing
+there". Add it to the undumped inventory.
+
+⚠ **The causal half of that entry was wrong, and is corrected here (2026-08-15).** It said the
+empty region is why "text renders as solid blocks while icons draw correctly". Four measurements
+say otherwise — see `kn7000_mame/notes/FINDINGS-kn2400-table-rom.md`:
+
+* the region *is* copied into RAM at boot (loop at `0x4860C274`, 40 records × 712 B, destination
+  99.86 % `0xFF`), but holding those buffers overwritten across the compositing paint leaves the
+  frame **bit-identical** to a control — while poking the framebuffer itself changes it, so the
+  test can succeed;
+* the routine that paints the panel (`0x485EC9D6`) reads work RAM 550,901 times and this region
+  **zero** times, and its input is **0.0 % `0xFF`**;
+* substituting the whole region with `0x00` changes read traffic by 68 % — so the firmware really
+  does parse it — yet leaves the screen bit-identical;
+* dumping and rendering the 320×240 UI plane shows **solid rectangles already drawn where text
+  belongs**, and the routine drawing them is a fill primitive that takes its colour as a parameter
+  and reads no bitmap at all.
+
+So the sharper statement is: **the KN2400 draws its text boxes and never draws a single glyph
+pixel into them.** The plane holds 5 distinct byte values against the KN7000's 45 for the same
+architecture. The ROM is undumped and functionally live, and dumping it remains a real win — but
+it is not established that it is what withholds the text, and no constant substitution restores
+it. What that experiment *cannot* show is what a genuine dump would do: `0x00` is no more a valid
+ROM image than `0xFF`.
 
 Highest-value parked items: re-dump **IC14** (should hash to `aa4917ce`); dump **IC304/305/306**
 (~75 % of KN5000 sounds, the largest single audible defect); re-read **KN1500 IC15** (lane census
