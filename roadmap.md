@@ -224,6 +224,19 @@ rig error, and every hard-won rule currently lives as prose in a different file,
   script **0** (was 5 — the README had claimed two while listing four).
   Still to add: `rig_lib.lua` for the shared in-Lua helpers, and a run manifest recording binary
   mtime, git HEAD and ROM hashes.
+- **A modelled POWER switch** — ✅ **shipped 2026-08-15 (KN5000).** MAME's `schedule_exit()`
+  calls `eat_all_cycles()`, so no CPU cycles run after shutdown is scheduled and any firmware
+  power-down routine is unreachable — an EXIT notifier also fires after NVRAM is written. The fix
+  is to stop using the emulator's exit as the power switch: a machine control pulses the CPU's
+  NMI, a timer gives the firmware its power-down window, and only then does `schedule_exit()`
+  run. No core change.
+  On the KN5000 this **restored the boot splash** with no write tap and no faked checksum: the
+  firmware's own handler saves `DRAM[0xF980..0xFFEE]` (which carries the payload checksums) into
+  the battery-backed IC21 SRAM, and its own boot code restores it. Verified against a cold-boot
+  control — warm shows the colour splash, cold shows "ALL INITIAL SETTING!" — with sound names
+  still resolving, so the kn5000-29 fix is not regressed. Gate 17/0/1.
+  **Worth reusing:** any model whose firmware has a power-fail routine is in the same position.
+  See `kn7000_mame/notes/FINDINGS-kn5000-splash-restored.md`.
 - **The service-diagnostic suite** — one Lua driver per model that walks all ~17 factory tests and
   records the firmware's own verdict. Expect and document honest failures: WAVE ROM will report NG
   on the KN7000 (synthetic waves) and the KN5000. That is the point — it converts "which parts are
