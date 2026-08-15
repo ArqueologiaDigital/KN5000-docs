@@ -233,8 +233,20 @@ rig error, and every hard-won rule currently lives as prose in a different file,
   the emulator renders the *same named songs*. An onset-aligned comparison can settle pan polarity,
   gain reference and EG decay law — all currently parked as "needs hardware". It cannot settle
   waveform identity; say so up front.
-- **Save states** — `kn7000_tonegen.cpp` has *zero* `save_item` calls. This is both an upstream gate
-  and 25 seconds of boot removed from every experiment.
+- **Save states** — ⚠ **the premise of this item was wrong, corrected 2026-08-15.**
+  `kn7000_tonegen.cpp` does have zero `save_item` calls, but it is a thin subclass with no state
+  of its own; the shared `kn_tonegen` base where the state actually lives already saved 27
+  members. Auditing properly found 14 unregistered of 41, of which most are legitimately exempt
+  (the MAME-managed stream, construction-time config, immutable ROM-derived wave tables) —
+  **and nine that were a real bug**: the effect-send gains, omitted because they are
+  `std::atomic<float>` and `save_item()` cannot register an atomic. They are genuine runtime
+  state (the firmware writes all nine from `tg_write`), so a state saved with reverb engaged
+  restored with the boot-default mix, silently. ✅ Fixed via `device_pre_save`/`device_post_load`
+  shadowing; save/load round-trip verified with `kn7000_regress.lua`, gate still 17/0/1 with both
+  audio oracles bit-identical.
+  Still open: the *other* devices' coverage has not been audited the same way, and the "25
+  seconds of boot removed from every experiment" payoff needs a documented boot-state snapshot
+  per model before it is real.
 
 **Exit:** a red gate is a bug, not a mystery; a measurement can be repeated by a command.
 
