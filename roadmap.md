@@ -244,9 +244,18 @@ rig error, and every hard-won rule currently lives as prose in a different file,
   restored with the boot-default mix, silently. ✅ Fixed via `device_pre_save`/`device_post_load`
   shadowing; save/load round-trip verified with `kn7000_regress.lua`, gate still 17/0/1 with both
   audio oracles bit-identical.
-  Still open: the *other* devices' coverage has not been audited the same way, and the "25
-  seconds of boot removed from every experiment" payoff needs a documented boot-state snapshot
-  per model before it is real.
+  ✅ **All six devices audited 2026-08-15** with `tools/audit_savestate.py`, which compares
+  declared members against registrations and annotates devices whose state is shadowed (without
+  that it reports the just-fixed gains as still broken). `kn_cpanel`, `kn6000_cpanel` and
+  `kn7000_cpanel` are clean. **`kn5000_tonegen` — the one upstream driver — was missing its
+  keybed FIFO and its pending-note deque**, the latter being how absolute pitch is recovered at
+  all; both now shadowed, gate still 17/0/1 with both audio oracles bit-identical. The remaining
+  unregistered members there stay unregistered on purpose: instrumentation counters, and four
+  flags set once from environment variables (run configuration, which a save state must not
+  carry). `kn5000_cpanel`'s `m_tx_queue` is real but belongs to the CP-serial work that is
+  **paused at Felipe's request** — not to be touched unasked.
+  Still open: the "25 seconds of boot removed from every experiment" payoff needs a documented
+  boot-state snapshot per model before it is real.
 
 **Exit:** a red gate is a bug, not a mystery; a measurement can be repeated by a command.
 
