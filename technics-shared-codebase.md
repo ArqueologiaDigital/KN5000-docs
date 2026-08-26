@@ -79,7 +79,7 @@ The **[Technics SX-WSA1 / SX-WSA1R]({{ site.baseurl }}/wsa1/)** (1995) answers
 that, because it is the case where the constraint is lifted. It is not an
 arranger at all — it is an "acoustic modelling" synthesizer, keyboard and rack —
 and it is built around **two Toshiba TMP95C061 processors, TLCS-900/H**. The
-KN5000's sub-CPU is a **TMP94C241, TLCS-900/H1**: same instruction encoding, and
+KN5000's sub-CPU is a **TMP94C241, TLCS-900/H2**: same instruction encoding, and
 the same LLVM `tlcs900_backend` assembles both disassembly trees. So here there
 is **no CPU boundary to stop machine code crossing** — and it crosses.
 
@@ -165,7 +165,14 @@ mean an acoustic-modelling synth still carries the KN5000's PCM tone generator.
 
 ### ★ And the framework is *absent* — which is the point
 
-The WSA1 does **not** run the MILK toolkit. Zero `MT_`, `*Proc` or `SLIDE4K` hits
+> **Provenance, because this section rests on ROM bytes.** The SX-WSA1 images are
+> **not dumps this project made**. They are a publicly redistributed set, and the
+> claim that they came out of a rack is the uploader's testimony. The byte
+> measurements below are reproducible against those images; what is second-hand is
+> where the images came from, not the arithmetic. See
+> [the WSA1 overview]({{ site.baseurl }}/wsa1/) for the full provenance note.
+
+The WSA1 does **not** run the MILK toolkit. Zero `MT_` or `*Proc` hits
 across its full 2 MB, against working positive controls on the machines that do
 have it. So the WSA1 **predates the KN line's application framework**: what it
 shares is **silicon, kernel and assets**, not the UI framework this page

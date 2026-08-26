@@ -24,7 +24,7 @@ protocols — as the physical hardware becomes scarce.
 
 | Instrument | Year | Main CPU | Documentation |
 |----------|------|----------|---------------|
-| **[Technics SX-WSA1]({{ site.baseurl }}/wsa1/)** | **1995** | Toshiba TLCS-900 (TMP95C061 ×2) | New — **the 61-key synthesizer**, same firmware set as the WSA1R; **no service manual exists anywhere**, so its panel rests on the ROM alone |
+| **[Technics SX-WSA1]({{ site.baseurl }}/wsa1/)** | **1995** | Toshiba TLCS-900 (TMP95C061 ×2) | New — **the 61-key synthesizer**; the images are a redistributed set and running them in *both* variants rests on the uploader's testimony. **No service manual exists anywhere**, so its panel rests on the ROM alone |
 | **[Technics SX-WSA1R]({{ site.baseurl }}/wsa1/)** | **1995** | Toshiba TLCS-900 (TMP95C061 ×2) | New — **a synthesizer module, not an arranger**: rack-mount "acoustic modelling". Firmware images are second-hand, not our dumps; disassembly 67.7 % substantive; MAME driver reaches a UI, **no sound** |
 | **[Technics SX-KN1500]({{ site.baseurl }}/kn1500/)** | 1996 | Toshiba TLCS-900 (TMP95C061) | New — the KN5000's CPU lineage; program ROM unvalidated (BAD_DUMP, needs redump) but its LCD-panel SVG is preserved as a ROM asset; MAME skeleton |
 | **[Technics SX-KN5000](#technics-kn5000)** | 1997 | Toshiba TLCS-900/H2 (TMP94C241F) | Extensive — 6 ROMs reconstructed 100% byte-perfect, MAME driver, homebrew SDK |

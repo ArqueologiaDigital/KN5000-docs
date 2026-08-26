@@ -91,8 +91,16 @@ unnamed routines faster than naming retires them.
 > *Coverage measures territory; this number measures meaning, which is the half
 > of the goal that is furthest from done.*
 
-Alongside it: **2,657 routine headers with evidence lines, 17,438 labels, 80
-findings documents and 191 committed analysis scripts.**
+Alongside it, measured in the tree on 2026-08-26: **2,706 routine headers with
+`Evidence:` lines** (`grep -rh 'Evidence:' prom_*/*.s | wc -l`), **81 notes
+documents** of which 70 are `FINDINGS-*` (`git ls-files 'notes/*.md'`), **194
+committed Python analysis scripts** (`git ls-files '*.py'`), and about **4,998**
+routines still named only `sub_XXXXXX` — the last of those is the number worth
+watching, because it measures meaning rather than territory.
+
+⚠ These move with every wave. Re-derive them with the commands above rather than
+quoting this paragraph; a label count in particular depends on whether you count
+compiler-local `.L` labels, so no single figure is quoted here.
 
 ## ★ The two processors run the same kernel — 35 of 36 routines identical to the byte
 
@@ -108,7 +116,8 @@ instruction by instruction and separates *different mnemonic* (structural) from
 | pairs with **zero** structural differences | **35 of 36** |
 | the exception | `Kernel_InitRam`, with **2** — both inside an 8-byte inline data block |
 
-The routine boundaries are **checked, not asserted**: `--pairs` verifies that each
+The routine boundaries are **checked, not asserted**: `notes/prom_c_kernel_map.py --pairs`
+verifies that each
 routine ends exactly where the next begins **in both images**, and fails
 otherwise. *36 boundaries agreeing to the byte across two independently compiled
 images is not something a wrong split survives.* `Kernel_ResumeTask` is the

@@ -266,7 +266,8 @@ prom_d holds a 48-slot directory at file `0`, then a **274-entry pointer
 directory at `0x000B80`** — 256 melodic sounds followed by **18 drum-kit records**
 of 408 bytes each (tone indices `0x100`–`0x111`), where the specification page
 advertises **16** preset kits — then 504 drum-instrument records of 150 bytes,
-each with a 16-byte printable name at its head. The payload ends at `0x050B08`
+each with a **13**-byte printable name at its head (the 16-byte figure belongs
+to the *tone* records; `prom_d_tone_database.py` asserts 13 for these). The payload ends at `0x050B08`
 and the remaining `0x2F4E7` bytes are an unbroken run of `0xFF`.
 
 **No field meaning is established anywhere in this image.** Every *name* used for
@@ -389,13 +390,19 @@ layer's unidentified "second storage unit" at `0x7E0008`.
 
 ## Service diagnostics
 
-The manual documents five self-tests. **Two are driven by a CHECKING DEVICE** —
-an LED and a switch on a lead plugged into **CN4** on the MAIN P.C.B.: with its
-switch **on**, power-up blinks an **eight-flash RAM/ROM verdict**; with the switch
-**off**, it blinks four times for a **CPU (IC1)** check, a longer flash marking a
-defective device. **The other three are entered by holding a number-pad key**
-while switching on — **3** = Wave ROM check (IC43–45, IC47–49) plus a *Generator
-IC Outsel check*, **4** = Control Panel LED check, **5** = LCD check.
+The manual documents five self-tests, **all entered at power-on**, and four of
+the five by holding a number-pad key while switching on:
+
+* **2** = CPU (IC1) check — also needs the **CHECKING DEVICE** on **CN4** (an LED
+  and a switch on a lead) with its switch **off**; it blinks four times, a longer
+  flash marking a defective device.
+* **3** = Wave ROM check (IC43–45, IC47–49) plus a *Generator IC Outsel check*.
+* **4** = Control Panel LED check.  **5** = LCD check.
+* The **RAM/ROM check** is the one that is not a number-pad test: it runs with the
+  CHECKING DEVICE's switch **on**, blinking an **eight-flash verdict**.
+
+The firmware agrees: number key `2` reaches screen `0xD9`, PANEL CPU CHECK — see
+the [SEG1 table]({{ site.baseurl }}/wsa1-panel/).
 
 Two oddities from the same pages, both recorded rather than explained:
 
@@ -440,7 +447,7 @@ Two things it also settles for the KN work:
   the linked page. ⚠ Whether the WSA1's DSP microprograms are *usable* is **not
   demonstrated**; the test is to find its uPD6383 upload routine and check its
   tables against the grammar this site already documents.
-* **The MILK toolkit is absent** — zero `MT_` / `*Proc` / `SLIDE4K` hits across
+* **The MILK toolkit is absent** — zero `MT_` / `*Proc` hits across
   the full 2 MB, against working positive controls. So the WSA1 **predates** the
   KN line's application framework. What it shares is silicon and assets, not the
   framework, and that is what makes it a genuinely different point on the family

@@ -49,11 +49,20 @@ SYST(1995, wsa1,  wsa1r, 0, wsa1,  wsa1,  wsa1_state, init_wsa1,  "Technics", "S
 `wsa1` is declared a **clone of `wsa1r`** and shares its ROM definitions verbatim
 — *not because the rack matters more*, but because **every document the driver
 rests on is the rack's**: the service manual is SX-WSA1R only, and the
-redistributed image set came out of a rack.
+redistributed image set is *said* by its uploader to have been read from a
+rack. (That is testimony, not something this project verified.)
 
-The machine configuration is genuinely identical between the two, because the
-hardware is: one ROM set, the same pair of TMP95C061s, the same panel link, the
-same LCD. The difference lives where it actually is — in the
+The *emulated machine configuration* is identical between the two, because
+everything the driver models is shared: one ROM set, the same pair of
+TMP95C061s, the same panel link, the same LCD.
+
+⚠ That is a statement about the driver, **not** about the two products. Their
+control panels are genuinely different boards — the firmware gives the keyboard
+two extra scan columns and three extra pots (see
+[the panel page]({{ site.baseurl }}/wsa1-panel/)) — and no SX-WSA1 document
+exists anywhere, so nothing about the keyboard's panel is corroborated by paper.
+The driver's configurations match because the parts it currently models happen
+to be the shared ones. The difference lives where it actually is — in the
 [strap value]({{ site.baseurl }}/wsa1/#two-products-one-rom-set-one-strap-bit)
 each `init_` sets (`m_model` = 1 keyboard, 2 rack) and in which inputs the box
 physically has. **The default is the rack, deliberately:** it is what the dumped
@@ -164,8 +173,13 @@ with no register at all:
 | semaphore 1 | count `02`, wait queue **empty** | count `00`, queue **occupied** |
 | task 2 | state `04`, never runs | state `03`, blocked |
 | callback ring | rd `0000`, wr `0008` | rd = wr = `0008` |
-| LCD writes | 33,623, frozen from t = 20 | **80,460** |
+| LCD writes | 33,623, frozen from t = 20 | **80,460** ⚠ |
 | screen | `ALL INITIAL SETTING!` | **`SOUND MODE`** |
+
+⚠ **The LCD-writes row does not discriminate and is kept only for completeness.**
+A control build with INTNEST implemented *also* ends at 33,623 LCD writes, so
+both explanations produce that number. The other five rows do discriminate.
+
 
 <figure style="margin:1.5rem 0;text-align:center;"><img src="{{ "/assets/images/wsa1/wsa1r_intnest_before_all_initial_setting.png" | relative_url }}" alt="ALL INITIAL SETTING! — the screen before the INTNEST register existed" style="image-rendering:pixelated;width:320px;max-width:100%;border:1px solid #ccc;border-radius:3px;"><figcaption style="font-size:0.8rem;color:#777;">The null: with no INTNEST register the scheduler is never entered, the draw task never dequeues, and the machine sits here for ever.</figcaption></figure>
 

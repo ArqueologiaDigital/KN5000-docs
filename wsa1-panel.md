@@ -111,8 +111,7 @@ prom_a carries its **own** variant-2 switch → LED adjacency table at `0xF95088
 which stores `0x0000` for a position with no switch. Relabel its nine rows as the
 nine wired segments and **its zero pattern *is* the schematic**: the same 58
 populated cells, the same hole at SEG2/SW7, the same 11-vs-9 segment count.
-**15 of 15 checks pass** in
-`kn7000_mame/notes/wsa1-probes/wsa1_sch_vs_rom_matrix.py`, and nothing from the
+`kn7000_mame/notes/wsa1-probes/wsa1_sch_vs_rom_matrix.py` reports **`FAILURES: 0`**, and nothing from the
 schematic was fed into that script — so it is a genuine second witness to
 segment ↔ column, bit ↔ row and population.
 
@@ -174,8 +173,8 @@ confirmed from the instructions rather than assumed: `sub_F94E1C` does
 `ld WA,(XHL)` and calls `0xF40670`, which reaches the unguarded entry of the LED
 register writer at prom_a `0xF8C846`, mapping `W` through the register → wire
 table and queueing `[wire][A]`. So the high byte is the register and the low byte
-is the data. 25 checks, 0 failures, in
-`kn7000_mame/notes/wsa1-probes/wsa1_lamp_identification.py`.
+is the data. `kn7000_mame/notes/wsa1-probes/wsa1_lamp_identification.py` reports
+**`FAILURES: 0`**.
 
 ### ★ The LED output space is 47 wide, not 64 — and that is a measurement
 
