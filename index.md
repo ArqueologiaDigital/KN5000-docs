@@ -22,8 +22,10 @@ protocols — as the physical hardware becomes scarce.
 
 ## The Instruments
 
-| Keyboard | Year | Main CPU | Documentation |
+| Instrument | Year | Main CPU | Documentation |
 |----------|------|----------|---------------|
+| **[Technics SX-WSA1]({{ site.baseurl }}/wsa1/)** | **1995** | Toshiba TLCS-900 (TMP95C061 ×2) | New — **the 61-key synthesizer**, same firmware set as the WSA1R; **no service manual exists anywhere**, so its panel rests on the ROM alone |
+| **[Technics SX-WSA1R]({{ site.baseurl }}/wsa1/)** | **1995** | Toshiba TLCS-900 (TMP95C061 ×2) | New — **a synthesizer module, not an arranger**: rack-mount "acoustic modelling". Firmware images are second-hand, not our dumps; disassembly 67.7 % substantive; MAME driver reaches a UI, **no sound** |
 | **[Technics SX-KN1500]({{ site.baseurl }}/kn1500/)** | 1996 | Toshiba TLCS-900 (TMP95C061) | New — the KN5000's CPU lineage; program ROM unvalidated (BAD_DUMP, needs redump) but its LCD-panel SVG is preserved as a ROM asset; MAME skeleton |
 | **[Technics SX-KN5000](#technics-kn5000)** | 1997 | Toshiba TLCS-900/H2 (TMP94C241F) | Extensive — 6 ROMs reconstructed 100% byte-perfect, MAME driver, homebrew SDK |
 | **[Technics SX-KN2400 / KN2600]({{ site.baseurl }}/kn2400-kn2600/)** | 1998–2000 | Panasonic MN10300 | New — drivers built; the KN7000's closest sibling (one firmware serves KN2400/KN2600/PR54) |
@@ -31,15 +33,21 @@ protocols — as the physical hardware becomes scarce.
 | **[Technics SX-KN6500]({{ site.baseurl }}/kn6000-hardware/)** | 2001 | Panasonic MN10300 (MN103002A) | New — firmware extracted, hardware mapped from the service manual |
 | **[Technics SX-KN7000]({{ site.baseurl }}/kn7000/)** | 2002 | Panasonic MN10300/AM33 | Early research — update-disk extraction and firmware analysis underway |
 
-These arrangers span **two CPU architectures** — the earlier TLCS-900 pair (KN1500,
-KN5000) and the **MN10300 family (KN2400, KN2600, KN6000, KN6500, KN7000)** — yet all descend
-from a **single evolving source codebase**: the same update-disk container format
-(`.SLD`/LZSS), the same MILK UI-framework symbol conventions, resource tables and
-message text recur across every model (the KN6000 shares ~85 % of its strings with
-the KN7000). See the
+These instruments span **two CPU architectures** — the earlier TLCS-900 group
+(**SX-WSA1/WSA1R**, KN1500, KN5000) and the **MN10300 family (KN2400, KN2600, KN6000,
+KN6500, KN7000)** — yet all descend from a **single evolving source codebase**: the same
+update-disk container format (`.SLD`/LZSS), the same MILK UI-framework symbol conventions,
+resource tables and message text recur across the arrangers (the KN6000 shares ~85 % of its
+strings with the KN7000).
+
+**The SX-WSA1 pair is the odd one out, and the most informative.** It is a
+*synthesizer*, not an arranger — its specification page has no rhythm, style or
+auto-accompaniment row at all — and it **predates the MILK framework entirely**. What it shares with the KN5000 instead is
+its CPU family, its RTOS, its panel driver and **32,795 bytes of literal machine
+code** (against a measured null of zero). See the
 [Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/) and the
 [cross-version diff guidebook]({{ site.baseurl }}/cross-version-diff-guidebook/)
-for the four-way comparison.
+for the comparison across the family.
 
 ## Project Goals
 

@@ -95,6 +95,17 @@
     - title: KN1500 (TLCS-900)
       url: /kn1500/
 
+- title: Technics SX-WSA1 / SX-WSA1R
+  pages:
+    - title: SX-WSA1 / SX-WSA1R Overview
+      url: /wsa1/
+    - title: Control Panel & Switch Matrix
+      url: /wsa1-panel/
+    - title: Emulation Status
+      url: /wsa1-emulation/
+    - title: Disassembly
+      url: /wsa1-disassembly/
+
 - title: KN5000 · Hardware
   pages:
     - title: Hardware Architecture

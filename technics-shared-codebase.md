@@ -4,7 +4,7 @@ title: Shared Codebase Map
 permalink: /technics-shared-codebase/
 ---
 
-# Shared Codebase Map (KN5000 ↔ KN7000)
+# Shared Codebase Map (KN5000 ↔ KN7000 ↔ WSA1)
 
 Many Technics keyboards appear to have had their firmware developed by reusing a
 common source codebase. This page maps **where the KN5000 and KN7000 firmwares
@@ -17,6 +17,14 @@ level, in shared *source*.
 > Compiled machine code therefore **cannot** be shared. Everything that *does*
 > match — identifier names, resource tables, message text, numeric constants —
 > is evidence of a shared source tree that was **recompiled** for each target.
+
+> **★ And there is now a control for that constraint.** The 1995
+> [SX-WSA1 / SX-WSA1R]({{ site.baseurl }}/wsa1/) — a synthesizer, not an arranger —
+> runs the **same CPU family as the KN5000**, and there the reuse shows up as
+> **literal machine code: 32,795 shared bytes against a measured null of zero**.
+> Same house style, one product line earlier, at the one layer the KN5000↔KN7000
+> pair could not use. See
+> [The WSA1 case](#the-wsa1-case-when-the-cpus-match-the-machine-code-is-shared-too).
 
 ## Verdict
 
@@ -58,6 +66,139 @@ Because the instruction sets differ, no byte-run of executable code is common to
 the two images. Every match below is therefore source-level reuse, made visible
 only because the compiler embeds these strings/tables verbatim regardless of
 target CPU.
+
+## The WSA1 case: when the CPUs match, the machine code IS shared too
+
+The section above is an argument from a *constraint* — the KN5000 and the KN7000
+cannot share object code, so whatever they do share must live above it. That
+constraint is real, but on its own it leaves one thing untested: **is Technics
+reuse actually a source-level habit, or is it only ever the assets a compiler
+happens to embed?**
+
+The **[Technics SX-WSA1 / SX-WSA1R]({{ site.baseurl }}/wsa1/)** (1995) answers
+that, because it is the case where the constraint is lifted. It is not an
+arranger at all — it is an "acoustic modelling" synthesizer, keyboard and rack —
+and it is built around **two Toshiba TMP95C061 processors, TLCS-900/H**. The
+KN5000's sub-CPU is a **TMP94C241, TLCS-900/H1**: same instruction encoding, and
+the same LLVM `tlcs900_backend` assembles both disassembly trees. So here there
+is **no CPU boundary to stop machine code crossing** — and it crosses.
+
+### 32,795 bytes of literal shared object code, against a null of zero
+
+`kn5000_shared_runs.py` in the WSA1 disassembly tree finds every maximal run of
+≥ 16 bytes shared between the four WSA1 images and the KN5000 sub-CPU payload,
+and grades each one:
+
+| | |
+|--|--:|
+| kept (survived the entropy guard) | **32,795 B** |
+| rejected as low-entropy fill | 291,802 B |
+| **shuffle null** — same byte histogram, sequence destroyed | **0 B** |
+| signal-to-null ratio | **32,795×** |
+| of the kept mass, held in the WSA1's **prom_c** | **28,916 B** |
+
+*(Figures re-run 2026-08-26.)*
+
+**The entropy guard is the result, not a detail.** Without it the "shared" mass
+is nine parts erase-fill and padding: runs are rejected when fewer than 12
+distinct byte values appear, when the modal byte is over 60 % of the run, or when
+the run is a repeating period of ≤ 4 bytes — and the rejected set is printed
+rather than silently dropped, because *"the kinship is entirely in padding"* is
+an outcome that script exists to be able to report. The second guard is the
+**shuffle null**, which preserves the byte histogram and destroys sequence: any
+run length reachable by chance at this histogram would score there. Nothing does.
+
+That **28,916 of the 32,795 bytes sit in prom_c** — the image belonging to the
+WSA1's *second* processor — is the structural finding. The KN5000's sub-CPU is
+*its* tone-generator controller, so **the WSA1's CPU 2 and the KN5000's sub-CPU
+are the same design**, and the data format follows the controller: the WSA1's
+tone database shares the KN5000's **81-byte per-element voice-parameter block**,
+63 of 81 columns agreeing on their modal byte against byte-shift nulls of 18–29
+and rotation nulls of 19–28.
+
+⚠ **Two different numbers exist for this and must not be conflated.** An earlier,
+separate script (`technics_roms/tools/wsa1_kinship.py`) reports **31,046 B in 588
+runs**, with its own null of 0 B against an unrelated Technics ROM. Different
+script, different corpus, no entropy guard. Pick one and name its script; do not
+average them.
+
+### The panel driver is shared, and it is a bijection
+
+A second, independent measurement makes the same point at routine granularity.
+Both machines carry a **Mitsubishi M37471M2196S** panel microcontroller. Take the
+3,150 bytes of the WSA1's serial-channel-1 module and the whole 2 MiB KN5000 v10
+main program ROM, and list every common substring of ≥ 16 bytes: there are
+**eight, 154 bytes in all, and all eight land inside the KN5000's control-panel
+driver** — a 3,535-byte window, **0.169 %** of that ROM.
+
+**The null is what makes it a result.** The same scan over the *whole* 512 KiB of
+the WSA1's prom_b gives **4,399 runs / 126,327 bytes**, and **exactly eight** of
+them land in the panel driver: the same eight. **A bijection, not a cluster.**
+⚠ (The count 8 is window-sensitive — a ninth run begins at the module's last byte
+and ends at the panel driver's first.)
+The two packet dispatchers are literally *the same instruction with a different
+table pointer* — ten bytes, of which three differ — and even the delay constants
+match (`SC1_WaitTicks2/6/51` against `DELAY_{2,6,51}_TICKS`).
+
+⚠ **The counter-example that keeps this honest.**
+In the same pair of machines, `DSP_WriteChannelRegs_Inner` is **80 of 81 bytes
+identical** to the KN5000's — and the one differing byte is the **peripheral
+base**. *Always diff the bytes before reusing a name.* Byte identity establishes
+that the code is the same; it does not establish that the surrounding machine is.
+
+### Three parts of silicon, not just code
+
+The sharing is not only in the firmware. Three custom parts on the 1995
+synthesizer carry **the same part numbers already reverse-engineered for the
+KN5000**:
+
+| part | WSA1 | KN5000 counterpart | certainty |
+|---|---|---|---|
+| panel MCU | Mitsubishi M37471M2196S | the same part | solid |
+| effects DSP | NEC uPD6383GF-3BA (×3) | [IC311]({{ site.baseurl }}/effects-dsp/) | solid |
+| tone generator | Matsushita TC183C230002 | IC303 | ⚠ **OCR-ambiguous** |
+
+⚠ The parts-list OCR prints the tone generator both as `TC183C230002` — matching
+the KN5000 — and as `TC1830230002`, differing in one character. **It is not
+established**, and it is the most consequential of the three, because it would
+mean an acoustic-modelling synth still carries the KN5000's PCM tone generator.
+
+### ★ And the framework is *absent* — which is the point
+
+The WSA1 does **not** run the MILK toolkit. Zero `MT_`, `*Proc` or `SLIDE4K` hits
+across its full 2 MB, against working positive controls on the machines that do
+have it. So the WSA1 **predates the KN line's application framework**: what it
+shares is **silicon, kernel and assets**, not the UI framework this page
+otherwise tracks.
+
+That absence is exactly what turns a suggestive result into a shape. Read the two
+findings together:
+
+| | KN5000 ↔ KN7000 | KN5000 ↔ WSA1 |
+|---|---|---|
+| CPUs | **differ** (TLCS-900 vs MN10300) | **match** (both TLCS-900) |
+| machine code shared | **none possible** | **32,795 B, null 0 B** |
+| kernel / RTOS | rewritten | **the same RTOS**, adapted — the WSA1 keeps the interrupt-nesting depth in control register `0x3C` and reads it back, while the KN5000 keeps it in a RAM word and only *mirrors* it into cr `0x7C` |
+| MILK UI framework | **shared, and the evidence for this page's thesis** | **absent — it had not been written yet** |
+| assets | tone-name tables byte-identical incl. padding | the **81-byte voice-parameter block** shared with prom_d |
+
+And the asset lineage reaches across all three machines at once:
+`technics_roms/tools/wsa1_kinship.py` finds **195 of the WSA1's 252 16-character
+tone-name fields (77.4 %) occurring verbatim in the KN7000's table ROM** — a 1995
+synthesizer and a 2002 arranger, seven years and a CPU architecture apart.
+
+The reuse was never a *framework* phenomenon. **It was a house style that
+operated at every layer the target allowed**: object code where the instruction
+set permitted it, silicon where the part was still current, and — once the CPU
+changed and object code stopped travelling — the source tree, the resource
+tables and the framework that this page documents. The KN5000 sits in the middle
+of that story rather than at its start: it shares a kernel and a panel driver
+with the earlier WSA1 generation, and hands a UI framework forward to the KN7000
+generation.
+
+Full detail is on the [SX-WSA1 pages]({{ site.baseurl }}/wsa1/), and the
+measurements are re-runnable from the scripts named above; see
+[SX-WSA1 Disassembly]({{ site.baseurl }}/wsa1-disassembly/#-shared-code-with-the-kn5000--measured-with-a-null).
 
 ## What is shared: the MILK UI toolkit
 
@@ -186,6 +327,17 @@ KN7000, and the shared `MT_`/`*Proc` symbol tables let KN5000 symbol knowledge
 seed the KN7000 disassembly directly. Across the whole Technics keyboard line,
 this reuse map is a route to understanding the family as a **single evolving
 system** rather than a set of unrelated instruments.
+
+The WSA1 extends that route **backwards in time, and past the keyboard line
+altogether**: it is not an arranger, and it still shares a kernel, a panel driver
+and a voice-parameter format with the KN5000. Anything decoded on the KN5000's
+sub-CPU is a head start on the WSA1's CPU 2, and — because the WSA1 names real
+effects that the KN5000 ships as
+[programs byte-identical to NO OPERATION]({{ site.baseurl }}/dsp-effect-data-zone/)
+on the very same uPD6383GF DSP — the traffic may yet run the other way as well.
+⚠ Whether the WSA1's DSP microprograms are *usable* on the KN5000 is **not
+demonstrated**; the test is to find the WSA1's upload routine and check its
+tables against the grammar this site already documents.
 
 ## Method note
 
