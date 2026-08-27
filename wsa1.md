@@ -404,12 +404,54 @@ the five by holding a number-pad key while switching on:
 The firmware agrees: number key `2` reaches screen `0xD9`, PANEL CPU CHECK — see
 the [SEG1 table]({{ site.baseurl }}/wsa1-panel/).
 
-Two oddities from the same pages, both recorded rather than explained:
+Two oddities from the same pages. **The first is now solved** (2026-08-27);
+the second is still recorded rather than explained:
 
 * the *Generator IC Outsel check* names **SUB OUT 2 and SUB OUT 3** — outputs
-  that neither the specification page nor the TERMINALS drawing lists;
+  that neither the specification page nor the TERMINALS drawing lists. They are
+  **not on the machine at all**: they belong to the *SY-ES1 Output Expansion
+  Board*, an option that fits both variants. See
+  [Digital audio output](#digital-audio-output-only-with-the-sy-es1) below;
 * the self-diagnostic calls the program EPROMs **"ROM (IC11, 12)"** while the
   schematic and the parts list place them at **IC12/IC13**.
+
+### Digital audio output: only with the SY-ES1
+
+**Neither variant has a digital output on its own.** The specification page's
+TERMINALS line is exhaustive and entirely analogue — `PHONES, MAIN OUT (R,
+L/MONO), SUB OUT (R, L/MONO), MIDI (IN, OUT, THRU) x2` — and the manual contains
+no occurrence of `OPTICAL`, `COAXIAL`, `S/PDIF`, `TOTX`/`TORX` or any digital
+interface transmitter. Its eight hits for `DIGITAL` are the DSP category
+`DIGITAL EFFECT`, MIDI's own expansion, the oscilloscope used for the waveform
+measurements, and an internal `READ DIGITAL SIGNAL` test point. The four
+`PCM1702U` DACs on the main board are exactly the four analogue channels.
+
+Digital out arrives with the **SY-ES1 Output Expansion Board** (© 1995
+Matsushita, order EMID951602), which fits *both* the `[Synthesizer]` and the
+`[Synthesizer module]`. It adds `SUB OUT 2`, `SUB OUT 3`, and:
+
+> **DIGITAL AUDIO OUT (S/P DIF standard).** 44.1 kHz, **20 bits linear**, 2
+> channels (stereo), **RCA pin jack**; carries *the stereo signals from the main
+> output*.
+
+Its ten ICs are `TC9271F`, `D74HC04GS`, 4 × `PCM1702U`, 4 × `M5218AFP`. **IC1
+`TC9271F` is captioned "INTERFACE"** and is an IEC-958 transmitter — its pins are
+`COPY`, `EMPHI`, `VLDY`, `CTG1-3`/`CTGA1-3` (category code), `LBIT`,
+`FS1/FS2/FS3`, `BLOCK`, `LRS`, with outputs `D01`/`D02`. The output stage is
+textbook coaxial S/PDIF:
+
+    IC1 D01/D02 -> IC2 D74HC04GS "BUFFER" (paralleled inverter sections)
+                -> R10 470 -> C21 -> T1 pulse transformer -> R1/R2 150R
+                -> L3 0.45uH + C11 150p -> JK1  DIGITAL AUDIO OUT
+
+`SUB OUT 2`/`SUB OUT 3` are analogue-only, from IC3–IC6 (`PCM1702U`) through
+`M5218AFP` I/V converters and low-pass filters to JK2–JK5.
+
+⚠ **Consequence for the driver.** The board's digital source arrives on its `CN2`
+from **main-board `CN14`**, as `BCK`, `LRCK`, `MCK`, `DATA`, `SDID2`, `SDID3`.
+So the main board **already emits serial digital audio internally** — it simply
+has no connector for it. Anything modelling the WSA1's output path should expect
+that bus to exist whether or not the expansion board is fitted.
 
 The **keyboard variant enters service mode from the keybed instead** — five
 two-note chords an octave apart — which no sibling machine in these trees does.
