@@ -718,7 +718,7 @@ The main CPU firmware symbol table reveals the real names for these functions:
 | 0xFA42FB | **RegisterObjectTable** | "workspace[0x0E0A][0x00E4]" | Register handler in object table |
 | 0xFA431A | **RegisterObject** | (unnamed) | Register individual object entry |
 | 0xFA43B3 | **UnRegisterObject** | (unnamed) | Remove object entry |
-| 0xFAD61F | **PostEvent** | "ApPostEvent" | Queue event for asynchronous dispatch |
+| 0xFA9752 | **PostEvent** | "ApPostEvent" | Queue event for asynchronous dispatch |
 
 ### Architecture Overview
 
@@ -772,12 +772,12 @@ SendEvent(XWA=object_id, XBC=request_code, XDE=param):
 
 The identity query (step 4) calls through the registered handler function (e.g., `ClassProc` for DISK MENU objects). For request `0x01E00000`, `ClassProc` simply returns XWA unchanged, so the identity equals the object ID.
 
-### PostEvent (0xFAD61F) — Asynchronous Event Queue
+### PostEvent (0xFA9752) — Asynchronous Event Queue
 
 `PostEvent` (previously called "ApPostEvent") queues events for later dispatch:
 
 ```asm
-PostEvent:                    ; 0xFAD61F
+PostEvent:                    ; 0xFA9752
     ; Allocate 8 bytes on stack, save registers
     ; Acquire lock (CALL 0xEF1EA7 with WA=4)
     ; Read queue state:
@@ -901,7 +901,7 @@ LD    XDE, 0                 ; Parameter: none
 CALL  PostEvent              ; Queue event for dispatch
 ```
 
-`PostEvent` (0xFAD61F) queues events in a ring buffer at `0x02BC34` (12-byte entries, max 1,024). The main event loop dequeues events and dispatches them synchronously via `SendEvent`.
+`PostEvent` (0xFA9752) queues events in a ring buffer at `0x02BC34` (12-byte entries, max 1,024). The main event loop dequeues events and dispatches them synchronously via `SendEvent`.
 
 ### Complete Activation Flow
 
@@ -949,7 +949,7 @@ Based on the complete dispatch analysis, the Mines project needs:
 
 ### Object System Initialization
 
-The firmware initializes the object table at startup via `InitializeObjectTable` (0xFA40B2). This function:
+The firmware initializes the object table at startup via `InitializeObjectTable` (0xFA40B3). This function:
 
 1. Clears all 1,120 entries in the object table (14 bytes each)
 2. Initializes internal dispatch tables (0x0328FC and 0x032ABC)
