@@ -8,8 +8,9 @@ permalink: /kn7000-image-gallery/
 
 The KN7000 firmware stores graphics in **two** ways:
 
-* **Standard file formats** — 169 baseline JPEGs (photos, demo art) and Windows
-  BMPs (UI graphics), extracted with `image_extract.py`. These are shown in the
+* **Standard file formats** — 169 images total (125 baseline JPEGs — photos,
+  demo art — and 44 Windows BMPs — UI graphics, the digital-drawbar caps and two
+  program-ROM icons), extracted with `image_extract.py`. These are shown in the
   sections below; each caption gives the source ROM, byte offset, and dimensions.
 * **Raw palette-indexed bitmaps** — exactly like the [KN5000]({{ site.baseurl }}/image-gallery/):
   headerless 4/8bpp indexed pixel data reached through a pointer hierarchy in the
