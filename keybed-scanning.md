@@ -9,6 +9,15 @@ permalink: /keybed-scanning/
 The KN5000's 61-key velocity-sensitive keyboard connects directly to the tone generator IC303 (TC183C230002), which performs hardware key scanning internally. The Sub CPU reads completed note events from IC303's keyboard output interface — the CPU does **not** scan the keyboard matrix itself.
 
 > **Status:** Note encoding and voice slot management fully reverse-engineered from SubCPU firmware. HLE keybed device implemented in MAME driver.
+>
+> **Correction (2026).** The disassembly has since renamed the two routines this page
+> describes and corrected their behaviour: `ToneGen_Read_Voice_Data` is `Keybed_Read_Event`
+> (same address, 0x03D0C5) and `ToneGen_Calc_Pitch` is `Keybed_Decode_Event` (same address,
+> 0x03D11F) — the old names were wrong, because neither routine touches tone-generator voice
+> state. More importantly, **the high byte at 0x110000 is not a linear velocity.** It is a
+> raw touch/key-travel-time reading that indexes a lookup-table curve; a *small* raw value
+> means a *hard*, loud strike. The sections below have been corrected to describe the real
+> curve instead of a direct pass-through.
 
 ## Architecture
 
@@ -36,8 +45,8 @@ The note flow is bidirectional — keybed events travel through the Sub CPU to t
 
 **Forward path** (keybed to display):
 1. Physical key press detected by IC303 hardware scanner
-2. IC303 presents note/velocity at 0x110000, sets status bit at 0x110002
-3. `ToneGen_Read_Voice_Data` reads the event and allocates a voice slot
+2. IC303 presents the key index and a raw touch reading at 0x110000, sets status bit at 0x110002
+3. `Keybed_Read_Event` (formerly mis-named `ToneGen_Read_Voice_Data`) reads the event, calls `Keybed_Decode_Event` to curve-map the touch reading into a MIDI velocity, and allocates a voice slot
 4. `InterCPU_DMA_Send` transmits `[0x90, note, velocity]` to Main CPU via latch
 5. Main CPU updates display (key indicators, voice allocation) and emits MIDI
 
@@ -51,31 +60,32 @@ The note flow is bidirectional — keybed events travel through the Sub CPU to t
 | Address | Width | Direction | Purpose |
 |---------|-------|-----------|---------|
 | 0x110002 | 16-bit | Read | Status register |
-| 0x110000 | 16-bit | Read | Voice data (note + velocity) |
+| 0x110000 | 16-bit | Read | Keybed event data (key index + raw touch reading) |
 
 ### Status Register (0x110002)
 
 | Bit | Name | Description |
 |-----|------|-------------|
-| 0 | DATA_READY | 1 = note event available for reading |
-| 1 | MODE | 0 = note-on context (normal operation) |
-| 15:2 | — | Reserved / unused |
+| 0 | DATA_READY | 1 = an event is queued; 0 = FIFO empty, data port left untouched |
+| 1 | RELEASE_QUALIFIER | 1 = treat this event the same as a `0xFF` touch byte (release path), even though the touch byte itself may not be `0xFF` |
+| 15:2 | — | Never tested by either firmware copy |
 
 ### Data Register (0x110000)
 
 | Bits | Name | Description |
 |------|------|-------------|
-| 7:0 | RAW_NOTE | Note number (see encoding below). Bit 7 = "has velocity" flag |
-| 15:8 | VELOCITY | Velocity value. 0xFF = note-off |
+| 6:0 | KEY_INDEX | Key index |
+| 7 | KEY_STATE | SET = key DOWN, CLEAR = key UP (not a "has velocity" or release flag) |
+| 15:8 | RAW_TOUCH | Raw touch/key-travel-time reading — **not a velocity**. It indexes a lookup-table curve (`Keybed_Decode_Event`) that produces the actual MIDI velocity; a *small* value here means a *hard* strike. `0xFF` means "no touch value for this event" and routes to the release/note-off arm. |
 
 ## Note Encoding
 
 ### Raw Note to MIDI Note
 
-`ToneGen_Calc_Pitch` (at 0x03D11F) adds a fixed offset of **0x24 (36)** to convert the raw note number to a MIDI note:
+`Keybed_Decode_Event` (at 0x03D11F, formerly mis-named `ToneGen_Calc_Pitch`) adds a fixed offset of **0x24 (36)** to the low 7 bits of the key byte to get the MIDI note:
 
 ```
-MIDI_note = raw_note + 0x24
+MIDI_note = (key_byte & 0x7F) + 0x24
 ```
 
 | Raw Note | MIDI Note | Name | Octave |
@@ -89,29 +99,43 @@ MIDI_note = raw_note + 0x24
 
 The KN5000 has 61 keys: C2 (raw 0) through C7 (raw 60).
 
-### Note-On Event Format
+### Touch-to-Velocity Curve
 
-When a key is pressed with measurable velocity:
-
-```
-data_word = (velocity << 8) | (raw_note | 0x80)
-status: bit 0 = 1 (data ready), bit 1 = 0 (note-on context)
-```
-
-- Bit 7 of the low byte is SET (0x80 OR'd in), indicating "has velocity data"
-- Velocity range: 0x01-0xFE (1-254), where higher = harder press
-
-### Note-Off Event Format
-
-When a key is released:
+**Correction:** earlier revisions of this page described the high byte as a linear velocity
+carried straight through to the DMA packet. It is not — `Keybed_Decode_Event` runs it through
+a touch-sensitivity curve (the same curve family as the sub-CPU boot ROM's
+`NOTE_VELOCITY_LOOKUP_CALCULATE`, see [Sub-CPU Boot ROM]({{ site.baseurl }}/subcpu-boot-rom/)):
 
 ```
-data_word = (0xFF << 8) | raw_note
-status: bit 0 = 1 (data ready)
+raw   = high byte of the 0x110000 word            ; 0xFF = "no touch value" (release)
+x     = ToneGen_Velocity_Input_Curve[raw]         ; 256-byte LUT @ 0x01F43E, MONOTONICALLY DECREASING
+y     = (x - pivot) * gain / divisor + pivot_out   ; pivot/divisor @ 0x01F418/0x01F41A; gain/pivot_out
+                                                    ; from the 3-byte-per-curve table @ 0x01F420
+y    -= black_key_trim   if note % 12 in {1,3,6,8,10}   ; the five black keys (table @ 0x01F422)
+clamp y to 0..255
+velocity = ToneGen_Velocity_Output_Curve[y]        ; 256-byte LUT @ 0x01F53E, MONOTONICALLY INCREASING, max 0x7F (127)
 ```
 
-- Bit 7 of the low byte is CLEAR (raw note value only)
-- Velocity byte = 0xFF triggers the note-off code path in `ToneGen_Read_Voice_Data`
+`curve` (the touch-sensitivity mode, 0-9) is the byte at RAM `0x4A48`, initialised to **6**
+by `ToneGen_Init` and changeable only by `Audio_CmdHandler_A0_BF`. Curve 0 has zero gain: with
+touch sensitivity off, every note lands at a fixed level (MIDI velocity 80). The input curve
+is monotonically *decreasing* — a **small** raw touch reading means a **hard, loud** strike
+(consistent with the raw value being a key-travel *time*, not a force). The black-key trim is
+a real mechanical compensation: the five black keys (note % 12 in {1, 3, 6, 8, 10}) sit higher
+and travel further, so the same physical force reads as a smaller raw value and needs an
+explicit subtraction to land at the same delivered velocity as a white key.
+
+### Note-On / Note-Off Event Format
+
+```
+data_word (0x110000) = (raw_touch << 8) | (key_index | key_state_bit7)
+status (0x110002):      bit 0 = 1 (data ready), bit 1 = release qualifier
+```
+
+- Bit 7 of the low byte is the key **state**: SET = key DOWN, CLEAR = key UP.
+- A raw touch byte of `0xFF`, or status bit 1 set, routes the event to the release/note-off
+  arm regardless of the key-state bit; `Keybed_Decode_Event` still runs (for the note number)
+  but the delivered velocity is forced to 0.
 
 ## Voice Slot Table
 
@@ -126,7 +150,7 @@ Each slot byte:
 - **0xFF** = note active (slot in use)
 - **0x00** = slot available
 
-When a note-on event arrives, `ToneGen_Read_Voice_Data` scans the 16 slots for an available one. When a note-off arrives, the corresponding slot is freed.
+When a note-on event arrives, `Keybed_Read_Event` scans the 16 slots for an available one. When a note-off arrives, the corresponding slot is freed.
 
 ## DMA Packet Format
 
@@ -136,15 +160,16 @@ After processing a note event, the Sub CPU relays it to the Main CPU via the int
 
 ```
 Byte 0: 0x90 (MIDI Note On status)
-Byte 1: MIDI note number (raw_note + 0x24)
-Byte 2: velocity (0x01-0xFE)
+Byte 1: MIDI note number ((key_index & 0x7F) + 0x24)
+Byte 2: velocity — the curve-mapped output of Keybed_Decode_Event (see Touch-to-Velocity
+        Curve above), not the raw touch byte; the output curve's range is 0x01-0x7F (1-127)
 ```
 
 ### Note-Off Packet
 
 ```
 Byte 0: 0x90 (MIDI Note On status — velocity 0 = note off per MIDI convention)
-Byte 1: MIDI note number (raw_note + 0x24)
+Byte 1: MIDI note number ((key_index & 0x7F) + 0x24)
 Byte 2: 0x00 (zero velocity = note off)
 ```
 
@@ -154,9 +179,9 @@ Byte 2: 0x00 (zero velocity = note off)
 |---------|---------|-------------|
 | `ToneGen_Init` | 0x03D016 | Set tone generator mode to 6, begin polling |
 | `ToneGen_Process_Notes` | 0x03D01E | Main loop: read and process all pending events |
-| `ToneGen_Read_Voice_Data` | 0x03D0C5 | Read one event from 0x110000, manage voice slots |
-| `ToneGen_Calc_Pitch` | 0x03D11F | Convert raw note to pitch value (adds 0x24) |
-| `ToneGen_Poll_Init` | 0x03D227 | Initial polling: read 16 slots with delay loops |
+| `Keybed_Read_Event` | 0x03D0C5 | Read one event from 0x110000, manage voice slots (formerly mis-named `ToneGen_Read_Voice_Data` — it does not touch tone-generator voice state) |
+| `Keybed_Decode_Event` | 0x03D11F | Convert raw key byte + touch reading to MIDI note and curve-mapped velocity (formerly mis-named `ToneGen_Calc_Pitch`) |
+| `ToneGen_Poll_Init` | 0x03D1FB | Initial polling: read 16 slots with delay loops (`ToneGen_Poll_Delay`, the inner busy-wait sub-block, is at 0x03D227) |
 | `ToneGen_Config_Init` | 0x02DFCF | Configure all 64 IC303 voices and global registers |
 | `InterCPU_DMA_Send` | (varies) | Send 3-byte note packet to Main CPU via latch |
 
