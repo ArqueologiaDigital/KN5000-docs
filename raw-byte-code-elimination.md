@@ -28,6 +28,25 @@ All 6 ROMs achieve 100% byte-perfect match. As of March 2026, all executable cod
 > in March — directive-counting (no `.incbin` left) is not a completeness proof; only a
 > per-byte disassembly attempt (Step 1's actual method, below) is.
 
+> **Second correction, same day.** The scoping above matters: that pass closed the *sound*
+> code. A separate falsification pass on 2026-09-01 attacked the payload's remaining 100%
+> claim and found **1,230 further bytes of real TLCS-900 code** still spelled `.byte`
+> outside the sound path, now converted and each one proved by round trip — disassemble the
+> run, re-assemble that exact text, require the original bytes back. **About 976 bytes of
+> code-shaped `.byte` remain**, for a named reason rather than for lack of trying: the
+> pinned LLVM backend can *decode* some addressing forms it cannot *encode*
+> (`DSP_Bytecode_Op01/02/03`, 569 B) and cannot re-parse some spellings its own
+> disassembler emits (~407 B in the TaskEvent/FIFO/TaskSched family). So the payload is
+> still not at zero, and the honest figure is the one with that remainder in it.
+>
+> Also worth recording beside the `.incbin` lesson, because it is the same mistake wearing
+> different clothes: a lane in the same push converted 153,600 bytes of wallpaper from
+> `.incbin` into 9,645 lines of `.byte` and reported the debt falling by that amount — then
+> **withdrew it**, on the grounds that a reader understands nothing new afterwards and a
+> viewable PNG is the better representation. Counting `.incbin` distorts in both
+> directions: it hides real debt written as `.byte`, and it rewards pushing legitimate data
+> *into* `.byte`.
+
 **Scope:** `.byte` sequences that encode native TLCS-900 CPU instructions across all 6 ROMs. Data tables, strings, bitmaps, firmware bytecode for software interpreters, and padding are out of scope (correct as-is).
 
 ## Current Status
