@@ -98,3 +98,48 @@ message opcode/id convention and the sleep/wake naming carry across. What is
 observed here for the KN7000 specifically are the concrete addresses — the task
 handles (`0x50380004` / `0x5038002C`), the per-task focused-object pointers, the
 message-id block (`0x6009D…0x600A1`) and the handler entry points.
+
+## The same kernel is in four processors, across two products
+
+*Added 2026-09-02.* The sharing above turns out to reach considerably further than
+the KN5000. The **SX-WSA1R**, a physical-modelling synthesiser built on a different
+CPU family (two TMP95C061s against the KN7000's MN10300), runs the **same
+multitasking kernel** — and so does each of the KN5000's two processors. One
+kernel, four processors, two products.
+
+The proof for the WSA1R pair is a build, not a resemblance: `wsa1/kernel/kernel.s`
+is a single source that assembles into **2,180 bytes of `prom_a` and 2,180 bytes of
+`prom_c`, both byte-identical to the real EPROMs**. Over the union of the two
+blocks there are 941 instruction slots; 735 needed no reconciliation, 129 differed
+only in house style, and the remaining 81 reduce to **21 named constants** (twelve
+RAM addresses, six array sizes, three ROM pointers) — with no conditional assembly
+anywhere in the file.
+
+For the KN5000 the instrument had to change, and that is the part worth
+remembering. ⚠ **Byte-identity was the wrong test and had already answered "no"**:
+a tool in the tree reported zero byte-identical matches for 23 routines across all
+41 KN5000 images. That is true about bytes and false about the question — two
+processors *in the same product*, from *the same build*, running *the same source*,
+still differ in 81 of 941 slots, so a third built years apart cannot possibly be
+closer. Matching on control-flow shape instead, against a **foil control** of
+non-kernel code cut to the same instruction counts:
+
+| | n | max | median | ≥ 0.70 |
+|---|---:|---:|---:|---:|
+| kernel routines (≥ 20 instr) | 20 | 1.000 | 0.909 | 20 |
+| non-kernel foils | 26 | 0.333 | 0.212 | 0 |
+
+No overlap, and a gap of 0.41.
+
+⚠ **Do not trust the KN5000's kernel labels.** The measured alignment does not
+match them: the site that actually corresponds to `MsgQueue_Send` is labelled
+`TaskSched_Wait`, the one matching `Kernel_SemaSignal` is labelled
+`TaskEvent_Wait`, and on the main CPU the site matching `Kernel_StartTask` at 0.978
+is called `Show_ScreenGroup_Entry`. Several KN5000 kernel labels are simply wrong —
+a renaming pass waiting to happen, and a reminder that names point an instrument at
+a region without being evidence about it.
+
+Not established: who wrote it, and that the sources are identical.
+`Kernel_Dispatch` scores only 0.742, because the KN5000 version has no tick-drain
+loop and its lock depth has moved out of a control register the TMP94C241 does not
+have. The same program; not the same file.
