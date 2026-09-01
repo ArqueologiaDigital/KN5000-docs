@@ -187,6 +187,8 @@ The first byte encodes both operand size and addressing mode:
 | 0    | (R) register indirect | reg_byte, sub_opc |
 | 1    | (R+d8) reg indirect + 8-bit disp | reg_byte, d8, sub_opc |
 | 2    | (addr24) direct 24-bit address | addr_lo, addr_mid, addr_hi, sub_opc |
+
+**Address width is not a function of the address value.** The direct-memory prefix's low two bits select an 8-, 16-, or 24-bit address form independently of how large the address is — shipped firmware writes `set 7,(0x00008a)` as `F2 8A 00 00 BF`, the 24-bit form, for an address that fits in a single byte. The LLVM assembler cannot guess the intended width from the number, so it is requested explicitly with a suffix: `(0x8a:8)`, `(0x1234:16)`, `(0x123456:24)`. An operand with no suffix keeps the 24-bit default, which is also the only width a relocation (as opposed to a constant) can use.
 | 3    | (R+d16) reg indirect + 16-bit disp | reg_byte, d16_lo, d16_hi, sub_opc |
 | 4    | (−R) predecrement | reg_byte, sub_opc |
 | 5    | (R+) postincrement | reg_byte, sub_opc |
@@ -224,7 +226,7 @@ Sub-opcode table same as register source prefix, plus additional formats for BIT
 
 ## LLVM Backend Support Status
 
-As of February 2026, the following summarizes what the custom LLVM TLCS-900 backend supports for assembly (llvm-mc):
+As of September 2026, the following summarizes what the custom LLVM TLCS-900 backend supports for assembly (llvm-mc):
 
 ### Fully Supported
 
@@ -251,10 +253,16 @@ As of February 2026, the following summarizes what the custom LLVM TLCS-900 back
 | Previous bank (D7) operations | Full Q register support |
 | LDS/LDS32/LDS8 small immediate | Register prefix form |
 | CPS small immediate compare | All sizes |
+| Direct-memory address width | Explicit `:8` / `:16` / `:24` suffix on `(addr)`, e.g. `(0x8a:8)`; no-suffix defaults to 24-bit |
+| PUSH/POP (memory operand) | Native mnemonic, e.g. `push (0x1234)` |
+| MUL/MULS/DIV/DIVS (memory operand) | Native mnemonic, e.g. `mul WA,(0x1234)` |
+| EX, shift/rotate, carry-flag group, JP/CALL cc (memory operand) | Native mnemonics added alongside the PUSH/POP and MUL/DIV memory forms |
+| Register-indexed load/store `(Xrr+Rn)` | `ld`/`st` forms for byte/word/long (`ldb_dri`/`ldw_dri`/`ldl_dri`, `stb_dri`/`stw_dri`/`stl_dri`), plus `cpib_ind` (register-indexed compare with immediate) |
+| ERP-byte (previous-bank) LD short-immediate and LD register | e.g. `ld QIZH,1` and `ld C,QIZH` |
 
 ### Previously Unsupported (now all implemented)
 
-As of March 2026, all instruction encodings needed for the KN5000 ROM disassembly have been implemented in the LLVM backend. The following were added during the `.byte` code elimination effort:
+As of March 2026, all instruction encodings needed for the KN5000 ROM disassembly at the time were implemented in the LLVM backend. The following were added during the `.byte` code elimination effort. (Further gaps — direct-memory address width, native mnemonics for several memory-operand forms, register-indexed load/store, and ERP-byte LD forms — were found and closed later, through September 2026; see the tables above and "Known Encoding Issues" below.)
 
 | Category | Resolution |
 |----------|-----------|
@@ -275,6 +283,10 @@ As of March 2026, all instruction encodings needed for the KN5000 ROM disassembl
 3. **LD immediate to memory sub-opcode:** Previously LLVM used sub-opcode 0x00 for `LD (addr), #imm16` but the hardware encoding uses 0x02. This has been **fixed** in the LLVM backend.
 
 4. **32-bit LD immediate always compact:** `LD XWA, #imm32` always uses the compact 5-byte form (0x40+R) rather than the 6-byte prefix form (E8+R, 0x03, imm32). Cannot reproduce the prefix form.
+
+5. **Fixed, but previously silent:** before a native memory form existed for them, `push (0x1234)` and `mul WA,(0x1234)` were accepted by the parser as if the parenthesised address were an *immediate operand* rather than a memory reference — `push (0x1234)` assembled to `[0x09,0x34]` (the address truncated to 8 bits) and `mul WA,(0x1234)` assembled to `[0xd8,0x08,0x34,0x12]` (multiplying by the address value itself, not by its contents). Both mnemonics now have proper memory forms and the syntax means what it says; no error was ever raised for the old, wrong reading, so any object code assembled before this fix should be treated as suspect.
+
+6. **`(Xrr+Rn)` register-indexed operand is now refused, not silently mis-encoded:** `(Xrr+Rn)` (e.g. `(xix+iz)`) is a distinct addressing mode from `(Xrr+d16)` and is not accepted through the displacement operand syntax. It used to fall through to the expression parser, which treated the index register name as an undefined symbol — `ld wa,(xix+iz)` assembled to `d3 f1 00 00 20` instead of the hardware's `d3 07 f0 f8 20`, and was diagnosed (if at all) only at link time. This is now a parse-time error. The register-indexed forms the KN5000/WSA1R firmware actually uses (`ld`/`st` byte/word/long via `(Xrr+Rn)`, and the register-indexed immediate compare) have their own dedicated mnemonics — see the Backend Support Status table above — rather than reusing the displacement syntax.
 
 ## Condition Codes
 
