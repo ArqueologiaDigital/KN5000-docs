@@ -21,7 +21,7 @@ and both were recovered from the firmware images rather than from a databook.
 > and responds to its panel. That is all.
 >
 > **Updated 2026-09-01:** the modelling window at `0x00104000` now has a
-> **placeholder device**, `wsa1_modeling_device`. It models the *register
+> **placeholder device**, `l7a1429_device`. It models the *register
 > interface* — an address latch at `+0`, data at `+2`, a saved register file
 > numbered `block * 0x40 + channel` — and synthesises nothing. Its value is that
 > the register traffic is now captured and inspectable rather than discarded, and
