@@ -342,8 +342,8 @@ The gate table entry for state `0xE4` (FEATURE PRESENTATION sub-menu) contains t
 | Function | ROM Address | Source File | Purpose |
 |----------|-------------|-------------|---------|
 | `GroupBoxProc_StartSSFPresentation` | 0xF9A273 | `presentation_sound_nav.s:33` | Builds correct `0xB80A` workspace, sends direct event |
-| `AcPresentCtrl_CheckSSFStart` | 0xF84625 | `drawbar_panel_ui.s:15535` | Checks workspace tag, gates SSF start |
-| `DemoMenu_BuildItemWorkspace` | 0xF83CEA | `drawbar_panel_ui.s:14643` | Builds `0x82xx` workspace (wrong tag for SSF) |
+| `AcPresentCtrl_CheckSSFStart` | 0xF84625 | `drawbar_panel_ui.s:18086` | Checks workspace tag, gates SSF start |
+| `DemoMenu_BuildItemWorkspace` | 0xF83CEA | `drawbar_panel_ui.s:17186` | Builds `0x82xx` workspace (wrong tag for SSF) |
 | Workspace tag table | 0xE9F88C | — | 16-bit values in `0x82xx` range |
 
 ---
