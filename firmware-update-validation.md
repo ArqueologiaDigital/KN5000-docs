@@ -16,7 +16,7 @@ The firmware performs several checks before beginning a flash update. All must p
 
 The firmware version byte at ROM address `0xFFFFE8` must equal `0xFF` to enter update mode. This sentinel value is written by the firmware before triggering a reset to signal that an update should be attempted on next boot.
 
-**Code:** `Get_Firmware_Version` at boot (`0xEF0534`), compared to `0xFF`.
+**Code:** `Get_Firmware_Version` at boot (`0xFFFFE5`), compared to `0xFF`.
 
 ### 2. Floppy Disc Presence
 
@@ -56,7 +56,7 @@ The offsets in the second column are as passed to the compare function (relative
 
 ### 5. Flash Chip Identification
 
-`Flash_IdentifyAndValidateChip` (`0xEF37A5`) probes the target flash memory using the standard AMD/Atmel flash Read ID command sequence:
+`Flash_IdentifyAndValidateChip` (`0xEF379A`) probes the target flash memory using the standard AMD/Atmel flash Read ID command sequence:
 
 1. Write `0xAA` to base+0xAAAA
 2. Write `0x55` to base+0x5554
@@ -112,7 +112,7 @@ The firmware update process has several notable omissions in its validation:
 
 ### No Post-Write Flash Verification
 
-- `Flash_ProgramWord` (`0xEF381A`) writes a word to flash using the AMD program command sequence but **does not read back the programmed value** to verify it was written correctly.
+- `Flash_ProgramWord` (`0xEF3815`) writes a word to flash using the AMD program command sequence but **does not read back the programmed value** to verify it was written correctly.
 - The word `0xFFFF` (erased state) is silently skipped (optimization — programming 0xFFFF to already-erased flash is a no-op).
 
 ## Post-Update Verification (Boot-Time Only)
@@ -125,7 +125,7 @@ Scans the Table Data ROM (`0x800000`-`0xA00000`) in 64-byte blocks, checking if 
 
 This is used at boot to detect whether the Table Data ROM has been erased (requiring re-programming from the staging area), not to verify the integrity of a completed update.
 
-### HDAE5000_ROM_Transfer (0xEF48C8)
+### HDAE5000_ROM_Transfer (0xEF48CF)
 
 Transfers data between Table Data ROM and HDAE5000 ROM via the PPI interface at `0x160000`. This routine **does** verify each word transferred matches the source:
 
@@ -208,14 +208,14 @@ For a detailed analysis of the floppy update attack surface, see [Floppy Securit
 
 | Symbol | Address | Purpose |
 |--------|---------|---------|
-| `Get_Firmware_Version` | `0xEF0534` | Read version byte from 0xFFFFE8 |
+| `Get_Firmware_Version` | `0xFFFFE5` | Read version byte from 0xFFFFE8 |
 | `Detect_Disk_Type` | `0xEF42FE` | 38-byte signature matching |
-| `Flash_IdentifyAndValidateChip` | `0xEF37A5` | Flash chip ID validation |
-| `Flash_ProgramWord` | `0xEF381A` | AMD flash program (no read-back verify) |
+| `Flash_IdentifyAndValidateChip` | `0xEF379A` | Flash chip ID validation |
+| `Flash_ProgramWord` | `0xEF3815` | AMD flash program (no read-back verify) |
 | `Flash_WaitUntilReady` | `0xEF3AED` | Flash ready polling |
 | `Erase_and_Burn____when_disk_is_valid` | `0xEF4745` | Type range validation + dispatch |
 | `TableData_ROM_Verify` | `0xEF48AE` | Boot-time ROM erasure check |
-| `HDAE5000_ROM_Transfer` | `0xEF48C8` | Verified ROM-to-ROM transfer |
+| `HDAE5000_ROM_Transfer` | `0xEF48CF` | Verified ROM-to-ROM transfer |
 | `SHOW_ILLEGAL_DISK_MESSAGE` | `0xEF482A` | Fatal error display + halt |
 | `Detect_Region_Code` | `0xEF083E` | Hardware region detection |
 
