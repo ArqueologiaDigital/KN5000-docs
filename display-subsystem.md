@@ -644,7 +644,7 @@ Many domain-specific widget types exist for the keyboard's various modes (arrang
 
 | Function | Address | Description |
 |----------|---------|-------------|
-| `LcdOn` | 0xFAA5D0 | Enable LCD output (set flag at 0x030464) |
+| `LcdOn` | 0xFAA5B6 | Enable LCD output (set flag at 0x030464) |
 | `LcdOff` | 0xFAA5DB | Disable LCD output |
 | `ChangePalette` | 0xFAF34E | Switch color palette |
 | `ChangeWall` | 0xFAF21C | Load background wallpaper |
@@ -810,6 +810,17 @@ The display is one of the most complete subsystems in MAME emulation. The MN8930
 
 ## Code References
 
+> **Correction (2026-09 review).** Cross-checking this whole appendix against the current
+> v10 build's symbol table (`nm rebuilt_ROMs/kn5000_v10_program.llvm.elf` in
+> `kn5000-roms-disasm`) found that most addresses here do not land exactly on a current
+> label start — some by a handful of bytes, consistent with this table having been compiled
+> by hand against an earlier disassembly pass, before later label-placement corrections.
+> One confirmed, unrelated-routine mismatch: **`LcdOn` is not at `0xFAA5D0`** — the real
+> `LcdOn` label is at `0xFAA5B6`; `0xFAA5D0` is `InitGraphics_SetupVRAM_Loop`, a different
+> routine a few lines further down the same function block. The rest of the table below is
+> **unverified** pending a full re-check against the symbol table rather than hand-copied
+> addresses; treat individual addresses here with caution until then.
+
 ### Core Display
 
 | Symbol | Address | Purpose |
@@ -820,7 +831,7 @@ The display is one of the most complete subsystems in MAME emulation. The MN8930
 | `Set_XWA_to_320_times_XDE` | `0xEF5023` | Y×320 coordinate calculation |
 | `VGA_ScreenBlank` | `0xFB319A` | Blank display during updates |
 | `VGA_ScreenUnblank` | `0xFB318A` | Restore display after updates |
-| `LcdOn` | `0xFAA5D0` | Enable LCD output |
+| `LcdOn` | `0xFAA5B6` | Enable LCD output |
 | `LcdOff` | `0xFAA5DB` | Disable LCD output |
 | `DrawQueue_Alloc` | `0xFAA4ED` | Allocate space in deferred draw queue |
 | `DisplayCmd_DequeueAndExecute` | `0xFAA36A` | Process queued draw command in draw task |
