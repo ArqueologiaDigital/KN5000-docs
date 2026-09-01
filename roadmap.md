@@ -318,7 +318,9 @@ Small, independently-correct PRs beat one large one. Order:
    Presentation` demo run"). The IC14 filename collision resolved toward the PR's flat hash: the
    merge landed `CRC(aa4917ce)` for `kn5000_rhythm_data_rom.ic14` and the fork now carries the same
    hash (with the raw as-dumped bytes kept alongside as `kn5000_rhythm_data_rom.ic14.as-read-a19a21-swapped`,
-   regenerable via `tools/rom-record-review/ic14_descramble_check.py`). **Also since merged
+   regenerable via `tools/kn5000_descramble_ic14.py` — the source comment in `kn5000.cpp` cites
+   a stale path, `tools/rom-record-review/ic14_descramble_check.py`, which does not exist).
+   **Also since merged
    2026-08-31: PR #15919** (`13fd3ea396a`, "kn5000: emulate the TEMPO/PROGRAM data wheel").
 2. The one-character `mn10300` disassembler fix — costs nothing, starts the relationship.
 3. `spi_sdcard` CRC16 init-0.
