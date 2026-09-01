@@ -6,7 +6,7 @@ permalink: /inter-cpu-protocol/
 
 # Inter-CPU Protocol
 
-The KN5000 uses two TMP94C241F CPUs that communicate via a memory-mapped latch at 0x120000. The Main CPU handles UI, MIDI, and control while the Sub CPU handles all audio generation.
+The KN5000 uses two TMP94C241F CPUs that communicate via a pair of memory-mapped latches — mapped at 0x140000 on the Main CPU's bus and at 0x120000 on the Sub CPU's bus (confirmed by the MAME driver's address maps in `kn5000.cpp`; on the Main CPU, 0x120000 is unrelated floppy-DMA hardware). The Main CPU handles UI, MIDI, and control while the Sub CPU handles all audio generation.
 
 ## Architecture
 
@@ -27,8 +27,8 @@ The KN5000 uses two TMP94C241F CPUs that communicate via a memory-mapped latch a
                                    v
                     ┌──────────────────────────┐
                     │         LATCH            │
-                    │       @ 0x120000         │
-                    │                          │
+                    │  0x140000 (Main CPU)     │
+                    │  0x120000 (Sub CPU)      │
                     │  Bidirectional Data      │
                     │  DMA-capable transfer    │
                     └──────────────────────────┘
@@ -88,7 +88,7 @@ The `Audio_DMA_Transfer` routine handles bulk data transfer:
 Audio_DMA_Transfer:
     ; Data pointer at 0x05DA
     ; Byte count at 0x05DE
-    ; Transfers in chunks to latch at 0x120000
+    ; Transfers in chunks to latch at 0x140000
 ```
 
 **Transfer Variables:**
@@ -128,20 +128,20 @@ The Sub CPU configures INT0 as **level-triggered** (IIMC bit 1 = 0). This means 
 The complete flow for receiving a command from the Main CPU involves three interrupt sources working in sequence:
 
 ```
-Main CPU writes command byte to latch (0x120000)
+Main CPU writes command byte to latch (0x140000)
     │
     v
 generic_latch data_pending → set_input_line(INT0, ASSERT)
     │
     v
 ┌──────────────────────────────────────────────────┐
-│  INT0 ISR (INT0_HANDLER at 0x020C47)             │
+│  INT0 ISR (INT0_HANDLER at 0x020E86)             │
 │                                                   │
 │  1. Read command byte from latch (0x120000)       │
 │     → This clears data_pending → deasserts INT0   │
 │                                                   │
 │  2. Decode command type:                          │
-│     - E1: DMAD0=0x10E0, DMAC0=6                  │
+│     - E1: DMAD0=0x1116, DMAC0=6                  │
 │     - E2: DMAD0=0x111C, DMAC0=10                 │
 │     - E3: Set PAYLOAD_LOADED_FLAG, return         │
 │     - Standard (0x00-0xDF):                       │
@@ -198,7 +198,7 @@ When DMAC0 reaches 0:
 Commands are dispatched based on upper 3 bits of the command byte:
 
 ```asm
-CMD_DISPATCH_TABLE:                         ; Address: 0x00F428
+CMD_DISPATCH_TABLE:                         ; Address: 0x00F46C
     dd Audio_CmdHandler_00_1F   ; 0x00-0x1F: MIDI/note commands → ring buffer at 0x2B0D
     dd Audio_CmdHandler_20_3F   ; 0x20-0x3F: Stub (returns 0)
     dd Audio_CmdHandler_40_5F   ; 0x40-0x5F: (line 9619)
@@ -257,7 +257,7 @@ Special command bytes bypass this encoding:
 
 ### MIDI Message Format (Ring Buffer at 0x2B0D)
 
-The ring buffer contains standard MIDI messages parsed by `MIDI_Dispatch` (0x020FA4):
+The ring buffer contains standard MIDI messages parsed by `MIDI_Dispatch` (0x034D93):
 
 | Status Byte | Length | Format | Handler |
 |-------------|--------|--------|---------|
@@ -415,7 +415,7 @@ InterCPU_RX_Handler:           ; 0xFF881F
 | 6 | Payload ready - triggers `call 0x000400` in boot ROM main loop |
 | 7 | Transfer active flag |
 
-### Boot ROM Main Loop (0xFF8410)
+### Boot ROM Main Loop (0xFF840C)
 
 ```asm
 Boot_Main_Loop:                ; 0xFF840C
@@ -595,7 +595,7 @@ The Main CPU uses command 0x2B to query the Sub CPU for the display name of the 
 
 ### Sub CPU Handling
 
-- Processed in `Audio_Process_DSP` (0x035B36), not the standard command dispatch table
+- Processed in `Audio_Process_DSP` (0x035AC8), not the standard command dispatch table
 - Sub-command 0x00 at offset 0x436B triggers sound name lookup from RAM tables at 0x041xxx
 - Names are pre-loaded during boot from Table Data ROM, not queried from tone generator
 - Response sent via `InterCPU_DMA_Send` with HDMA ch2
@@ -663,11 +663,11 @@ This table maps Main CPU sending routines to the Sub CPU handlers that process t
 Main CPU                          Sub CPU
 ────────                          ───────
 Audio_SendCommand
-  → Audio_CommandEncoder
+  → Sprintf_Core (retired name: Audio_CommandEncoder)
     → AssswbWr (ring buffer)
       → sendCOMM
         → InterCPU_Send_Data_Block  → INT0 / MICRODMA_CH0_HANDLER
-          (latch write @ 0x120000)     → CMD_DISPATCH_TABLE[bits 7-5]
+          (latch write @ 0x140000)     → CMD_DISPATCH_TABLE[bits 7-5]
                                           → Audio_CmdHandler_XX_XX
                                             → MIDI_Dispatch (for 0x00-0x1F)
 ```
@@ -690,15 +690,15 @@ Audio_SendCommand
 | Command | Main CPU Routine | Main CPU Address | Sub CPU Handler | Purpose |
 |---------|-----------------|-----------------|-----------------|---------|
 | 0xE1 | `InterCPU_E1_Bulk_Transfer` | 0xEF3457 | `InterCPU_RX_Handler` (boot) / `CH0_State2_E1` | Two-phase bulk DMA (6-byte header + payload) |
-| 0xE2 | `InterCPU_E2_Send` | 0xEF3555 | `InterCPU_RX_Handler` (boot) / `CH0_State3_E2` | Extended parameter transfer (10-byte header) |
-| 0xE3 | `SubCPU_Send_Payload` | 0xEF0222 | `InterCPU_RX_Handler` (boot) | Payload ready signal (sets bit 6 of 0x04FE) |
+| 0xE2 | `InterCPU_E2_Send` | 0xEF33AA | `InterCPU_RX_Handler` (boot) / `CH0_State3_E2` | Extended parameter transfer (10-byte header) |
+| 0xE3 | `SubCPU_Send_Payload` | 0xEF068A | `InterCPU_RX_Handler` (boot) | Payload ready signal (sets bit 6 of 0x04FE) |
 
 ### Boot-Time Transfer Cross-Reference
 
 | Step | Main CPU Routine | Main CPU Address | Sub CPU Handler | Description |
 |------|-----------------|-----------------|-----------------|-------------|
-| 1 | `SubCPU_Send_Payload` | 0xEF0222 | `InterCPU_RX_Handler` | Transfer 192KB firmware payload via E1 bulk transfers |
-| 2 | `SubCPU_Send_Payload` (E3) | 0xEF0222 | `InterCPU_RX_Handler` | Signal payload ready → Sub CPU jumps to payload entry |
+| 1 | `SubCPU_Send_Payload` | 0xEF068A | `InterCPU_RX_Handler` | Transfer 192KB firmware payload via E1 bulk transfers |
+| 2 | `SubCPU_Send_Payload` (E3) | 0xEF068A | `InterCPU_RX_Handler` | Signal payload ready → Sub CPU jumps to payload entry |
 | 3 | `SubCPU_Init_DMA_Channels` | 0xEF329E | `InterCPU_Latch_Setup` | Both CPUs configure DMA channels for runtime communication |
 | 4 | `SubCPU_Payload_Verify` | 0xEF092B | — | Main CPU verifies payload checksums (no Sub CPU involvement) |
 
@@ -709,10 +709,10 @@ The Main CPU's `Audio_SendCommand` (called from 197+ locations) is the primary i
 | Stage | Routine | Address | CPU | Description |
 |-------|---------|---------|-----|-------------|
 | 1. Lock | `Audio_Lock_Acquire` | 0xEF1FEE | Main | Acquire lock #7 (serializes audio commands) |
-| 2. Format | `Audio_CommandEncoder` | 0xFF0ABC | Main | Printf-like formatter builds command packet |
-| 3. Queue | `AssswbWr` | 0xFDBAEA | Main | Write to ring buffer at 0xBD3C (max 0x1FC bytes) |
+| 2. Format | `Sprintf_Core` | 0xFF1048 | Main | Printf-like formatter builds command packet (retired name: `Audio_CommandEncoder`) |
+| 3. Queue | `AssswbWr` | 0xFDB1F3 | Main | Write to ring buffer at 0xBD3C (max 0x1FC bytes) |
 | 4. Send | `sendCOMM` | 0xEF32F4 | Main | Chunk into ≤32-byte blocks, call `InterCPU_Send_Data_Block` |
-| 5. Transfer | `InterCPU_Send_Data_Block` | 0xEF3492 | Main | Handshake + DMA write to latch at 0x120000 |
+| 5. Transfer | `InterCPU_Send_Data_Block` | 0xEF3345 | Main | Handshake + DMA write to latch at 0x140000 |
 | 6. Receive | `MICRODMA_CH0_HANDLER` | 0x020F1F | Sub | DMA interrupt reads from latch, dispatches to handler |
 | 7. Parse | `MIDI_Dispatch` | 0x034D93 | Sub | Parse MIDI status bytes, route to voice handlers |
 | 8. Unlock | `Audio_Lock_Release` | 0xEF1F0F | Main | Release lock #7 |

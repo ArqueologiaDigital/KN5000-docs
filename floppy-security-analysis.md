@@ -240,7 +240,7 @@ These areas require further investigation to determine whether the data-control 
 | `Parport_ReadNextByte` | `0xEF4C07` | Byte reader with floppy refill |
 | `Flash_AccumWrite_Byte` | `0xEF4C7A` | Decompressed byte → flash accumulator |
 | `FLASH_MEM_UPDATE` | `0xEF4F6F` | Top-level update entry point |
-| `String_Compare` | `0xFF0CDA` | Byte-by-byte string comparison |
+| `String_Compare` | `0xFF0CC1` | Byte-by-byte string comparison |
 
 ---
 
