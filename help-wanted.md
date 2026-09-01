@@ -26,18 +26,19 @@ All ROMs achieve 100% byte-perfect match, and all NAKA widget C data files have 
 raw byte arrays to named packed structs. 15 sound data files have been converted to C structs with
 named fields.
 
-⚠ **Two claims that stood here since March 2026 were measured false on 2026-08-14 and are corrected:**
+⚠ **Two claims that stood here since March 2026 were measured false on 2026-08-14; one of
+them has since actually been achieved, re-measured 2026-09:**
 
-| claim as it stood | measured |
-|---|---|
-| "All `LABEL_XXXXXX` labels have been replaced with semantic names" | **35,924 of 39,451 rows (91 %)** in `symbols/maincpu_symbols_reference.txt` are still `LABEL_*` |
-| "All executable `.byte` code has been eliminated … zero code `.byte` fallbacks" | **at least 303** `.byte` lines still carry an instruction comment, e.g. `v7/maincpu/kn5000_v7_program.s:1160` — `.byte 0x1d, 0x31, 0x04, 0xff ; call Math_DivideSigned32` |
+| claim as it stood | measured 2026-08-14 | measured 2026-09 |
+|---|---|---|
+| "All `LABEL_XXXXXX` labels have been replaced with semantic names" | **35,924 of 39,451 rows (91 %)** in `symbols/maincpu_symbols_reference.txt` were still `LABEL_*` | **0 remain** — the file was regenerated from the build on 2026-08-21 (`169d4039`) with every `LABEL_*` replaced by a semantic name. The claim is now true. |
+| "All executable `.byte` code has been eliminated … zero code `.byte` fallbacks" | **at least 303** `.byte` lines still carried an instruction comment | **278** — still nonzero, so this one is still an open backlog, just a smaller one |
 
-Reproduce: `grep -rc 'LABEL_' symbols/maincpu_symbols_reference.txt` and
+Reproduce: `grep -c 'LABEL_' symbols/maincpu_symbols_reference.txt` and
 `grep -rn '^\s*\.byte' --include='*.s' . | grep -E ';.*\b(ld|jp|call|ret|push|pop)\b' | wc -l`
 in `kn5000-roms-disasm`. Note that 100 % byte-match is true and always will be — it is preserved by
 construction and says nothing about how much of the build is real source rather than `.incbin`
-passthrough. Both figures above are *the honest remaining backlog*, and both are places to help.
+passthrough. The `.byte`-fallback figure is *the honest remaining backlog*, and is a place to help.
 
 ### HDAE5000 ROM Disassembly
 
