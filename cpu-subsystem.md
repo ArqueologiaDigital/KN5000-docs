@@ -255,9 +255,23 @@ All 6 ROMs (Main CPU, Sub CPU boot, Sub CPU payload, Table Data, HDAE5000, Custo
 
 The ASL Macro Assembler (used historically) is archived in `archive/asl/`.
 
-### `.byte` Code Elimination: Complete
+### `.byte` Code Elimination
 
-As of March 2026, **all executable code across all 6 ROMs uses native TLCS-900 instructions** — zero `.byte` code fallbacks remain. Previously missing LLVM backend encodings (R+d16, 16-bit direct, 8-bit direct, F2 immediate stores, etc.) have all been implemented.
+As of March 2026, the LLVM backend encodings that were missing at the time (R+d16, 16-bit
+direct, 8-bit direct, F2 immediate stores, etc.) had all been implemented, and the disassembly
+repository's own milestone commits describe "all executable code" as converted for that
+effort. **This is not the current state.** Re-running the repository's own
+`scripts/analysis/audit_byte_code.py` classifier (2026-09) still finds several hundred `.byte`
+blocks across the sub-CPU boot ROM, HDAE5000 and table-data sources that the tool classifies
+as already decodable as native instructions by the current LLVM backend — 397 blocks (20,851
+bytes), concentrated in `table_data/preset_banks.s` (18,763 bytes) and
+`hdae5000/hdae5000_data_tables.s` (722 bytes) — plus 3 small blocks (19 bytes) that still need
+further backend work. Converting `.byte` fallbacks to native mnemonics is therefore an ongoing
+effort, not a completed one; see [Raw Byte Code Elimination]({{ site.baseurl }}/raw-byte-code-elimination/)
+for the current tracking page. (Note: the classifier's "decodable" label means llvm-mc can
+round-trip the bytes as valid instructions, not that a block is proven to be code rather than
+data that happens to disassemble cleanly — treat the counts as leads, per the tool's own
+caveat.)
 
 ## Related Pages
 
