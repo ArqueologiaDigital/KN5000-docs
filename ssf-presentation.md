@@ -485,7 +485,7 @@ When the timer reaches 10, song playback begins:
 
 ### Song List Processing
 
-`Demo_SelectEntry_ProcessSongList` (0xF86D86) manages song cycling:
+`Demo_SelectEntry_ProcessSongList` (0xF86B7C) manages song cycling:
 
 1. Checks if the song list at DRAM address `0x28B4` (10420) is empty
 2. Checks bit 3 of DRAM `0x28AD` (10413) for auto-play vs. manual mode
@@ -528,21 +528,21 @@ When the timer reaches 10, song playback begins:
 
 | Function | ROM Address | Source File | Purpose |
 |----------|-------------|-------------|---------|
-| `UIState_KeyScan_Dispatch` | 0xF98697 | `presentation_sound_nav.s` | SSF gate check: reads UI state, checks gate table, sends event 0x1C00038 |
+| `UIState_KeyScan_Dispatch` | 0xF98697 | `ui_control_panel.s` | SSF gate check: reads UI state, checks gate table, sends event 0x1C00038 |
 | `EventDispatch_Direct` | 0xFA9945 | (event system) | Broadcast event router with registration table |
 | `GroupBoxProc_StartSSFPresentation` | 0xF9A273 | `presentation_sound_nav.s:33` | Builds workspace with tag 0x0000B80A, sends event 0x1C0001C |
-| `AcPresentationControlProc` | 0xF8450B | `drawbar_panel_ui.s:15535` | Main presentation controller; dispatches via jump table at 0xE9F9B2 |
+| `AcPresentationControlProc` | 0xF8450B | `drawbar_panel_ui.s:17983` | Main presentation controller; dispatches via jump table at 0xE9F9B2 |
 | `AcPresentCtrl_CheckSSFStart` | 0xF84625 | `drawbar_panel_ui.s` | Checks workspace tag == 0xB80A, gates SSF start |
 | `AcPresentationBoxProc` | 0xF842B4 | `drawbar_panel_ui.s` | Presentation visual frame rendering |
 | `AcFdemoScreenProc` | 0xF84149 | `drawbar_panel_ui.s` | Feature Demo screen handler |
 | `DemoModeFunc` | 0xF222CC | `demo_routines.s` | Main demo mode dispatcher (event 0x1C00013) |
 | `DemoMode_Initialize` | 0xF869E3 | `demo_routines.s` | First-time demo setup (voice save, audio init) |
 | `DemoMode_Main_Operation` | 0xF8696F | `demo_routines.s` | Main demo playback loop |
-| `DemoMenu_BuildItemWorkspace` | 0xF83CEA | `drawbar_panel_ui.s:14643` | Builds 0x82xx workspace (automated path -- wrong tag for SSF) |
-| `Demo_SelectEntry_TimerTick` | 0xF86D45 | `demo_routines.s` | Timer-driven state machine entry point |
+| `DemoMenu_BuildItemWorkspace` | 0xF83CEA | `drawbar_panel_ui.s:17186` | Builds 0x82xx workspace (automated path -- wrong tag for SSF) |
+| `Demo_SelectEntry_TimerTick` | 0xF86BE4 | `demo_routines.s` | Timer-driven state machine entry point |
 | `Demo_SelectEntry_PlaySong` | -- | `demo_routines.s` | Song loading and SwbtWr initialization |
-| `Demo_SelectEntry_ProcessSongList` | 0xF86D86 | `demo_routines.s` | Song cycling and index management |
-| `Demo_WaitForDisplayBit` | 0xF86F2C | `demo_routines.s` | Timeout-protected busy-wait for display ready |
+| `Demo_SelectEntry_ProcessSongList` | 0xF86B7C | `demo_routines.s` | Song cycling and index management |
+| `Demo_WaitForDisplayBit` | 0xF86F2E | `demo_routines.s` | Timeout-protected busy-wait for display ready |
 | `FDemo_ProcessDisplayStateQuery` | -- | (presentation chain) | Processes display state after SSF event 0x1C00006 |
 | `FDemoText_ProcessTextMarkup` | -- | (presentation chain) | Processes XML text markup for rendering |
 | `DrawBitmapFile` | -- | `drawing_primitives.s:3346` | BMP header validation, palette load, pixel decode, VRAM blit |
@@ -560,7 +560,7 @@ When the timer reaches 10, song playback begins:
 
 ## Known Bug: MAME SSF Never Activates
 
-**Status (March 2026):** The SSF visual presentation (FTBMP bitmap rendering) does not trigger in MAME. The demo timer and song cycling work, but no slides are ever displayed. The tone generator hold timer bug has been fixed (voices no longer get stuck active when waveform ROMs are missing), which resolved 12 of 16 sequencer parts clearing naturally. A workaround timer handles the remaining 4 stuck accompaniment parts. The primary remaining blocker is the event routing issue -- see [Investigation Progress (March 2026)](#investigation-progress-march-2026).
+**Status (paused March 18, 2026):** The SSF visual presentation (FTBMP bitmap rendering) does not trigger in MAME. The demo timer and song cycling work, but no slides are ever displayed. An early tone-generator hold-timer fix, paired with a workaround timer that force-cleared stuck sequencer parts by writing DRAM directly, briefly appeared to resolve most of the failure -- but the workaround was later removed as a policy violation (HLE code must not bypass the firmware's own state machine), and deeper tracing found a different picture: `DRAM[0x10420]` briefly flashes to `0xFFFF` then collapses back to `0x0000` within about a second, because voices without waveform ROM data were not sustaining long enough for the firmware's own part-tracking to work. The investigation traced the full event-dispatch chain, the tempo/timer hardware, and the demo song-loading path before being paused to address other driver stability concerns -- see [Investigation Progress (March 2026)](#investigation-progress-march-2026) for the full trace-by-trace record and its closing summary of confirmed/uncertain findings.
 
 ### Symptom Chain
 

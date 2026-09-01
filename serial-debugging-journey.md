@@ -187,6 +187,16 @@ The remaining challenge is understanding why the firmware keeps re-initializing 
 
 We'll continue analyzing the firmware's serial initialization routines to understand exactly what conditions it's checking before proceeding past the init loop.
 
+**Resolved.** The init loop was possibility 2: the firmware polls a hardware
+status bit before trusting the transmitter, and MAME wasn't returning it.
+`kn5000: Add control panel HLE device` (2026-03-21) rewrote the control panel
+as a proper `kn5000_cpanel_device` driven entirely over this serial link, and
+fixed the boot hang by returning the SCLK1 idle state on Port F bit 6 so the
+firmware's TX-readiness check passes. Real button/LED I/O now goes over
+SCLK1/CPDATA as designed, replacing the memory-mapped I/O stopgap. See
+[Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) for the
+current, working protocol description.
+
 ## Code References
 
 The relevant MAME driver files:

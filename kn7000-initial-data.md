@@ -60,12 +60,12 @@ readings were wrong — pylzss's 1.1 MB partial was a false positive; the near-u
 histogram is just well-compressed DEFLATE output.) **However**, an empirical test (2026-07-07) showed that preloading the decoded image into the
 custom flash (dataflash `0x56020000`) does **not** change the style names, and a read-tap
 recorded **zero** reads from the custom data-flash (`0x56000000`–`0x561FFFFF`) while the style
-list is displayed. The `8 Beat 1` names are templated at **boot** by a function at `0x484420CB`
-(which copies the default string `0x4872AB42` via the library memcpy `0x4C003043`), from a source
-that is **not** the custom flash. So the decoded image is genuine user data, but the "all 8 Beat 1"
-list bug is a **separate** defect in the boot-time style-name build — populating the custom flash is
-not its fix. Next: disassemble `0x484420CB` (needs an MN10300 disassembler / a QTDEBUG build) to see
-why the style-ID→name lookup defaults.
+list is displayed. So the decoded image is genuine user data, but it is not the source of the
+"all 8 Beat 1" style-list bug. That bug's real mechanism — a different, undumped ~4.1 MB
+"Technics Rhythms" resource, with a shipped synthetic-ROM mitigation — is described under
+[How the rhythm menu resolves a style name](#how-the-rhythm-menu-resolves-a-style-name) below;
+an earlier "templated at boot by `0x484420CB`" theory was investigated and superseded by that
+finding.
 
 ### Favorites, decoded
 
@@ -137,12 +137,25 @@ program-ROM chain — all now named in the [disassembly]:
    styleListPtr@+0x14}` — gives that genre's style-ID list (BALLAD = 16 styles).
 3. Each style-ID's source bits pick built-in / MEMORY / CUSTOM; `ResolveStyleId`
    (`0x48435B33`) maps it through `StyleNumToBankSlotLUT` (`0x48734EE4`).
-4. The **name** is fetched from the custom flash — which is empty in emulation, so
-   every slot currently shows the default "8 Beat 1".
+4. The **display name** comes from a *different* resource than the custom-data flash
+   above: a "Technics Rhythms" name table that the selector `0x4843385E` probes across
+   six candidate windows (including the factory read-only flash at `0x57000000` and a
+   last-resort software window at `0x54E00000`), none of which is dumped. When every
+   probe misses, the resolver falls back to a program-ROM stub (`0x48729988`, header
+   `count = 1`), so every style row rendered as "8 Beat 1" regardless of its real
+   style-ID.
 
-So the "all 8 Beat 1" symptom is not a broken table (the table enumerates 16 valid
-styles); it is the **empty custom flash**. Populating it — by reversing the `.AST`
-codec, or dumping a programmed part — is the fix.
+So the "all 8 Beat 1" symptom was never the custom-data flash above (that theory —
+along with an earlier "templated at boot" theory — is superseded); it traces to the
+undumped ~4.1 MB rhythm-name flash (candidate chips: IC21 factory flash, or IC18+IC20
+custom flash). The current mitigation is a **synthetic ROM** (`kn7000_rhythms_synthetic.rom`,
+built by `tools/gen_technics_rhythms.py`, flagged `BAD_DUMP`) mapped at the firmware's
+own last-resort probe window `0x54E00000`: it reconstructs the real, intact directory
+prefix (a truncated copy survives in the dumped table ROM at `0x483E828C`) plus 52 real
+style names recovered from an intact secondary catalog, and honestly labels the
+remaining 168 factory names — which exist only on the undumped flash — as
+self-announcing placeholders (e.g. "BALLAD 04 ?"). The real fix is still a hardware
+dump of that flash.
 
 [kn7000_extraction]: https://github.com/felipesanches/kn5000_homebrew
 [disassembly]: {{ site.baseurl }}/kn7000-firmware/

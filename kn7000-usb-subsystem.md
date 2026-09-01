@@ -131,6 +131,6 @@ UI-navigation one.
 
 ## See also
 
-- [Storage & File System]({{ site.baseurl }}/kn7000-storage-subsystem/) — the SD card sibling co-processor
+- [Storage & File System]({{ site.baseurl }}/storage-subsystem/) — the SD card sibling co-processor
 - [MIDI / Serial I/O]({{ site.baseurl }}/midi-serial-io/)
 - [Hardware Architecture]({{ site.baseurl }}/hardware-architecture/)

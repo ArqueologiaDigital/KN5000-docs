@@ -150,11 +150,11 @@ Detailed hardware documentation extracted from the service manual schematics.
 |----|-------------|------|------|----------|
 | IC1 | QS6C5008E13 | ROM | 8Mbit | Table Data (ODD) |
 | IC3 | QS6C5D0ME11 | ROM | 8Mbit | Table Data (EVEN) |
-| IC4 | QV1GFKN5KAX1 | ROM | 8Mbit | Program (EVEN) |
-| IC6 | QV1GFKN5KAX1 | ROM | 8Mbit | Program (ODD) |
+| IC4 | QV1GFKN5KAX1 | ROM | 8Mbit | Program (ODD) |
+| IC6 | QV1GFKN5KAX1 | ROM | 8Mbit | Program (EVEN) |
 | IC9 | M5M44260AJ7S | DRAM | 4Mbit | Dynamic RAM |
 | IC10 | M5M44260AJ7S | DRAM | 4Mbit | Dynamic RAM |
-| IC14 | QS6C303C301I | ROM | - | Additional ROM |
+| IC14 | QS6C303C301I | ROM | 32Mbit | Rhythm Data ROM |
 | IC19 | QV1GFKN5KAX1 | ROM | 8Mbit | Custom Data |
 | IC21 | - | SRAM | 1Mbit | Backup (battery) |
 
@@ -176,7 +176,7 @@ The KN5000 uses different data organization depending on the ROM:
 
 | ROM | Chips | Interleaving | Size | Address Range |
 |-----|-------|-------------|------|---------------|
-| Program ROM | IC4 (even) + IC6 (odd) | 16-bit word-level | 2MB | 0xE00000-0xFFFFFF |
+| Program ROM | IC6 (even) + IC4 (odd) | 16-bit word-level | 2MB | 0xE00000-0xFFFFFF |
 | Table Data ROM | IC3 (even) + IC1 (odd) | 16-bit word-level | 2MB | 0x800000-0x9FFFFF |
 | Sub CPU Boot ROM | IC30 (internal) | None (single chip) | 128KB | 0xFE0000-0xFFFFFF |
 | Custom Data Flash | IC19 | None (single chip) | 1MB | 0x300000-0x3FFFFF |
@@ -364,7 +364,7 @@ Main CPU (TMP94C241F)          Control Panel MCU (M37471M2196S)
         │─────────> CMD0-4 ────────────>│ (Commands?)
 ```
 
-The exact protocol details must be reverse-engineered from the main CPU firmware disassembly.
+The exact protocol has since been reverse-engineered from the main CPU firmware disassembly and implemented as MAME HLE — see [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) for the full command/response reference.
 
 ## References
 

@@ -101,7 +101,7 @@ them as a parallel corpus and cross-reference constantly:
 | Split table ROM → 84-segment directory + 293 bitmaps + sound/style names + PAD presets | 🟢 same MILK formats; reuse `table_*.py` | re-point offsets; regenerate galleries |
 | MN10300 disassembler (`unidasm -arch mn10300`) | ✅ **works** (verified on KN6000 code) | — |
 | MN10300 **execution core** (`mn10300.cpp`, incl. `udf00`/`udf07`, interrupts) | ✅ **reuse the KN7000 core verbatim** | none for the ISA; only device wiring |
-| MAME driver (`kn7000.cpp`) | 🟢 **fork → `kn6000.cpp` / `kn6500.cpp`** | new memory map / base address, panel wiring, ROM regions |
+| MAME driver (`kn7000.cpp`) | ✅ **done, without forking** — `kn6000`/`kn6500` are `SYST()` variants inside the shared `kn7000.cpp`, reusing `kn7000_state` | dedicated panel layout (`kn6000.lay`) and tone-generator device now shipped; see the status update below |
 | Self-loaded library ROM (`0x4C000000`) | 🟢 likely the same mechanism | find the copy routine + source offset per model |
 | Byte-exact buildable disassembly + `mn10300_asm.py` | 🟢 transfers | regenerate per ROM |
 | 2,302 functions named from MILK reflection tables | 🟢 **rerun generically per ROM**, then four-way align | — |
@@ -155,8 +155,37 @@ names), KN6500 4,189 (2,006 symbols) — via the new NUL-walk `name_extract_nul.
 boot now reaches the main play screen, so the priority shifts to **dumping the built-in
 mask ROMs (IC13/IC14)** — currently undumped, so the instrument icons render with
 placeholder graphics — plus further peripheral wiring; decode the remaining
-table-ROM assets (bitmaps, PAD presets); add `kn5000` to the same binary (blocked on a
-MAME genie/`SOURCES` link quirk — see memory).
+table-ROM assets (bitmaps, PAD presets).
+
+## Status update (2026-07-20 ticks)
+
+Substantial work has landed since the section above was last written:
+
+- **`kn5000` now rides in the same binary too** — the earlier MAME genie/`SOURCES` link
+  blocker is resolved (naming `kn5000.cpp` and its device `.cpp` files explicitly in
+  `SOURCES` was the fix). `-validate` passes for all seven systems
+  (kn1500/kn2400/kn2600/kn5000/kn6000/kn6500/kn7000) from one shared tree.
+- **KN6000 has its own panel layout**, `kn6000.lay`, generated from the SX-KN6000 service
+  manual (pp. 5-6) instead of inheriting the KN7000's — the earlier default silently drew
+  a KN6000 as a KN7000, mapping every clickable element to the wrong function. Click-through
+  verification (POP, PIANO, DISK, PROGRAM MENU, DEMO, …) confirms the KN6000 now opens the
+  right screen per button; LED bindings remain unbound (the `[register][bit]` decode isn't
+  confirmed yet) and stay dark rather than guess.
+- **KN6000/KN6500 share a single tone-generator chip**, unlike the KN7000's two — confirmed
+  from the firmware's own TG write primitive (`0x4849465B`). The KN6000's tone-generator
+  device is live-verified against captured audio: measured pitch is within 0.01 semitone of
+  the true frequency at three test notes (C4/G4/C5). Timbre is still a placeholder sine
+  (wave ROMs undumped).
+- **KN6500 is a separate story: it emits zero tone-generator writes on a key press.** Its
+  voice engine never starts (a boot/enable-gate difference from KN6000, not a decode
+  problem), so it stays `MACHINE_NO_SOUND` while KN6000 is `MACHINE_IMPERFECT_SOUND`.
+- **The KN6000/KN6500 "table" ROM loads were confirmed to be non-dumps** — their low 1 MB
+  is just the program ROM's upper 1 MB reproduced, contributing nothing. They were replaced
+  with the KN7000's table ROM (flagged `BAD_DUMP`, with the substitution stated in the driver
+  comment) so the play screen renders with real text (part names, voice names) instead of
+  blanking; this makes the screen legible but **nothing table-derived on a KN6xxx screen is
+  KN6xxx-authentic** — the real fix is still a hardware dump of KN6000's IC13/IC14
+  (`QSIGX3C16008`/`QSIGX3C16007`) and KN6500's equivalents (`C3FBMD000069`/`68`).
 
 ## More Technics models incoming
 
