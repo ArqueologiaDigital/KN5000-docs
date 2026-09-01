@@ -323,7 +323,17 @@ See [Feature Demo & Presentation System]({{ site.baseurl }}/feature-demo/) for f
 
 ### Include Files
 
-| File | Lines | Contents |
+⚠ The line counts below are stale — the repo now holds three ROM versions (v7/v9/v10) and none
+of them matches these figures exactly for every file (checked directly: `drawing_primitives.s` is
+close at 4,575 in v10, but `semenu_routines.s` is 7,506 in v9/v10 — more than double the 3,431
+here — and `fdemotext_routines.s` is 3,259 in v9/v10 against 2,334 here). Current v10 line counts,
+for reference: `drawing_primitives.s` 4,575; `semenu_routines.s` 7,506; `bitmap_out_routines.s`
+4,669; `psgridbox_routines.s` 1,146; `rvari_routines.s` 2,761; `fdemotext_routines.s` 3,259;
+`setwall_routines.s` 2,193; `bmdredit_routines.s` 4,436. Paths also moved under per-subsystem
+directories, e.g. `v10/maincpu/ui/drawing_primitives.s`, `v10/maincpu/audio/semenu_routines.s`,
+`v10/maincpu/demo/fdemotext_routines.s`, `v10/maincpu/sequencer/bmdredit_routines.s`.
+
+| File | Lines (as originally documented) | Contents |
 |------|-------|----------|
 | `drawing_primitives.s` | 4,567 | Line, box, frame, bitmap, string rendering |
 | `semenu_routines.s` | 3,431 | Sound editor menu system |
@@ -417,17 +427,25 @@ All coordinates are **little-endian 16-bit** values. The LCD display is 320×240
 
 ### Decoded Files
 
+⚠ These were originally `.s` files with the raw bytes embedded as `.byte` directives; the repo has
+since been restructured (multi-version ROM support) and the same content — byte counts verified
+identical — now lives as raw `.bin` files under `<version>/maincpu/includes/generated/`:
+
 | File | Bytes | Commands | Contents |
 |------|-------|----------|----------|
-| `style_ui_screendata_main.s` | 3531 | 375 | Style editor main grid: chord boxes, parameter widgets, chord name tables, bottom bar |
-| `style_ui_screendata_meascursor.s` | 184 | 18 | Measure cursor: MEAS/CURSOR/CTL labels, BAL/ERS refs, navigation arrows |
-| `style_ui_screendata_yesctl.s` | 228 | 29 | Yes/No confirmation + measure cursor + CTL value |
-| `style_ui_screendata_ctlonly.s` | 551 | 4+tables | CTL-only: 4 commands + LCD charset translation table + format strings |
+| `style_ui_screendata_main.bin` | 3531 | 375 | Style editor main grid: chord boxes, parameter widgets, chord name tables, bottom bar |
+| `style_ui_screendata_meascursor.bin` | 184 | 18 | Measure cursor: MEAS/CURSOR/CTL labels, BAL/ERS refs, navigation arrows |
+| `style_ui_screendata_yesctl.bin` | 228 | 29 | Yes/No confirmation + measure cursor + CTL value |
+| `style_ui_screendata_ctlonly.bin` | 551 | 4+tables | CTL-only: 4 commands + LCD charset translation table + format strings |
 
 ### Decoder Scripts
 
-- `scripts/decode_screendata.py` — Generic bytecode parser, outputs human-readable command descriptions
-- `scripts/annotate_screendata_main.py` — Section-aware annotation generator for the main screen
+⚠ **Stale**: both scripts below are hardcoded to the pre-restructure `.s` layout (`REPO/maincpu/includes/style_ui_screendata_main.s`)
+and now fail with `FileNotFoundError` against the current `.bin`-based tree — reproduced directly.
+Their command-format documentation above is still correct; only the file-loading path is broken.
+
+- `scripts/analysis/decode_screendata.py` — Generic bytecode parser, outputs human-readable command descriptions
+- `scripts/tools/annotate_screendata_main.py` — Section-aware annotation generator for the main screen
 
 ## Research Needed
 
