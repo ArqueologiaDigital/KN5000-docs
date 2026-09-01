@@ -330,8 +330,11 @@ The complete change set has been tested with the following ROM set:
 
 # MN10300 family: the ROM-record contribution
 
-*Added 2026-08-02. A separate line of work from the KN5000 PRs above: those improve an existing
-driver, this creates one.*
+*First submitted 2026-08-02. A separate line of work from the KN5000 PRs above: those improve an
+existing driver, this creates one.*
+
+**Upstream PR:** [mamedev/mame#15911](https://github.com/mamedev/mame/pull/15911) — "matsushita/kn7000.cpp:
+add ROM records for the Technics SX-KN series" (merged 2026-08-23)
 
 ## Why a driver with no CPU
 
@@ -344,16 +347,19 @@ so the hardware stays documented until a core exists.
 
 ## What it contains
 
-Two commits, 606 insertions, nothing modified or deleted:
-
-| commit | contents |
-|---|---|
-| `machine/intelfsh.cpp` | `MBM29LV160B` and `MX29LV160B` — 16 Mbit bottom-boot parts |
-| `matsushita/kn7000.cpp` | five machines, eleven dumped images, thirty undumped declarations, the KN6000 expansion connector and the HD-SX3 |
+As merged (one commit, 403 insertions, two files — `src/mame/mame.lst` and
+`src/mame/matsushita/kn7000.cpp`, nothing modified or deleted): five machines, eleven dumped
+images, thirty undumped declarations.
 
 Every device gets a line under its real part number and manual-verified capacity. Anything that is
 not an honest dump of that machine's own part is **`NO_DUMP` with the correct expected size**, never
 shipped as substitute data — see [ROM Dumping Roadmap]({{ site.baseurl }}/rom-dumping-roadmap/) for what remains.
+
+**Follow-up work, not yet submitted upstream** (staged locally as of 2026-08-31): the **KN6000
+expansion connector and the HD-SX3** board (separate `bus/technics/` files, not part of
+`kn7000.cpp`), and new `intelfsh.cpp` flash-device types (`MBM29LV160B`/`MX29LV160B`) for the
+JEDEC-ID work described below — this identification work predates a functional flash device and
+is not needed by the ROM-record-only driver that actually merged.
 
 ## The flash device IDs were read, not guessed
 
