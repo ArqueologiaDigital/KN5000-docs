@@ -8,6 +8,14 @@ permalink: /issues/
 
 This page is auto-generated from the [Beads](https://github.com/beads-ai/beads) issue tracker.
 
+> **This page is a frozen historical snapshot, not a live status page.** Beads was decommissioned
+> on 2026-07-27 at the project owner's request; it is no longer installed and this page is no
+> longer regenerated. It reflects the tracker's state as of its last generation below — by the
+> time of decommissioning the open/closed counts had moved to 20 open / 405 closed (425 total).
+> The full, final issue set (694 issues across every project that used Beads) is archived at
+> `~/compartilhado/beads-decommission-2026-07-27/` (`readable/` for Markdown, `exports/` for JSON) as a historical
+> record; do not reinstall Beads.
+
 **Total Issues:** 424 (21 open, 402 closed)
 
 **Quick Links:** 
