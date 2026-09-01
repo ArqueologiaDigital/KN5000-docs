@@ -40,10 +40,10 @@ routines, and the build-time round-trip that keeps rebuilt ROMs byte-identical.
 | **Blocks known** | 19 in table_data (+ 3 archived update images) | 6 in table_data |
 
 Addresses are Main CPU program ROM (v10). Both routines and the dispatcher live
-in `v10/maincpu/boot/system_handlers.s` (lines 6845, 6968 and 7091).
+in `v10/maincpu/boot/system_handlers.s` (lines 6980, 7103 and 7226).
 
 **The dispatcher** (`SLIDE_Parse_Header`, 0xEF41E3,
-`v10/maincpu/boot/system_handlers.s:7091`) compares the first **five** bytes of
+`v10/maincpu/boot/system_handlers.s:7226`) compares the first **five** bytes of
 the block against `SLIDE_STRING` and then reads the sixth character:
 
 ```asm
@@ -59,7 +59,7 @@ SLIDE_Parse_Check8K:
 	calr	SLIDE_Decompress_8K_Init
 ```
 
-(`system_handlers.s:7110-7128`.) An unrecognised sixth character is silently
+(`system_handlers.s:7245-7263`.) An unrecognised sixth character is silently
 ignored — the routine returns success without decompressing anything. Only a
 missing `SLIDE` prefix returns the 0xFFFF failure code.
 
@@ -102,7 +102,7 @@ Sub-CPU program. Read little-endian it would be 3. (The preset block's
 `00 95 00` is endian-symmetric and cannot discriminate.) The firmware agrees:
 both `SLIDE_Decompress_*_Init` routines build the count as
 `(hdr[8] << 16) + ((hdr[9] << 8) | hdr[10])`
-(`v10/maincpu/boot/system_handlers.s:6986-6998`).
+(`v10/maincpu/boot/system_handlers.s:7121-7133`).
 
 The decoder stops as soon as the declared output size (38,144 bytes) is
 reached, which happens at ROM address `0x8E6CF4` after consuming 27,881 stream
@@ -439,7 +439,7 @@ count into the match offset. The authority for everything below is
 `scripts/build/decompress_slide8k.py` / `compress_slide8k.py` in the
 disassembly repository — they round-trip all six factory blocks byte-identically
 — cross-checked line by line against `SLIDE_Decompress_8K_Init`
-(`v10/maincpu/boot/system_handlers.s:6968-7089`).
+(`v10/maincpu/boot/system_handlers.s:7103-7224`).
 
 ### Container
 
@@ -472,7 +472,7 @@ ef40e8: ld   BC,0x1ff6           ; initial write position
 
 So ring positions **0x0000-0x1FF5 are zero** and the write position starts at
 **0x1FF6**, wrapping modulo 0x2000. (SLIDE4K: 0x1000-byte ring, zero-filled to
-0x0FED, write position 0x0FEE — `system_handlers.s:6849-6860`.) A valid encoder
+0x0FED, write position 0x0FEE — `system_handlers.s:6984-6995`.) A valid encoder
 must never emit a match reading ring[0x1FF6-0x1FFF] before the corresponding
 output bytes have been written; `compress_slide8k.py` enforces exactly that
 (`find_longest_match`, lines 195-243).
@@ -481,9 +481,9 @@ output bytes have been written; `compress_slide8k.py` enforces exactly that
 
 The firmware keeps the flag in a 16-bit word as `0xFF00 | flags` and shifts it
 right once per element; the reload happens when the 0xFF sentinel has been
-shifted out of bit 8 (`system_handlers.s:7004-7013`). That is what guarantees
+shifted out of bit 8 (`system_handlers.s:7139-7148`). That is what guarantees
 exactly 8 elements per flag byte. Bit 0 after each shift selects the element
-type — **LSB first**, 1 = literal, 0 = back-reference (`:7017`).
+type — **LSB first**, 1 = literal, 0 = back-reference (`:7152`).
 
 ### Match Encoding
 
@@ -499,12 +499,12 @@ while the copy runs — so a match may legally read bytes it has just produced
 (this is how runs longer than the distance to the write position are encoded).
 
 The firmware forms the offset with `and wa, 0xf8` / `sll wa, 5`
-(`system_handlers.s:7047-7048`). The **+3 base** is confirmed twice over: the
+(`system_handlers.s:7182-7183`). The **+3 base** is confirmed twice over: the
 count field is masked with `and iz, 0x7` and then incremented by 2
-(`:7052-7053`), and the copy loop is **inclusive** — `cp iy, iz` / `jr ule`
-(`:7076-7077`) — so it runs `iy = 0 … iz`, i.e. `(high & 0x07) + 3` iterations.
+(`:7187-7188`), and the copy loop is **inclusive** — `cp iy, iz` / `jr ule`
+(`:7211-7212`) — so it runs `iy = 0 … iz`, i.e. `(high & 0x07) + 3` iterations.
 The SLIDE4K routine is structurally identical with `0xF0`/`<<4`, `and iz, 0xf`
-(`:6924-6930`, `:6953-6954`), giving `(high & 0x0F) + 3`.
+(`:7059-7065`, `:7088-7089`), giving `(high & 0x0F) + 3`.
 
 ### Termination
 
