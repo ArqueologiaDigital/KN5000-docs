@@ -125,6 +125,37 @@ matches across all 41 KN5000 images — true about bytes, false about the questi
 for the reason step one measures: two processors in the same product, from the
 same build, running the same source, still differ in 81 of 941 slots.
 
+### A second shared source: the DSP channel-register driver
+
+*Added 2026-09-01.* The kernel is no longer the only source both processors
+share. `dsp/dsp_channel_regs.s` — four routines, 234 bytes, of which **231 are
+byte-identical between the two CPUs** — is now a single file included by both
+roots. Everything that differs is one equate:
+
+| CPU | `DSP_REGS_BASE` |
+|---|---|
+| CPU 1 (`prom_a`) | `0x007F0000` |
+| CPU 2 (`prom_c`) | `0x00E00000` |
+
+Three use sites, and **no conditional assembly anywhere in the body**. The
+byte-identity gate covers it: 13 images rebuild identically (9 KN5000 + 4
+WSA1R), and the negative control — setting the sub-CPU equate wrong — fails
+`prom_c` at exactly three bytes while leaving `prom_a` green, so the gate is
+demonstrably load-bearing here.
+
+⚠ **The merge produced a finding, not just a tidier tree.** With both files'
+call-site annotations on one page, they disagree twice, in opposite directions:
+
+| routine | CPU 1 | CPU 2 |
+|---|---|---|
+| `DSP_ChannelRegs_Init` | no call site found | called at boot from `0xF98B95` |
+| `DSP_WriteAllChannelRegs` | published via `prom_b` thunk `0xF42DE4` | not traced |
+
+Identical bytes, different reachability per processor — each one uses the
+routine the other does not. This is **unexplained**. In either file alone an
+untraced routine reads as ordinary coverage debt; only the merge makes it an
+asymmetry.
+
 The control that decides it is a **foil** — the identical search run over WSA1R
 code that is *not* the kernel:
 
