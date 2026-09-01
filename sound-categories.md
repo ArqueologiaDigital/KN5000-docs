@@ -166,7 +166,7 @@ When a user selects a sound:
 1. **UI event** — Sound button press generates a control panel event
 2. **Category lookup** — Main CPU reads `SOUND_DATA_SECTION_PTRS[category_index]` to get the data pointer
 3. **Voice lookup** — Within the category data, the selected voice index maps to a `{voice_id, bank}` pair
-4. **Command encoding** — `Audio_SendCommand` formats a MIDI Program Change (or extended command) with the voice/bank parameters
+4. **Command encoding** — a formatting routine builds a MIDI Program Change (or extended command) with the voice/bank parameters. ⚠ This step used to be attributed to `Audio_SendCommand`; that symbol was renamed in March 2026 to `Sprintf_Locked` once it was found to be a general sprintf()-style formatter (parses `%d`/`%x`/`%f`/`%s` format strings), not an audio-specific command sender — see the correction below.
 5. **Inter-CPU transfer** — Command sent via `sendCOMM` → `InterCPU_Send_Data_Block` → latch at 0x120000
 6. **Sub CPU processing** — `Audio_CmdHandler_00_1F` writes to ring buffer → `MIDI_Dispatch` routes to `Voice_ProgChange`
 7. **Voice activation** — Sub CPU updates the voice parameter block (287 bytes at `0x041300 + channel × 0x11F`)
@@ -342,8 +342,15 @@ Pipe Organ, Accordion, Jazz Guitar, Solid Guitar, Modern E.P., E.Piano (variant)
 | `SOUND_DATA_BRASS_PTRS` | 0xE06BB0 | Brass pointer table (128 entries) |
 | `SOUND_DATA_WORLD_PERC` | 0xE0ADCD | World Perc pointer table (128 entries) |
 | `SOUND_DATA_ORGAN_ACCORDION` | 0xE0B190 | Organ inline 2-byte pairs (128 entries) |
-| `Audio_SendCommand` | 0xFF0B6B | Main CPU audio command interface (197+ call sites) |
 | `Voice_ProgChange` | Sub CPU | Sub CPU program change handler |
+
+⚠ **Removed 2026-09: `Audio_SendCommand` at `0xFF0B6B`.** Neither the name nor the address
+holds up. The routine this page meant is at `0x00FF0A72` and was renamed `Sprintf_Locked` in
+March 2026 (`b5d34b75`, along with `Audio_CommandEncoder`→`Sprintf_Core` and 282 internal
+`AudioCmd_*` labels→`Sprintf_*`) once it was shown to be a general sprintf()-style formatter
+called from 128+ sites across MIDI, sequencer and demo code — not an audio-specific command
+interface. The step-4 description above ("command encoding") likely still happens somewhere
+in the sound-selection path, but this page does not have a verified, current symbol for it.
 
 ## Related Pages
 

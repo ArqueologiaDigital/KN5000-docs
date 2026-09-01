@@ -1335,16 +1335,16 @@ Possible causes under investigation:
 
 ## Code References
 
-### Main CPU (`maincpu/kn5000_v10_program.asm`)
+### Main CPU (`v10/maincpu/kn5000_v10_program.s`)
 
 | Routine | Address | Description |
 |---------|---------|-------------|
 | `Audio_Lock_Acquire` | 0xEF1FEE | Acquire inter-CPU lock |
 | `Audio_Lock_Release` | 0xEF1F0F | Release inter-CPU lock |
 | `Audio_DMA_Transfer` | 0xEF341B | Core DMA transfer |
-| `Audio_InitDMAChannels` | 0xEF329E | Initialize DMA channels |
+| `SubCPU_Init_DMA_Channels` (was `Audio_InitDMAChannels`) | 0xEF329E | Initialize DMA channels |
 | `sendCOMM` | 0xEF32F4 | Send command/audio data to Sub CPU (chunks 32-byte blocks) |
-| `InterCPU_Send_Data_Block` | 0xEF3350 | Send 1-32 byte packet via inter-CPU latch |
+| `InterCPU_Send_Data_Block` | 0xEF3345 | Send 1-32 byte packet via inter-CPU latch |
 | `Audio_CheckSubsystemReady` | 0xFDDE6F | Check if audio subsystem is ready for commands |
 | `Audio_CheckInitStatus` | 0xFDF08A | Verify audio init state (checks 0xF19E) |
 | `Voice_InitializeAll` | 0xFE0E75 | Initialize all 16 voices (26 params each) |
@@ -1352,7 +1352,7 @@ Possible causes under investigation:
 | `DemoMode_Initialize` | 0xF869E3 | Feature Demo first-time initialization |
 | `DemoMode_Main_Operation` | 0xF8696F | Feature Demo normal playback handler |
 
-### Sub CPU (`subcpu/kn5000_subprogram_v142.asm`)
+### Sub CPU (`v142/subcpu/kn5000_subprogram_v142.s`)
 
 | Routine | Address | Description |
 |---------|---------|-------------|
@@ -1870,7 +1870,13 @@ Each effect has up to 8 adjustable parameters selected from a shared pool of 52 
 
 **Algorithm Selection Mechanism:**
 
-The MainCPU sends the effect index (0-39) to the SubCPU via `Audio_SendCommand` (cmd 0x4D8C, category 0xE3). The SubCPU's `DSP_Cmd2B_AlgoSelect` handler (sub-command 0x00) receives this index, looks up the algorithm type from the ROM table at 0x01F596, initializes the voice structure (287 bytes per slot, base 0x041368, stride 0x11F), then uploads the appropriate DSP program modules and coefficient data to DSP1.
+The MainCPU sends the effect index (0-39) to the SubCPU (cmd 0x4D8C, category 0xE3). ⚠ This
+page used to name the sending routine `Audio_SendCommand`; that symbol does not exist any
+more — it was renamed `Sprintf_Locked` in March 2026 (`b5d34b75`) once it was shown to be a
+general sprintf()-style formatter, called from 128+ sites across MIDI, sequencer and demo
+code, not an audio-specific command interface. Which routine actually performs *this*
+send has not been re-verified; treat the sender's identity as unconfirmed pending that
+work. The SubCPU's `DSP_Cmd2B_AlgoSelect` handler (sub-command 0x00) receives this index, looks up the algorithm type from the ROM table at 0x01F596, initializes the voice structure (287 bytes per slot, base 0x041368, stride 0x11F), then uploads the appropriate DSP program modules and coefficient data to DSP1.
 
 The algo type is stored at offset 0x5D of the voice structure. The full byte encodes both the algo type (lower nibble) and additional routing state (upper nibble). For example, 0x93 = algo type 3 with upper state 9, 0x25 = algo type 5 with upper state 2.
 
