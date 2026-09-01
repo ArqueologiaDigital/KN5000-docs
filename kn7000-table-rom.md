@@ -15,15 +15,24 @@ little-endian u32 chunk offsets, and each entry points to a tagged resource.
 | Address | Tag / content | Meaning |
 |--------|---------------|---------|
 | `0x48000000` | u32 offset directory | index of all chunks (first chunk at `0x48000200`) |
-| `0x48035d08` | **`TCMP`** | a **MN10300 code overlay** copied to RAM `0x50180000` at boot and executed — the KN7000 keeps part of its program in the table ROM |
+| `0x48035d08` | **`TCMP`** | the factory rhythm-**style** container (3 built-in styles, " Easy 8 Beat " / "Easy 16 Beat " / " Easy Swing  "), `LibMemCopy`'d to RAM `0x50180000` (`MEM_STYLE_AREA`) at boot — **data, not code**; nothing ever calls into that RAM range |
 | `0x48040674` | **`TPAD`** | performance-**pad** index / parameters |
 | `0x4804238c` | `Technics Pads` | accompaniment pad pattern data |
 | `0x483e828c` | `Technics Rhythms` | style/rhythm resource index |
-| (throughout) | **JFIF JPEG** | 117 embedded UI/graphics images |
+| (throughout) | **JFIF JPEG** | 119 embedded UI/graphics images |
+
+> **Correction.** An earlier pass here misread the copy of the `TCMP` chunk into RAM
+> `0x50180000` as a **code overlay being executed** (the symbol was once named
+> `RamCodeOverlayImage`). Both ends of that copy are data: the destination is zeroed by
+> `LibMemSet(0x50180000, 0, 0x25800)` beforehand, the source is `TableRomSeg02PtrSize`
+> resolving directory entries 2–3, and nothing in the firmware branches into
+> `0x50180000`. The routine and symbol are now named `MemStyleAreaLoadFactory` /
+> `FactoryMemStyleContainer`. See `kn7000_mame/notes/AUTONOMOUS-STATUS.md` (2026-07-20)
+> and `kn7000_mame/notes/table-rom-format.md`.
 
 ## The UI graphics are standard JPEGs
 
-Scanning for JPEG streams recovers **117 images, 115 of which decode cleanly with an ordinary JFIF
+Scanning for JPEG streams recovers **119 images, 117 of which decode cleanly with an ordinary JFIF
 decoder** — 52 are `160×120` icons/thumbnails and twelve are full-screen `640×240` reference/help
 screens. In other words the KN7000 stores its on-screen artwork as ordinary JPEGs and decodes them
 in firmware. (A long-standing emulation note that "the boot-splash JPEG decodes to garbage" is

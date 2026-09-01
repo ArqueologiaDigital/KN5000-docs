@@ -177,6 +177,8 @@ SetVisible:                      # CPU 0x4842D406
     ret     0, 0xc
 ```
 
-66 functions (the task/event and display/object framework clusters) are
-converted this way so far; growing the set converts more, always holding the
-100% byte-match invariant.
+111 functions are converted this way so far: the task/event and display/object
+framework clusters, the complete Techni-Chord harmony engine, and the complete
+control-panel serial protocol (the `PanelTransaction`/ISR/state-machine chain
+that drove the MAME panel HLE); growing the set converts more, always holding
+the 100% byte-match invariant.
