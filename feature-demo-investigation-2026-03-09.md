@@ -49,13 +49,13 @@ Demo_SelectEntry_PlaySong (0xF86E06)
 
 ### How the Blocking Works
 
-`SwbtWr_ReinitBothBanks` (`style_data_init.s:1405`) calls `SwbtWr_InitBank1` and `SwbtWr_InitBank2`. Each of these calls `SwbtWr_DispatchLoop_Init`, which has a critical fall-through:
+`SwbtWr_ReinitBothBanks` (`system_handlers.s`, the file `style_data_init.s` was renamed to) calls `SwbtWr_InitBank1` and `SwbtWr_InitBank2` (both in `dsp_config_sysex.s`). Each of these calls `SwbtWr_DispatchLoop_Init`, which has a critical fall-through:
 
 ```asm
-SwbtWr_DispatchLoop_Init:           ; style_data_init.s, address in dsp_config_sysex.s:735
+SwbtWr_DispatchLoop_Init:           ; dsp_config_sysex.s
     stdi16 49275, 0                 ; reset buffer index to 0
                                     ; *** FALLS THROUGH ***
-SwbtWr_DispatchLoop:                ; dsp_config_sysex.s:738
+SwbtWr_DispatchLoop:                ; dsp_config_sysex.s
     ldda32 xiy, 49289              ; load buffer base pointer
     addda16 xiy, 49275             ; add current index
     cp (xiy), 0xFF                 ; check for terminator
@@ -140,8 +140,8 @@ The table at `0x9C4000` in Table Data ROM holds 19 valid entries (indices 0–18
 2. **ROM disassembly analysis** — Cross-referencing assembly source files:
    - `file_demo_proc.s` — Demo timer and song loading
    - `dsp_config_sysex.s` — SwbtWr dispatch loop
-   - `style_data_init.s` — Bank initialization
-   - `tonegen_voice_ctrl.s` — UI state dispatch
+   - `system_handlers.s` (`style_data_init.s` at the time of this session) — Bank initialization
+   - `ui_control_panel.s` (`tonegen_voice_ctrl.s` at the time of this session) — UI state dispatch
    - `ui_widget_defs.s` — Event dispatch routing
    - `cpanel_constants.s` — Button mapping
    - `cpanel_routines.s` — Control panel ISR
@@ -264,12 +264,12 @@ Maintain a timestamped log of what was tried, what was found, and what questions
 |------|---------------|-----------|
 | `file_demo_proc.s` | `Demo_SelectEntry_TimerTick`, `Demo_SelectEntry_PlaySong`, `Demo_SelectEntry_ProcessSongList` | Timer state machine and song loading |
 | `dsp_config_sysex.s` | `SwbtWr_DispatchLoop`, `SwbtWr_QueueMainEvent` | The blocking dispatch loop |
-| `style_data_init.s` | `SwbtWr_ReinitBothBanks`, main loop Phase 4 | Initialization that triggers the block |
-| `tonegen_voice_ctrl.s` | `UIState_KeyScan_Dispatch` | Button event routing |
+| `system_handlers.s` (`style_data_init.s` at the time of this session) | `SwbtWr_ReinitBothBanks`, main loop Phase 4 | Initialization that triggers the block |
+| `ui_control_panel.s` (`tonegen_voice_ctrl.s` at the time of this session) | `UIState_KeyScan_Dispatch` | Button event routing |
 | `ui_widget_defs.s` | `EventDispatch_Direct` (0xFA9945) | Event filter matching |
 | `cpanel_constants.s` | Button mapping tables | Physical button → event param |
 | `cpanel_routines.s` | `CPanel_RX_ButtonPacket` | Control panel ISR |
-| `seq_task_sched.s` | `Seq_DispatcherEntry`, `Seq_DispatcherTick` | Sequencer task scheduling |
+| `smf_event_processor.s` (`seq_task_sched.s` at the time of this session) | `Seq_DispatcherEntry`, `Seq_DispatcherTick` | Sequencer task scheduling |
 
 ## Key DRAM Addresses
 
