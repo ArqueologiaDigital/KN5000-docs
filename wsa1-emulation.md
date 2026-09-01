@@ -69,13 +69,15 @@ sibling, and its register file is a different shape from the tone generator's
 Upstream MAME has **no `wsa1.cpp` at all**. What exists is:
 
 * a **development driver** in this project's `kn7000_mame` overlay —
-  `src/mame/matsushita/wsa1.cpp` (3,103 lines) plus `wsa1_cpanel.{cpp,h}` and
+  `src/mame/matsushita/wsa1.cpp` (3,399 lines) plus `wsa1_cpanel.{cpp,h}` and
   `src/mame/layout/wsa1r.lay`;
 * a deliberately **smaller submission candidate** on the branch `technics-wsa1`
-  of a separate MAME checkout — 566 lines carrying only the two processors, the
+  of a separate MAME checkout — 610 lines carrying only the two processors, the
   clock, and the part of the memory map that is evidence-complete enough to
-  offer. Two prep commits (a ROM record, and instantiating both TMP95C061s with a
-  partial map) sit on that branch **unmerged**.
+  offer. Five prep commits (a ROM record; instantiating both TMP95C061s with a
+  partial map; mapping the tone bank at `0xf00000` on CPU 2; naming the floppy
+  controller and the model strap; and correcting CPU 1's static RAM to reach
+  `0x7fff`, not `0x51ff`) sit on that branch **unmerged**.
 
 **The two files will diverge, and that is intentional.** Everything in the
 overlay beyond the submission copy is work in progress, and several pieces rest
@@ -345,8 +347,10 @@ feeding each other:
 `kn7000_mame/notes/WSA1-EMULATION-DISASM-GAPS.md` is the formal version of that
 traffic: a ranked **request list** of about 95 entries from the emulator to the
 disassembly, lettered A–Y plus MAME-side items, each naming a question, what the
-driver does instead today, and where to start looking. Gaps B, E, F, L and Y are
-closed; gap O is closed for the rack; gap C's leading hypothesis is refuted.
+driver does instead today, and where to start looking. Gaps B, C, E, F, L and Y
+are closed; gap O is closed for the rack; gap G is half closed — the link wedge
+it was blamed for turned out to be gap G's DSP-ready handshake, not the link
+itself.
 
 ## What is still missing
 

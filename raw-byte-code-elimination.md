@@ -13,6 +13,21 @@ permalink: /raw-byte-code-elimination/
 
 All 6 ROMs achieve 100% byte-perfect match. As of March 2026, all executable code uses native TLCS-900 instructions — the `.byte` code elimination goal is **complete**. The remaining `.byte` directives in the source are exclusively data (tables, strings, padding), not executable code.
 
+> ⚠ **The March 2026 measurement missed real code, and the instrument was the problem.**
+> The Sub CPU Payload's "0 code `.byte` remaining" was originally established by checking for
+> leftover `.incbin` directives — but a `.byte` run is exactly as undisassembled as an
+> `.incbin` and passes that test just as cleanly. A 2026-09-01 audit of the sound subsystem
+> (`notes/sound/kn5000_sound_boundary.py`, written up in
+> `notes/sound/FINDINGS-kn5000-sound-coverage-2026-09-01.md`) found the v1.42 sub-CPU payload
+> still held on the order of 16,000 bytes of `.byte`, including two runs the source itself had
+> already annotated *"MISLABELLED, THIS IS CODE"* — roughly 8,500 bytes of that being
+> tone-generator/DSP register-write code. All of it has since been converted to native
+> instructions and re-verified against the committed MAME `unidasm` listing (10 conversion
+> rounds, `--unspellable` and `--misframes` both now 0 in both sub-CPU images). So the *sound
+> code* portion of the Sub CPU Payload genuinely reached 0 code `.byte` only on 2026-09-01, not
+> in March — directive-counting (no `.incbin` left) is not a completeness proof; only a
+> per-byte disassembly attempt (Step 1's actual method, below) is.
+
 **Scope:** `.byte` sequences that encode native TLCS-900 CPU instructions across all 6 ROMs. Data tables, strings, bitmaps, firmware bytecode for software interpreters, and padding are out of scope (correct as-is).
 
 ## Current Status
@@ -20,6 +35,10 @@ All 6 ROMs achieve 100% byte-perfect match. As of March 2026, all executable cod
 ### Completed (March 2026)
 
 All executable code `.byte` sequences have been eliminated from the **Main CPU**, **Sub CPU**, and **Table Data** ROMs:
+
+⚠ The "Sub CPU Payload" row's March 2026 figures were measured by the flawed `.incbin`-absence
+test described above; see the warning box for what that method missed and when it was actually
+closed out (2026-09-01, for the sound-code portion).
 
 | ROM | Native Instructions | Code .byte Remaining | Status |
 |-----|-------------------|---------------------|--------|
