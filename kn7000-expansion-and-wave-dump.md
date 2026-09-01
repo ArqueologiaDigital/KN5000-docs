@@ -109,12 +109,13 @@ words) verify any dump before the chips are ever in hand:
   IC203 = 0x8164C77C    IC204 = 0x815CFC83    IC207 = 0x8331EF0B    IC208 = 0x83254F9D
 ```
 
-*Still to pin down:* the exact (side, chip, address) → byte mapping inside the port (bank base
-`0x8000` plus the running hi/lo latches, and whether the two ROMs per side are a 32-bit-wide pair or a
-hi/lo bank). Enough is known to write the dumper loop; confirm the arithmetic against `0x484839A1`
-before trusting byte order. The port is **not yet modelled** in MAME, so the software readout runs on
-real hardware today; emulating it would need the tone-generator device to answer `0x9804/0x9805
-0006/08/0A`.
+⚠ **Updated — the port is now modelled in MAME** (see "MAME status" below); the paragraph
+below describes the state before that work landed, kept for the arithmetic detail.
+
+*Was still to pin down, and is now settled by the model below:* the exact (side, chip,
+address) → byte mapping inside the port (bank base `0x8000` plus the running hi/lo
+latches, and whether the two ROMs per side are a 32-bit-wide pair or a hi/lo bank). The
+software readout also runs unmodified on real hardware — this was never MAME-only.
 
 ## Running code from a board — the KN6000/KN6500 XAPR route
 
