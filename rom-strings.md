@@ -16,9 +16,16 @@ This page documents meaningful strings found in each KN5000 ROM through systemat
 
 ### Product Identification
 
+⚠ **Corrected 2026-09 — the address and exact text below were wrong.** The string is
+`KN5000 ~95 VOCALIST WORKSTATION` (no `Technics` prefix in this particular string) at
+file offset `0x5957E`, CPU address **`0xE5957E`**, not `0xE023F0` (that address is
+actually the start of the instrument-category table below). A separate string,
+`Technics KN5000 Program  DATA FILE 1/2`, exists near the very start of the ROM
+(`0xE00038`).
+
 | Location | String |
 |----------|--------|
-| 0xE023F0 | `Technics KN5000 ~95 VOCALIST WORKSTATION` |
+| 0xE5957E | `KN5000 ~95 VOCALIST WORKSTATION` |
 
 This product ID string confirms the keyboard model and its "Vocalist Workstation" designation, indicating built-in vocal processing capabilities.
 
