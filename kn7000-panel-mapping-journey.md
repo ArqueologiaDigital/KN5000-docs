@@ -74,8 +74,16 @@ In parallel we found the firmware's master dispatch table (at `0x48614978`): for
 records an event code, so genres show up as one event class, part-mutes as on/off pairs, and a
 distinct `0x1xxx` class marks the system keys. It's a gorgeous artifact and a strong lead — the
 catch is that the firmware's internal segment numbering doesn't line up cleanly with the layout's
-segment numbering yet, so we can't blindly transcribe it. Pinning that remap is on the list; once
-it's done it should name every remaining switch at once.
+segment numbering yet, so we can't blindly transcribe it.
+
+> **Update.** `0x48614978` turned out to be a red herring of a specific kind: it is a real,
+> fully-decoded dispatch table, but it is the **inactive half**. A RAM flag at `0x5006BE94`
+> selects between two complete panel interpretations shared with the KN5000 codebase — flag 0
+> uses `PanelWireNormTable` (`0x486135A0`) and dispatch `0x48614978`; the KN7000 runs with the
+> flag set to **1**, which selects a different normalize table (`0x48613620`) and a different
+> dispatch table, `0x486149FC`. The remap *has* since been pinned — the ADDR→normSeg formula and
+> the ioport map are in `kn7000_mame/notes/panel-board-decode.md` — and the mute-matrix
+> cross-check above holds either way, because both tables agree on the mute part IDs.
 
 ## Cracking the MUTE matrix by counting presses
 
