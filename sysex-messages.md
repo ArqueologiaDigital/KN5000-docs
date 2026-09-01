@@ -10,7 +10,7 @@ The KN5000 uses two distinct SysEx formats: **Roland GS** for incoming voice par
 
 ## Outgoing: Technics SysEx
 
-The KN5000 sends short proprietary SysEx messages via `MIDI_SendSysExCmd` (`0xFEBDA3`).
+The KN5000 sends short proprietary SysEx messages via `MIDI_SendSysExCmd` (`0xFEBDA1`).
 
 ### Packet Format
 
@@ -51,7 +51,7 @@ It then calls `MIDI_SendCmdPacket` to transmit the packet through the MIDI outpu
 
 ## Incoming: Roland GS SysEx
 
-The KN5000 receives and processes **Roland GS** System Exclusive messages for real-time voice parameter control. This is validated by `SysEx_ValidateRolandHeader` (`0xFDAD57`).
+The KN5000 receives and processes **Roland GS** System Exclusive messages for real-time voice parameter control. This is validated by `SysEx_ValidateRolandHeader` (`0xFDADF6`).
 
 ### Expected Header
 
@@ -103,11 +103,11 @@ Each handler follows the same pattern:
 4. **Iterate** active voice slots (from `DSPCfg_ReadParam_Map0` at `0x4B04`/`0x4904`), applying the same parameter to all matching slots
 5. **Restore** the original slot ID if the base address was temporarily modified
 
-The per-channel dispatch tables (`SysEx_DispatchByChannel` at `0xFDAD71`, `SysEx_DispatchByChannel_49` at `0xFDADA0`) route parameters to up to 8 hardware channels, using jump tables at `0xEE3520`.
+The per-channel dispatch tables (`SysEx_DispatchByChannel` at `0xFDACEA`, `SysEx_DispatchByChannel_49` at `0xFDAD71`) route parameters to up to 8 hardware channels, using jump tables at `0xEE3520`.
 
 ## SysEx Parser State Machine
 
-`SysEx_ParserLoop` (`0xFD8D2B`) implements a 3-state parser for incoming SysEx streams read from the sequencer buffer:
+`SysEx_ParserLoop` (`0xFD8D33`) implements a 3-state parser for incoming SysEx streams read from the sequencer buffer:
 
 ### States (stored at DRAM address 48414)
 
@@ -154,11 +154,11 @@ The handlers support 10 sub-operations (indices 0-9) per data type, covering ope
 
 ### ExcSendFunc
 
-`ExcSendFunc` (`0xF76688`) is the top-level entry point. It validates the message type (`0x1C00007`), then calls `MainExcSend`, which dispatches to `SysEx_InitiateSend` based on an index (0-5) looked up from a table at `0xE7FD84`.
+`ExcSendFunc` (`0xF7661B`) is the top-level entry point. It validates the message type (`0x1C00007`), then calls `MainExcSend`, which dispatches to `SysEx_InitiateSend` based on an index (0-5) looked up from a table at `0xE7FD84`.
 
 ### SysEx_InitiateSend
 
-`SysEx_InitiateSend` (`0xFD8C7F`) configures the SysEx send mode:
+`SysEx_InitiateSend` (`0xFD8CAE`) configures the SysEx send mode:
 
 1. Sets bit 7 of the mode byte (DRAM 48380)
 2. Sets the SysEx active flag (bit 6 of DRAM 48408)
@@ -188,27 +188,33 @@ The command mapping (`0x30`/`0x33` → bank 4B, `0x38`/`0x3A` → bank 49) corre
 
 | Symbol | Address | Purpose |
 |--------|---------|---------|
-| `MIDI_SendSysExCmd` | `0xFEBDA3` | Send Technics SysEx (F0 50 87 param) |
-| `MIDI_SendCmdPacket` | `0xFEB55F` | Low-level MIDI packet transmit |
-| `SysEx_ValidateRolandHeader` | `0xFDAD57` | Validate incoming Roland GS header |
-| `SysEx_ApplyVoiceParam_4B` | `0xFDAD9A` | Apply voice param, bank 4B, 8 voices |
-| `SysEx_ApplyVoiceParam_4B_128` | `0xFDADF2` | Apply voice param, bank 4B, 128 voices |
-| `SysEx_ApplyVoiceParam_49` | `0xFDAE58` | Apply voice param, bank 49, 8 voices |
-| `SysEx_ApplyVoiceParam_49_128` | `0xFDAEC4` | Apply voice param, bank 49, 128 voices |
-| `SysEx_DispatchByChannel` | `0xFDAD71` | Route param to channel (bank 4B) |
-| `SysEx_DispatchByChannel_49` | `0xFDADA0` | Route param to channel (bank 49) |
-| `SysEx_ClampVoiceIndex8` | `0xFDACD4` | Clamp voice index to 0-7 |
-| `SysEx_ClampVoiceIndex128` | `0xFDAD07` | Clamp voice index to 0-127 |
-| `SysEx_ParserLoop` | `0xFD8D2B` | SysEx stream parser state machine |
-| `SysEx_InitiateSend` | `0xFD8C7F` | Initiate bulk SysEx send |
-| `MidiSysEx_CmdDispatchLoop` | `0xF24171` | MIDI status byte dispatcher (0x81-0xF0) |
-| `ExcSendFunc` | `0xF76688` | Main SysEx send handler |
-| `ExcDotFunc` | `0xF766A6` | Data Object Transfer handler |
-| `ExcPmemFunc` | `0xF76706` | Panel Memory SysEx handler |
-| `ExcSmemFunc` | `0xF76764` | Sound Memory SysEx handler |
-| `ExcCompFunc` | `0xF767C2` | Composer SysEx handler |
-| `ExcSeqFunc` | `0xF76820` | Sequence SysEx handler |
-| `ExcMspFunc` | `0xF7687E` | MSP SysEx handler |
+| `MIDI_SendSysExCmd` | `0xFEBDA1` | Send Technics SysEx (F0 50 87 param) |
+| `MIDI_SendCmdPacket` | `0xFEBF48` | Low-level MIDI packet transmit |
+| `SysEx_ValidateRolandHeader` | `0xFDADF6` | Validate incoming Roland GS header |
+| `SysEx_ApplyVoiceParam_4B` | `0xFDAE7F` | Apply voice param, bank 4B, 8 voices |
+| `SysEx_ApplyVoiceParam_4B_128` | `0xFDAF32` | Apply voice param, bank 4B, 128 voices |
+| `SysEx_ApplyVoiceParam_49` | `0xFDAFD7` | Apply voice param, bank 49, 8 voices |
+| `SysEx_ApplyVoiceParam_49_128` | `0xFDB08A` | Apply voice param, bank 49, 128 voices |
+| `SysEx_DispatchByChannel` | `0xFDACEA` | Route param to channel (bank 4B) |
+| `SysEx_DispatchByChannel_49` | `0xFDAD71` | Route param to channel (bank 49) |
+| `SysEx_ClampVoiceIndex8` | `0xFDAB44` | Clamp voice index to 0-7 |
+| `SysEx_ClampVoiceIndex128` | `0xFDABC8` | Clamp voice index to 0-127 |
+| `SysEx_ParserLoop` | `0xFD8D33` | SysEx stream parser state machine |
+| `SysEx_InitiateSend` | `0xFD8CAE` | Initiate bulk SysEx send |
+| `MidiSysEx_CmdDispatchLoop` | `0xF2417E` | MIDI status byte dispatcher (0x81-0xF0) |
+| `ExcSendFunc` | `0xF7661B` | Main SysEx send handler |
+| `ExcDotFunc` | `0xF7666C` | Data Object Transfer handler |
+| `ExcPmemFunc` | `0xF766D9` | Panel Memory SysEx handler |
+| `ExcSmemFunc` | `0xF76737` | Sound Memory SysEx handler |
+| `ExcCompFunc` | `0xF76795` | Composer SysEx handler |
+| `ExcSeqFunc` | `0xF767F3` | Sequence SysEx handler |
+| `ExcMspFunc` | `0xF76851` | MSP SysEx handler |
+
+*(Addresses above were re-verified 2026-09 against `nm` on the rebuilt v10 ELF
+(`kn5000-roms-disasm/rebuilt_ROMs/kn5000_v10_program.llvm.elf`); every address in this table
+and in the prose above it was wrong in the previous revision of this page — several of the
+`Exc*Func` entries were off by exactly the offset to that function's internal jump table
+label, e.g. the old `ExcPmemFunc` address was actually `ExcPmemFunc_HandlerJumpTable`.)*
 
 ## References
 
@@ -219,4 +225,4 @@ The command mapping (`0x30`/`0x33` → bank 4B, `0x38`/`0x3A` → bank 49) corre
 
 ---
 
-*Last updated: March 2026*
+*Last updated: March 2026; addresses re-verified against the symbol table September 2026*
