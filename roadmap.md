@@ -73,9 +73,11 @@ siblings are mostly ROM work.
 | **G-ORG** | 1988–95 | unknown | GX/GN/FN3/EN/GA/EA console organs | ★ proven kinship, zero silicon data |
 | **G-PIANO** | — | CPU+ROM | SX-PX, SX-PC series | out of scope for drivers; ROM archival only |
 
-Seven MAME drivers exist today — `kn1500`, `kn5000`, `kn6000`, `kn6500`, `kn2400`, `kn2600`,
-`kn7000` — all in the fork; **only `kn5000` is upstream**. (The docs have claimed eight models; the
-eighth, SX-PR54, is documented but has no driver.)
+Seven MAME drivers existed as of this assessment — `kn1500`, `kn5000`, `kn6000`, `kn6500`, `kn2400`,
+`kn2600`, `kn7000` — all in the fork; **only `kn5000` is upstream**. **Since then (from 2026-08-25)
+an eighth, `wsa1`/`wsa1r` (`src/mame/matsushita/wsa1.cpp`), has been added** — see Phase 7 below,
+which is now stale about it being "unstarted". (The docs have claimed eight models; SX-PR54 is
+documented but still has no driver.)
 
 **Models that do not exist and must not appear in any plan:** KN450 (a confusion with SX-K450),
 KN900 (the real number is KN901), KN2100, KN2200, KN4000, KN5500, and **KN8000** — zero hits across
@@ -211,7 +213,8 @@ rig error, and every hard-won rule currently lives as prose in a different file,
   always silent so level is measured on ch1/ch2), each corresponding to a mistake that had already
   been made here. Full run 2026-08-15: **17 passed, 0 failed, 1 skipped.**
   Still to add: wiring it to a cron tick and publishing the result as a committed status file.
-- **`tools/rig.sh`** — ✅ **built 2026-08-15.** One entry point for all 117 rigs, encoding the
+- **`tools/rig.sh`** — ✅ **built 2026-08-15.** One entry point for all rigs (117 at the time this
+  was written; `tools/gen_rig_index.py` now counts 136, as later phases added more), encoding the
   hazards once: absolute rig path, throwaway cfg/NVRAM with a loud banner (and `--user-cfg` to
   reproduce the *user's* environment, per RULE 20), timeout wrapper, visible video, correct skip
   flag, machine inferred from a `rig-machine:` header. It prints the exact command it ran, so a
@@ -311,10 +314,12 @@ an outside reader is not misled.
 
 Small, independently-correct PRs beat one large one. Order:
 
-1. **Push the rebased PR #15878** — it is 4 commits ahead / 149 behind origin, so a maintainer sees
-   a stale base with no CI signal. **First resolve the IC14 filename collision**: the fork expects
-   `76d11a5e` and de-scrambles at load; the PR expects a flat `aa4917ce`. Both call the file
-   `kn5000_rhythm_data_rom.ic14`, so no single romset satisfies both.
+1. ✅ **Done. PR #15878 merged upstream 2026-08-17** (`8789d0f0d48`, "KN5000: Make `Feature
+   Presentation` demo run"). The IC14 filename collision resolved toward the PR's flat hash: the
+   merge landed `CRC(aa4917ce)` for `kn5000_rhythm_data_rom.ic14` and the fork now carries the same
+   hash (with the raw as-dumped bytes kept alongside as `kn5000_rhythm_data_rom.ic14.as-read-a19a21-swapped`,
+   regenerable via `tools/rom-record-review/ic14_descramble_check.py`). **Also since merged
+   2026-08-31: PR #15919** (`13fd3ea396a`, "kn5000: emulate the TEMPO/PROGRAM data wheel").
 2. The one-character `mn10300` disassembler fix — costs nothing, starts the relationship.
 3. `spi_sdcard` CRC16 init-0.
 4. **Promote `mn89304_vga_device`** out of `kn5000.cpp`, where it hides as a driver-local class with
@@ -353,7 +358,14 @@ German and French catalogues where the English reads KN5000) and **KN2000**.
 
 ### Phase 7 — WSA1, and the organs · *months, gated on research*
 
-The WSA1 is now the best-prepared unstarted target in the project: its **full 2 MB v2.0 OS is in
+**⚠ Update: this phase started 2026-08-25**, after the 2026-08-14 assessment date above — a
+`wsa1`/`wsa1r` driver (`src/mame/matsushita/wsa1.cpp`) now exists in the fork with LCD, inter-CPU
+link and CPU2 register-file work, and boots to the real `SOUND MODE` screen; see
+[wsa1-emulation]({{ site.baseurl }}/wsa1-emulation/) for the milestone-by-milestone state. The
+framing below (written when this was still unstarted) is kept for its still-valid reasoning about
+*why* WSA1 was a good target.
+
+The WSA1 was the best-prepared unstarted target in the project: its **full 2 MB v2.0 OS is in
 hand** and verified, its service manual is free, its CPU is one we already emulate, and three of its
 custom chips are parts we have already reverse-engineered. Budget it as a new *application*, not a
 new architecture. MAME already has a SED1330 device for its display.
