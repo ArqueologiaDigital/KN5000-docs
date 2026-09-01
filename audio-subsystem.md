@@ -119,7 +119,18 @@ The dual DSP chips are controlled via the Sub CPU's internal I/O ports. DSP1 (IC
 
 ### DSP Channel Register Map (Memory-Mapped at 0x130000)
 
-The memory-mapped interface at 0x130000 provides a second access path to DSP registers, used for channel initialization:
+⚠ **Which chip actually decodes this block is UNCERTAIN, and it is confirmed NOT the
+uPD6383GF's own command/data port** (that is the Port PZ/P7 parallel handshake described
+above). MAME's driver maps 0x130000 to IC311 as a board-level convenience while explicitly
+recording that this is not the DSP's host interface; the boot ROM itself named it
+`TONE_GEN_BASE`, but it is also confirmed **not** the tone generator (no access to it is
+bracketed by the tone generator's P6.7 select strobe, unlike every genuine tone-generator
+write). Treat "DSP Channel Register Map" below as a working label for a real, distinct
+4-channel register block whose owning chip has not been identified — not as a second path
+into the same registers IC311 exposes over the parallel bus.
+
+The memory-mapped interface at 0x130000 provides a second access path to DSP-*related*
+registers, used for channel initialization:
 
 ```
 Channel register address = channel_number × 0x20 + 0x10
@@ -949,6 +960,15 @@ The MainCPU ROM at 0xE324C4 contains 86 parameter name entries (17 bytes each: 1
 
 **Common suffix:** Every algorithm ends with AlgoParamDecode(EMPHASIS GAIN) for effect variant selection, Interp2Point(GLOBAL_SCALE) for output level, and (most) LUTParamSet(PHASER DRY/WET) for dry/wet mix control.
 
+⚠ **Twelve of the named effects appearing in these tables ship a DSP microcode program
+byte-identical to NO OPERATION (the same 49-word image, hash `2baadb775ff5eb84`)** —
+having a decoded parameter-translation path (which named parameters map to which DSP
+coefficients, described above) is independent of whether the uploaded algorithm actually
+does anything. The twelve: `MODULATION DELAY`, `SLOW ATTACKER`, `NOISE FLANGER`, `CEL`,
+`CELM`, `PITCH SHIFTER`, `PEDAL WAH`, `HARS EFFECT`, `STRING`, `PEDAL WAH+DELAY`, `DS_D`,
+`OVER_D`. Of these, only `SLOW ATTACKER` is reachable from a front-panel effect-type list
+(DSP EFFECT TYPE 14); the rest are not selectable through either array-driven editor page.
+
 **Register Address Programs (ROM table at 0x1F09C):** Each algorithm type also has a register address program that specifies which DSP register addresses each parameter writes to. The register programs use the same bytecode format as the parameter mapping but contain DSP coefficient addresses (12-bit or 16-bit) and fixed-point default values. Algo types 0, 7, 11 share a fallback that doesn't have register address programs (NULL pointers).
 
 ### DSP Coefficient Setup Pipeline
@@ -1188,6 +1208,20 @@ The Main CPU organizes sounds into 16 categories with pointers at 0xE023B0:
 
 ## Feature Demo
 
+⚠ **Update 2026-09-01: the "zero Note On/Off events" diagnosis below predates a MAME
+core-level fix and is no longer the current state.** Commit `3fd44f3` (2026-08-05) found
+that the sub→main inter-CPU link was wedged by a **duplicate `/INT0` dispatch** in MAME's
+TLCS-900 (`tmp94c241`) core itself — a preempted, non-reentrant receive ISR got re-entered
+by an acceptance-time `/INT0` re-assertion, ate the packet header a second time, and the
+resumed original dispatch then parsed a payload byte as a header, wedging the link for
+good. Dropping that re-assertion made latch writes, INT0 dispatches and latch reads 1:1:1,
+and the demo now runs well past 100 seconds with real voice names on the play screen. The
+detailed logs below (zero `putc_mrx` hits, ring buffer never written, etc.) describe the
+**pre-fix** symptom and are kept as the record of that investigation, not as the current
+emulation behavior. Separately, IC14's rhythm ROM dump was found to have two address lines
+transposed, which affects roughly two-thirds of factory rhythms; that is a different,
+still-partially-open issue from the inter-CPU wedge fixed here.
+
 The Feature Demo plays pre-recorded MIDI sequences to demonstrate the keyboard's capabilities. Pressing the DEMO button triggers a complex initialization and playback sequence.
 
 ### Demo Initialization Flow
@@ -1421,15 +1455,15 @@ Register writes use CMD 0x30 followed by 4-byte data groups: `[0x00, addr, val_h
 
 ### DSP Firmware / Microcode Loading
 
-**The DSP chips do NOT receive external microcode from the Sub CPU.** Investigation of the SubCPU firmware reveals that no large code blocks are ever uploaded to the DSPs. Instead:
+**The Sub CPU DOES upload microcode to IC311, and this section's own earlier framing (below) was wrong about that.**
 
-1. **The DSPs are programmable, and the firmware programs them at run time.** An earlier revision of this page claimed both chips carry fixed internal microcode. That is **superseded**: the Sub CPU uploads bytecode microprograms to IC311 (uPD6383GF) through the [DSP bytecode interpreter]({{ site.baseurl }}/dsp-bytecode-interpreter/), which is how the effect algorithms are switched. See [Effects DSP]({{ site.baseurl }}/effects-dsp/).
+1. **The DSPs are programmable, and the firmware programs them at run time.** An earlier revision of this page claimed both chips carry fixed internal microcode. That is **superseded**: the Sub CPU uploads bytecode microprograms to IC311 (uPD6383GF) through the [DSP bytecode interpreter]({{ site.baseurl }}/dsp-bytecode-interpreter/), which is how the effect algorithms are switched. See [Effects DSP]({{ site.baseurl }}/effects-dsp/). The MAME driver corroborates this independently: the emulated host interface has verified that uploaded microcode lands in the chip's I-RAM.
 
 2. **Sub CPU controls DSPs via register writes only** — All communication uses the 8-bit parallel bus handshake protocol (Port PZ data, Port P7 control lines). The Sub CPU sends:
    - **Command bytes** (P7.6=1): Select DSP register or operation mode
    - **Data bytes** (P7.6=0): Write parameter values to selected register
 
-3. **Configuration via bytecode interpreter** — The Sub CPU has a bytecode interpreter (`DSP_BytecodeInterpreter_Init` at 0x03C266) that reads compact bytecode programs from ROM and translates them into sequences of DSP command+data writes. This is a **Sub CPU-side** interpreter, not DSP microcode.
+3. **Configuration via bytecode interpreter** — The Sub CPU has a bytecode interpreter (`DSP_BytecodeInterpreter_Init` at 0x03C259) that reads compact bytecode programs from ROM and translates them into sequences of DSP command+data writes, including the microcode upload itself. This is a **Sub CPU-side** interpreter that emits DSP-side bytecode; it is not the DSP's own instruction set.
 
 **Evidence:** The `DSP_WriteEFFConfig` and `DSP_WriteGlobalConfig` routines both call `DSP_BytecodeInterpreter_Init` with ROM pointers to bytecode tables (at 0x14777 for EFF configs, 0x147B3 for global configs). These tables contain opcodes like:
 - `0x0-0x4`: DSP register write operations
@@ -1437,7 +1471,7 @@ Register writes use CMD 0x30 followed by 4-byte data groups: `[0x00, addr, val_h
 - `0x0E`: Send command+data sequence
 - `0x0F`: End of program
 
-**Implication for emulation:** The DSP chips must be emulated with their internal behavior intact. Since no dumps of the DSP internal ROMs exist, the DSP behavior must be reverse-engineered from the register interface (what the SubCPU writes) and the resulting audio output. This is the primary remaining challenge for accurate sound emulation.
+**Implication for emulation:** What blocks audio emulation is **not** a missing ROM dump — the uploaded bytecode is Sub-CPU ROM content and is already fully carved (see the [DSP Effect Data Zone]({{ site.baseurl }}/dsp-effect-data-zone/)). What is missing is the **uPD6383GF's own instruction-set semantics**: nothing yet decodes what the DSP's internal core actually does with the bytes it receives, so even with the microcode upload traffic captured, the chip's audio-domain behavior cannot be reproduced. This is the primary remaining challenge for accurate sound emulation.
 
 ### DSP Preset Structure
 
@@ -1952,15 +1986,17 @@ See [Keybed Scanning]({{ site.baseurl }}/keybed-scanning/) for the complete note
 
 ## MAME Emulation Status
 
-The MAME driver (`kn5000.cpp`) includes device classes for the audio chips. The tone generator produces basic audio output (waveform playback from ROM). The DSP devices are register stubs that accept firmware writes without crashing. No DSP audio processing is emulated — the DSP internal ROMs have not been dumped.
+*(⚠ re-checked 2026-09-01 against the overlay driver, `kn7000_mame/src/mame/matsushita/kn5000.cpp` — several claims below were stale.)*
+
+The MAME driver includes device classes for the audio chips. The tone generator produces basic audio output (waveform playback from ROM). **DSP1 (IC311) now has a real device (`upd6383_device`)** behind a compile-time switch (`KN5000_ENABLE_DSP1`, off by default): its host interface is exercised and uploaded microcode is verified to land in the chip's I-RAM, but the chip's own instruction set is not decoded, so nothing executes and there is no audio from it. DSP2 (IC310) is still handled via SubCPU GPIO port callbacks rather than a dedicated device — and per the driver's own hardware notes, IC310, not IC311, is the chip the main audio mix actually passes through (IC303 SDO0 → IC310 → IC313 PCM69AU), which is why DSP1 being silent does not mute the instrument.
 
 ### Audio Chip Device Classes
 
 | Device | Chip | IC | Interface | MAME Class | Status |
 |--------|------|----|-----------|------------|--------|
 | Tone Generator | TC183C230002 | IC303 | Memory-mapped (0x100000) | `kn5000_tonegen_device` | 64-voice PCM with pitch/pan/volume, keybed input, voice status readback |
-| DSP1 | uPD6383GF-3BA | IC311 | Memory-mapped (0x130000) | `kn5000_dsp1_device` | Register stub: 4 channels × 0x20 registers, accepts writes |
-| DSP2 | MN19413 | IC310 | Serial (GPIO bit-bang) | (port callbacks) | Not yet a separate device; serial protocol handled by SubCPU GPIO |
+| DSP1 | uPD6383GF-3BA | IC311 | Memory-mapped (0x130000) | `upd6383_device` (`m_dsp1`), optional, `KN5000_ENABLE_DSP1=0` by default | Draft core: host interface + I-RAM upload verified; instruction set not decoded, so silent |
+| DSP2 | MN19413 | IC310 | Serial (GPIO bit-bang) | (port callbacks) | Not yet a separate device; serial protocol handled by SubCPU GPIO; this is the chip the main mix passes through |
 
 **Tone Generator (`kn5000_tonegen_device`):**
 - Register-indirect config interface (address port + data port)
@@ -1981,10 +2017,18 @@ The MAME driver (`kn5000.cpp`) includes device classes for the audio chips. The 
 - Voice status readback: reports KEY ON while hold timer active
 - Keyboard input interface with `push_keybed_event()` for MAME input port integration
 
-**DSP1 (`kn5000_dsp1_device`):**
-- 4 channels × 0x20-byte register space (channel base = N × 0x20 + 0x10)
-- Register-indirect interface: address latch at 0x130000, data at 0x130002
-- Accepts firmware register writes; no audio processing (internal ROM not dumped)
+**DSP1 (`upd6383_device`, member `m_dsp1`, optional and `set_disable()`d by default):**
+- The real device's host interface is the parallel Port PZ/P7 handshake (`host_w`), not a
+  memory-mapped port; I-RAM, C-RAM and D-RAM are mapped by the device itself, and only the
+  external digital-delay DRAM (IC309) is the driver's to map.
+- Held disabled on purpose: uploaded microcode is captured into a real, debugger-visible
+  I-RAM, but the chip's own instruction set is not decoded, so the core must not execute —
+  a partially-correct effects DSP was exactly the failure mode that produced
+  audible-but-wrong sound on the KN7000.
+- The **separate** 0x130000/0x130002 register block described above (`dsp_reg_addr_w` /
+  `dsp_reg_data_w` / `dsp_reg_data_r` on `kn5000_state`, not on the DSP device) is a
+  read-back model only; an earlier driver revision wrongly modelled it as the DSP's
+  command/data port, which is why an upload capture hooked there saw nothing but zeros.
 
 **DSP2 (MN19413 — not yet a MAME device):**
 - Serial interface via SubCPU GPIO (Port PF bit 0 = SDA, bit 2 = SCLK, PE.6 = CS)
@@ -1995,8 +2039,8 @@ The MAME driver (`kn5000.cpp`) includes device classes for the audio chips. The 
 
 ### Key Emulation Challenges
 
-1. **No DSP internal ROM dumps** — Both DSP chips contain internal ROM with their effects algorithms. Without dumps, audio processing cannot be accurately emulated.
-2. **Tone generator wavetable ROM** — IC303 contains internal wavetable samples. Without a dump, synthesized audio output is not possible.
+1. **The uPD6383GF's own instruction set is not decoded** — this is the actual blocker, not a missing ROM dump. The bytecode the Sub CPU uploads to IC311 is Sub-CPU ROM content and is fully carved (see the [DSP Effect Data Zone]({{ site.baseurl }}/dsp-effect-data-zone/)); what remains unknown is what the chip's own core does when it executes that upload. IC310 (MN19413) is a separate, undocumented custom ASIC with no public programming information at all.
+2. **Tone generator wavetable ROM — largely solved.** IC307 (one of the four wave ROMs IC304-IC307 that hang off IC303) is a hardware-rooted dump and is already used for 64-voice PCM playback (see "Tone Generator" above and [Waveform ROM Format]({{ site.baseurl }}/waveform-rom-format/)). IC304-IC306 are currently `BAD_DUMP` copies of IC307, not independent dumps, so waveform *selection* across banks is not yet faithful even though single-bank playback works.
 3. **Serial port 1 protocol** — The ~500kHz UART connection between SubCPU and the DAC/DSP control path is not yet fully decoded.
 
 ### What Works Now
@@ -2012,7 +2056,7 @@ The MAME driver (`kn5000.cpp`) includes device classes for the audio chips. The 
 ### Known Issues
 
 - **Feature Demo timing** — The SSF presentation runs too fast because `Seq_IsMelodyActive` sees voices as inactive almost immediately after KEY OFF. Root cause: the tone generator HLE's release envelope completes in ~125ms. Fix: a 2-second hold timer was added per voice so firmware status queries still see voices as active, matching the real hardware's longer envelope times. Needs MAME testing to verify.
-- **No DSP effects audio** — DSP device classes are logging stubs with register tracking. Tone generator produces sine wave output but no effects processing (reverb, chorus, etc.).
+- **No DSP effects audio** — DSP1 is a real device (`upd6383_device`) but held disabled because its instruction set is not decoded; DSP2 (IC310) has no dedicated device at all, only SubCPU GPIO port callbacks. Neither produces effects processing (reverb, chorus, etc.). The tone generator itself produces real 64-voice PCM wavetable playback from ROM (not just a sine wave) as its normal mode; a diagnostic sine-wave render mode also exists, selectable from the MAME menu (`:TGMODE` port).
 
 ## Research Needed
 
