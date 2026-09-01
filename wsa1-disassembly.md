@@ -13,9 +13,13 @@ bytes in total — are being converted to TLCS-900 assembly source that
 the same practices, including the same
 [LLVM TLCS-900 backend](https://github.com/felipesanches/llvm-project/tree/tlcs900_backend).
 
-> **Status: paused after wave 6, at Felipe's request.** Six conversion waves ran;
-> the work is deliberately incomplete. Coverage stands at **1,420,501 substantive
-> bytes — 67.7 %.**
+> **Status: the reachability coverage goal has been met.** A further wave, run
+> after the wave-6 pause, converted every reachable code path that has start
+> evidence: recursive descent over the three code images now finds only
+> **STRONG 17 bytes** still reachable-and-unconverted (all formally refused —
+> see below), down from 17,558 at that goal's start. Raw substantive coverage —
+> which counts territory, not reachability, and so is a smaller number by
+> design — stands at **1,575,648 bytes — 75.1 %.**
 
 ## The gate is the only thing that certifies this tree
 
@@ -30,7 +34,7 @@ Never substitute a similarity percentage, and never use `--no-build` unless you
 have just built — **both shortcuts have already cost the sibling project real
 retractions**, and the reasons are written into the script's own docstring.
 Commits additionally carry an `LLVM: <branch>@<short> (<full>)` line, enforced by
-a commit hook; the current pin is `tlcs900_backend @ bcf152d1fe00`. The same
+a commit hook; the current pin is `tlcs900_backend @ dbb72df07371`. The same
 backend assembles the KN5000 tree.
 
 ## ⚠ The rule the gate cannot enforce
@@ -64,13 +68,18 @@ Regenerate with `python3 scripts/analysis/source_coverage.py`; never retype it.
 
 | source | image | substantive | verified filler | still `.incbin` | spans |
 |---|---|---:|---:|---:|---:|
-| `prom_a` | `wsa1_prom_a.ic12` | 374,691 | 43,012 | 106,585 | 49 |
-| `prom_b` | `wsa1_prom_b.ic13` | 320,217 | 44,612 | 159,459 | 148 |
-| `prom_c` | `wsa1_prom_c.ic28` | 395,072 | 129,216 | **0** | 34 |
+| `prom_a` | `wsa1_prom_a.ic12` | 429,545 | 48,437 | 46,306 | 84 |
+| `prom_b` | `wsa1_prom_b.ic13` | 420,510 | 62,966 | 40,812 | 417 |
+| `prom_c` | `wsa1_prom_c.ic28` | 395,072 | 129,216 | **0** | 32 |
 | `prom_d` | `wsa1_prom_d.bin` | 330,521 | 193,767 | **0** | 0 |
-| **total** | | **1,420,501 (67.7 %)** | 410,607 | 266,044 | |
+| **total** | | **1,575,648 (75.1 %)** | 434,386 | 87,118 | |
 
-⚠ **Quote the substantive column, not the 87.3 % total.** Wave 3 converted
+*(Re-run 2026-09-01, after the reachability goal below was met — prom_a and
+prom_b both moved substantially, and `prom_b`'s span count went up because the
+remaining `.incbin` fragmented into more, smaller gaps as reachable code was
+carved out of it.)*
+
+⚠ **Quote the substantive column, not the 95.8 % total.** Wave 3 converted
 123,151 bytes of prom_c of which **118,298 were a verified run of `0x0E` pad
 emitted as `.fill`** — that moved the headline from 4.3 % to 27.7 % while adding
 under 5 KB of decoded content. The pad is real and checked rather than sampled,
@@ -82,19 +91,54 @@ one commit** — it still claimed 4,639 bytes after four agents had converted
 604,523 — because it sat outside every lane. Three of the four lanes noticed and
 none edited it.
 
-### ★ The number that measures meaning, and it went up
+## ★★ The reachability goal: met
 
-`sub_XXXXXX` — the count of routines that are converted but **unnamed** — stands
-at about **4,998, and it rose during wave 6**. Newly converted code brings in
-unnamed routines faster than naming retires them.
+A goal distinct from raw coverage — *convert every reachable code path that has
+start evidence* — has been completed. `notes/reachability.py` walks the CPU
+vector table, the 1,910-slot routine directory, framed pointer tables, branch
+targets in converted code and 32-bit immediates, and grades every seed:
+**STRONG** (a directory slot, a decoded branch, a hardware vector — convert on
+this column) versus **WEAK** (a `.long` entry or a raw immediate, which is a
+pointer and as likely to name a table as a routine).
+
+| | at goal start | now |
+|---|---:|---:|
+| STRONG reachable-and-unconverted | 17,558 bytes | **17 bytes** |
+| `prom_b` STRONG remaining | — | **0** |
+| `prom_c` STRONG remaining | — | **0** |
+| ANY (STRONG+WEAK) reachable-and-unconverted | — | 1,702 bytes, 17 spans |
+
+The 17 remaining STRONG bytes (`0xFA369A-0xFA36AB` in `prom_a`) are a walk
+artefact and are **formally refused**: read straight out of the ROM they spell
+`"D GROUP NAMING"`, the tail of a UI string reached only because the walk
+decoded its way into it — no seed of any grade names that address, and no
+converted instruction falls through into it. The walk reached a **fixpoint**:
+round 1 revealed 499 bytes, round 2 revealed 38, and converting those 38
+revealed nothing further.
+
+This did **not** touch semantics — every label the goal added is a bare
+`sub_XXXXXX` with a start-evidence line, no claim about behaviour — and it left
+existing prose untouched (verified by diff, not assumed). What is left for a
+future goal: 180 bytes with no start evidence at all (refuse unless evidence
+appears), ~1,702 reachable bytes that are WEAK-seed-only pointer-table
+artefacts needing a byte-level audit before conversion, and ~105,000 bytes of
+`.incbin` that nothing reaches (data — converting it adds territory, not
+coverage).
+
+### ★ The number that measures meaning, and it keeps going up
+
+`sub_XXXXXX` — the count of routines that are converted but **unnamed** — stood
+at about 4,998 after wave 6 and has continued to climb since, to about
+**5,014**. Newly converted code brings in unnamed routines faster than naming
+retires them.
 
 > *Coverage measures territory; this number measures meaning, which is the half
 > of the goal that is furthest from done.*
 
-Alongside it, measured in the tree on 2026-08-26: **2,706 routine headers with
-`Evidence:` lines** (`grep -rh 'Evidence:' prom_*/*.s | wc -l`), **81 notes
-documents** of which 70 are `FINDINGS-*` (`git ls-files 'notes/*.md'`), **194
-committed Python analysis scripts** (`git ls-files '*.py'`), and about **4,998**
+Alongside it, re-derived 2026-09-01: **7,557 routine headers with
+`Evidence:` lines** (`grep -rh 'Evidence:' prom_*/*.s | wc -l`), **105 notes
+documents** of which 78 are `FINDINGS-*` (`git ls-files 'notes/*.md'`), **360
+committed Python analysis scripts** (`git ls-files '*.py'`), and about **5,014**
 routines still named only `sub_XXXXXX` — the last of those is the number worth
 watching, because it measures meaning rather than territory.
 
