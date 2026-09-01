@@ -27,7 +27,7 @@ Things we don't know yet and need to investigate.
 - [x] What is the addressing scheme? **Segment outputs SEG00-SEG15** via HD74LS07P drivers
 - [ ] Can LEDs be dimmed or only on/off?
 - [x] Is there multiplexing? **Yes**, MCU multiplexes via segment outputs
-- [ ] What do the 4 LED packet types (bits 4-5) represent? (Handlers at 0xFC6C80+ undisassembled)
+- [x] What do the 4 LED packet types (bits 4-5) represent? **Dispatched via `CPanel_LED_PacketHandlers` (0xFC4B85)**: types 0-2 share `CPanel_LED_HandlePacket2` (0xFC4B95, 48 bytes) which transfers a fixed 2-byte row-select+pattern pair; type 3 uses `CPanel_LED_HandlePacketN` (0xFC4BC5, 66 bytes) for variable-length data, whose byte-1 low nibble encodes a count (`nibble + 2` bytes total). See [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/).
 - [x] LED packet format? **Bits 4-5 select handler, bits 5-0 = row, bits 7-6 = panel select**
 - [x] LED row mapping? **CPR: rows 0x00-0x0C, CPL: rows 0xC0-0xC8** - see [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/)
 
@@ -117,10 +117,10 @@ Some flag bits appear unused in the code we've analyzed:
 
 ### Undisassembled Code
 - ~~Encoder handlers at 0xFC6C80~~ ✓ **Fully disassembled** (450 bytes → 6 handlers)
-- LED-related routines at 0xFC4B95, 0xFC4BC5 need investigation
+- ~~LED-related routines at 0xFC4B95, 0xFC4BC5 need investigation~~ ✓ **Resolved** — named and sized: `CPanel_LED_HandlePacket2` (0xFC4B95) and `CPanel_LED_HandlePacketN` (0xFC4BC5), see [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/#led-packet-handlers-fully-disassembled). Per that page, "all control panel routines have been fully disassembled."
 
 ---
 
-*Last updated: March 2026*
+*Last updated: September 2026 (LED packet type / handler questions resolved; rest is otherwise as of March 2026 and not independently re-verified this pass)*
 
 *Have answers or new questions? Contribute to the project!*
