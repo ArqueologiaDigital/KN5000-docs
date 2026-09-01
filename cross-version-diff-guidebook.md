@@ -6,7 +6,7 @@ permalink: /cross-version-diff-guidebook/
 
 # Cross-Version Source Diff Guidebook
 
-Best practices for producing the cleanest possible source-level diffs between KN5000 firmware versions. Derived from the v9-to-v10 diff minimization journey (5,388 lines reduced to 44) and applied to all version pairs.
+Best practices for producing the cleanest possible source-level diffs between KN5000 firmware versions. Derived from the v9-to-v10 diff minimization journey (5,388 lines reduced to 95) and applied to all version pairs.
 
 ## Principles
 
@@ -122,5 +122,5 @@ NOT: `.incbin "v7_postshift_blob.bin"` replacing 43 `.include` directives.
 
 ## See Also
 
-- [Firmware Changes: v9 vs v10]({{ site.baseurl }}/firmware-v9-vs-v10/) -- Example of a fully minimized diff (44 lines)
+- [Firmware Changes: v9 vs v10]({{ site.baseurl }}/firmware-v9-vs-v10/) -- Example of a fully minimized diff (95 lines)
 - [LLVM Semantic Instructions]({{ site.baseurl }}/llvm-semantic-instructions/) -- Parenthesized operand syntax
