@@ -204,7 +204,7 @@ flowchart LR
 
 <pre class="mermaid">
 flowchart TD
-    MAIN["kn5000_v10_program.s<br/>(3,400 lines — entry point)"]
+    MAIN["kn5000_v10_program.s<br/>(3,519 lines — entry point)"]
 
     subgraph BOOT_FILES ["Boot & System"]
         BOOT_HW["shared/boot_hw_init.s"]
@@ -212,24 +212,24 @@ flowchart TD
         FACTORY["factory_test/test_*.s"]
     end
 
-    subgraph UI_FILES ["UI Framework (19 .s + 27 .c)"]
-        WIDGET_DEFS["ui/ui_widget_defs.s (19K)"]
+    subgraph UI_FILES ["UI Framework (17 .s + 29 .c)"]
+        WIDGET_DEFS["ui/ui_widget_defs.s (344K)"]
         DRAW_PRIM["ui/drawing_primitives.s"]
         CPANEL_RT["ui/cpanel_routines.s"]
-        NAKA_C["ui_widgets/*.c (26 files)<br/>Typed C struct widget data"]
+        NAKA_C["ui_widgets/*.c (29 files)<br/>Typed C struct widget data"]
     end
 
     subgraph AUDIO_FILES ["Audio (31 files)"]
-        ACE["audio/audio_control_engine.s (8K)"]
-        NVM["audio/note_voice_mapping.s (26K)"]
+        ACE["audio/audio_control_engine.s (208K)"]
+        NVM["audio/note_voice_mapping.s (504K)"]
         SEMENU["audio/semenu_routines.s"]
         DSP_CFG["audio/dsp_config_sysex.s"]
-        SND_DATA["audio/sound_data_*.s (7 files)"]
+        SND_DATA["audio/sound_data_*.s (17 files)"]
     end
 
     subgraph SEQ_FILES ["Sequencer (15 files)"]
-        ACC_ENG["sequencer/accompaniment_engine.s (33K)"]
-        SEQ_ENG["sequencer/sequencer_engine.s (32K)"]
+        ACC_ENG["sequencer/accompaniment_engine.s (680K)"]
+        SEQ_ENG["sequencer/sequencer_engine.s (608K)"]
         SMF_PLAY["sequencer/smf_playback.s"]
     end
 
@@ -259,11 +259,14 @@ flowchart TD
 | Metric | Value |
 |--------|-------|
 | Total native instructions | 279,441 (0 code .byte remaining) |
-| Assembly source files | 154 (.s) + 70 (.c) |
+| Assembly source files | 156 (.s) + 90 (.c) |
 | ROM byte match | 100% on all 6 ROMs |
 | Labeled symbols | 37,276 (0 opaque LABEL_XXXXXX) |
-| NAKA widget C structs | 26 files with typed fields |
+| NAKA widget C structs | 29 files with typed fields |
 
 ---
 
-*Auto-generated from KN5000 ROM disassembly analysis. Last updated: March 2026.*
+*Auto-generated from KN5000 ROM disassembly analysis. Last updated: March 2026 (file counts,
+line count and file-size annotations spot-checked and corrected against the v10/maincpu tree
+2026-09-01; the instruction/symbol counts and hardware/UI counts elsewhere on this page were
+not independently re-verified).*

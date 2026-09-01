@@ -22,8 +22,13 @@ claim needs real hardware to settle, it says so plainly.
 > memory map, control-flow model and several instruction roles are established, and two
 > whole algorithms (the parametric EQ and the reverb diffuser) are decoded to the bit.
 > The instruction set as a whole is **not** fully decoded — honest coverage is ~18 % of
-> the microcode words. The DSP core is **not** emulated in MAME: the device captures the
-> host byte stream, there is no execution and no audio yet.
+> the microcode words. MAME now carries an experimental, opt-in partial-execution core for
+> the chip (compile-time `KN5000_ENABLE_DSP1`, default off; a runtime `DSPCFG` port, also
+> default off) that runs one uPD6383GF frame per tone-generator sample and logs which words
+> trap — 199 of the 285 words on the frame path execute, 108 of them fully. It is a decoding
+> instrument, not an audio feature: every frame is still discarded before it reaches the mix
+> (0 of 1,368,001 sampled frames complete), so the default build's audio is unaffected either
+> way and there is still no audio from this chip.
 
 This page supersedes, in part, the older
 [DSP Bytecode Interpreter]({{ site.baseurl }}/dsp-bytecode-interpreter/) page, which was
@@ -370,9 +375,12 @@ Note that the chip a *slot* talks to is a separate lookup: the byte table at Sub
 
 ## 7. What still needs real hardware
 
-The reverse engineering is entirely **static** — nothing above was executed on the chip or
-in an emulator. Five things need a running core (a real uPD6383 or a MAME core, once one
-exists) and are honestly OPEN:
+The reverse engineering behind the conclusions above is entirely **static** — none of it
+depends on the chip or an emulator actually completing a frame. MAME's own draft core (§ above)
+does not change that: it is gated off by default, and every frame it attempts still traps and
+is discarded before reaching the mix, so it has not produced a validated result either. Five
+things need a running core (a real uPD6383, or MAME's once it can complete a frame) and are
+honestly OPEN:
 
 1. **The absolute pointer origin** — a single address-bus read on the first data access
    after the header would convert every `addr8` in the corpus into a real address.

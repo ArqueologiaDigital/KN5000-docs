@@ -320,7 +320,7 @@ Ordered by cost. The first two are free and block everything else.
 
 | # | Question | Measurement |
 |---|---|---|
-| 1 | H3b — was `0x3E0000` ever programmed on this unit? | On the real instrument, open the built-in memory-dump screen (`DBMEMORYDUMPPROC`, `0xFA2EE6`) at `0x3E0000` and look for ASCII `SLIDE4K`. Present → our dump is incomplete. Absent → the region was genuinely never programmed. |
+| 1 | H3b — was `0x3E0000` ever programmed on this unit? | On the real instrument, open the built-in memory-dump screen (`DbMemoryDumpProc`, `0xFA2EE6`) at `0x3E0000` and look for ASCII `SLIDE4K`. Present → our dump is incomplete. Absent → the region was genuinely never programmed. |
 | 2 | H3b/H3c — was the instrument making sound when IC19 was read? | Ask the owner. If it was, a blank `0x3E0000` is impossible and the dump must be incomplete. |
 | 3 | Was IC19 read in-system or on a programmer? | Ask the owner. An in-system read through the CPU has a readback-window limit that would explain a truncated tail; an off-board programmer read would not. |
 | 4 | Definitive | Re-read IC19 in full with a device programmer (off-board, or in-circuit with the CPU held in reset) and search for `53 4C 49 44 45 34 4B`. |
