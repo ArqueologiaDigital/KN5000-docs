@@ -116,9 +116,9 @@ The MIDI RX handler maintains a full saved register context at DRAM 1080-1104. T
 
 ## Channel Message Routing
 
-`MIDI_CHANNEL_MESSAGE_DISPATCHER` (`0xFCF746`) routes incoming data bytes based on the running status byte:
+`MIDI_CHANNEL_MESSAGE_DISPATCHER` (`0xFCF733`) routes incoming data bytes based on the running status byte:
 
-1. Extract the status type: `(running_status >> 4) & 0x7` → index into 8-entry jump table at `MIDI_CHANNEL_HANDLER_JUMP_TABLE` (`0xFCF761`).
+1. Extract the status type: `(running_status >> 4) & 0x7` → index into 8-entry jump table at `MIDI_CHANNEL_HANDLER_JUMP_TABLE` (`0xFCF760`).
 
 2. Dispatch to the appropriate handler.
 
@@ -147,7 +147,7 @@ For Note On with velocity 0 in a full buffer, the event is silently dropped (eff
 
 ### SysEx Message Handling
 
-`MIDI_SYSTEM_EXCLUSIVE_HANDLER` (`0xFCF7A4`) handles system messages:
+`MIDI_SYSTEM_EXCLUSIVE_HANDLER` (`0xFCF800`) handles system messages:
 
 | Status | Message | Action |
 |--------|---------|--------|
@@ -236,13 +236,13 @@ Events are queued via `MIDI_QUEUE_EVENT_PAIR` which writes both the event code a
 
 ## High-Level Processing (`MidiSerial_ProcessInput`)
 
-Above the interrupt-driven byte-level I/O, `MidiSerial_ProcessInput` (`0xFCFA39`) runs in the main task loop:
+Above the interrupt-driven byte-level I/O, `MidiSerial_ProcessInput` (`0xFCF9AE`) runs in the main task loop:
 
 1. Check if MIDI processing is enabled (DRAM 64848 bit 4).
 2. Compare read/write pointers of the ring buffer at `0x1F37B`.
 3. For each buffered message:
    - Extract the status type: `(status >> 4) & 0x7`
-   - Look up handler address from `MidiSerial_CmdJumpTable` (16-entry table at `0xFCFA5D`)
+   - Look up handler address from `MidiSerial_CmdJumpTable` (16-entry table at `0xFCFA67`)
    - Call the handler
 4. After processing all messages: call `MidiStream_LoadAllPresets`.
 
@@ -287,27 +287,27 @@ Key MIDI state variables maintained in DRAM:
 
 | Symbol | Address | Purpose |
 |--------|---------|---------|
-| `SC0Init_Entry` | `0xFCF890` | Serial port initialization |
-| `SC0Init_EnableRegisters` | `0xFCF924` | Configure SC0 registers |
+| `SC0Init_Entry` | `0xFCF897` | Serial port initialization |
+| `SC0Init_EnableRegisters` | `0xFCF940` | Configure SC0 registers |
 | `READ_COM_SELECT_SWITCH` | `0xFCF8F6` | Read rear panel switch |
 | `INTRX0_HANDLER` | `0xFCF1F0` | MIDI RX interrupt handler |
 | `INTTX0_HANDLER` | `0xFCF15B` | MIDI TX interrupt handler |
-| `INTRX0_CLEAR_ERROR_STATE` | `0xFCF139` | RX error recovery |
-| `MIDI_RX_BYTE_DISPATCHER` | `0xFCF22E` | Classify and route RX bytes |
-| `MIDI_CHANNEL_MESSAGE_DISPATCHER` | `0xFCF746` | Route channel messages |
-| `MIDI_SYSTEM_MESSAGE_HANDLER` | `0xFCF2A9` | Process real-time messages |
-| `MIDI_SYSTEM_EXCLUSIVE_HANDLER` | `0xFCF7A4` | SysEx start/end handling |
-| `MIDI_RX_CONTEXT_SAVE` | `0xFCF610` | Save 7 registers to DRAM |
-| `MIDI_RX_CONTEXT_RESTORE` | `0xFCF5F8` | Restore 7 registers from DRAM |
-| `MIDI_SC0_TX_DISPATCH` | `0xFCF940` | TX path dispatch (MIDI vs serial) |
-| `MIDI_SC0_ENABLE_TX` | `0xFCF960` | Enable TX interrupt |
-| `MidiSerial_ProcessInput` | `0xFCFA39` | Main-loop MIDI processing |
-| `MidiSerial_WaitForData` | `0xFCFA6C` | Wait for RX buffer data |
-| `MIDI_QUEUE_EVENT_TO_SEQUENCER` | `0xFCF780` | Queue MIDI to sequencer buffer |
-| `MIDI_START_PLAYBACK_REQUEST` | `0xFCF62F` | External Start handler |
-| `MIDI_RESET_PLAYBACK_STATE` | `0xFCF64D` | Reset all clock counters |
-| `MIDI_QUEUE_TRACK_EVENT` | `0xFCF697` | Queue beat event to FIFO |
-| `MIDI_QUEUE_EVENT_PAIR` | `0xFCF6C5` | Queue event + position pair |
+| `INTRX0_CLEAR_ERROR_STATE` | `0xFCF13D` | RX error recovery |
+| `MIDI_RX_BYTE_DISPATCHER` | `0xFCF224` | Classify and route RX bytes |
+| `MIDI_CHANNEL_MESSAGE_DISPATCHER` | `0xFCF733` | Route channel messages |
+| `MIDI_SYSTEM_MESSAGE_HANDLER` | `0xFCF297` | Process real-time messages |
+| `MIDI_SYSTEM_EXCLUSIVE_HANDLER` | `0xFCF800` | SysEx start/end handling |
+| `MIDI_RX_CONTEXT_SAVE` | `0xFCF87A` | Save 7 registers to DRAM |
+| `MIDI_RX_CONTEXT_RESTORE` | `0xFCF85D` | Restore 7 registers from DRAM |
+| `MIDI_SC0_TX_DISPATCH` | `0xFCF972` | TX path dispatch (MIDI vs serial) |
+| `MIDI_SC0_ENABLE_TX` | `0xFCF991` | Enable TX interrupt |
+| `MidiSerial_ProcessInput` | `0xFCF9AE` | Main-loop MIDI processing |
+| `MidiSerial_WaitForData` | `0xFCFA25` | Wait for RX buffer data |
+| `MIDI_QUEUE_EVENT_TO_SEQUENCER` | `0xFCF782` | Queue MIDI to sequencer buffer |
+| `MIDI_START_PLAYBACK_REQUEST` | `0xFCF4F7` | External Start handler |
+| `MIDI_RESET_PLAYBACK_STATE` | `0xFCF51B` | Reset all clock counters |
+| `MIDI_QUEUE_TRACK_EVENT` | `0xFCF68F` | Queue beat event to FIFO |
+| `MIDI_QUEUE_EVENT_PAIR` | `0xFCF6D5` | Queue event + position pair |
 
 ## References
 
