@@ -16,9 +16,10 @@ literal machine code** with the [KN5000]({{ site.baseurl }}/system-overview/).
 
 > **Status: early, and honest about it.** Both variants are declared in a
 > development MAME driver that boots them to their real `SOUND MODE` screen and
-> takes button presses. It makes **no sound at all** — the tone generator, the
-> modelling LSI and the three DSPs are not modelled, and **all six wave mask ROMs
-> are undumped**. A byte-exact disassembly of all four EPROM images exists and is
+> takes button presses. It makes **no sound at all** — the tone generator and the
+> three DSPs are not modelled, and **all six wave mask ROMs are undumped**. Since
+> 2026-09-01 the modelling window at `0x00104000` has a placeholder device that
+> models its register interface and synthesises nothing. A byte-exact disassembly of all four EPROM images exists and is
 > paused at **67.7 % substantive** coverage. See
 > [Emulation Status]({{ site.baseurl }}/wsa1-emulation/) and
 > [Disassembly]({{ site.baseurl }}/wsa1-disassembly/).
@@ -164,7 +165,7 @@ readings are recorded; where a designator is derived rather than read, it says s
 |-----|------|------|
 | **IC1** | **TMP95C061AF** | Toshiba TLCS-900/H, *"MICROCOMPUTER (MAIN)"* |
 | **IC2** | **TMP95C061AF** | Toshiba TLCS-900/H, *"MICROCOMPUTER (SUB)"* |
-| **IC3** | **L7A1429** | *"MODELING LSI"* — the engine the machine is named after. No MAME device exists; not modelled. |
+| **IC3** | **L7A1429** | *"MODELING LSI"* — the engine the machine is named after. A **placeholder** MAME device (`wsa1_modeling_device`, 2026-09-01) models the register interface at `0x00104000`; it synthesises nothing. ⚠ That `0x104000` decodes to *this part* is an inference — no ROM names a part number — so the disassembly still calls it `Dev104_`. |
 | **IC4** | **TC183C230002** | *"TONE GENELATOR LSI"* [sic] |
 | IC30 (+ two more) | **NEC uPD6383GF-3BA** | three digital signal processors — **the same part as the KN5000's IC311**. ⚠ Only the IC30 designator prints cleanly; the other two schematic instances read as IC5 and IC6, and the block diagram shows three DSP blocks, so three is the count used |
 | **IC7** | **SED1330FBA** | LCD controller for the 320 × 240 dot panel |

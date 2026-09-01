@@ -16,9 +16,53 @@ and both were recovered from the firmware images rather than from a databook.
 > **⚠ Do not read this page as "the machine works."** Both systems are declared
 > `MACHINE_NOT_WORKING | MACHINE_NO_SOUND`, and the second flag is the honest
 > one: **nothing synthesises**. The tone generator's actual synthesis, the three
-> uPD6383GF DSPs and their microcode upload, the L7A1429 modelling LSI, the flash
-> and MIDI are all absent, and **all six wave mask ROMs are undumped**
-> (`NO_DUMP`). The machine draws a UI and responds to its panel. That is all.
+> uPD6383GF DSPs and their microcode upload, the flash and MIDI are all absent,
+> and **all six wave mask ROMs are undumped** (`NO_DUMP`). The machine draws a UI
+> and responds to its panel. That is all.
+>
+> **Updated 2026-09-01:** the modelling window at `0x00104000` now has a
+> **placeholder device**, `wsa1_modeling_device`. It models the *register
+> interface* — an address latch at `+0`, data at `+2`, a saved register file
+> numbered `block * 0x40 + channel` — and synthesises nothing. Its value is that
+> the register traffic is now captured and inspectable rather than discarded, and
+> that its header carries what is established about the device beside what is
+> merely inferred.
+
+### What crosses that bus is parameters, not code
+
+Before writing the device, one thing had to be settled, because a program loader
+and a register file are different objects: **is the firmware uploading microcode
+to the modelling section, or writing registers?**
+
+It is writing registers, and the method is a controlled comparison rather than an
+impression — this firmware contains a *known* code-upload path to measure
+against, the DSP effect microcode that leaves CPU 2 through port P7 a byte at a
+time with strobes and a `0x1F40` timeout poll.
+
+| discriminant | P7 (known code upload) | `0x104000` |
+|---|---|---|
+| opaque byte stream | yes — `ld (0x0013),(XIZ+d)` | no |
+| handshake / strobe / timeout | yes | no |
+| micro-DMA ever aimed at it | channel-driven | **no channel, ever** |
+| destination addresses | one port, repeatedly | fixed register set |
+| register numbering | n/a | `block * 0x40 + channel` |
+| values sourced from | a byte buffer | a packed *part record* |
+
+Eight distinct block numbers, every gap exactly `0x40`, and thirteen
+`Pack104_SetInputs_*` routines marshalling part records into them. Reproduce with
+`wsa1/notes/sound/dev104_payload_class.py` in the disassembly tree (6 checks).
+
+⚠ **The claim is bounded.** No executable payload crosses `0x00104000`. That is
+*not* proof the die holds no microcode of its own — a modelling engine with fixed
+on-die code exposing only coefficients would produce exactly this traffic.
+
+⚠ **And the device's name is an inference.** The service manual lists **IC3 =
+L7A1429, "MODELING LSI"**, so the part is named; what is *not* established is that
+`0x104000` decodes to it. What is established: `0x104000` is the only per-channel
+synthesis device CPU 2 drives that has no counterpart in the KN5000's PCM
+sibling, and its register file is a different shape from the tone generator's
+(19 contiguous blocks against 22 sparse). The disassembly still calls it
+`Dev104_` for that reason.
 
 ## ⚠ The driver is not upstream, and there are deliberately two of it
 

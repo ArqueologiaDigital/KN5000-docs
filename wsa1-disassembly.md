@@ -102,6 +102,50 @@ watching, because it measures meaning rather than territory.
 quoting this paragraph; a label count in particular depends on whether you count
 compiler-local `.L` labels, so no single figure is quoted here.
 
+## ★★ Updated 2026-09-01: ONE KERNEL, FOUR PROCESSORS, TWO PRODUCTS
+
+The result below stands and has since been carried two steps further.
+
+**Step one — the two WSA1R processors now share ONE SOURCE.** `wsa1/kernel/kernel.s`
+plus `kernel_maincpu.inc` / `kernel_subcpu.inc` assembles **twice**: into 2,180
+bytes of `prom_a` and 2,180 bytes of `prom_c`, both byte-identical to the EPROMs.
+That dual build is the proof — one wrong constant and one of the two images stops
+matching. Over the union of 941 instruction slots, 735 needed no reconciliation,
+129 differed only in house style, and **81 carry a per-CPU value — which turned
+out to be 21 constants**, not 81 patches (twelve RAM addresses, six array sizes,
+three ROM pointers). There is no `.if`/`.else` in the file.
+
+**Step two — the same kernel is in BOTH of the KN5000's processors**, in its
+sub-CPU payload and, as a separate build rather than a copy, in its main program
+ROM. One kernel, four processors, two products.
+
+⚠ **Byte-identity was the wrong instrument for that second question, and had
+already answered it wrongly.** A tool in the tree reported *zero* byte-identical
+matches across all 41 KN5000 images — true about bytes, false about the question,
+for the reason step one measures: two processors in the same product, from the
+same build, running the same source, still differ in 81 of 941 slots.
+
+The control that decides it is a **foil** — the identical search run over WSA1R
+code that is *not* the kernel:
+
+| | n | max | median | ≥ 0.70 |
+|---|---:|---:|---:|---:|
+| kernel routines (≥ 20 instr) | 20 | 1.000 | **0.909** | **20** |
+| non-kernel foils, same lengths | 26 | **0.333** | 0.212 | **0** |
+
+No overlap, a gap of 0.41. `prom_b` — same product, same compiler, no kernel —
+tops out at 0.28, so it is not measuring the compiler; shuffling the query's
+token order collapses the score, so it is measuring *order*, not vocabulary. Two
+threshold-free instruments agree: the 26 sites appear in ROM order as a **21-long
+increasing run** (200,000 permutations never exceeded 14), and the recovered RAM
+map is **monotone** across all three processors.
+
+**Not established:** who wrote it, or that the sources are identical —
+`Kernel_Dispatch` scores 0.742, the KN5000 version having no tick-drain loop and
+its lock depth moved out of a control register the TMP94C241 does not have.
+
+---
+
 ## ★ The two processors run the same kernel — 35 of 36 routines identical to the byte
 
 The strongest structural result in the tree is about the machine's relationship
