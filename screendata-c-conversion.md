@@ -30,7 +30,7 @@ Already integrated into the build as `.incbin` directives in `style_ui_params.s`
 
 The scoop display subsystem (`scoop_display.s`) loads XIY/XIX pointers into these blocks at various sub-offsets (~40 distinct entry points). It does not have its own ScreenData — it reuses Style UI data.
 
-### Subsystem 2: Sound Editor (22 files, documentation)
+### Subsystem 2: Sound Editor (23 files, documentation)
 
 Located in `maincpu/audio/sound_editor_screens/`. The original data remains as inline `.byte` in `sound_editor_ui.s`.
 
@@ -55,6 +55,7 @@ Located in `maincpu/audio/sound_editor_screens/`. The original data remains as i
 | se_setup_labels.c | 47 bytes | 5 | Label definitions |
 | se_setup_sel_rects.c | 30 bytes | 3 | Selection rectangles |
 | se_setup_sel{1-4}.c | 10–30 bytes | 1–2 | Selection rect entries |
+| se_rhythm_transport_tables.c | 220 bytes | 16 | Rhythm/drum-sound transport, with 2 dispatch tables |
 
 ### Subsystem 3: Accompaniment Engine (3 files, documentation)
 
@@ -71,9 +72,9 @@ Located in `maincpu/sequencer/accomp_screens/`. The original data remains as inl
 | Subsystem | Files | Bytes | Status |
 |-----------|-------|-------|--------|
 | Style UI | 16 | ~6,193 | Build-integrated (authoritative) |
-| Sound Editor | 22 | 3,238 | Typed documentation |
+| Sound Editor | 23 | 3,458 | Typed documentation |
 | Accompaniment | 3 | 317 | Typed documentation |
-| **Total** | **41** | **~9,748** | 25 files verified 100% byte-match |
+| **Total** | **42** | **~9,968** | 26 files verified 100% byte-match |
 
 ### NOT in scope: NAKA Widget Tables
 
