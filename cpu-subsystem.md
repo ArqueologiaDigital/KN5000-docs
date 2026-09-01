@@ -311,5 +311,5 @@ As of March 2026, **all executable code across all 6 ROMs uses native TLCS-900 i
 ## External References
 
 - [TMP94C241 Datasheet](https://www.alldatasheet.com/datasheet-pdf/pdf/47265/TOSHIBA/TMP94C241.html) - CPU specifications
-- [TLCS-900 Programming Manual](https://archive.org/details/toshiba-tlcs900) - Instruction set reference
-- [LLVM TLCS-900 Backend](https://github.com/niclasr/llvm-project) - Custom LLVM backend for TLCS-900
+- TLCS-900 Programming Manual — **link unverified**: `https://archive.org/details/toshiba-tlcs900` 404s as of this review (2026-09); see [TLCS-900 Instruction Encoding Reference]({{ site.baseurl }}/tlcs900-instruction-encoding/#references) for unconfirmed candidate replacements
+- [LLVM TLCS-900 Backend](https://github.com/ArqueologiaDigital/llvm-project) - Custom LLVM backend for TLCS-900 (corrected from `niclasr/llvm-project`: this was the only page on the site using that name, against ~50 pages naming `ArqueologiaDigital/llvm-project` for the same backend; neither URL is confirmed publicly reachable, so this is an internal-consistency fix, not a verified-live link)

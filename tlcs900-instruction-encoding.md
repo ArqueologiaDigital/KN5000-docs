@@ -313,7 +313,7 @@ Used with SCC, JP, CALL, and other conditional instructions:
 
 ## References
 
-- [TMP94C241F Datasheet (Toshiba)](https://archive.org/details/tmp94c241f)
-- [TLCS-900 Programming Manual](https://archive.org/details/tlcs900programmingmanual)
+- TMP94C241F Datasheet (Toshiba) — **link unverified**: `https://archive.org/details/tmp94c241f` 404s as of this review (2026-09) and no confirmed replacement item on archive.org was found by name/part-number search
+- TLCS-900 Programming Manual — **link unverified**: `https://archive.org/details/tlcs900programmingmanual` 404s as of this review (2026-09). Candidates that exist on archive.org but were not confirmed to be the same document: `manuallib-id-2619783` ("TOSHIBA TLCS-900/H series datasheet") and `tlcs-900-cpu-docs` ("Toshiba TLCS-900 CPU Documentation")
 - [MAME TLCS-900 CPU core](https://github.com/mamedev/mame/tree/master/src/devices/cpu/tlcs900)
 - [LLVM TLCS-900 Backend (custom)](https://github.com/ArqueologiaDigital/llvm-project)
