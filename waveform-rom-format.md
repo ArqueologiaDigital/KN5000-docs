@@ -12,12 +12,12 @@ The KN5000's tone generator (IC303, TC183C230002) reads waveform data from four 
 
 | IC | Part Number | Size | MAME Offset | Status |
 |----|-------------|------|-------------|--------|
-| IC304 | QS6GU3C32375 | 4 MB | 0x000000 | **NO_DUMP** |
-| IC305 | QS6GT3C33A01 | 4 MB | 0x400000 | **NO_DUMP** |
-| IC306 | QS6GU3C32374 | 4 MB | 0x800000 | **NO_DUMP** |
-| IC307 | QS6GX3C32008 | 4 MB | 0xC00000 | **Dumped** (CRC: 20ff4629) |
+| IC304 | QS6GU3C32375 | 4 MB | 0x000000 | **undumped** — driver fills the bank with a `BAD_DUMP`-flagged copy of IC307 |
+| IC305 | QS6GT3C33A01 | 4 MB | 0x400000 | **undumped** — driver fills the bank with a `BAD_DUMP`-flagged copy of IC307 |
+| IC306 | QS6GU3C32374 | 4 MB | 0x800000 | **undumped** — driver fills the bank with a `BAD_DUMP`-flagged copy of IC307 |
+| IC307 | QS6GX3C32008 | 4 MB | 0xC00000 | **Dumped** (CRC: 20ff4629) — the one hardware-rooted wave ROM dump |
 
-The four ROMs form a contiguous 16 MB waveform address space, declared as `ROM_REGION16_LE` in the MAME driver (16-bit little-endian word access).
+The four ROMs form a contiguous 16 MB waveform address space, declared as `ROM_REGION16_LE` in the MAME driver (16-bit little-endian word access). IC304-306 are not `NO_DUMP` in the current driver: since 2026-07-23 the driver loads a real region there, filled with a copy of the genuine IC307 dump and marked `BAD_DUMP` so MAME's audit/UI flags it as not-genuine. This is a deliberate faithful-mechanism placeholder — voices that select IC304-306 play a real-but-wrong-instrument PCM waveform (routed through the real paged datapath) rather than silence, and it is dropped for the real dumps the moment they exist. See `src/mame/matsushita/kn5000.cpp` (`ROM_REGION16_LE(0x1000000, "waveform", 0)`) in the `kn7000_mame` driver overlay.
 
 ## IC307 Binary Layout
 
@@ -145,7 +145,7 @@ Based on the DAC specification (PCM69AU, 18-bit stereo) and typical Matsushita t
 The waveform ROMs are separate from:
 - **Rhythm Data ROM** (IC14, 4 MB) -- Contains drum pattern sequencing data, not PCM audio. Uses a completely different format with 0x83 delimiter bytes.
 - **Table Data ROM** (IC1/IC3, 2 MB) -- Contains voice parameter tables, pitch lookup tables, and other firmware data. Accessed by the SubCPU to configure tone generator registers.
-- **Waveform RAM** (IC308/IC309, 2 x 4Mbit DRAM @ 0x1E0000) -- Writable sample memory, possibly for user waveforms or DSP buffer. Currently stubbed in MAME.
+- **Waveform/sample RAM stub** (sub-CPU address `0x1E0000-0x1EFFFF`) -- still an unattributed `noprw()` stub in the MAME driver (`kn7000_mame`'s `src/mame/matsushita/kn5000.cpp`), not yet tied to a specific chip. **Correction:** earlier revisions of this page named this region "IC308/IC309, 2 x 4Mbit DRAM" — that attribution is wrong. IC308 and IC309 have since been identified (Felipe, reading the chips directly) as the DSP1/DSP2 *effect delay-line* DRAMs: IC309 (M5M44260AJ-7S, 4-Mbit) is IC311/DSP1's external delay memory, and IC308 (M5M418128AJ-6, a **1**-Mbit, byte-wide DRAM) is DSP2's. Neither is waveform/sample RAM, and IC308 is not 4 Mbit.
 
 ## Open Questions
 
