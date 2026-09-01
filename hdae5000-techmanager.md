@@ -14,6 +14,25 @@ The HD-TechManager5000 is a Windows application that communicates with the HD-AE
 
 > **See Also**: [HDAE5000 Disk Interface]({{ site.baseurl }}/hdae5000-disk-interface/) for the parallel port protocol details, [HDAE5000 MAME Setup]({{ site.baseurl }}/hdae5000-mame-setup/) for basic setup.
 
+> **Update (2026-09).** Plans A and B below are no longer just proposals — a third
+> architecture was actually built on the driver-overlay's `kn5000_research_techmanager`
+> branch (9 commits, in `~/compartilhado/mame`), and it isn't either plan as written. Instead
+> of a TCP bridge or a symmetric composite driver, `kn5000_state` was refactored from
+> `driver_device` to `device_t` (following MAME's Sega System 32 dual-PCB pattern) so the
+> whole KN5000+HDAE5000 machine can be instantiated as a **centronics peripheral device**
+> that plugs into any stock PC driver's LPT slot — e.g. `fs_mame at486
+> -board4:lpt:centronics kn5000_hdae`. This needed a new `kn5000_cable` device wiring the
+> HDAE5000's PPI (Port A/B/C at `0x160000`-`0x160004`) to the centronics lines in both
+> directions, plus a PS/2 bidirectional-mode fix to MAME's `pc_lpt` device (`data_r()` was
+> masking peripheral response bits against the host's own output latch — exactly the mode
+> `ppkn50.dll` uses). As of the branch's last commit, the bidirectional signal path (PC → KN5000
+> via direct PPI input wiring, KN5000 → PC via write taps on the PPI output ports) is wired
+> end-to-end. It has not been run against the real, unmodified TechManager5000 software as
+> part of this review, and the project's own PR-planning notes call it "genuinely interesting
+> research... not close to PR shape" — so treat it as a working prototype of the signal path,
+> not a finished, submitted, or upstream feature. The comparison below is kept for its
+> original planning value, but the "Status" section is stale and is corrected further down.
+
 ## Background: How ppkn50.dll Works
 
 The `ppkn50.dll` library (disassembled and fully documented) communicates with the HDAE5000 using:
@@ -131,10 +150,14 @@ Run both the KN5000 and a PC driver within a single MAME instance, with the para
 
 ## Status
 
-Both plans are in the design phase. The prerequisite for either plan is:
+Neither Plan A nor Plan B as written was the path actually taken — see the update note at
+the top of this page. Superseding status:
 1. The HDAE5000 PPI callbacks are wired (done --- March 30, 2026)
 2. A working ATA interface with disk image support (done --- March 30, 2026)
-3. Research into MAME's PC driver LPT implementation and multi-machine support
+3. A third architecture (KN5000+HDAE5000 as a centronics peripheral of a stock PC driver,
+   `kn5000_research_techmanager` branch) has the bidirectional PPI↔centronics signal path
+   wired end-to-end, but has not been validated against the real TechManager5000 software
+   and is explicitly not close to PR/upstream shape.
 
 ## Related Pages
 
