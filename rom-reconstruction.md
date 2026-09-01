@@ -211,7 +211,7 @@ the HD-AE5000's from 223 to 532, and the sub-CPU boot ROM's from 53 to 63.
 | Composer factory memory image | 0x9B4000–0x9C3FFF | `Composer_FactoryMemoryImage` — one labelled 64 KB include, layout documented in-source |
 | Boot FDC command-layer driver | 0x9FD8A5–0x9FEA9C | `table_data/boot_fdc_driver.s` (2,316 lines) |
 | Boot disk-format probe | 0x9FEB2B–0x9FEC6D | `table_data/boot_disk_probe.s` |
-| Boot CP-serial driver | 0x9FEC6E–0x9FFB2E | `boot_cpserial.s` + `_isr.s` + `_states.s` |
+| Boot CP-serial driver | 0x9FEC6E–0x9FFB2E | `table_data/boot_cpserial.s` + `table_data/boot_cpserial_isr.s` + `table_data/boot_cpserial_states.s` |
 | Boot C runtime (heap, memcmp, divide) | 0x9FFB2F–0x9FFE7F | `table_data/boot_clib.s` |
 | Boot debug group (NOP-patched out) | 0x9FFE80–0x9FFEDF | `table_data/boot_debug.s` |
 | Sub-CPU DSP data zones A0 / A / B | 0x00F7E6–0x01E17E | carved into labelled tables in `v142/subcpu/subcpu_data_tables.s` |
