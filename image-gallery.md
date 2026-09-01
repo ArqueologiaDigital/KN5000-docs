@@ -271,7 +271,7 @@ The wallpaper system uses multiple name getter routines for displaying wallpaper
 
 ## UI Icons (Table Data ROM)
 
-The KN5000 uses 176 small icons for menu items and UI elements. These were discovered by analyzing the `DrawIcons` routine at `0xFABF9B`.
+The KN5000 uses 176 small icons for menu items and UI elements. These were discovered by analyzing the `DrawIcons` routine at `0xFABF3F`.
 
 **Technical details:**
 - Icon table at `0x938000` (Table Data ROM offset `0x138000`)
