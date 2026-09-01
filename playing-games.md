@@ -12,16 +12,25 @@ This guide walks you through running homebrew games on the Technics KN5000 using
 
 | Item | Source |
 |------|--------|
-| **MAME** (with KN5000 driver) | Build from source: [GitHub](https://github.com/felipesanches/mame/tree/kn5000_pr5_driver) |
+| **MAME** (with KN5000 driver) | Build from source: see [Building MAME](#building-mame) below |
 | **Original KN5000 ROM dumps** | Dump from your own KN5000 keyboard (see [Help Wanted]({{ site.baseurl }}/help-wanted/)) |
 | **Game source code** | See individual game sections below |
 
-> **Important:** The KN5000 driver is not yet in upstream MAME. You must build from the `kn5000_pr5_driver` branch of the fork linked above. See [Building MAME](#building-mame) below.
+> **Correction (2026-09).** This page used to say the KN5000 driver was not yet in upstream
+> MAME and had to be built from a `kn5000_pr5_driver` branch. That branch has since been
+> **merged** (the KN5000 driver has been in upstream `mamedev/mame` since PR #12649, with
+> continued updates on `master` since, e.g. #15878 and #15919) — that branch name no longer
+> exists as an active branch. **Plain upstream MAME now has the base KN5000 driver.** Some of
+> what this page walks through (Another World, Mines, the App Loader — all of which rely on
+> custom homebrew ROM images and the HDAE5000 extension slot, not on driver features per se)
+> has not been re-verified against current upstream MAME as part of this review; if something
+> below doesn't work against a plain upstream checkout, the actively developed driver overlay
+> (not a stale personal-fork branch) is the thing to check next.
 
 ## Building MAME
 
 ```bash
-git clone https://github.com/felipesanches/mame.git -b kn5000_pr5_driver
+git clone https://github.com/mamedev/mame.git
 cd mame
 
 # Incremental build (KN5000 driver only — much faster than full MAME)
@@ -82,7 +91,7 @@ See: [Another World VM technical details]({{ site.baseurl }}/another-world-vm/)
 ### Build
 
 ```bash
-git clone https://github.com/felipesanches/custom-kn5000-roms.git
+git clone https://github.com/ArqueologiaDigital/custom-kn5000-roms.git
 cd custom-kn5000-roms/anotherworld
 
 # Place your Another World DOS game files in game_data/MSDOS/
