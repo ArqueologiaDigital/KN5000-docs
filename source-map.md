@@ -113,7 +113,7 @@ maincpu/
 | File | Lines | Description |
 |------|-------|-------------|
 | `audio/audio_control_engine.s` | 8,377 | MIDI stream processing, control panel LED management, voice/tone control, sound preset dispatch |
-| `audio/audio_cmd_encoder.s` | 3,100 | Audio command encoder — printf-like formatter for SubCPU commands |
+| `audio/sprintf_core.s` | 3,100 | `sprintf` — a general string formatter, not audio-specific. Renamed from `audio_cmd_encoder.s` once the routines were identified as `Sprintf_*` rather than `Audio_CommandEncoder`/`AudioCmd_*`; it still lives under `audio/` for historical reasons. |
 | `audio/audioinit_routines.s` | 2,505 | Audio subsystem initialization, stereo voice configuration |
 | `audio/dsp_config_sysex.s` | 5,626 | DSP effect parameter handlers (reverb, chorus, EQ, compressor), SysEx command processing |
 | `audio/sound_editor_ui.s` | 11,946 | Sound editor UI: patch/bank selection, parameter editing, drum kit editor |
@@ -134,7 +134,7 @@ maincpu/
 | `audio/sound_data_world_perc.s` | 395 | World percussion: 128-entry pointer table + 0xFF-terminated patch entries |
 | `audio/sound_data_brass.s` | 403 | Brass: 128-entry pointer table + 0xFF-terminated patch entries |
 | `audio/sound_data_sax_reed.s` | 95 | Saxophone/reed sound data |
-| `audio/tonegen_param_table.s` | 92 | Tone generator parameter lookup table |
+| `audio/tonegen_param_table.c` | 92 | Tone generator parameter lookup table |
 | `audio/sound_data_synth.s` | 20 | Synth sound data |
 | `audio/sound_data_drum_kits.s` | 18 | Drum kit sound data |
 | `audio/sound_data_orchestral_pad.s` | 12 | Orchestral pad sound data |
@@ -227,24 +227,24 @@ Each assembly `.s` file uses `.incbin` to include a compiled C struct binary. Th
 | `ui_widgets/naka_widget_tables_1.s` | 1,909 | Widget pointer tables: SmfDp, DocDp, PdDp, KssDp, DrumDp screen groups |
 | `ui_widgets/naka_widget_tables_2.s` | 1,668 | Widget data tables: CtlMsgGridBox, MidiControlMessage, additional NAKA types |
 | `ui_widgets/style_bitmaps.s` | 5,910 | Style selection bitmap resources |
-| `ui_widgets/e0e974_e15b20.s` | 6,116 | Feature Demo screens, style category menus, accompaniment UI |
-| `ui_widgets/e176e4_e1a704.s` | 2,745 | Style presentation and performance UI |
-| `ui_widgets/e1ab58_e1b7d2.s` | 683 | Mixed widget data and strings |
-| `ui_widgets/e2107c_e24034.s` | 2,694 | Rhythm variation selection, song/sequencer parameter screens |
-| `ui_widgets/e27408_e27556.s` | 151 | Equalizer and effect parameter UI |
-| `ui_widgets/e27fa4_e30932.s` | 8,274 | Accompaniment memory/PCG output grids, MIDI controller UI |
-| `ui_widgets/e55e38_e5a38e.s` | 2,910 | MIDI controller messages, accompaniment input grid |
-| `ui_widgets/e812e8_e818e6.s` | 286 | Menu item pagination UI |
-| `ui_widgets/e81cce_e85f46.s` | 3,708 | Tech Chord dispatch, chord/transpose UI |
-| `ui_widgets/ea13cc_ea8c9e.s` | 5,503 | Disk format dialogs (multi-language), Tech Chord configuration |
+| `ui_widgets/performance_style_screens.s` | 6,116 | Feature Demo screens, style category menus, accompaniment UI |
+| `ui_widgets/composer_style_convert_screens.s` | 2,745 | Style presentation and performance UI |
+| `ui_widgets/msp_recording_screens.s` | 683 | Mixed widget data and strings |
+| `ui_widgets/direct_play_medley_screens.s` | 2,694 | Rhythm variation selection, song/sequencer parameter screens |
+| `ui_widgets/sequencer_exit_widgets.s` | 151 | Equalizer and effect parameter UI |
+| `ui_widgets/effects_sequencer_screens.s` | 8,274 | Accompaniment memory/PCG output grids, MIDI controller UI |
+| `ui_widgets/midi_reverb_presets_screens.s` | 2,910 | MIDI controller messages, accompaniment input grid |
+| `ui_widgets/sound_menu_drawbar_screens.s` | 286 | Menu item pagination UI |
+| `ui_widgets/technichord_part_settings.s` | 3,708 | Tech Chord dispatch, chord/transpose UI |
+| `ui_widgets/disk_menu_file_io_screens.s` | 5,503 | Disk format dialogs (multi-language), Tech Chord configuration |
 | `ui_widgets/block_012.s` | 552 | User bitmap viewer, track chord UI, language text, integration setup |
-| `ui_widgets/eb2afe_eb71be.s` | 1,247 | Style bitmap and dispatch table wrapper |
+| `ui_widgets/debug_naming_panel_sim.s` | 1,247 | Style bitmap and dispatch table wrapper |
 | `ui_widgets/block_007.s` | 86 | Additional widget block |
-| `ui_widgets/ed2a9c_ed2b96.s` | 189 | Extension-region widget descriptor |
-| `ui_widgets/ed333c_ed35e4.s` | 182 | Extension-region widget descriptor |
-| `ui_widgets/ed3cc0_ed665a.s` | 1,940 | Extension-region widget data |
-| `ui_widgets/ed803c_eda02c.s` | 2,727 | Extension-region widget data |
-| `ui_widgets/eee718_eef588.s` | 1,015 | Final widget block before boot code |
+| `ui_widgets/master_style_grid_screens.s` | 189 | Extension-region widget descriptor |
+| `ui_widgets/normal_mode_layout.s` | 182 | Extension-region widget descriptor |
+| `ui_widgets/control_menu_screens.s` | 1,940 | Extension-region widget data |
+| `ui_widgets/extension_device_screens.s` | 2,727 | Extension-region widget data |
+| `ui_widgets/sequencer_channel_containers.s` | 1,015 | Final widget block before boot code |
 
 **C struct files** (26 `.c` + 1 `.h` — typed widget data with named fields):
 
@@ -267,23 +267,23 @@ Data files for the style UI subsystem: parameter block definitions for different
 | File | Lines | Description |
 |------|-------|-------------|
 | `includes/gui_display_struct_data.s` | 328 | GUI display structure data tables |
-| `includes/style_ui_screendata_main.s` | 226 | Main style UI screen layout data |
+| `style_ui/main.c` | 226 | Main style UI screen layout data |
 | `includes/gui_format_strings.s` | 49 | GUI number/text format strings |
-| `includes/style_ui_screendata_ctlonly.s` | 40 | Control-only style screen data |
-| `includes/style_ui_paramblock_bal.s` | 20 | Style balance parameter block |
-| `includes/style_ui_screendata_yesctl.s` | 19 | Yes/control style screen data |
-| `includes/style_ui_screendata_meascursor.s` | 16 | Measure cursor screen data |
-| `includes/style_ui_paramblock_medium.s` | 16 | Medium-size parameter block |
-| `includes/style_ui_paramblock_extended.s` | 16 | Extended parameter block |
-| `includes/style_ui_paramblock_meas.s` | 14 | Measure parameter block |
-| `includes/style_ui_paramblock_common.s` | 14 | Common parameter block |
-| `includes/style_ui_paramblock_alte.s` | 12 | Alt-E parameter block variant |
-| `includes/style_ui_paramblock_altc.s` | 11 | Alt-C parameter block variant |
-| `includes/style_ui_paramblock_altd.s` | 9 | Alt-D parameter block variant |
-| `includes/style_ui_paramblock_alta.s` | 7 | Alt-A parameter block variant |
-| `includes/style_ui_paramblock_altb.s` | 7 | Alt-B parameter block variant |
-| `includes/style_ui_paramblock_short.s` | 7 | Short parameter block |
-| `includes/style_ui_paramblock_value.s` | 7 | Value parameter block |
+| `style_ui/ctlonly.c` | 40 | Control-only style screen data |
+| `style_ui/paramblock/bal.c` | 20 | Style balance parameter block |
+| `style_ui/yesctl.c` | 19 | Yes/control style screen data |
+| `style_ui/meascursor.c` | 16 | Measure cursor screen data |
+| `style_ui/paramblock/medium.c` | 16 | Medium-size parameter block |
+| `style_ui/paramblock/extended.c` | 16 | Extended parameter block |
+| `style_ui/paramblock/meas.c` | 14 | Measure parameter block |
+| `style_ui/paramblock/common.c` | 14 | Common parameter block |
+| `style_ui/paramblock/alte.c` | 12 | Alt-E parameter block variant |
+| `style_ui/paramblock/altc.c` | 11 | Alt-C parameter block variant |
+| `style_ui/paramblock/altd.c` | 9 | Alt-D parameter block variant |
+| `style_ui/paramblock/alta.c` | 7 | Alt-A parameter block variant |
+| `style_ui/paramblock/altb.c` | 7 | Alt-B parameter block variant |
+| `style_ui/paramblock/short.c` | 7 | Short parameter block |
+| `style_ui/paramblock/value.c` | 7 | Value parameter block |
 
 ### `extensions/` — Extension Device Support (codename: TOSHI)
 
