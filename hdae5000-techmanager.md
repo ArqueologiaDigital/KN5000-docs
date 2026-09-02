@@ -20,7 +20,7 @@ The HD-TechManager5000 is a Windows application that communicates with the HD-AE
 > of a TCP bridge or a symmetric composite driver, `kn5000_state` was refactored from
 > `driver_device` to `device_t` (following MAME's Sega System 32 dual-PCB pattern) so the
 > whole KN5000+HDAE5000 machine can be instantiated as a **centronics peripheral device**
-> that plugs into any stock PC driver's LPT slot — e.g. `fs_mame at486
+> that plugs into any stock PC driver's LPT slot — e.g. `mame at486
 > -board4:lpt:centronics kn5000_hdae`. This needed a new `kn5000_cable` device wiring the
 > HDAE5000's PPI (Port A/B/C at `0x160000`-`0x160004`) to the centronics lines in both
 > directions, plus a PS/2 bidirectional-mode fix to MAME's `pc_lpt` device (`data_r()` was

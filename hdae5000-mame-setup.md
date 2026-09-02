@@ -6,8 +6,6 @@ permalink: /hdae5000-mame-setup/
 
 # HD-AE5000 MAME Setup Guide
 
-*Last updated: March 30, 2026*
-
 This guide explains how to set up and use the HD-AE5000 hard disk expansion board in MAME's KN5000 emulation.
 
 > **See Also**: [HDAE5000 Overview]({{ site.baseurl }}/hdae5000/) for firmware analysis, [Disk Interface]({{ site.baseurl }}/hdae5000-disk-interface/) for the low-level ATA protocol, [Filesystem]({{ site.baseurl }}/hdae5000-filesystem/) for the on-disk format.
@@ -19,7 +17,7 @@ This guide explains how to set up and use the HD-AE5000 hard disk expansion boar
 To boot the KN5000 with the HDAE5000 extension board but no hard disk attached:
 
 ```bash
-fs_mame kn5000 -ui_active -window -extension hdae5000
+mame kn5000 -ui_active -window -extension hdae5000
 ```
 
 The firmware will display the HD-AE5000 splash screen ("Start-up! Please wait..."), poll for the drive, time out after a few seconds, and display **"Hard disk reset error"**. This is normal --- it means the firmware correctly detected that no drive is present. After dismissing the error, the keyboard boots normally with disk-related features disabled.
@@ -27,10 +25,12 @@ The firmware will display the HD-AE5000 splash screen ("Start-up! Please wait...
 ### Running with a Hard Disk Image
 
 ```bash
-fs_mame kn5000 -ui_active -window -extension hdae5000 -hard1 kn5000_disk.hd
+mame kn5000 -ui_active -window -extension hdae5000 -harddisk kn5000_disk.hd
 ```
 
-The `-hard1` flag attaches a raw disk image to the ATA slot on the HDAE5000.
+`-harddisk` (short form `-hard`) attaches a raw disk image to the ATA slot on the HDAE5000.
+`-harddisk1` / `-hard1` are registered aliases and work too; with only one hard-disk image
+device in the machine, MAME's canonical, unnumbered names are the ones to prefer.
 
 ## Creating a Disk Image
 
@@ -47,15 +47,19 @@ dd if=/dev/zero of=kn5000_disk.hd bs=512 count=20480
 
 MAME's ATA HLE device calculates CHS geometry from the file size automatically.
 
-### Important: Use Raw Images, Not CHD
+### Use raw images
 
-The HDAE5000 ATA interface requires **raw disk images** (plain sector dumps). MAME's CHD (Compressed Hunks of Data) format does **not** work --- MAME returns raw CHD header bytes instead of decompressed sector data when accessed through the `ata_interface_device`.
+| Format | Extension | Notes |
+|--------|-----------|-------|
+| Raw image | `.hd` | Plain sector dump, no header. What everything here is tested with. |
+| Raw image | `.img` | Same format, different extension. Note `.img` is not in the image device's `file_extensions()` list, so MAME's file browser will not offer it — pass it on the command line. |
+| CHD | `.chd` | **Untested through this path.** |
 
-| Format | Extension | Works? | Notes |
-|--------|-----------|--------|-------|
-| Raw image | `.hd` | Yes | Plain sector dump, no header |
-| Raw image | `.img` | Yes | Same format, different extension |
-| CHD | `.chd` | No | Returns header bytes, not sector data |
+> ⚠ Earlier guidance here said CHD "returns header bytes, not sector data". That mechanism is
+> not what MAME does: `harddisk_image_device::internal_load_hd()` sniffs the `MComprHD` magic and
+> opens the file as a CHD, falling through to the raw path only when the magic is absent. Whatever
+> was observed, it was not this. Use raw images because that is what is exercised, not because CHD
+> is known broken.
 
 If you have a CHD image, extract it first:
 
@@ -141,16 +145,23 @@ The firmware uses **CHS addressing** exclusively and **PIO mode** for all data t
 
 ### Boot hangs at splash screen
 
-If the emulator appears stuck on "Start-up! Please wait..." for more than 10 seconds, the ATA device may be instantiated but not responding with DRDY. This was fixed in the March 30, 2026 commit --- ensure you have the latest `kn5000_pr6_hdae5000` branch or newer.
+If the emulator appears stuck on "Start-up! Please wait..." for more than 10 seconds, the ATA device is instantiated but not answering with DRDY.
 
-**Root cause**: MAME's ATA HLE device goes through a multi-millisecond reset/diagnostic sequence, during which the status register returns BSY=1. The firmware's tight polling loop (4M iterations) becomes extremely slow when each read hits the ATA device subsystem. The fix sets the default ATA slot to empty (no device) unless a disk image is explicitly provided.
+**Mechanism**: MAME's ATA HLE device goes through a multi-millisecond reset/diagnostic sequence during which the status register returns BSY=1. The firmware's tight polling loop (4M iterations) becomes extremely slow when every read hits the ATA device subsystem.
+
+**The slot is populated by default.** `hdae5000.cpp` configures
+`ATA_INTERFACE(config, m_ata).options(ata_devices, "hdd", nullptr, false)`, so a drive exists
+whether or not you pass an image. The alternative — defaulting the slot to empty and
+instantiating a drive only when an image is given — exists on the older `kn5000_pr6_hdae5000`
+branch (`options(ata_devices, nullptr, nullptr, false)`) and is **not** what the shipped
+overlay build does.
 
 ### "Hard disk reset error" with a disk image attached
 
 Verify:
 1. The disk image is a **raw image** (not CHD)
 2. The file extension is `.hd` or `.img`
-3. The image is attached with `-hard1` (not `-hard`)
+3. The image is attached with `-harddisk` (or its `-hard` / `-hard1` aliases)
 4. The image file is not zero bytes
 
 ### Drive detected but filesystem errors
