@@ -164,8 +164,8 @@ themselves measure **0.00 % false positives** on 271 verified-clean frames and
 **Repaint timing**, which the capture harness depends on: the *idle* repaint
 period is **~2,952 ms** (~0.34 Hz) with the 16-row repaint itself taking ~112 ms.
 A parked address is therefore re-read about three times a minute, not many times a
-second — an earlier note saying the viewer "repaints continuously" had the hazard
-right and the rate wrong. The practical consequence is that after dialling an
+second. The viewer does repaint on its own, but slowly. The practical consequence
+is that after dialling an
 address the panel is still being painted for up to ~3 s, so a recording that starts
 immediately can never catch its start page settled.
 
@@ -260,12 +260,11 @@ frame, the **NTSC panel measures 539 px wide against PAL's 433 px**. The KN7000
 centres its picture inside PAL's taller raster instead of using the extra lines, so
 PAL spends its resolution on borders.
 
-> Two earlier predictions from this project were wrong here, in *opposite*
-> directions — first that PAL would win because it has more lines, then that the
-> difference was an artefact of grabber resolution (that one was confounded by a
-> hand-drawn capture rectangle). This is the measured answer, and it also settled a
-> smaller question: **native VLC snapshots beat hand-cropped preview grabs**,
-> clearly and by a lot.
+> Two plausible predictions fail here. PAL does **not** win on line count, and the
+> difference is **not** an artefact of grabber resolution — a measurement that
+> suggests it is has usually been confounded by a hand-drawn capture rectangle.
+> Take **native VLC snapshots, not hand-cropped preview grabs**; the margin is
+> large.
 
 ### The calibration page
 
@@ -346,9 +345,9 @@ Calibration page, 60 frames a page, 12 camera pixels per character, corners plac
 | heavier movement, 12° tilt, 9 px/char, 2× blur, or 3× noise | 0 | **0** |
 
 Five of the seven conditions commit nothing, and none commits a wrong byte. That is
-the deliberate trade, and it moved *towards* refusal during development: an earlier
-build committed 150–180 bytes in four of those conditions by training on its own
-output. Coverage is recoverable — the store accumulates — and a wrong byte is not.
+the deliberate trade. A decoder that trains on its own output will commit 150–180
+bytes in four of those conditions instead; this one refuses, because coverage is
+recoverable — the store accumulates — and a wrong byte is not.
 
 On the real composite frame of §6 the tool commits **0 bytes and gets 0 wrong**.
 
