@@ -679,9 +679,9 @@ When the timer reaches 10, `Demo_SelectEntry_PlaySong` is called. This function 
 
 After SwbtWr processing completes (~960 frames), PlaySong returns (sets `DRAM[0x8F4E]` from `0x04` to `0x06`), and the timer resumes counting down from 10. The tone generator hold timer (2 seconds per voice) then controls the pacing of subsequent song transitions.
 
-**Note:** The 16-second initial delay may differ from real hardware where DSP writes are faster (direct hardware registers vs. HLE emulation). See [research log]({{ site.baseurl }}/feature-demo-investigation-2026-03-09/) for detailed investigation.
+**Note:** The 16-second initial delay may differ from real hardware, where the tone generator writes go to hardware registers rather than through HLE. See [Feature Demo Timer Behaviour]({{ site.baseurl }}/feature-demo-investigation-2026-03-09/) for the frame-by-frame measurement.
 
-**MAME Bug Found (March 9, 2026):** The sequencer tick counters never increment because INTTR5 never fires. Two bugs in `tmp94c241.cpp`'s `timer_16bits` lambda: (1) TREG_HIGH match sets wrong interrupt flag (0x08/INTTR4 instead of 0x80/INTTR5), (2) T4FFCR bits incorrectly gate the entire match instead of just the flip-flop. Fix implemented, not yet tested. See [timer bug research log]({{ site.baseurl }}/feature-demo-timer-bug-2026-03-09/).
+The sequencer tick counters are driven by **INTTR5**. Two defects in `tmp94c241.cpp`'s `timer_16bits` lambda used to stop it firing — a TREG_HIGH match raised `0x08` (INTTR4) instead of `0x80` (INTTR5), and the `T4FFCR` bits gated the whole match instead of just the flip-flop. Both are fixed, upstream in [#15878](https://github.com/mamedev/mame/pull/15878). See [Timer 4/5 and the Sequencer Clock]({{ site.baseurl }}/feature-demo-timer-bug-2026-03-09/).
 
 ### Key DRAM Addresses
 
@@ -709,4 +709,4 @@ After SwbtWr processing completes (~960 frames), PlaySong returns (sets `DRAM[0x
 
 ---
 
-*Last updated: March 14, 2026*
+
