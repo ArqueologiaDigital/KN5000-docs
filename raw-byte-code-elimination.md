@@ -9,8 +9,8 @@ permalink: /raw-byte-code-elimination/
 **Status: IN PROGRESS.** All 6 ROMs are 100% byte-perfect against their physical dumps, but
 that is a build-match guarantee, not a disassembly guarantee: a `.byte` run that spells real
 code reassembles to the same bytes as an `.incbin` of those bytes, and passes the gate
-identically either way. Measured code-as-`.byte` remains in the Main CPU, Sub CPU Payload
-and HDAE5000 ROMs.
+identically either way. Measured code-as-`.byte` remains in the Main CPU and HDAE5000 ROMs;
+the Sub CPU Payload reached zero.
 **Goal:** Convert all executable code currently represented as raw `.byte` sequences to native TLCS-900 assembly mnemonics.
 
 ## Context
@@ -23,15 +23,15 @@ settled by a per-byte disassembly attempt (Step 1's method, below), not by count
 `.incbin` directives — the table under **Current Status** states what that measurement
 currently finds, ROM by ROM.
 
-**The sub-CPU payload is not at zero code-as-`.byte`.** About 976 bytes of code-shaped
-`.byte` remain, for a named toolchain reason rather than for lack of trying: the pinned
-LLVM backend can *decode* some addressing forms it cannot *encode*
-(`DSP_Bytecode_Op01/02/03`, 569 B — see [LLVM Semantic Instructions]({{ site.baseurl
-}}/llvm-semantic-instructions/) for the decoder fix that makes these convertible) and cannot
-re-parse some spellings its own disassembler emits (the `TaskEvent`/`FIFO`/`TaskSched`
-family; of the ~407 B there, 14 B has a diagnosed cause, the rest does not yet). Conversions
-in this image are proved by round trip: disassemble the run, re-assemble that exact text,
-require the original bytes back.
+**The sub-CPU payload is now at zero code-as-`.byte`.** Its last two blocked families are
+both closed: `DSP_Bytecode_Op01/02/03` (569 B) needed a decoder fix before the encoder's own
+output could round-trip (see [LLVM Semantic Instructions]({{ site.baseurl
+}}/llvm-semantic-instructions/)), and the `TaskEvent`/`FIFO`/`TaskSched` family's apparent
+~407 B gap turned out to be a measurement bug in the round-trip prober, not a decoder
+limitation — of the 672 B it flagged, 50 B is genuine data (loaded as an address, never
+executed) and the remaining 622 B decodes and reassembles byte-exact once the prober's own
+undercount is corrected. Conversions in this image are proved by round trip: disassemble the
+run, re-assemble that exact text, require the original bytes back.
 
 **Counting `.incbin` distorts in both directions.** It hides real debt written as `.byte`,
 and it equally rewards pushing legitimate data *into* `.byte` — respelling a viewable
@@ -48,7 +48,7 @@ Neither direction is progress.
 |-----|-------------------|---------------------|--------|
 | Main CPU (v9 / v10, each) | 239,683 | 8,058 B confirmed + ~14,727 B misframed islands | **Not complete** |
 | Main CPU (v7) | — | 275,822 B (797 confirmed regions + 2,268 misframed islands) — the largest code-as-`.byte` debt in the project | **Not complete** |
-| Sub CPU Payload | 35,721 | ~976 B | **Not complete** |
+| Sub CPU Payload | 35,721 | **0** | **Complete** |
 | Sub CPU Boot | 1,357 | **0** | **Complete** |
 | Table Data | 1,678 | **0** | **Complete** |
 | Custom Data | 0 (data only) | **0** | **Complete** |
