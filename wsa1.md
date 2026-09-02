@@ -215,11 +215,10 @@ program a divide-by-768 (`0xF82754`, `0xFFF078`) that is **self-consistent with 
 oscillator. The tempo constant is what excludes 24.
 Re-derive it with `scripts/analysis/derive_system_clock.py`.
 
-⚠ **Retracted, and it must not come back:** an earlier version of this argument
-used the tempo tracker's 1750 multiplier (`muls WA,0x06D6` at `0xFA5553`),
-claiming it fits fc/8 to 2.3 % and misses fc/128 by 16.4×. That ratio is the same
-prediction on either tap scale (2048/8 = 256 and 32768/128 = 256); it cannot
-adjudicate anything.
+⚠ **One constant that looks like a third lever is not one, and must not be used
+as one:** the tempo tracker's 1750 multiplier (`muls WA,0x06D6` at `0xFA5553`)
+makes the *same* prediction on either timer tap scale — 2048/8 = 256 and
+32768/128 = 256 — so it cannot adjudicate between them.
 
 ## The four images
 
@@ -254,12 +253,16 @@ branch shaped for prom_d's **one-byte-shorter tag and no other**. Re-derived by
 `notes/prom_a_boot_checks.py`, section 7 — eleven checks, inside a script that
 runs 90 over this boot block.
 
-⚠ This **corrected** an earlier claim that prom_d was an image of the 512 KiB
-flash at `0xE80000`. prom_c's own flash driver refutes it: its top-boot test is
-`cp XIX,0x00EF0000`, so the firmware's model of that part ends at `0xEFFFFF`,
-*below* prom_d's base. **prom_d is a different part from the tone flash.** The
-linker script `prom_d/prom_d.ld` still carries the superseded hypothesis and is
-stale — do not quote it.
+⚠ **prom_d is not the 512 KiB flash at `0xE80000`, and prom_c's own flash driver
+is what excludes it:** `Flash_SectorErase` holds base `0x00E80000` and its
+top-boot sub-sector map ends at `0xEFFFFF`, *below* prom_d's base, and the same
+routine that installs `0x00F00000` installs `0x00E80000` into a separate slot.
+Two different parts (`wsa1/notes/prom_d_base_checks.py`, 12 checks).
+
+The linker script `wsa1/prom_d/prom_d.ld` keeps `ORIGIN = 0` deliberately, and
+its header explains why: prom_d's own directory holds **0-based file offsets**,
+and prom_c adds the base to them at run time. Addressing the image absolutely in
+the source would encode a base the hardware does not use.
 
 ### prom_d is a tone database, and it is the KN5000's design
 
@@ -405,8 +408,8 @@ the five by holding a number-pad key while switching on:
 The firmware agrees: number key `2` reaches screen `0xD9`, PANEL CPU CHECK — see
 the [SEG1 table]({{ site.baseurl }}/wsa1-panel/).
 
-Two oddities from the same pages. **The first is now solved** (2026-08-27);
-the second is still recorded rather than explained:
+Two oddities from the same pages. The first is explained; the second is
+recorded and not explained:
 
 * the *Generator IC Outsel check* names **SUB OUT 2 and SUB OUT 3** — outputs
   that neither the specification page nor the TERMINALS drawing lists. They are
@@ -474,9 +477,10 @@ That result, and what it does to the site's shared-codebase argument, is on
 
 Two things it also settles for the KN work:
 
-* `kn7000_mame/notes/kn5000-dsp-datasheet-hunt.md` recorded that **no other
-  product using the uPD6383 had been found. That is now false** — and the WSA1
-  carries a full effect-name table in prom_b, in 16-character centred fields —
+* **The SX-WSA1R is a second product built around the uPD6383**, which for a
+  long time had no known user outside the KN5000
+  (`kn7000_mame/notes/kn5000-dsp-datasheet-hunt.md`). It carries a full
+  effect-name table in prom_b, in 16-character centred fields —
   `SLOW ATTACKER` sits at `0xF149FD`, `PITCH SHIFTER` at `0xF14ABD`, `PEDAL WAH`
   at `0xF14ADF` and `PEDAL WAH+DELAY` at `0xF14BFC`, among `OVERDRIVE`, `FUZZ`,
   `EXCITER`, `COMPRESSOR`, `PARAMETRIC EQ`, `AUTO PAN`, `VIBRATO`, `AUTO WAH`,
