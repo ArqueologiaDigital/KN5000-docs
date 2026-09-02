@@ -281,14 +281,14 @@ encodings carry an immediate of the same width; only the opcode shape differs:
 | store `0x8E00` at `(237)` | dedicated word form | `0a ed 00 8e` | direct-address form | `f0 ed 02 00 8e` |
 
 The disassembly names each form with its own mnemonic — `cps`/`lds`/`lds32`,
-`ldb`, `ldio`/`ldwio`, `stb_erp`/`ldb_erp` — precisely because the operand
-syntax has nowhere to put the distinction. Eleven mnemonics in the tree were
-triaged against this question and **nine of them are genuine form selectors
-across 78,364 instruction sites**: renaming one to its native spelling assembles
-cleanly and emits different bytes, so a mechanical rename would produce wrong
-code with no diagnostic. The two that were only spellings — `incm`, an alias
-whose own definition prints as `incw`, and `ldda32`, whose `d`+`a`+`32` is fully
-expressible as `ld xwa, (4160:16)` — have been retired.
+`ldb`, `ldio`/`ldwio`, `stb_erp`/`ldb_erp` — precisely because the operand syntax
+has nowhere to put the distinction. **Nine mnemonics are genuine form selectors,
+across 78,364 instruction sites**: each one assembles cleanly under its native
+spelling and emits *different bytes*, so a mechanical rename would produce wrong
+code with no diagnostic anywhere. Only two names in the same family are mere
+spellings and carry no encoding choice: `incm`, an alias whose own definition
+prints as `incw`, and `ldda32`, whose `d`+`a`+`32` is fully expressible as
+`ld xwa, (4160:16)`.
 
 ⚠ The size suffix on a **memory** operand is load bearing for the same reason: a
 memory operand carries no size of its own. `incw 1, (xsp+4)` is `9f 04 61` and
