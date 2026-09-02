@@ -6,12 +6,11 @@ permalink: /kn7000-usb-subsystem/
 
 # KN7000 USB Subsystem
 
-What the rear **USB** terminal is, what it does, and how far it can be emulated. This is the opening
-survey of a fresh investigation — the hardware topology and feature set are established; reverse-
-engineering the host-side protocol is the work that follows.
+What the rear **USB** terminal is, what it does, and how far it can be emulated. The hardware
+topology and the feature set are established; the host-side protocol is not yet reverse-engineered.
 
 *Sources: KN7000 service manual (block diagram, parts list, main-CPU schematics), the KN7000 owner's
-manual, and firmware strings. Started 2026-08-03.*
+manual, and firmware strings.*
 
 ## In one line
 
@@ -102,9 +101,9 @@ The terminal takes a **type-AB USB cable** to a PC. The bundled CD-ROM carries t
      real USB-MIDI / USB-audio device to the host is beyond MAME's current USB-device support and needs
      the co-processor behaviour regardless; deferred until step 1 lands.
 
-## Register-level reverse engineering — first pass
+## Which main-CPU register is the link
 
-Pushing on "which main-CPU register is the link" narrows it sharply, mostly by elimination:
+Elimination narrows it sharply:
 
 - **Not an on-chip serial (SIO).** The MN10300 has exactly three USARTs, and all three are already
   identified — control panel, MIDI-1, MIDI-2. The USB link is not one of them.
@@ -119,10 +118,9 @@ Pushing on "which main-CPU register is the link" narrows it sharply, mostly by e
   runs only on demand. **No boot stub is needed** — HLE is required only to make the USB *features*
   work, which lowers its priority and de-risks it.
 
-**Dynamic trace, and the real gate.** A Lua GPIO/SIO tracer was driven straight to **MIDI MENU →
-Computer Connection** using the (fully mapped) LCD soft-keys, and the mode was cycled on-screen. The
-result is a clean negative: *opening the screen and changing the mode produce only control-panel serial
-traffic* — SIO channel 0 muxed by GPIO `0x36008024`/`0x36008064`, driven from `0x484AC6xx-0x484ACDxx`.
+**The real gate is a PC connection, not the UI.** A Lua GPIO/SIO tracer driven to **MIDI MENU →
+Computer Connection** via the LCD soft-keys, cycling the mode on-screen, gives a clean negative:
+opening the screen and changing the mode produce only control-panel serial traffic — SIO channel 0 muxed by GPIO `0x36008024`/`0x36008064`, driven from `0x484AC6xx-0x484ACDxx`.
 **No USB communication fires.** The USB co-processor only starts talking to the main CPU once a PC is
 physically attached (VBUS + enumeration); with no PC and the (undumped) USB controller unmodelled,
 nothing raises "connected", so the main CPU never drives the link. Reaching the USB bit-bang is
