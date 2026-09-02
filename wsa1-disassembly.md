@@ -337,19 +337,29 @@ not renames.**
 ## What is left
 
 `prom_c` and `prom_d` have **zero `.incbin`** — they are territorially complete.
-All remaining conversion is in prom_a (106,585 B) and prom_b (159,459 B).
+All remaining conversion is in `prom_a` and `prom_b`:
 
-`prom_d`'s "zero instruction encodings" claim does not rest on the disassembler
-alone, which has whole blind families (see
-[TLCS-900 Instruction Encoding: Known Decoding Gaps]({{ site.baseurl
-}}/tlcs900-instruction-encoding/#known-decoding-gaps)) that would produce the
-same "nothing decodes" symptom whether or not code is actually present. A
-decoder-independent scan for the encoder's exact SriRR-family byte shape
-(`wsa1/notes/sound/prom_d_srirr_falsification.py`) finds 0 matches in
-`prom_d` against 599 in `prom_a`, 1,261 in `prom_b` and 125 in `prom_c` — all
-three confirmed code images — so the method is discriminating rather than
-just failing to fire anywhere, and `prom_d`'s null result survives an attack
-that does not depend on the disassembler's own SriRR blind spot. This clears
+| image | verbatim `.incbin` | source |
+|---|---:|---:|
+| `prom_a` | 15,722 B | 97.0% |
+| `prom_b` | 26,013 B | 95.0% |
+| `prom_c` | 0 | 100% |
+| `prom_d` | 0 | 100% |
+
+Those are **verbatim** bytes — blobs with no generating source — as reported by
+`scripts/analysis/kn5000_source_coverage.py`. Neither image carries a
+`.byte`-dressed remainder: their byte runs are audited and typed, so for these
+two the `.incbin` count *is* the debt. Separately, `wsa1/notes/reachability.py`
+reports 9 bytes STRONG reachable-and-unconverted across the product.
+
+`prom_d` contains **no code**. Flattened through the assembler it yields ten
+instruction encodings totalling 30 bytes, and every one is a verified data
+coincidence: a little-endian `u16` array where a field's low byte happens to be
+`0xC7` and the following field's low byte falls inside an ERP sub-opcode range.
+Quote the figure that way — "ten spurious encodings, all proven data" — rather
+than "zero encodings", which is the weaker claim it is often shortened to.
+
+That conclusion does not rest on the disassembler This clears
 the SriRR gap only; the ERP family (`decodeERPPrefix()`) has no structural
 byte shape a scan can key on, so it remains an open limit rather than a
 cleared one.
