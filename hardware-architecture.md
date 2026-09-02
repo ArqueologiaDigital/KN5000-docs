@@ -106,7 +106,7 @@ Detailed hardware documentation extracted from the service manual schematics.
 
 **IC5: TMP94C241F**
 - Toshiba 32-bit TLCS-900/H2 microcontroller
-- Address bus: A0-A21 (16MB addressable)
+- 24-bit address space (16 MB); the board's own decode network uses A16-A22
 - Data bus: D0-D15 (16-bit)
 - Multiple serial channels
 - DMA controller
@@ -118,7 +118,7 @@ Detailed hardware documentation extracted from the service manual schematics.
 - Toshiba 32-bit TLCS-900/H2 microcontroller (same as main CPU)
 - Up to 20 MHz clock
 - 16 MB linear address space (24-bit addresses)
-- 2 KB internal RAM (0x000800-0x000FFF)
+- 2 KB on-chip RAM at 0x000400-0x000BFF
 
 **Memory Map:**
 
