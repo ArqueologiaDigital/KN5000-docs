@@ -185,9 +185,36 @@ findings together:
 |---|---|---|
 | CPUs | **differ** (TLCS-900 vs MN10300) | **match** (both TLCS-900) |
 | machine code shared | **none possible** | **32,795 B, null 0 B** |
-| kernel / RTOS | rewritten | **the same RTOS**, adapted — the WSA1 keeps the interrupt-nesting depth in control register `0x3C` and reads it back, while the KN5000 keeps it in a RAM word and only *mirrors* it into cr `0x7C` |
+| kernel / RTOS | rewritten | **one kernel, four processors, two products** — see below |
 | MILK UI framework | **shared, and the evidence for this page's thesis** | **absent — it had not been written yet** |
 | assets | tone-name tables byte-identical incl. padding | the **81-byte voice-parameter block** shared with prom_d |
+
+### ★★ One kernel, four processors, two products
+
+The kernel result is the strongest cross-machine finding in these trees, and it is
+stronger than "the same RTOS":
+
+* **The WSA1R's two TMP95C061s build their kernel from ONE SOURCE FILE.**
+  `wsa1/kernel/kernel.s` assembles twice — into 2,180 bytes of `prom_a` and 2,180
+  bytes of `prom_c`, both byte-identical to the EPROMs. Of 941 instruction slots,
+  81 carry a per-CPU value, and those 81 sites are **21 constants**: RAM
+  addresses, array sizes and ROM pointers. The two processors run the same kernel
+  over different RAM maps with different task, semaphore and queue counts.
+* **The same kernel is in both of the KN5000's processors**, in the sub-CPU
+  payload and — as a separate build, not a copy — in the main program ROM
+  (`wsa1/notes/kernel_structural_match.py`).
+* ⚠ **Byte identity cannot answer this question.** A byte search finds zero kernel
+  routines in any of the 41 KN5000 images, because two processors in the *same*
+  product from the *same* build already differ in 81 of 941 slots. The match is
+  structural, over decoded token sequences, and it is graded against a **foil** —
+  non-kernel WSA1R routines of the same lengths, run through the identical
+  search. Kernel routines score 0.742–1.000 (median 0.909, 20 of 20 above 0.70);
+  the 26 foils top out at 0.333, none above 0.70. No overlap, and a gap of 0.41.
+
+The adaptation shows in one detail worth keeping: the WSA1 holds the
+interrupt-nesting depth in control register `0x3C` and **reads it back**, while the
+KN5000 keeps it in a RAM word and only *mirrors* it into cr `0x7C`. Same RTOS,
+two family members, two ways of using the hardware the part provides.
 
 And the asset lineage reaches across all three machines at once:
 `technics_roms/tools/wsa1_kinship.py` finds **195 of the WSA1's 252 16-character
@@ -299,7 +326,7 @@ Shared reuse stops cleanly at the application layer:
 
 | Layer | KN5000 | KN7000 |
 |-------|--------|--------|
-| RTOS/kernel | custom (no banner) | `MILK MN10300 Ver1.0R1` @ `0x3B8AAC` |
+| RTOS/kernel | no banner — but **not bespoke**: it is the same TLCS-900 kernel the SX-WSA1R's two processors run, present in both KN5000 CPUs ([above](#-one-kernel-four-processors-two-products)) | `MILK MN10300 Ver1.0R1` @ `0x3B8AAC` |
 | Compression | [LZSS]({{ site.baseurl }}/lzss-compression/) | LZSS **and** zlib/deflate 1.0.4 @ `0x3B8604` |
 | Photo/demo images | headerless 8bpp bitmaps | *adds* JPEG (Adobe Photoshop) + Windows BMP |
 | Tone-init helper | `SwbtWr` @ `0x1F410` | absent (sound-init layer reworked) |
