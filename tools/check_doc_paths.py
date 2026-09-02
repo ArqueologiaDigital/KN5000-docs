@@ -18,6 +18,10 @@ QUESTION ANSWERED
   described as an "audio command encoder" while the path still resolved.
   A clean run here narrows where to look; it never certifies a page.
 
+  Only git-TRACKED files count, so a page that names a BUILD ARTEFACT
+  (`apploader.bin`, `mines_disk.bin`) is reported dead and always will be.
+  Those two are expected; do not "fix" them by deleting the filename.
+
   Resolution is deliberately generous: a path resolves if it exists
   relative to a repo root OR if its basename exists anywhere in the repo.
   That undercounts rot (a file moved between directories still "resolves"),
@@ -35,7 +39,12 @@ import os, re, subprocess, sys
 
 DOCS = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPOS = [os.path.expanduser("~/compartilhado/kn5000-roms-disasm"),
-         os.path.expanduser("~/compartilhado/kn7000_mame")]
+         os.path.expanduser("~/compartilhado/kn7000_mame"),
+         # Homebrew trees the tutorials cite: the App Loader extension ROM and
+         # the Mines port built against it.  Without these, every path on
+         # app-loader.md reads as dead when the files are simply in another repo.
+         os.path.expanduser("~/compartilhado/custom-kn5000-roms"),
+         os.path.expanduser("~/compartilhado/Mines")]
 PATH_RE = re.compile(r'`([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:s|py|c|h|cpp|inc|json|rom|bin|ld))`')
 
 def index(repo):

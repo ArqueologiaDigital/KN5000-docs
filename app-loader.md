@@ -14,6 +14,21 @@ The App Loader is a generic program launcher for the KN5000 keyboard. It replace
 ![Mines game launched from App Loader]({{ site.baseurl }}/assets/images/apploader-mines-running.png)
 *The Mines game running after being loaded from disk by the App Loader. The game binary was read from the FAT16 filesystem, loaded into RAM at 0x208000, and launched via its entry point.*
 
+## Where the Source Lives
+
+The App Loader and the applications built for it live in two repositories that are separate from
+the MAME driver tree and the disassembly tree:
+
+| Component | Repository-relative path |
+|---|---|
+| App Loader firmware (C + `startup.s`) | `custom-kn5000-roms/apploader/src/`, `custom-kn5000-roms/apploader/startup.s` |
+| App Loader linker script | `custom-kn5000-roms/apploader/kn5000.ld` |
+| Disk-image builder | `custom-kn5000-roms/apploader/tools/create_disk.py` |
+| Built extension ROM (512 KB) and disk image | written by `make` into `custom-kn5000-roms/apploader/build/` as `apploader.bin` and `apploader_disk.hd` |
+| Mines disk startup and linker script | `Mines/platforms/kn5000/disk_startup.s`, `Mines/platforms/kn5000/disk.ld` (branch `kn5000_port`) |
+
+Paths in the rest of this page are relative to those two repository roots.
+
 ## How It Works
 
 The App Loader is an [HDAE5000 extension ROM]({{ site.baseurl }}/hdae5000-homebrew/) that implements:
@@ -57,7 +72,7 @@ The KN5000 firmware runs at 60Hz. The App Loader (and any loaded app) must coope
 3. **Running app** calls `yield_to_firmware()` to return control until the next frame
 4. This cycle repeats at 60Hz, giving each party time to run
 
-The key insight: the loaded app's `yield_to_firmware()` uses the **same shared addresses** (SAVED_SP at 0x200044, APP_SAVED_SP at 0x200048) as the App Loader, forming a seamless coroutine chain: Firmware <-> App Loader <-> Running App.
+The loaded app's `yield_to_firmware()` uses the **same shared addresses** as the App Loader -- `SAVED_SP` at 0x200044 and `APP_SAVED_SP` at 0x200048, declared in both `custom-kn5000-roms/apploader/startup.s` and `custom-kn5000-roms/apploader/src/kn5000.h`. That makes one coroutine chain: Firmware <-> App Loader <-> Running App.
 
 ## Creating an Application
 
@@ -123,7 +138,7 @@ Your app needs a small assembly startup that:
 4. Calls your C `main()` function
 5. On return, restores the caller's stack and returns
 
-Here is a minimal startup (`disk_startup.s`):
+Here is a minimal startup, as used by the Mines port (`Mines/platforms/kn5000/disk_startup.s`):
 
 ```asm
 .equ SAVED_SP,        0x200044    ; Firmware SP (shared with App Loader)
@@ -198,7 +213,7 @@ Clear_C_BSS:
 
 ### Linker Script
 
-Use this linker script (`disk.ld`) to place everything at the correct RAM address:
+Use this linker script (`Mines/platforms/kn5000/disk.ld`) to place everything at the correct RAM address:
 
 ```
 MEMORY {
@@ -324,7 +339,7 @@ clean:
 
 ## Building the Disk Image
 
-Applications are distributed on a FAT16 hard disk image. The App Loader includes a Python script (`tools/create_disk.py`) that creates a properly formatted disk image.
+Applications are distributed on a FAT16 hard disk image. The App Loader includes a Python script, `custom-kn5000-roms/apploader/tools/create_disk.py`, that creates a properly formatted disk image.
 
 ### Disk Image Structure
 
@@ -343,7 +358,7 @@ Sector 1+:    FAT16 partition
 
 ### Adding Your App to the Disk
 
-To add a new application to the disk image, modify `tools/create_disk.py`. Follow the pattern used for HELLO and MINES:
+To add a new application to the disk image, modify `custom-kn5000-roms/apploader/tools/create_disk.py`. Follow the pattern used for HELLO and MINES:
 
 1. Create a subdirectory cluster under `/APPS/`
 2. Write the `APP.INI` manifest
@@ -368,8 +383,8 @@ Note: The offset of 512 skips the MBR sector to reach the FAT16 partition.
 
 - MAME with the KN5000 driver (including HDAE5000 extension slot and ATA support)
 - Original KN5000 ROM dumps
-- The App Loader ROM (`build/apploader.bin`, 512KB)
-- A disk image with your app (`build/apploader_disk.hd`)
+- The App Loader ROM: the 512 KB `apploader.bin` that `make romset` writes into `custom-kn5000-roms/apploader/build/`
+- A disk image with your app: `apploader_disk.hd`, in the same build directory
 
 ### Building Everything
 
@@ -445,7 +460,7 @@ The App Loader requires a **raw disk image** with `.hd` extension. CHD (Compress
 
 ## Worked Example: Mines Game
 
-The Mines (Minesweeper) game is the first real application to run on the App Loader. Here's how it was built:
+Mines (Minesweeper) is a full application that runs under the App Loader. It is built in three steps.
 
 ### 1. Build the Mines disk binary
 
@@ -455,7 +470,7 @@ make disk
 # Produces: build/mines_disk.bin (14KB)
 ```
 
-This builds Mines with a disk-specific startup (`disk_startup.s`) and linker script (`disk.ld`) that target RAM at 0x208000 instead of the extension ROM address.
+This builds Mines with a disk-specific startup (`Mines/platforms/kn5000/disk_startup.s`) and linker script (`Mines/platforms/kn5000/disk.ld`) that target RAM at 0x208000 instead of the extension ROM address.
 
 ### 2. Create the disk image
 
@@ -465,7 +480,7 @@ make disk
 # Produces: build/apploader_disk.hd with /APPS/MINES/APP.BIN
 ```
 
-The `create_disk.py` script automatically picks up the Mines binary and creates the disk image.
+`create_disk.py` looks for the `mines_disk.bin` that `make disk` leaves in `Mines/platforms/kn5000/build/`, and when it is present writes it into the image as `/APPS/MINES/APP.BIN`.
 
 ### 3. Run in MAME
 
@@ -474,9 +489,9 @@ make test-interactive
 # Boot the keyboard, press DISK, navigate to Mines, press ENTER
 ```
 
-### Key Design Decisions
+### How the Mines Port Fits the Loader
 
-- **Shared coroutine addresses**: The Mines game's `yield_to_firmware()` uses the same SAVED_SP/APP_SAVED_SP addresses (0x200044/0x200048) as the App Loader. This means the firmware doesn't know the difference between the App Loader and the Mines game -- both participate in the same cooperative multitasking scheme.
+- **Shared coroutine addresses**: The Mines game's `yield_to_firmware()` uses the same SAVED_SP/APP_SAVED_SP addresses (0x200044/0x200048) as the App Loader, so the firmware does not distinguish between the App Loader and the Mines game -- both participate in the same cooperative multitasking scheme.
 
 - **No XAPR header**: Unlike the extension ROM approach, disk apps don't need an XAPR header. They're plain flat binaries loaded to RAM.
 
