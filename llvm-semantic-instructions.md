@@ -151,17 +151,16 @@ The LLVM TLCS-900 backend lives at `/home/fsanches/compartilhado/llvm-project/ll
 [31:29] NumPreOps   — pre-SubOpcode operand count
 ```
 
-## Direct-address width-request syntax (new since this page's last major revision)
+## Direct-address width-request syntax
 
-A direct-address operand now takes an optional explicit width suffix —
+A direct-address operand takes an optional explicit width suffix —
 `(0x8a:8)`, `(0x2075:16)`, `(0x8a:24)` — parsed by
 `parseDirectAddrOperand()` in `AsmParser/TLCS900AsmParser.cpp`. The TLCS-900
 has three direct-address widths and picks between them in the prefix byte, so
 the width is a spelling choice the source has to make: this firmware writes
 `set 7,(0x00008a)` as `F2 8A 00 00 BF` for an address that fits in eight
 bits, so the width is **not derivable from the address value alone**. An
-operand with no suffix keeps the 24-bit default, which is why code that
-already assembled before the suffix existed did not need to change.
+operand with no suffix keeps the 24-bit default.
 
 ## Register-indexed and extended-register-pair decoding
 
