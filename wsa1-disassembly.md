@@ -146,7 +146,7 @@ watching, because it measures meaning rather than territory.
 quoting this paragraph; a label count in particular depends on whether you count
 compiler-local `.L` labels, so no single figure is quoted here.
 
-## ★★ Updated 2026-09-01: ONE KERNEL, FOUR PROCESSORS, TWO PRODUCTS
+## ★★ ONE KERNEL, FOUR PROCESSORS, TWO PRODUCTS
 
 The result below stands and has since been carried two steps further.
 
@@ -163,16 +163,14 @@ three ROM pointers). There is no `.if`/`.else` in the file.
 sub-CPU payload and, as a separate build rather than a copy, in its main program
 ROM. One kernel, four processors, two products.
 
-⚠ **Byte-identity was the wrong instrument for that second question, and had
-already answered it wrongly.** A tool in the tree reported *zero* byte-identical
-matches across all 41 KN5000 images — true about bytes, false about the question,
-for the reason step one measures: two processors in the same product, from the
+⚠ **Byte identity is the wrong instrument for that second question.** Zero
+routines match byte-for-byte across the 41 KN5000 images — true about bytes and
+irrelevant to the question, for the reason step one measures: two processors in the same product, from the
 same build, running the same source, still differ in 81 of 941 slots.
 
 ### A second shared source: the DSP channel-register driver
 
-*Added 2026-09-01.* The kernel is no longer the only source both processors
-share. `dsp/dsp_channel_regs.s` — four routines, 234 bytes, of which **231 are
+The kernel is not the only source both processors share. `dsp/dsp_channel_regs.s` — four routines, 234 bytes, of which **231 are
 byte-identical between the two CPUs** — is now a single file included by both
 roots. Everything that differs is one equate:
 

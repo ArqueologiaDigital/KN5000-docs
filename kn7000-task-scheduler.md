@@ -101,8 +101,7 @@ message-id block (`0x6009D…0x600A1`) and the handler entry points.
 
 ## The same kernel is in four processors, across two products
 
-*Added 2026-09-02.* The sharing above turns out to reach considerably further than
-the KN5000. The **SX-WSA1R**, a physical-modelling synthesiser built on a different
+The sharing reaches considerably further than the KN5000. The **SX-WSA1R**, a physical-modelling synthesiser built on a different
 CPU family (two TMP95C061s against the KN7000's MN10300), runs the **same
 multitasking kernel** — and so does each of the KN5000's two processors. One
 kernel, four processors, two products.
@@ -115,17 +114,13 @@ only in house style, and the remaining 81 reduce to **21 named constants** (twel
 RAM addresses, six array sizes, three ROM pointers) — with no conditional assembly
 anywhere in the file.
 
-For the KN5000 the instrument had to change, and that is the part worth
-remembering. ⚠ **Byte-identity was the wrong test and had already answered "no"**:
-a tool in the tree reported zero byte-identical matches for 23 routines across all
-41 KN5000 images. That is true about bytes and false about the question — two
-processors *in the same product*, from *the same build*, running *the same source*,
-still differ in 81 of 941 slots, so a third built years apart cannot possibly be
-closer. Matching on control-flow shape instead, against a **foil control** of
-non-kernel code cut to the same instruction counts:
+For the KN5000 the identification rests on **control-flow shape**, not byte
+identity. Byte identity is the wrong measure across products: two processors in
+the same product, from the same build, running the same source, still differ in
+81 of 941 instruction slots, so a third built years apart cannot be closer. The
+score is measured against a **foil control** of non-kernel code cut to the same
+instruction counts:
 
-| | n | max | median | ≥ 0.70 |
-|---|---:|---:|---:|---:|
 | kernel routines (≥ 20 instr) | 20 | 1.000 | 0.909 | 20 |
 | non-kernel foils | 26 | 0.333 | 0.212 | 0 |
 
