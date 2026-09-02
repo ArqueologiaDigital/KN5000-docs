@@ -43,14 +43,14 @@ Detailed hardware documentation extracted from the service manual schematics.
 │  ┌────┴────┐      └────┬───┘ └──────┘ └────────┘             │
 │  │ IC207   │           │                                      │
 │  │ VRAM    │      ┌────┴───┐                                  │
-│  │4Mbit    │      │IC304-6 │   ┌────────┐                    │
+│  │4Mbit    │      │IC304-7 │   ┌────────┐                    │
 │  └─────────┘      │Waveform│   │ IC208  │                    │
 │                    │ ROMs   │   │  FDC   │                    │
 │                    └────────┘   └────────┘                    │
 └───────────────────────────────────────────────────────────────┘
 ```
 
-**Signal flow:** Main CPU handles UI, sequencing, and high-level music control. It sends MIDI-like commands to the Sub CPU via the inter-CPU latch at 0x120000. The Sub CPU translates these into low-level register writes for the tone generator (IC303) and DSP chips (IC310, IC311). Waveform data is stored in IC304-306 (currently undumped). Audio output goes through the DSPs for effects processing and mixing before reaching the DAC.
+**Signal flow:** Main CPU handles UI, sequencing, and high-level music control. It sends MIDI-like commands to the Sub CPU via the inter-CPU latch at 0x120000. The Sub CPU translates these into low-level register writes for the tone generator (IC303) and DSP chips (IC310, IC311). Waveform data is stored in four mask ROMs, IC304-IC307; only **IC307 is dumped**. Audio output goes through the DSPs for effects processing and mixing before reaching the DAC.
 
 ## Control Panel MCUs
 
@@ -154,7 +154,7 @@ Detailed hardware documentation extracted from the service manual schematics.
 | IC6 | QV1GFKN5KAX1 | ROM | 8Mbit | Program (EVEN) |
 | IC9 | M5M44260AJ7S | DRAM | 4Mbit | Dynamic RAM |
 | IC10 | M5M44260AJ7S | DRAM | 4Mbit | Dynamic RAM |
-| IC14 | QS6C303C301I | ROM | 32Mbit | Rhythm Data ROM |
+| IC14 | QS6C303C301I (the driver's ROM record reads the part as `QSIGX3C23011`) | ROM | 32Mbit | Rhythm Data ROM. ⚠ **The read this project holds had address lines A19 and A21 transposed.** Service-manual page 32 shows IC14 wired straight, so the defect is in the dump, not on the board; the correction is applied on disk once and the raw read is kept beside it. See the ROM record in `src/mame/matsushita/kn5000.cpp` |
 | IC19 | QV1GFKN5KAX1 | ROM | 8Mbit | Custom Data |
 | IC21 | - | SRAM | 1Mbit | Backup (battery) |
 
@@ -206,7 +206,7 @@ This is **not** the same as byte-level interleaving (`even[0], odd[0], even[1], 
 | IC303 | TC183C230002 | Tone Generator | Memory-mapped at 0x100000 (SubCPU) |
 | IC310 | MN19413 | DSP2 (mixing/EQ) | Serial GPIO bit-bang (SubCPU) |
 | IC311 | uPD6383GF-3BA | DSP1 (effects) | Memory-mapped at 0x130000 + parallel port (P7/PZ) |
-| IC304-306 | — | Waveform ROMs | Connected to IC303 (undumped) |
+| IC304-307 | see [Waveform ROM Format]({{ site.baseurl }}/waveform-rom-format/) | Waveform ROMs, 4 MB each | Connected to IC303. **IC307 is dumped; IC304-306 are not** — the driver fills their banks with a `BAD_DUMP`-flagged copy of IC307, so voices selecting them play real-but-wrong PCM through the real paged datapath instead of silence |
 
 The tone generator IC303 handles polyphonic synthesis with 64 voice channels, while IC311 (DSP1) provides digital effects (reverb, chorus, delay, distortion) and IC310 (DSP2) handles mixing and EQ. The SubCPU controls all three via dedicated interfaces.
 
@@ -364,7 +364,7 @@ Main CPU (TMP94C241F)          Control Panel MCU (M37471M2196S)
         │─────────> CMD0-4 ────────────>│ (Commands?)
 ```
 
-The exact protocol has since been reverse-engineered from the main CPU firmware disassembly and implemented as MAME HLE — see [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) for the full command/response reference.
+The protocol is reverse-engineered from the main CPU firmware disassembly and implemented as MAME HLE — see [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) for the full command/response reference.
 
 ## References
 
