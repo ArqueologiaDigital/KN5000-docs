@@ -320,25 +320,53 @@ regenerates it byte-for-byte (six `bootcode_*.bin` files remain because the ASL 
 615,350 bytes unreferenced by the LLVM build, and a 221,104-byte dead tail beyond file
 offset 0x7F2D8 that duplicates the source-built demo-preset region and is read by nothing.
 
+## Three kinds of debt, not one
+
+Disassembly debt in this tree comes in three distinct shapes, counted by three different
+instruments, and quoting any one of them as "the" debt figure is the mistake to avoid:
+
+| kind | what it is | counted by |
+|---|---|---|
+| **verbatim** | bytes handed back through `.incbin` of a blob with no generating source | `scripts/analysis/kn5000_source_coverage.py` |
+| **code-as-`.byte`** | real instructions spelled as data directives | per-image census tools, e.g. `scripts/analysis/v9_v10_undisassembled_census.py` |
+| **data-as-code** | data disassembled into plausible instruction mnemonics that re-assemble byte-exact | `scripts/analysis/v10_data_as_code_census.py`, `wsa1/notes/data_as_code_audit.py`, `scripts/analysis/kn5000_rest_data_as_code_audit.py` |
+
+A `.byte` run is exactly as undecoded as an `.incbin`, but passes every "no `.incbin`" check
+— and the third kind is invisible by construction: a re-assembly of a wrong interpretation
+still reproduces the original bytes, so the byte gate cannot object to it either. Two
+confirmed instances exist in [HD-AE5000]({{ site.baseurl }}/hdae5000/) — a 309-byte version
+string disassembled as garbage instructions, and a 6,356-byte record table with zero call or
+jump sites anywhere in the tree, loaded only as an address.
+
+**All thirteen gated images have now been censused for data-as-code.** Seven come back
+clean, and for those the "every debt figure is a lower bound" caveat below is lifted: subcpu
+boot, table data, custom data, and all four SX-WSA1R images (`prom_a`/`prom_b`/`prom_c`/
+`prom_d`). The caveat survives for `v9`, `v7` and `v142`, whose seed-coverage gaps run
+51–74% — that much of their proven code is reached only through indirect or computed
+dispatch that static analysis cannot follow, so a census there cannot rule out further
+misdecoded spans.
+
 ## Verbatim debt across all thirteen gated images
 
 `scripts/analysis/kn5000_source_coverage.py` measures **verbatim debt** — bytes that enter
 the build through an `.incbin` of a committed blob with no generating source — across all
 nine KN5000 images and the four SX-WSA1R images together (13 total, 12,386,304 B). This is
-a narrower question than "is this region understood": a `.byte` run that spells real code,
-or a wrong disassembly that happens to re-assemble to the right bytes, is invisible to it.
-There is currently no tool that measures the second kind (code spelled as `.byte`, tracked
-separately per image — see the maincpu figures above) or the third (data disassembled into
-plausible instruction mnemonics that re-assemble byte-exact — see
-[HD-AE5000]({{ site.baseurl }}/hdae5000/) for two confirmed instances). Every debt figure
-on this page is therefore a lower bound.
+a narrower question than "is this region understood": a `.byte` run that spells real code
+(tracked separately per image — see the maincpu figures above), or a wrong disassembly that
+happens to re-assemble to the right bytes (see the data-as-code note above), is invisible to
+it. Outside the seven data-as-code-clean images above, every debt figure on this page is
+therefore a lower bound.
 
 **maincpu v10 and v9 are at zero verbatim debt: 100% source.** Nothing in either tree enters
 the build as an opaque blob — even the eight flash-update boot banners round-trip from
 committed PNGs (`python3 scripts/build/mono_images.py verify` reports `ROUND TRIP EXACT:
 all 8 banners x 2 revisions (9,856 B)`, the same 616-byte-each files shared byte-for-byte
-between the two firmware revisions). Zero verbatim debt also holds for subcpu v142, subcpu
-boot, custom data, HD-AE5000, and SX-WSA1R's `prom_c` and `prom_d`.
+between the two firmware revisions). v9's confirmed-region backlog — the high-confidence
+code-as-`.byte` shape `v9_v10_undisassembled_census.py --judge` can find — is closed on both
+images: re-running it directly against v9 (not mirrored from v10, whose source has since
+drifted out of lockstep) finds zero confirmed hits beyond the same hand-audited DATA regions
+already on record. Zero verbatim debt also holds for subcpu v142, subcpu boot, custom data,
+HD-AE5000, and SX-WSA1R's `prom_c` and `prom_d`.
 
 Where real verbatim debt remains (reproduce with the command above; these are current
 measurements, not the tool's raw total — see the note on table data below):
@@ -346,18 +374,21 @@ measurements, not the tool's raw total — see the note on table data below):
 | Image | Verbatim debt | % source |
 |---|---:|---:|
 | `v7/maincpu` | 123,733 B | 94.1% |
-| `wsa1/prom_a` | 15,722 B | 97.0% |
-| `wsa1/prom_b` | 28,247 B | 94.6% |
-| `table_data` | 17,570 B real (336,038 B raw tool total) | see below |
+| `wsa1/prom_a` | 3,670 B | 99.3% |
+| `wsa1/prom_b` | 10,738 B | 98.0% |
+| `table_data` | 0 B real (318,468 B raw tool total) | see below |
 
-**Table data's raw 336,038 B figure overstates its debt by 318,468 B.** That amount is the
+**Table data's real remaining debt is zero.** The tool's raw 318,468 B figure is entirely the
 six `FTBMP01-06.BMP` feature-demo slide images — genuine, uncompressed 8bpp Windows BMPs
 (`BM` magic, correct 40-byte DIB header, viewable in any image tool) that are already the
 shipped artefact in its best form. The tool counts them as debt because it classifies by
 *mechanism* (does a generator exist?) rather than by *what is understood*; giving them a
 round-trip PNG generator would add machinery for no viewability gain and would discard the
-genuine artefact Technics's own toolchain shipped. Table data's real remaining debt is the
-17,570 B left over once the six BMPs are excluded.
+genuine artefact Technics's own toolchain shipped. The only other slice ever counted against
+table data — a 17,570 B stale remnant duplicating the live English/German help-database
+streams 0x8000 lower in the ROM — is now itself derived from those streams by a committed
+generator (`gen_stale_help_duplicate.py`) rather than stored as a raw blob, so it no longer
+counts as debt either: table data's unclassified, real conversion debt is 0 B.
 
 ### Disassembly status diagram
 

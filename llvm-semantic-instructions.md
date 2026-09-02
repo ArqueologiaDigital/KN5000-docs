@@ -130,13 +130,13 @@ inventory of current mnemonics.
 
 The LLVM TLCS-900 backend lives at `/home/fsanches/compartilhado/llvm-project/llvm/lib/Target/TLCS900/`.
 
-**Key files** (line counts re-checked 2026-09-01):
+**Key files:**
 - `TLCS900InstrFormats.td` — 83 instruction format class definitions (1,093 lines; was 79 formats when this page was first written)
 - `TLCS900InstrInfo.td` — 5,521 lines of instruction definitions
 - `TLCS900BaseInfo.h` — TSFlags bit-field definitions (283 lines)
 - `AsmParser/TLCS900AsmParser.cpp` — 569 lines, including the direct-address width-request parser (see below)
-- `MCTargetDesc/TLCS900MCCodeEmitter.cpp` — 1,631 lines, manual encoding
-- `Disassembler/TLCS900Disassembler.cpp` — 2,459 lines, manual decoding
+- `MCTargetDesc/TLCS900MCCodeEmitter.cpp` — 1,657 lines, manual encoding
+- `Disassembler/TLCS900Disassembler.cpp` — 2,920 lines, manual decoding, including the register-indexed `SriRR*` family and the `ERP` (extended register pair) prefix forms (see below)
 
 **Encoding strategy:** The backend uses manual encoding via a giant `switch(Format)` in `MCCodeEmitter::encodeInstruction()`, NOT auto-generated TableGen encoding. Each of the 83 format classes has a dedicated switch case that emits bytes using TSFlags metadata.
 
@@ -163,43 +163,51 @@ bits, so the width is **not derivable from the address value alone**. An
 operand with no suffix keeps the 24-bit default, which is why code that
 already assembled before the suffix existed did not need to change.
 
-## Silent miscompiles found and fixed in this backend
+## Register-indexed and extended-register-pair decoding
 
-Five encodings assembled to the **wrong bytes with no diagnostic** before
-being caught and fixed. The first three (LLVM `tlcs900_backend`, commits
-`e7a43c67fdca` and `95f7f2d40428`, both 2026-09-01):
+The disassembler decodes two families that the assembler has always
+encoded correctly but that had no decoder path: the register-indexed
+`SriRR*` group (`st_rr*`, `ld_rr*`, `lda_rr`, `jp_rr`, `call_rr`, mode
+bytes `07`/`03`) and the `ERP` (extended register pair) byte/long forms
+(`decodeERPPrefix()`, prefix bytes `C7`/`E7`). Both are exercised by the
+regression suite against literal bytes pulled from `kn5000_v10_program.rom`
+and `wsa1/original_ROMs/wsa1_prom_a.ic12`, and both are what let the KN5000
+and WSA1R disassembly trees name instructions that used to sit as
+undecoded `.byte` runs purely because no decoder case existed for the mode
+byte, not because the bytes were unclear.
 
-- `push (0x1234)` emitted `09 34` — the address silently truncated to 8 bits.
-- `mul WA,(0x1234)` emitted `d8 08 34 12` — a multiply by the *address*, not
-  the memory operand, because neither mnemonic had a memory form and the
-  parenthesised address was parsed as an immediate.
-- The 8-bit **INDEX register**'s file address was emitted with its high/low
-  halves swapped (`A=0xE1` instead of the correct `A=0xE0`). The byte gate
-  had stayed green because all four call sites in the KN5000/WSA1 trees
-  happened to name the wrong register to get the right byte.
+## Encoding subtleties this backend gets right
 
-The other two are **decoder** bugs, found by round-tripping subcpu v142
-`.byte` runs through the disassembler and back through llvm-mc (commit
-`ad8129f59880`, 2026-09-02):
+A handful of forms look ambiguous or interchangeable but are not; each is
+covered by a regression test tied to real ROM bytes rather than a
+hand-picked example.
 
-- The dst-mem-prefix immediate-store sub-opcode `0x02` decoded as `LD16mi_dst`
-  (mnemonic `ldmi16`, real opcode `0x14`) instead of `LD16mi_dst_02` (mnemonic
-  `ldw`, real opcode `0x02`) — so re-assembling the disassembler's own output
-  for the ROM's `bf 04 02 01 00` produced `bf 04 14 01 00`, a different
-  instruction, with no diagnostic. This alone blocked all three
-  `DSP_Bytecode_Op0N` handlers (569 B) in the v1.42 sub-CPU payload from
-  round-tripping.
+- A direct-memory operand can be requested at 8, 16, or 24-bit width —
+  `(0x8a:8)`, `(0x2075:16)`, `(0x8a:24)` — because the TLCS-900 picks the
+  width in the prefix byte and it is **not derivable from the address value
+  alone**: this firmware writes `set 7,(0x00008a)` as `F2 8A 00 00 BF` for an
+  address that fits in eight bits. An operand with no suffix keeps the
+  24-bit default.
+- `push (addr)` and `mul reg,(addr)` each take a genuine memory operand, not
+  an immediate — `push (0x1234)` and `mul WA,(0x1234)` are distinct from
+  their immediate counterparts and encode to their own byte forms.
+- The 8-bit **INDEX register**'s file address is `A=0xE0` (not `0xE1`); the
+  register file is byte-addressed and little-endian, so a word register's
+  low half sits at offset 0.
 - The direct-address ALU family (`addda16`/`subda16`/…/`cpda16` and the
-  `_da24`/mem-dest siblings) printed its register operand at 8/16-bit width
-  even though every one of those instructions' sole TableGen definition takes
-  a 32-bit GPR operand, so the disassembler's own output (e.g. `addda16 wa,
-  (4160)`) failed to re-parse; the 32-bit spelling (`addda16 xwa, (4160)`)
-  encodes byte-identically. The same routing check also caught CP's own base
-  opcode, printing its operands in the wrong order.
+  `_da24`/mem-dest siblings) takes a 32-bit GPR operand — spell it
+  `addda16 xwa, (4160)`, not `addda16 wa, (4160)` — because every one of
+  those instructions' TableGen definition is 32-bit regardless of the
+  mnemonic's `16`/`24` suffix.
+- `(Xrr+d8)` is **signed**. A displacement written as `+151` does not fit
+  the signed 8-bit field and legitimately assembles to the 5-byte
+  `(Xrr+d16)` form instead — `+151` and `-105` are different addresses, not
+  two spellings of the same byte. To reproduce a raw disp8 byte `0x97` in
+  the 2-byte encoding, write the signed form `-105`.
 
-All five are now diagnosed or fixed rather than silently mis-encoded; see
-`llvm-project`'s `TOOLCHAIN_VERSION` file for the full writeups and
-verification (`make gate-all` across the KN5000 and SX-WSA1R ROM sets).
+See `llvm-project`'s `TOOLCHAIN_VERSION` file (pinned commit `6fe210fb0a81`)
+for the byte-level proofs and the `make gate-all` verification across the
+KN5000 and SX-WSA1R ROM sets.
 
 ## Process for Each Phase
 
