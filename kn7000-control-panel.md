@@ -12,7 +12,7 @@ that light under them — is not wired directly to the main CPU. Instead it is
 the MN10300 main CPU and drive the LEDs on its behalf. This distributes the
 tedious matrix scanning off the main CPU and matches the KN5000's arrangement
 (with a different number of sub-CPUs). This page documents the panel from the
-firmware (`kn7000_program.rom`) — the sub-CPUs, how input becomes events, and the
+firmware (`kn7000_program_even.rom` / `kn7000_program_odd.rom`) — the sub-CPUs, how input becomes events, and the
 LED/dial control — grounded in the service-test screens and the named handlers.
 In MAME the sub-CPU side is modelled by a dedicated high-level-emulation device,
 **`kn7000_cpanel_device`**, which owns the panel's buttons and LEDs and speaks the
@@ -22,18 +22,18 @@ serial link to the main CPU (mirroring the KN5000's `kn5000_cpanel` device).
 
 The service manual's schematics show **three panel PCBs, each with its own 8-bit
 microcomputer**, and the service-test "PANEL CPU CHECKING" / "PANEL SW&LED CHECK"
-screens enumerate **four logical groups** (the fourth, CPSD, has no separate board
-— it is the data-dial/misc group):
+screens enumerate **four logical groups**:
 
 | Sub-CPU | PCB | Micro | Role |
 |---------|-----|-------|------|
-| **CPL** | CPL (page 128) | IC1101 = `C0BDB646823` | left: LCD soft-keys, style/rhythm groups, fills, performance pads |
+| **CPL** | CPL (page 128) | IC1101 = `C2BBDB000023` | left: LCD soft-keys, style/rhythm groups, fills, performance pads |
 | **CPC** | CPC (page 130) | (8-bit micro) | centre: the part mixer — 16 `MUTE UP/DOWN`, contrast, page/exit |
-| **CPR** | CPR (page 132) | IC1001 = `C0BDB000023` | right (**master**): sound groups & families, part select, transpose, LCD soft-keys, memory/disk. The main-CPU serial link attaches here and chains to CPL. |
-| **CPSD** | — | (logical) | the ROT data-dial encoder and misc |
+| **CPR** | CPR (page 132) | IC1001 = `C2BBDB000023` | right (**master**): sound groups & families, part select, transpose, LCD soft-keys, memory/disk. The main-CPU serial link attaches here and chains to CPL. |
+| **CPSD** | SD front panel | MN102H60 | the SD-card front-panel board. It is **not** on the panel scan link: it has its own MN102H60 and speaks to the main CPU over SIO **channel 2**, framed as MIDI. |
 
-The **data dial** is a rotary encoder (`SW1101` on the ROT board) whose A/B lines
-feed CPR directly.
+The **data dial** is a rotary encoder (`SW1101` on the ROT board). It is not a
+scan-matrix switch: the panel reports it as a continuous-controller frame on wire
+`0x10` (see *Continuous controls* below).
 
 ### Button inventory (from the schematics)
 
@@ -52,9 +52,9 @@ frames. By board:
 
 * **CPL** — `LCD Left 1–5`, `START/STOP`, `SYNCHRO & BREAK`, `INTRO & ENDING 1/2`,
   `FILL IN 1/2`, `FADE IN/OUT`, `TAP TEMPO`, `SPLIT POINT`; the style/rhythm groups
-  (`SOUL & FUNK`, `BALLAD`, `JAZZ COMBO`, `ROCK & POP`, `BIG BAND & SWING`,
-  `MARCH`, `ENTERTAINER`, `COUNTRY`, `LATIN & WORLD`, `GOSPEL & BLUES`, `BALLROOM`,
-  `MODERN DANCE`, `MOVIE SHOW`, `CUSTOM`, `R & B`); `VARIATION & MSA 1–4`,
+  (`8 & 16 BEAT`, `SOUL & FUNK`, `BALLAD`, `JAZZ COMBO`, `ROCK & POP`, `MARCH`,
+  `ENTERTAINER`, `COUNTRY`, `LATIN & WORLD`, `BALLROOM`, `MODERN DANCE`,
+  `MOVIE SHOW`, `CUSTOM`); `VARIATION & MSA 1–4`,
   `MUSIC STYLE ARRANGER`, `PAD 1–6/SOLO`, `PERFORMANCE PADS BANK/STOP/AUTO`,
   `ONE TOUCH PLAY`, `SOUND SET`, `MUSIC STYLIST`, `AUTO MODE`, `DEMO`,
   `MEMORY/LOAD`, `PLAY CHORD OFF/ON`, `ARRANGER OFF/ON`.
@@ -67,8 +67,8 @@ frames. By board:
   `TRANSPOSE R1/R2 ±`, `LCD Right 1–5`, `MEMORY`, `FAVORITES`, `VARIATION`,
   `REVERB`, `CHORUS`, `SUSTAIN`, `DIGITAL EFFECT`, `SOUND DSP`, `EFFECT MIC`,
   `MULTI`, `TECHNI-CHORD`, `SOLO`, `SOUND SET/EXPLORER`, `EW EXPANSION`, disk/SD
-  (`DISK EASY REC`, `DISK MENU LOAD`, `SD CARD LOAD`, `CUSTOMIZE`, `CUSTOM PANEL`,
-  `PROGRAM MENUS`, `NEXT BANK`, `BANK VIEW`).
+  (`DISK EASY REC`, `DISK MENU LOAD`, `DISK PLAY`, `SD CARD LOAD`, `CUSTOMIZE`,
+  `CUSTOM PANEL`, `PROGRAM MENUS`, `NEXT BANK`, `BANK VIEW`).
 
 The exact **SEG-column × SW-row** position of every switch is transcribed from
 the service-manual schematics (CPL = DIAGRAM-15 p128, own sub-CPU IC1101; CPC =
@@ -80,29 +80,60 @@ the driver's `notes/panel-matrix-service-manual.md`.
 
 ### Scan-matrix port naming (`CP{board}_SEG{col}`)
 
-The port names encode the **physical scan matrix**: each `CP{board}_SEG{col}` port is
-one scan **column** (segment) that a panel sub-CPU strobes, and each of its bits is one
-**SW sense line** the sub-CPU reads on that column. This is a direct image of the
-firmware's **normalized-segment (`normSeg`) space** — port → `normSeg` with the SW bit
-unchanged, a pure identity, because each scan column maps to exactly **one wire `ADDR`**
-(there is no per-bit repacking). Before it speaks, the device reverse-normalizes each
+Each `CP{board}_SEG{col}` port is one scan **column** (segment) that a panel sub-CPU
+strobes, and each of its bits is one **SW sense line** the sub-CPU reads on that column.
+Port → `normSeg` is a pure identity with the bit unchanged, because each scan column maps
+to exactly **one wire `ADDR`** (there is no per-bit repacking). Which button sits on which
+column and bit comes from **each button's firmware event code and argument**
+(`notes/panel-button-map.md`), not from the schematic transcription: where the two
+disagree — `BRASS`, `WORLD`, `SYNTH` and `ORGAN & ACCORDION` sit on different columns in
+the two sources — the driver follows the firmware, because that is what actually makes the
+instrument perform the function. Before it speaks, the device reverse-normalizes each
 column to its wire address: CPL/CPC's columns (`normSeg 0x00`–`0x0B`) go out as wire
 `0xC0`–`0xCB`, CPR's columns (`normSeg 0x0C`–`0x15`) as wire `0x00`–`0x09`. On each scan
 the device reads these ports, and for any column whose bits changed it emits the 2-byte
 `[ADDR][DATA]` switch frame the real sub-CPU would send; the main CPU XORs `DATA`
 against its per-segment shadow to recover the pressed/released edges.
 
-**Verified button→function bindings (empirical).** Driving each normalised input
-segment in the emulator and reading the resulting screen confirms the true
-function of each button — independent of the (KN5000-derived) silk-screen guess.
-The 16 sound-family buttons and 16 rhythm-genre buttons are fully resolved this
-way; the sound families map (input `SEGnn.bit` → function): SEG0C.b0 `PIANO`,
-b1 `GUITAR`, b2 `MALLET & ORCH PERC`, b3 `WORLD`, b4 `STRINGS & VOCAL`, b5
-`BRASS`; SEG0D.b0 `SAX & WOODWIND`, b1 `ORGAN & ACCORDION`, b2 `SOUND EXPLORER`,
-b3 `DIGITAL DRAWBAR`, b4 `TAB ORGAN`, b5 `ACCORDION REGISTER`; SEG0E.b0 `PAD`,
-b1 `SYNTH`, b2 `BASS`, b3 `DRUM KITS`. (The rhythm genres, menus, transpose and
-octave keys are likewise resolved; part-mute and arranger keys change state
-without opening a titled screen and are being mapped by their state effect.)
+#### The bindings that matter most
+
+**LCD soft-keys.** All ten are bound and working. The left column is one port; the
+right column is spread over three.
+
+| Key | Port | Mask | Key | Port | Mask |
+|---|---|---|---|---|---|
+| LCDL 1 | `CPL_SEG0` | `0x02` | LCDR 1 | `CPR_SEG5` | `0x10` |
+| LCDL 2 | `CPL_SEG0` | `0x08` | LCDR 2 | `CPR_SEG5` | `0x20` |
+| LCDL 3 | `CPL_SEG0` | `0x20` | LCDR 3 | `CPR_SEG7` | `0x01` |
+| LCDL 4 | `CPL_SEG0` | `0x01` | LCDR 4 | `CPR_SEG6` | `0x01` |
+| LCDL 5 | `CPL_SEG0` | `0x04` | LCDR 5 | `CPR_SEG5` | `0x01` |
+
+**The 16 sound families**, all on CPR:
+
+| Family | Port · mask | Family | Port · mask |
+|---|---|---|---|
+| `STRINGS & VOCAL` | `CPR_SEG0` `0x10` | `PIANO` | `CPR_SEG4` `0x10` |
+| `SYNTH` | `CPR_SEG0` `0x20` | `DIGITAL DRAWBAR` | `CPR_SEG4` `0x20` |
+| `WORLD` | `CPR_SEG1` `0x10` | `SOUND EXPLORER` | `CPR_SEG6` `0x08` |
+| `PAD` | `CPR_SEG1` `0x20` | `ORGAN & ACCORDION` | `CPR_SEG7` `0x08` |
+| `MALLET & ORCH PERC` | `CPR_SEG2` `0x10` | `DRUM KITS` | `CPR_SEG8` `0x04` |
+| `ACCORDION REGISTER` | `CPR_SEG2` `0x20` | `SAX & WOODWIND` | `CPR_SEG8` `0x08` |
+| `GUITAR` | `CPR_SEG3` `0x10` | `BASS` | `CPR_SEG9` `0x04` |
+| `TAB ORGAN` | `CPR_SEG3` `0x20` | `BRASS` | `CPR_SEG9` `0x08` |
+
+**Rhythm genres.** Thirteen are bound, on two CPL columns: `CPL_SEG1` bits 2–7
+(`CUSTOM`, `ENTERTAINER`, `LATIN & WORLD`, `MOVIE SHOW`, `MARCH`, `BALLROOM`) and
+`CPL_SEG2` bits 0–5 and 7 (`COUNTRY`, `JAZZ COMBO`, `SOUL & FUNK`, `BALLAD`,
+`MODERN DANCE`, `ROCK & POP`, `8 & 16 BEAT`). Two positions in that block —
+`CPL_SEG1` `0x02` and `CPL_SEG2` `0x40` — are still `IPT_UNUSED`.
+
+**The 16-part mute matrix**, all on CPC, two bits (ON/OFF) per part:
+
+| Port | Parts | Port | Parts |
+|---|---|---|---|
+| `CPC_SEG5` (bits 4–7) | 1–2 | `CPC_SEG10` | 11–14 |
+| `CPC_SEG8` | 3–6 | `CPC_SEG11` (bits 0–3) | 15–16 |
+| `CPC_SEG9` | 7–10 | | |
 
 Each scans its own switch matrix and drives its own LEDs; the test mode lights
 them group by group (`CPL LEDS to light`, `CPC LEDs to light`, `CPR LEDs to
@@ -138,8 +169,10 @@ as a **voice-event FIFO** -- the same interface the KN5000 firmware calls
 is a 16-bit word: **low byte = note, high byte = velocity** (velocity 0 = note
 off); the port yields **0xFFFF when empty**. The firmware polls it and turns each
 event into an internal note (in parallel with the MIDI-in path). The MAME driver
-models this FIFO, so the key bed is playable from the PC keyboard (a ~2-octave
-subset in a tracker-style layout); audible output still awaits the (undumped)
+models this FIFO. All **61 keys (C2..C7)** are declared, each carrying
+`PORT_GM_NOTE` musical-note markup, so a USB-MIDI controller routed through MAME's
+midi input provider plays the whole bed; the middle two octaves (C4..C6) additionally
+keep PC tracker-style key bindings. Audible output still awaits the (undumped)
 waveform ROMs, but the note reaches the firmware.
 
 ## The data dial
@@ -160,8 +193,9 @@ and the part/track indicator sets. Because the LEDs sit under the buttons and ar
 driven by the same sub-CPU that scans them, the "SW&LED CHECK" test can verify a
 whole section's matrix in one pass.
 
-In MAME these become the device's LED outputs — `cpl_led#` / `cpc_led#` / `cpr_led#`,
-one bank per panel board — which the layout lights under each button. A LED command
+In MAME these become the device's LED outputs, one bank per panel board. The layout
+lights **44 `cpl_led#` and 57 `cpr_led#`** under the buttons; the device also declares a
+`cpc_led#` bank, which the layout does not yet reference. A LED command
 rides the **same serial channel** as the button reports: the firmware sends a
 `[ADDR][DATA]` frame whose `ADDR` selects a board and an 8-bit LED register and whose
 `DATA` bits are the individual lamps, and the device decodes it onto those outputs. The
@@ -169,9 +203,9 @@ map is **authoritative from a real-machine lamp test** — driving the firmware'
 `F3`+`F4` service LED sweep on Felipe's own KN7000 confirmed **79 press-lit LEDs** (the
 lamp under each button). Together with the mode/indicator lamps (state LEDs such as the
 CUSTOMIZE-menu, DISK-in-use, split-point and conductor indicators), the device binds
-**101 named LED outputs**. A handful of driven LED bits are not yet tied to a named
-panel function; the decoder still passes those through, so the layout can name them
-once identified.
+**101 named LED outputs**. Of the 171 decoded LED bits, **68 are marked
+`(unmapped)`** — driven by the firmware but not yet tied to a named panel function. The
+decoder still passes those through, so the layout can name them once identified.
 
 ## Hardware path & serial protocol
 
@@ -220,9 +254,8 @@ out and switches in):
    **Latched/continuous controls** (type 2 — the volume faders, data dial and
    pedal) are instead dispatched through `0x484AD680`, which forms an index
    `((b & 0xC0) >> 3) | (b & 0x07)` into a **32-entry jump table at `0x48613108`**
-   and latches the new value (see *Continuous controls* below). *(An earlier note
-   here called `0x484AD680` "the switch dispatch"; the momentary keys do not go
-   through it — they take the shadow-XOR path.)*
+   and latches the new value (see *Continuous controls* below). Momentary keys do
+   **not** go through `0x484AD680`; they take the shadow-XOR path above.
 
 LED output rides the **same channel**: `SetHoldLed`/`SetOtherPartLed` →
 `SetLedByIndex` (`0x484B1BCB`, a jump table at `0x4861518C`) accumulate bits into
@@ -265,31 +298,32 @@ attention signal only when the outgoing queue is empty), so the driver records t
 fader's power-on position silently and only speaks when it moves.
 
 The remaining two type-2 handlers are the panel's **rotary encoders**, both on wire
-bank `00`. Injecting each on the home screen and watching the on-screen tempo pins
-them down: **`0x17` is the TEMPO/PROGRAM knob** and **`0x10` is the large DATA dial**
-(the one with the central `SET` button). Unlike the faders these are *incremental*
-encoders, not absolute pots: feeding `0x17` a set of fixed absolute values produces a
-**non-monotonic** tempo (`0x40`→184, `0x80`→56, `0x20`→88, `0x10`→88), because the
-firmware acts on the *difference* between successive positions, with acceleration —
-a small fast delta already jumps the tempo by tens of BPM, exactly like turning a
-detented hardware knob quickly. The DATA dial (`0x10`) instead moves the *focused*
-edit field and leaves the tempo alone on the home screen. Because the response to an
-absolute value is meaningless for such a control, the emulator does **not** bind
-these two to a plain slider — a faithful binding has to reproduce the encoder's
-delta-and-acceleration behaviour, which is a separate piece of work.
+bank `00`: **`0x17` is the TEMPO/PROGRAM knob** and **`0x10` is the large DATA dial**
+(the one with the central `SET` button). Neither is an absolute pot, and the two are
+consumed differently:
 
-*(A practical aside for anyone probing the KN7000 in MAME: the musical-notes-over-a-
-globe image you see a few seconds after launch is the **boot splash**, not the idle
-demo — the real `PMEM` home screen only appears around ~13 s in, so timed probes must
-wait for it.)*
+| Wire | Control | Firmware consumption | Driver port |
+|---|---|---|---|
+| `0x17` | TEMPO/PROGRAM knob | **Adds** the wire byte as a signed 8-bit step every frame: `tempo += (int8_t)wire`. It does not diff an absolute position, and the response is linear — one detent is about 1 BPM. | `TEMPO_KNOB`, a `PORT_ADJUSTER(50)` that the layout knob drags in a circle |
+| `0x10` | DATA dial | The panel keeps an 8-bit position counter and ships it; the main-CPU handler **diffs** successive positions. It moves the *focused* edit field and leaves the tempo alone on the home screen. | `DIAL`, an `IPT_DIAL` (0..255, wraps), forwarded verbatim |
 
-### Boot handshake (why the KN7000 wouldn't boot in MAME)
+Both are bound. The TEMPO knob's adjuster is an infinite rotary control, so a
+full-circle drag wraps its 0..100 range; the device takes the direction the short way
+round and emits `±1` per detent. Because the firmware adds rather than diffs, sending a
+growing absolute position drives the tempo to the 300 BPM rail regardless of which way
+the knob turns. Its raw adjuster setting is read from the field's live value rather than
+through the analog port read, whose interpolation wobble would otherwise inject spurious
+mixed-sign steps that cancel the encoder motion.
+
+When probing the KN7000 in MAME: the musical-notes-over-a-globe image a few seconds
+after launch is the **boot splash**, not the idle demo. The `PMEM` home screen appears
+around 13 s in, so timed probes must wait for it.
+
+### Boot handshake
 
 Before the main CPU reaches its home screen it must complete a **handshake** with
 the panel sub-CPUs; if it fails, the boot draws a full-screen diagnostic reading
-**"ERROR in CPU data transmission."** Reproducing this handshake was the last
-thing blocking the firmware from booting under emulation. The chain, reversed
-from the firmware:
+**"ERROR in CPU data transmission."** The chain:
 
 1. **Transmit side (interrupt group 0x11).** The main CPU sends **7-byte frames
    with line-sync bytes woven between the payload**: positions 0,1 sync, 2 =
@@ -313,13 +347,12 @@ from the firmware:
    pointer has moved** (a reply arrived) within a short window; otherwise it
    retries — **ten times** — and then paints the error screen.
 
-Modeling this faithfully in MAME required, besides the frame format above:
-correct interrupt-priority masking on the CPU (so a handler that re-enables
-interrupts mid-body doesn't re-enter itself), delivering every interrupt through
-a deferred timer (a completion asserted synchronously from inside a register
-write is wiped by the ISR-exit acknowledge), and the two-edge ATN pulse driven
-off the `0x34000280` re-arm write. With those in place the handshake completes,
-the error screen clears, and the KN7000 draws its home screen.
+Three emulation details are load-bearing here, besides the frame format:
+interrupt-priority masking must be correct on the CPU, so a handler that re-enables
+interrupts mid-body does not re-enter itself; every interrupt must be delivered
+through a deferred timer, because a completion asserted synchronously from inside a
+register write is wiped by the ISR-exit acknowledge; and the two-edge ATN pulse must
+be driven off the `0x34000280` re-arm write.
 
 ## Relationship to the KN5000
 
@@ -330,21 +363,17 @@ protocol]({{ site.baseurl }}/control-panel-protocol/)). The KN7000-specific deta
 the set of **four** sub-CPUs (CPL/CPC/CPR/CPSD) and their concrete test-mode and
 handler names.
 
-## Emulation note: PAGE / CONTRAST mapping (2026-07)
+## PAGE and CONTRAST
 
-In MAME these two CPC rockers were long mis-mapped (placeholder guesses on the
-analog DATA/dial wires). The firmware resolves them as ordinary **pseudo-part
-up/down** events, and the panel scanner already delivers them:
+The firmware resolves these two CPC rockers as ordinary **pseudo-part up/down**
+events, which the panel scanner delivers like any other switch:
 
 | Rocker | Pseudo-part | Event pair | Driver bits (normSeg.bit) | Notes |
 |---|---|---|---|---|
 | **PAGE Up / Down** | `0x18` | `0x2001` / `0x2000` | `SEG0B` 0x10 / 0x20 | page-box widget `0x4841DF23` accepts key `0x18`; `AcWindowPageProc` does page +1 / −1 |
 | **CONTRAST + / −** | `0x1D` | `0x2001` / `0x2000` | `SEG05` 0x04 / 0x08 | contrast-edit filter `0x4854E693` accepts only arg-hi `0x1D`; shares the value stepper with the Tempo/Program wheel |
 
-Both were previously mislabeled `BASS ON/OFF` (PAGE) and `PADS ON/OFF`
-(CONTRAST) — folklore names carried over from a sister model. The wires the
-guesses used (normSeg `0x16`–`0x1A`) are **not buttons** at all: they are the
-absolute-analog inputs (DATA dial, pitch-bend / modulation wheels,
-Tempo/Program encoder). Live-verified in the emulator: the corrected PAGE rocker
-walks MULTI EFFECT `PAGE 6/8 → 7 → 8 → 7 → 6 → 5` and the within-group effect-type
-sub-pages. The LCD contrast value is driven but not rendered.
+normSeg `0x16`–`0x1A` are **not buttons** at all: they are the absolute-analog
+inputs (DATA dial, pitch-bend / modulation wheels, Tempo/Program encoder). The PAGE
+rocker walks MULTI EFFECT `PAGE 6/8 → 7 → 8 → 7 → 6 → 5` and the within-group
+effect-type sub-pages. The LCD contrast value is driven but not rendered.

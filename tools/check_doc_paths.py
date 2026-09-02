@@ -19,8 +19,9 @@ QUESTION ANSWERED
   A clean run here narrows where to look; it never certifies a page.
 
   Only git-TRACKED files count, so a page that names a BUILD ARTEFACT
-  (`apploader.bin`, `mines_disk.bin`) is reported dead and always will be.
-  Those two are expected; do not "fix" them by deleting the filename.
+  (`apploader.bin`, `mines_disk.bin`) or a ROM-DUMP filename (`*.rom`, `*.ic*`)
+  is reported dead and always will be -- no dump is committed to either repo.
+  Those are expected; do not "fix" them by deleting the filename.
 
   Resolution is deliberately generous: a path resolves if it exists
   relative to a repo root OR if its basename exists anywhere in the repo.
