@@ -427,22 +427,24 @@ All coordinates are **little-endian 16-bit** values. The LCD display is 320×240
 
 ### Decoded Files
 
-⚠ These were originally `.s` files with the raw bytes embedded as `.byte` directives; the repo has
-since been restructured (multi-version ROM support) and the same content — byte counts verified
-identical — now lives as raw `.bin` files under `<version>/maincpu/includes/generated/`:
+These blocks are typed C struct source per `<version>/maincpu/style_ui/*.c`, compiled and
+`.incbin`'d into `ui_widgets/style_ui_params.s` — see
+**[ScreenData C Conversion]({{ site.baseurl }}/screendata-c-conversion/)** for the full
+inventory across all three ScreenData subsystems:
 
 | File | Bytes | Commands | Contents |
 |------|-------|----------|----------|
-| `style_ui_screendata_main.bin` | 3531 | 375 | Style editor main grid: chord boxes, parameter widgets, chord name tables, bottom bar |
-| `style_ui_screendata_meascursor.bin` | 184 | 18 | Measure cursor: MEAS/CURSOR/CTL labels, BAL/ERS refs, navigation arrows |
-| `style_ui_screendata_yesctl.bin` | 228 | 29 | Yes/No confirmation + measure cursor + CTL value |
-| `style_ui_screendata_ctlonly.bin` | 551 | 4+tables | CTL-only: 4 commands + LCD charset translation table + format strings |
+| `style_ui/main.c` | 3531 | 375 | Style editor main grid: chord boxes, parameter widgets, chord name tables, bottom bar |
+| `style_ui/meascursor.c` | 184 | 18 | Measure cursor: MEAS/CURSOR/CTL labels, BAL/ERS refs, navigation arrows |
+| `style_ui/yesctl.c` | 228 | 29 | Yes/No confirmation + measure cursor + CTL value |
+| `style_ui/ctlonly.c` | 551 | 4+tables | CTL-only: 4 commands + LCD charset translation table + format strings |
 
 ### Decoder Scripts
 
-⚠ **Stale**: both scripts below are hardcoded to the pre-restructure `.s` layout (`REPO/maincpu/includes/style_ui_screendata_main.s`)
-and now fail with `FileNotFoundError` against the current `.bin`-based tree — reproduced directly.
-Their command-format documentation above is still correct; only the file-loading path is broken.
+⚠ **Stale**: both scripts below still hardcode the path from before the tree moved to the typed
+`.c` layout above (`maincpu/includes/style_ui_screendata_main.s`, which does not exist at any
+version) and fail with `FileNotFoundError` — reproduced directly. Their command-format
+documentation earlier on this page is still correct; only the file-loading path is broken.
 
 - `scripts/analysis/decode_screendata.py` — Generic bytecode parser, outputs human-readable command descriptions
 - `scripts/tools/annotate_screendata_main.py` — Section-aware annotation generator for the main screen
