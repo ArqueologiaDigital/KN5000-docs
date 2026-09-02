@@ -13,159 +13,185 @@ bytes in total — are being converted to TLCS-900 assembly source that
 the same practices, including the same
 [LLVM TLCS-900 backend](https://github.com/felipesanches/llvm-project/tree/tlcs900_backend).
 
-> **Status: the reachability coverage goal has been met.** A further wave, run
-> after the wave-6 pause, converted every reachable code path that has start
-> evidence: recursive descent over the three code images now finds only
-> **STRONG 17 bytes** still reachable-and-unconverted (all formally refused —
-> see below), down from 17,558 at that goal's start. Raw substantive coverage —
-> which counts territory, not reachability, and so is a smaller number by
-> design — stands at **1,625,342 bytes — 77.5 %.**
+> **Status.** All four images rebuild byte-identically from source, and that is
+> checked centrally after every commit. `prom_c` and `prom_d` carry **no
+> `.incbin` at all**; all remaining verbatim bytes are in `prom_a` and `prom_b`.
+> Recursive descent over the three code images finds essentially no
+> reachable-and-unconverted code left — the entire STRONG total is one span of
+> `prom_b`, and it is formally refused ([why](#the-reachability-column-and-what-is-still-on-it)).
+> Every figure on this page is regenerable; regenerate it rather than quoting it,
+> because these numbers move within hours while conversion lanes run.
 
 ## The gate is the only thing that certifies this tree
 
 ```
-python3 scripts/analysis/assert_byte_identical.py
+make gate-wsa1     # the four SX-WSA1R images
+make gate-all      # all thirteen: 9 KN5000 + 4 SX-WSA1R
 ```
 
-It must print `PASS: every rebuilt ROM is byte-identical.` after **every** edit
-and at **every** commit. It rebuilds first and compares bytes.
+Both rebuild first and then compare bytes, and must print
+`PASS: every rebuilt ROM is byte-identical.` after **every** edit and at **every**
+commit. `gate-wsa1` is `cd wsa1 && python3 scripts/analysis/assert_byte_identical.py`.
 
 Never substitute a similarity percentage, and never use `--no-build` unless you
-have just built — **both shortcuts have already cost the sibling project real
-retractions**, and the reasons are written into the script's own docstring.
-Commits additionally carry an `LLVM: <branch>@<short> (<full>)` line, enforced by
-a commit hook; the current pin is `tlcs900_backend @ dbb72df07371`. The same
-backend assembles the KN5000 tree.
+have just built; the reasons are in the script's own docstring. Commits
+additionally carry an `LLVM: <branch>@<short> (<full>)` line, enforced by a commit
+hook. **The pinned toolchain is recorded in `TOOLCHAIN_VERSION`, which is the
+authority — read it rather than quoting a commit id from here.** The same LLVM
+TLCS-900 backend assembles the KN5000 tree, so a backend change is gated on all
+thirteen images at once.
 
 ## ⚠ The rule the gate cannot enforce
 
-**The gate is blind to names and comments. A confidently wrong routine header
-passes for ever.** Every error in the list below was gate-clean:
+**The gate is blind to names, comments and interpretation.** It certifies that
+the bytes come back; it certifies nothing about what they mean. Each of these is
+gate-clean, and each has occurred in this tree:
 
-* eight KN5000 label transplants naming the wrong object (a spliced-ROM offset
-  bug, off by `0xEB00`);
-* a "zero exceptions" that had 341 exceptions;
-* a "243 of 244" reproduced by no committed script;
-* a handler count of 35 that was 34;
-* a "byte for byte" for a match that was 170 of 204 bytes;
-* a routine **80 of 81 bytes identical** to the KN5000's where the one differing
-  byte was the peripheral base;
-* about 20 call sites cited one byte past the instruction, systematically;
-* "no references" and "no site found" asserted without running the census — they
-  had references;
-* a findings title claiming producers were "named" when they were only "located";
-* the system-clock note's lever B (see the
-  [retraction]({{ site.baseurl }}/wsa1/#the-clock-fc--28-mhz-and-the-firmware-is-what-says-so)).
+* a routine header naming the wrong object, because the name was transplanted
+  across a spliced image with every offset short by a fixed constant;
+* a quantified claim ("zero exceptions", "243 of 244", a handler count) that no
+  committed script reproduces;
+* a "byte for byte" describing a partial match, or a borrowed name whose two
+  sides differ in a peripheral base address;
+* call sites cited one byte past the instruction, systematically;
+* "no references" or "no call site" asserted without running the census;
+* a title claiming producers were *named* when they were only *located*;
+* **data framed as code** — a span that decodes into plausible mnemonics and
+  re-assembles byte-exactly, because that is all the gate checks.
 
 Hence the working rules: every semantic name needs an `Evidence:` line; every
 quantified claim needs a committed script, tested on the **last** element as well
 as the first; every borrowed name needs a byte diff with the differing count
 stated. **Prefer `sub_XXXXXX` plus a stated gap over a plausible guess.**
 
-## Coverage — and why the headline number is the smaller one
+## Coverage — three columns, and only one of them means understanding
 
-Regenerate with `python3 wsa1/scripts/analysis/source_coverage.py`; never retype it.
+```
+python3 wsa1/scripts/analysis/source_coverage.py     # per-image, this product
+python3 scripts/analysis/kn5000_source_coverage.py   # all 13 gated images
+```
 
-| source | image | substantive | verified filler | still `.incbin` | spans |
+Every image's bytes fall into exactly three buckets, and they are not equivalent:
+
+* **substantive** — decoded instructions and typed data structures;
+* **verified filler** — long runs of a single pad byte, measured and emitted as
+  `.fill`. Real, checked rather than sampled, and belongs in the source — but it
+  is territory, not understanding, and prom_c/prom_d are mostly this;
+* **verbatim `.incbin`** — a blob with no generating source. This is the debt.
+
+Snapshot from the two commands above, 2026-09-02 (span counts are
+`grep -rc '^\s*\.incbin' wsa1/prom_*/`):
+
+| source | image | substantive | verified filler | still `.incbin` | `.incbin` spans |
 |---|---|---:|---:|---:|---:|
-| `prom_a` | `wsa1_prom_a.ic12` | 457,503 | 63,115 | 3,670 | 71 |
-| `prom_b` | `wsa1_prom_b.ic13` | 442,246 | 71,304 | 10,738 | 345 |
-| `prom_c` | `wsa1_prom_c.ic28` | 395,072 | 129,216 | **0** | 32 |
+| `prom_a` | `wsa1_prom_a.ic12` | 458,630 | 63,116 | 2,542 | 6 |
+| `prom_b` | `wsa1_prom_b.ic13` | 442,320 | 71,304 | 10,664 | 71 |
+| `prom_c` | `wsa1_prom_c.ic28` | 395,072 | 129,216 | **0** | 0 |
 | `prom_d` | `wsa1_prom_d.bin` | 330,521 | 193,767 | **0** | 0 |
-| **total** | | **1,625,342 (77.5 %)** | 457,402 | 14,408 | |
+| **total** | | **1,626,543 (77.6 %)** | 457,403 | 13,206 | |
 
-*(prom_a and prom_b carry almost all of the remaining `.incbin`; `prom_b`'s span
-count is high because the remaining bytes are fragmented into many small gaps
-as reachable code gets carved out of them one span at a time.)*
+⚠ **Quote substantive, not the ~99 % "incl. filler" total.** prom_c alone
+contributes a verified 118,298-byte run of `0x0E` pad; counting it as equal to
+decoded code inflates the headline without adding a byte of understanding.
 
-⚠ **Quote the substantive column, not the 99.3 % total.** Wave 3 converted
-123,151 bytes of prom_c of which **118,298 were a verified run of `0x0E` pad
-emitted as `.fill`** — that moved the headline from 4.3 % to 27.7 % while adding
-under 5 KB of decoded content. The pad is real and checked rather than sampled,
-so it belongs in the source; but a number that treats it as equal to decoded code
-flatters. **Coverage measures territory, not understanding.**
+⚠ **Never retype this table into a page that is not regenerated.** A hand-typed
+copy of it is stale the moment any lane converts a span, and nothing in the build
+can notice.
 
-⚠ The table is generated for a reason: the hand-typed version went **stale within
-one commit** — it still claimed 4,639 bytes after four agents had converted
-604,523 — because it sat outside every lane. Three of the four lanes noticed and
-none edited it.
+## The reachability column, and what is still on it
 
-## ★★ The reachability goal: met
+Coverage counts territory. A separate and stricter question — *is there any byte
+that execution can reach and that this tree has not converted?* — is answered by
+`wsa1/notes/reachability.py`, which walks the CPU vector table, the 1,910-slot
+routine directory, framed pointer tables, branch targets in converted code and
+32-bit immediates, and **grades every seed**:
 
-A goal distinct from raw coverage — *convert every reachable code path that has
-start evidence* — has been completed. `notes/reachability.py` walks the CPU
-vector table, the 1,910-slot routine directory, framed pointer tables, branch
-targets in converted code and 32-bit immediates, and grades every seed:
-**STRONG** (a directory slot, a decoded branch, a hardware vector — convert on
-this column) versus **WEAK** (a `.long` entry or a raw immediate, which is a
-pointer and as likely to name a table as a routine).
+* **STRONG** — a directory slot, a decoded branch, a hardware vector. An entry
+  point, full stop. *Convert on this column.*
+* **WEAK** — a `.long` table entry or a raw 32-bit immediate. That is a pointer,
+  and a pointer is as likely to name a table as a routine; walking from one
+  paints data as code.
 
-| | at goal start | now |
-|---|---:|---:|
-| STRONG reachable-and-unconverted | 17,558 bytes | **17 bytes** |
-| `prom_b` STRONG remaining | — | **0** |
-| `prom_c` STRONG remaining | — | **0** |
-| ANY (STRONG+WEAK) reachable-and-unconverted | — | 1,702 bytes, 17 spans |
+```
+python3 wsa1/notes/reachability.py            # the coverage report
+python3 wsa1/notes/reachability.py --targets  # the ranked work list
+```
 
-The 17 remaining STRONG bytes (`0xFA369A-0xFA36AB` in `prom_a`) are a walk
-artefact and are **formally refused**: read straight out of the ROM they spell
-`"D GROUP NAMING"`, the tail of a UI string reached only because the walk
-decoded its way into it — no seed of any grade names that address, and no
-converted instruction falls through into it. The walk reached a **fixpoint**:
-round 1 revealed 499 bytes, round 2 revealed 38, and converting those 38
-revealed nothing further.
+As of 2026-09-02 the whole product reports **STRONG 9 bytes** and **ANY
+(STRONG+WEAK) 1,531 bytes across 30 spans**, with `prom_a` and `prom_c` at zero
+STRONG. `prom_d` is data with no established load base and is not walked at all.
 
-This did **not** touch semantics — every label the goal added is a bare
-`sub_XXXXXX` with a start-evidence line, no claim about behaviour — and it left
-existing prose untouched (verified by diff, not assumed). What is left for a
-future goal: 180 bytes with no start evidence at all (refuse unless evidence
-appears), ~1,702 reachable bytes that are WEAK-seed-only pointer-table
-artefacts needing a byte-level audit before conversion, and ~105,000 bytes of
-`.incbin` that nothing reaches (data — converting it adds territory, not
-coverage).
+**Those 9 STRONG bytes are refused, not pending.** They sit inside one 149-byte
+span of `prom_b`, `0xF283A8-0xF2843D`. Its only matching display-list handler is
+the bare-`ret` family, whose implied-length rule is "min 2" — true of any byte
+pair, so it corroborates nothing — and `unidasm` renders the span as incoherent
+code from that offset. It is the walk-decoded-its-way-into-data pattern, and it
+is documented as excluded at the source
+(`wsa1/notes/gen_prom_b_untouched_pool_module.py`, `wsa1/notes/README-prom_b.md`).
 
-### ★ The number that measures meaning, and it keeps going up
+⚠ **The walk's own reach is a claim about the walk, not about the ROM.** A seed
+of the wrong grade paints data as code, and the byte gate cannot object, because
+re-assembling a wrong interpretation reproduces the same bytes. That is why the
+grading exists and why the STRONG column is the only one converted on.
 
-`sub_XXXXXX` — the count of routines that are converted but **unnamed** — stood
-at about 4,998 after wave 6 and has continued to climb since, to about
-**5,014**. Newly converted code brings in unnamed routines faster than naming
-retires them.
+What remains outside that column: the WEAK-only bytes, which need a byte-level
+audit before anything is converted; runs with no start evidence of any grade,
+which are refused until evidence appears; and the `.incbin` that nothing reaches
+at all, which is data — converting it adds territory, not coverage.
 
-> *Coverage measures territory; this number measures meaning, which is the half
-> of the goal that is furthest from done.*
+### ★ The number that measures meaning
 
-Alongside it, re-derived 2026-09-01: **7,557 routine headers with
-`Evidence:` lines** (`grep -rh 'Evidence:' prom_*/*.s | wc -l`), **105 notes
-documents** of which 78 are `FINDINGS-*` (`git ls-files 'notes/*.md'`), **360
-committed Python analysis scripts** (`git ls-files '*.py'`), and about **5,014**
-routines still named only `sub_XXXXXX` — the last of those is the number worth
-watching, because it measures meaning rather than territory.
+Coverage measures territory. The count of routines that are **converted but
+still unnamed** — every label of the form `sub_XXXXXX` — measures meaning, and it
+is the half of the work that is furthest from done. Conversion adds unnamed
+routines; only reading them retires one.
 
-⚠ These move with every wave. Re-derive them with the commands above rather than
-quoting this paragraph; a label count in particular depends on whether you count
-compiler-local `.L` labels, so no single figure is quoted here.
+Run from the disassembly repo root; these are the definitions, and they drift
+with every merge:
+
+```
+grep -rhoE '^sub_[0-9A-Fa-f]{6}:' wsa1/prom_*/*.s | sort -u | wc -l   # unnamed routines
+grep -rh 'Evidence:' wsa1/prom_*/*.s | wc -l                          # evidenced headers
+git ls-files 'wsa1/notes/*.md' | wc -l                                # notes documents
+git ls-files 'wsa1/*.py' | wc -l                                      # committed analysis scripts
+```
+
+2026-09-02: 4,752 unnamed routines, 7,561 `Evidence:` lines, 113 notes documents
+(86 of them `FINDINGS-*`), 410 committed Python analysis scripts.
+
+⚠ A label count depends on what you count — compiler-local `.L` labels in
+particular — so a figure without its command is meaningless here.
 
 ## ★★ ONE KERNEL, FOUR PROCESSORS, TWO PRODUCTS
 
-The result below stands and has since been carried two steps further.
+**The two WSA1R processors share ONE SOURCE FILE.** `wsa1/kernel/kernel.s`,
+with `kernel_maincpu.inc` or `kernel_subcpu.inc` supplying the equates,
+assembles **twice**: into 2,180 bytes of `prom_a` and 2,180 bytes of `prom_c`,
+both byte-identical to the EPROMs. **That dual build is the proof** — one wrong
+equate and one of the two images stops rebuilding.
 
-**Step one — the two WSA1R processors now share ONE SOURCE.** `wsa1/kernel/kernel.s`
-plus `kernel_maincpu.inc` / `kernel_subcpu.inc` assembles **twice**: into 2,180
-bytes of `prom_a` and 2,180 bytes of `prom_c`, both byte-identical to the EPROMs.
-That dual build is the proof — one wrong constant and one of the two images stops
-matching. Over the union of 941 instruction slots, 735 needed no reconciliation,
-129 differed only in house style, and **81 carry a per-CPU value — which turned
-out to be 21 constants**, not 81 patches (twelve RAM addresses, six array sizes,
-three ROM pointers). There is no `.if`/`.else` in the file.
+Of 941 instruction slots (939 present on both sides as source lines), 735 already
+said the same thing, 129 differed only in house style, and **81 carry a per-CPU
+value. Those 81 sites are 21 constants**, not 81 patches: twelve RAM addresses,
+six array sizes, three ROM pointers. There is no `.if`/`.else` anywhere in the
+file — an equate names each difference once and the body stays genuinely shared.
 
-**Step two — the same kernel is in BOTH of the KN5000's processors**, in its
-sub-CPU payload and, as a separate build rather than a copy, in its main program
-ROM. One kernel, four processors, two products.
+The array sizes are where the two processors' personalities live: CPU 1 runs **4
+tasks, 8 semaphores, 4 message queues**; CPU 2 runs **3, 4 and 2**. The same
+kernel over a different RAM map with different counts is the entire difference
+between them.
 
-⚠ **Byte identity is the wrong instrument for that second question.** Zero
-routines match byte-for-byte across the 41 KN5000 images — true about bytes and
-irrelevant to the question, for the reason step one measures: two processors in the same product, from the
-same build, running the same source, still differ in 81 of 941 slots.
+**The same kernel is in both of the KN5000's processors too** — in its sub-CPU
+payload and, as a separate build rather than a copy, in its main program ROM.
+One kernel, four processors, two products
+(`wsa1/notes/kernel_structural_match.py`, with a 14-check `--selftest`).
+
+⚠ **Byte identity is the wrong instrument for that cross-product question, and
+this tree's own result says why.** A byte search finds zero kernel routines in
+any of the 41 KN5000 images — true about bytes, and no answer at all, because two
+processors *in the same product, from the same build, running the same source*
+already differ in 81 of 941 slots. The match has to be made structurally, on
+decoded token sequences, and it has to be run against a foil.
 
 ### A second shared source: the DSP channel-register driver
 
@@ -313,20 +339,23 @@ against `kn5000_subprogram_v142.rom`, which the sibling Makefile builds as a
 this script. The count of WSA1 bytes is unaffected, but **payload offsets from
 this script are not directly comparable to KN5000 addresses**.
 
-### The label transplant, and the retraction that shaped it
+### The label transplant
 
-`transplant_kn5000_labels.py` proposes KN5000 sub-CPU routine names for WSA1
-addresses **by byte identity**, and currently emits **105 proposals, 0 dropped**.
+`wsa1/scripts/analysis/transplant_kn5000_labels.py` proposes KN5000 sub-CPU
+routine names for WSA1 addresses **by byte identity**, writing
+`wsa1/notes/kn5000-label-transplant-generated.md`. It emits **105 proposals, 0
+dropped by the byte check** (re-run 2026-09-02).
 
-⚠ **An earlier version advertised eight proposals, and all eight named the wrong
-object** — the script matched against the spliced image, so every offset past the
-first 256 bytes was short by 60,160 = `0xEB00`. `EGEnv_ValueCurve_Simple` landed
-inside the keybed *touch* curve. **The names were thematically plausible, which is
-why eye-checking did not catch them**, and two independent lanes found the bug.
+Two properties of the script matter more than the count:
 
-Two changes so it cannot recur: the splice is out of the pipeline, and **every
-proposal is byte-verified at emission** and dropped if the bytes disagree. The
-original failure would now emit zero rows rather than eight wrong ones.
+* **It matches against the ELF's own unspliced binary**, so `addr = 0x400 +
+  offset` holds at every offset and there is no correction constant to get wrong.
+  (The sibling Makefile also builds a *spliced* `kn5000_subprogram_v142.rom`;
+  matching against that one shifts every offset past the first 256 bytes by
+  60,160 = `0xEB00`, and the resulting names are thematically plausible enough to
+  survive eye-checking.)
+* **Every proposal is byte-verified at emission** and dropped if the bytes
+  disagree, so a mis-based run emits nothing rather than plausible wrong names.
 
 ⚠ Byte identity establishes that the *code* is the same, not that the surrounding
 machine is. Of the 105, exactly **one** (`Int_SignedDiv` / `FP_UnsignedDiv` at
@@ -340,16 +369,18 @@ All remaining conversion is in `prom_a` and `prom_b`:
 
 | image | verbatim `.incbin` | source |
 |---|---:|---:|
-| `prom_a` | 3,670 B | 99.3% |
-| `prom_b` | 10,738 B | 98.0% |
+| `prom_a` | 2,542 B | 99.5% |
+| `prom_b` | 10,664 B | 98.0% |
 | `prom_c` | 0 | 100% |
 | `prom_d` | 0 | 100% |
 
-Those are **verbatim** bytes — blobs with no generating source — as reported by
-`scripts/analysis/kn5000_source_coverage.py`. Neither image carries a
-`.byte`-dressed remainder: their byte runs are audited and typed, so for these
-two the `.incbin` count *is* the debt. Separately, `wsa1/notes/reachability.py`
-reports 9 bytes STRONG reachable-and-unconverted across the product.
+*(2026-09-02, `python3 scripts/analysis/kn5000_source_coverage.py`.)*
+
+Those are **verbatim** bytes — blobs with no generating source. Neither image
+carries a `.byte`-dressed remainder: their byte runs are audited and typed, so
+for these two the `.incbin` count *is* the debt. That is not true of the tree at
+large — see [the three kinds of debt]({{ site.baseurl }}/rom-reconstruction/) —
+but it is true here, and it was established by audit rather than assumed.
 
 `prom_d` contains **no code**. Flattened through the assembler it yields ten
 instruction encodings totalling 30 bytes, and every one is a verified data
@@ -358,10 +389,19 @@ coincidence: a little-endian `u16` array where a field's low byte happens to be
 Quote the figure that way — "ten spurious encodings, all proven data" — rather
 than "zero encodings", which is the weaker claim it is often shortened to.
 
-That conclusion does not rest on the disassembler This clears
-the SriRR gap only; the ERP family (`decodeERPPrefix()`) has no structural
-byte shape a scan can key on, so it remains an open limit rather than a
-cleared one.
+That conclusion does not rest on the disassembler alone. A decoder-independent
+scan for the encoder's exact SriRR-family byte shape
+(`wsa1/notes/sound/prom_d_srirr_falsification.py`) finds **0 matches in `prom_d`
+against 599 in `prom_a`, 1,261 in `prom_b` and 125 in `prom_c`** — all three
+confirmed code images — so the method discriminates rather than simply failing to
+fire anywhere, and prom_d's null survives an attack that does not depend on the
+disassembler at all.
+
+The same script re-verifies prom_d's erased region independently: one 193,767-byte
+run of `0xFF` at file `0x050B09`, ending at `0x07FFF0`, with sixteen bytes of
+content after it — the ASCII `wsad_54.ssf`. It is **not** a trailing tail.
+
+### The largest spans still unconverted
 
 * **prom_a** — `0xFE8000-0xFEB330` (13,104 B) and `0xFEF746-0xFF3800` (16,570 B),
   the code halves of the sequencer/UI module. Deferred because about **15 string
@@ -378,11 +418,11 @@ cleared one.
 ## ⚠ Tools that mislead, named as such
 
 * **`prom_c_frontier.py`: 132 of its 135 targets are phantoms**, produced by
-  linearly disassembling ASCII descriptor strings and data zones. Wave 5 ignored
-  it and was right to.
+  linearly disassembling ASCII descriptor strings and data zones. Its output is
+  not a work list.
 * **`prom_b_span_frontier.py`'s `proven 0` is not evidence of data.** Its
-  call-site scanner only recognises one calling idiom, so a well-evidenced region
-  reached another way scores 0. Wave 6's best target scored worst.
+  call-site scanner recognises one calling idiom, so a well-evidenced region
+  reached any other way scores 0 — a low score there ranks nothing.
 * **A frontier count that does not fall after converting a data span is correct,
   not a failure** — data retires no call target. Do not quote a drop that did not
   happen.
@@ -393,10 +433,14 @@ file `0x4B27E` (the bytes at its head are π) which linearly disassembles into a
 tidy stride-4 register file **that does not exist** — 280 phantom "registers" came
 out of that before the recursive-descent walker was written. Even the walker's
 heuristic seeds drag data in as code, and three known false positives are named
-in its README. Recursive descent currently reaches **36.7 %** of CPU 1's two
-EPROMs and **42.6 %** of CPU 2's, so a device touched only from unreached code
-would still be missing from the
-[memory map]({{ site.baseurl }}/wsa1/#memory-maps).
+in its README.
+
+**And recursive descent does not reach everything.** `wsa1/notes/reachability.py`
+reached 377,559 B of prom_a plus 302,686 B of prom_b (CPU 1) and 232,116 B of
+prom_c (CPU 2) on 2026-09-02 — well under each CPU's megabyte and half-megabyte
+of EPROM. A device touched only from code the walk never reaches would still be
+missing from the [memory map]({{ site.baseurl }}/wsa1/#memory-maps), so absence
+from that map is not evidence that a device does not exist.
 
 ## Related
 
