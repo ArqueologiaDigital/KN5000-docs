@@ -30,11 +30,11 @@ and both were recovered from the firmware images rather than from a databook.
 
 ### What crosses that bus is parameters, not code
 
-Before writing the device, one thing had to be settled, because a program loader
-and a register file are different objects: **is the firmware uploading microcode
-to the modelling section, or writing registers?**
+A program loader and a register file are different objects, and the driver has to
+decide which it is modelling: **does the firmware upload microcode to the
+modelling section, or write registers?**
 
-It is writing registers, and the method is a controlled comparison rather than an
+It writes registers, and the method is a controlled comparison rather than an
 impression — this firmware contains a *known* code-upload path to measure
 against, the DSP effect microcode that leaves CPU 2 through port P7 a byte at a
 time with strobes and a `0x1F40` timeout poll.
@@ -132,88 +132,73 @@ different machines and not a cosmetic split** — the strap is doing visible wor
 ⚠ The colours are a **driver choice**, not a measurement (see `palette_init()`).
 Only the glyphs are evidence.
 
-## The boot, milestone by milestone
+## The boot, in order
 
-Each line below was produced by a named probe in
-`kn7000_mame/notes/wsa1-probes/`, and each probe states the question it answers.
+Every step below is read by a named probe in `kn7000_mame/notes/wsa1-probes/`,
+and each probe states the question it answers; `wsa1_boot_milestones.lua` walks
+the sequence.
 
-| t | what happens |
+| step | what happens |
 |---|---|
-| 0.00 s | RESET at `0xF826A9` — watchdog off, ports, timers, chip selects, RAM cleared, then into prom_b through the thunk table |
-| 0.00 s | the 488 Hz timer tick at RAM `0x0080` starts counting |
-| 0.013 s | the **battery-RAM checksum pair** at `0xF82C80` runs: `0x100` words summed from `0x007620` against `(0x007FD2)`, then from `0x617800` against `(0x007FD4)` |
-| 5.01 s | the SC1 module opens the control-panel link, and the panel answers |
-| 7.21 s | the SED1330 is initialised, from `0xF8E822` in `LCD_Init_SED1330` |
-| 70.5 s | CPU 2 reaches MAIN and its key scanner goes live |
-| 75 s | the panel carries drawn text and stops changing, while CPU 1 keeps running ordinary code across prom_a and prom_b — **a live system sitting on a screen, not a hang** |
+| RESET at `0xF826A9` | watchdog off, ports, timers, chip selects, RAM cleared, then into prom_b through the thunk table |
+| the 488 Hz tick starts | the 8-bit timer that every firmware delay is written against, counting at RAM `0x0080` |
+| the **battery-RAM checksum pair** at `0xF82C80` | `0x100` words summed from `0x007620` against `(0x007FD2)`, then from `0x617800` against `(0x007FD4)` |
+| the SC1 module opens the control-panel link | and the panel answers |
+| `LCD_Init_SED1330` at `0xF8E822` | the display controller is initialised — first write at **t = 0.50 s** |
+| SWI7 text drawing begins | **t = 19.62 s** |
+| CPU 2 reaches MAIN | its key scanner goes live |
+| the screen settles on `SOUND MODE` | the panel carries drawn text and stops changing, while CPU 1 keeps running ordinary code across prom_a and prom_b — **a live system sitting on a screen, not a hang** |
 
-⚠ **This walkthrough was measured on an older build, and two later fixes move
-it.** The absolute times predate the timer corrections below: with the timers
-right the same milestones arrive about **4× sooner** — the SED1330's first write
-moves from t = 7.21 s to **t = 0.50 s**, and SWI7 text drawing from t = 72.24 s
-to **t = 19.62 s**. And the screen the last row settles on was
-`ALL INITIAL SETTING!` on that build; once control register `0x3C` existed, the
-draw task runs and both variants go on to `SOUND MODE`.
+*(The two absolute times are from `tlcs900_timer_control.sh` on the current core.
+They are meaningful only against a build whose timers are right — see below —
+so re-measure rather than quoting them across a core change.)*
 
 **Both checksums FAIL, and that is the right answer.** The helper at `0xF82CD3`
 returns carry *clear* on a match and its callers only `set` a verdict bit on that
 path, so in `(0x007FD1)` a **set bit means PASS**; the measured value is `0x00`.
 For a machine with no battery-backed contents, failing is correct.
 
-> ★ **A teaching anecdote this project keeps on purpose.** An earlier revision of
-> the probe notes reported *"0 LCD accesses, the boot never reaches the display"*
-> and called a blank window the expected state. That came from a **six-second
-> run** on a machine that takes ~90 emulated seconds to boot. It was a
-> measurement artefact, corrected in place. **On this machine, a null result from
-> a short run is not a null result.**
+> ★ **A short run on this machine is not a null result, it is no result.** The
+> boot takes tens of seconds of emulated time before anything is drawn. Any probe
+> that reports "the firmware never reaches X" from a run shorter than the boot is
+> measuring its own timeout. Use `-str 120` or more.
 
-## Four defects in MAME's TLCS-900, found by this machine
+## What this machine requires from MAME's TLCS-900 core
 
-All four are in `src/devices/cpu/tlcs900/`, and every one of them was found
-because this firmware depends on it:
+Four behaviours in `src/devices/cpu/tlcs900/` are load-bearing for this firmware,
+and each is stated here with the evidence that fixes its value:
 
-1. **The 8-bit prescaler taps were 16× too slow** — `m_timer_pre >> 15` instead
-   of the databook's φT1 = 8/fc, φT4 = 32/fc, φT16 = 128/fc, φT256 = 2048/fc
-   (Toshiba *TLCS-900 Series CMOS 16-bit Microcontrollers TMP95C061*,
-   Table 3.8 (1) p. 81).
-2. **The 16-bit timers 4–7 were never counted at all** — `m_t16_reg` was written
-   by `treg45_w` / `treg67_w` and read by nothing, and nothing set `INTET54`. So
-   `INTTR4`, *this machine's musical clock* (vector `0x50` → `0xF82EA2`), could
-   not fire.
-3. **Control register `0x3C`, INTNEST, did not exist** — the `p_CR16` decode sent
-   it to `m_dummy`. This is what blocked the UI; see below.
-4. **P6 was mapped with `port_w<PORT_7>`**, so every write to P6 was delivered to
-   PORT_7.
+1. **The 8-bit prescaler taps are φT1 = fc/8, φT4 = fc/32, φT16 = fc/128,
+   φT256 = fc/2048** (Toshiba *TLCS-900 Series CMOS 16-bit Microcontrollers
+   TMP95C061*, Table 3.8 (1) p. 81), i.e. shifts of 3/5/7/11 on the prescaler.
+   They set the rate of the RAM `0x0080` tick, which comes out at **488.3 Hz**
+   against the 488.28 the firmware computes for.
+2. **The 16-bit timers 4–7 must actually count, and must set `INTET54`.**
+   `INTTR4` — vector `0x50` → `0xF82EA2` — is *this machine's musical clock*, and
+   it runs at **192.0 Hz**.
+3. **Control register `0x3C`, INTNEST, must exist** and must be incremented on
+   interrupt acceptance and decremented on `RETI`. Without it the UI never
+   appears; see below.
+4. **P6 must be mapped to `PORT_6`**, not `PORT_7`.
 
-Plus, in the overlay's `tmp95c061`, a **serial engine on channel 1** and **INT6 /
-INT7 in `execute_set_input()`**, both of which upstream lacks entirely.
+The overlay's `tmp95c061` additionally carries a **serial engine on channel 1**
+and **INT6 / INT7 in `execute_set_input()`**, neither of which exists upstream.
 
-### What fixing the timers changed, measured
+`notes/wsa1-probes/tlcs900_timer_control.sh` re-measures rates 1 and 2 against a
+control build, which is how they are checked rather than assumed.
 
-`notes/wsa1-probes/tlcs900_timer_control.sh` switches between the two builds:
-
-| | reverted | fixed |
-|---|---|---|
-| INTT1 (the RAM `0x0080` tick) | 30.5 Hz | **488.3 Hz** (the firmware wants 488.28) |
-| INTTR4 (vector `0x50`) | never fired | **192.0 Hz** |
-| SED1330 first write | t = 7.21 s | **t = 0.50 s** |
-| SWI7 text drawing | t = 72.24 s | **t = 19.62 s** |
-
-Boot to a drawn screen is ~4× quicker in emulated time, and **the machine's
-musical clock exists at all for the first time.**
-
-### ★ Control register 0x3C is what stood between two screens
+### ★ Control register 0x3C is what stands between two screens
 
 `IRQ_Epilogue` (prom_a `0xF857B7`) reads control register **`0x3C`** and enters
 the kernel only if it reads exactly 1; `Kernel_Dispatch` (`0xF85715`) reads it
-again and refuses to reschedule unless it is 0. MAME had no such register and
-nothing incremented it on interrupt acceptance or decremented it on `RETI`. Both
-CPUs' kernels use it — 10 accesses in prom_a, 9 in prom_c.
+again and refuses to reschedule unless it is 0. Both CPUs' kernels use it — 10
+accesses in prom_a, 9 in prom_c — so a core without the register never
+reschedules and the draw task never dequeues.
 
-Implemented for real in the shared CPU core, and measured against a control build
-with no register at all:
+It is implemented in the shared CPU core. The control that shows it is
+load-bearing is a build with no such register at all:
 
-| | no register | implemented |
+| | control: no register | as implemented |
 |---|---|---|
 | pending-tick counter `(0xBE)` | wraps at 253 Hz, never drained | `00` |
 | semaphore 1 | count `02`, wait queue **empty** | count `00`, queue **occupied** |
@@ -227,7 +212,7 @@ A control build with INTNEST implemented *also* ends at 33,623 LCD writes, so
 both explanations produce that number. The other five rows do discriminate.
 
 
-<figure style="margin:1.5rem 0;text-align:center;"><img src="{{ "/assets/images/wsa1/wsa1r_intnest_before_all_initial_setting.png" | relative_url }}" alt="ALL INITIAL SETTING! — the screen before the INTNEST register existed" style="image-rendering:pixelated;width:320px;max-width:100%;border:1px solid #ccc;border-radius:3px;"><figcaption style="font-size:0.8rem;color:#777;">The null: with no INTNEST register the scheduler is never entered, the draw task never dequeues, and the machine sits here for ever.</figcaption></figure>
+<figure style="margin:1.5rem 0;text-align:center;"><img src="{{ "/assets/images/wsa1/wsa1r_intnest_before_all_initial_setting.png" | relative_url }}" alt="ALL INITIAL SETTING! — the screen before the INTNEST register existed" style="image-rendering:pixelated;width:320px;max-width:100%;border:1px solid #ccc;border-radius:3px;"><figcaption style="font-size:0.8rem;color:#777;">The control build: with no INTNEST register the scheduler is never entered, the draw task never dequeues, and the machine sits here for ever.</figcaption></figure>
 
 ⚠ **The KN5000 is not affected, and that is a measurement rather than a symmetry
 argument.** `tlcs900_intnest_evidence.py` scans every `ldc` in all four SX-WSA1R
@@ -238,15 +223,16 @@ adapted to two family members. *(The same scan shows the
 [SX-KN1500]({{ site.baseurl }}/kn1500/)'s IC15 reading cr `0x3C` with the same
 4-read / 5-write shape — an observation, not yet a claim about its kernel.)*
 
-### The regression gate that had to pass
+### Why every core change here is gated on the KN5000
 
-Those files are shared by every `tlcs900` driver in MAME, so the standing gate was
-re-run on the built binary: **17 passed, 0 failed, 1 skipped**, every liveness
-figure equal to its recorded 2026-08-14 value, and — the one that matters — the
-**KN5000 demo-audio capture byte-identical to its pinned baseline**. That is 90
-emulated seconds of the tone generator playing, i.e. tens of thousands of
-interrupts and `RETI`s on the sibling TMP94C241, producing exactly the same WAV
-as before.
+`src/devices/cpu/tlcs900/` is shared by every `tlcs900` driver in MAME, so a
+change made for this machine can silently break a sibling. The standing gate is
+therefore run on the built binary for **every** core change, and the row that
+matters is not a pass count: it is the **KN5000 demo-audio capture, which must
+come back byte-identical to its pinned baseline**. That capture is 90 emulated
+seconds of the tone generator playing — tens of thousands of interrupts and
+`RETI`s on the sibling TMP94C241 — so an identical WAV is a strong statement that
+interrupt timing did not move.
 
 ## What is modelled
 
@@ -264,12 +250,11 @@ as before.
 
 **The control panel is wired, and it works in both directions.** CPU 1 clocks out
 exactly the seven command frames the disassembly says the SC1 module sends first,
-in ROM order; the panel answers each; and since the receive-ring phase bug was
-found and fixed, pressing MENU DISK through the rack layout's own binding opens
-the DISK menu and lights the DISK lamp. All 58 rack switches and 14 of its 18
-lamps are bound. The full account — the schematic trace, the second witness in
-the ROM, and the bug — is on the
-[Control Panel]({{ site.baseurl }}/wsa1-panel/) page.
+in ROM order; the panel answers each; and pressing MENU DISK through the rack
+layout's own binding opens the DISK menu and lights the DISK lamp. All 58 rack
+switches and 14 of its 18 lamps are bound. The full account — the schematic
+trace, the second witness in the ROM, and the receive-ring phase rule the HLE
+must obey — is on the [Control Panel]({{ site.baseurl }}/wsa1-panel/) page.
 
 The SED1330's two runtime services differ in **layer count, not geometry**:
 service `0x10` rebuilds the boot layout (three layers, `OV = 1`), service `0x0F`
@@ -317,7 +302,7 @@ that pin, and the poll is bounded, so nothing hangs without it — it is only sl
 *Turning a measured stall into a fabricated ready signal would buy speed with a
 claim about the hardware that nobody has checked.*
 
-*(P5 bit 4 used to be on that same list and is not any more: it is the service
+*(P5 bit 4 is not a candidate for the same treatment: it is the service
 CHECKING DEVICE's switch, and the manual says so in as many words.)*
 
 ## The keybed scanner works; the link does not carry the note
@@ -345,12 +330,16 @@ feeding each other:
   found, because it is **on the other processor**.
 
 `kn7000_mame/notes/WSA1-EMULATION-DISASM-GAPS.md` is the formal version of that
-traffic: a ranked **request list** of about 95 entries from the emulator to the
-disassembly, lettered A–Y plus MAME-side items, each naming a question, what the
-driver does instead today, and where to start looking. Gaps B, C, E, F, L and Y
-are closed; gap O is closed for the rack; gap G is half closed — the link wedge
-it was blamed for turned out to be gap G's DSP-ready handshake, not the link
-itself.
+traffic: a ranked **request list** from the emulator to the disassembly, lettered
+A–Y plus MAME-side items, each naming a question, what the driver does instead
+today, and where to start looking. Roughly a third of the lettered gaps are
+closed and several are closed on one side only, so **read the note for the live
+status rather than a list repeated here** — it marks each entry closed, half
+closed, or closed for one variant.
+
+One result from that traffic is worth carrying: **the link wedge and the DSP
+handshake are the same problem.** CPU 2's stall is its uPD6383 READY poll (below),
+not the inter-processor link.
 
 ## What is still missing
 
@@ -359,10 +348,10 @@ itself.
 | **Sound of any kind** | nothing synthesises. The tone generator, the three DSPs, the modelling LSI and the wave ROMs are all absent or undumped |
 | **The six wave mask ROMs** | `NO_DUMP`. The manual gives their capacity (16 Mbit each) but not their organisation, and the scan does not resolve which sits on which of the tone generator's address buses — so each gets its own region rather than being concatenated |
 | **The AM29F400T flash** | not modelled; its data-poll and erase-verify loops are unbounded and will spin if reached |
-| **MIDI** | MAME's `tmp95c061` has no serial engine on channel 0 at all, so there is nothing to connect a `midiin`/`midiout` to |
+| **MIDI** | serial channel 0 is a register stub — `sc0buf_r()` returns 0 and `sc0buf_w()` only fakes transmit completion — so there is no engine for a `midiin`/`midiout` to attach to |
 | **The panel MCU's mask ROM** | not dumped, and no ROM region is declared for it — the manual does not give its capacity, and guessing one would be worse than leaving it out |
 | **`0x104000` and `0x10C000`** | shapes established, **roles not**. The labels deliberately read `Dev104_` and `Dev10C_` rather than anything that would imply a function |
-| **The drive motor line** | the firmware **does** drive CPU 1's PA bit 3 — four writes, the only bit of PA it changes after RESET, and it *clears* the bit (`res 3,(0x1E)` at `0xFE18EF`) before a 307 ms spin-up delay. ⚠ An earlier note claimed the firmware never writes that pin and called it a hardware question; **that is retracted at the source**. The driver still declines to wire it to the drive's motor, because *what the pin does* is not claimed — a drive-motor or drive-select line is only the obvious reading. The consequence is stated rather than papered over: with no motor modelled, an attached image never becomes READY, and a read reports the firmware's own error `0x31`, drive not ready |
+| **The drive motor line** | the firmware **does** drive CPU 1's PA bit 3 — four writes, the only bit of PA it changes after RESET, and it *clears* the bit (`res 3,(0x1E)` at `0xFE18EF`) before a 307 ms spin-up delay. The driver still declines to wire it to the drive's motor, because *what the pin does* is not claimed — a drive-motor or drive-select line is only the obvious reading. The consequence is stated rather than papered over: with no motor modelled, an attached image never becomes READY, and a read reports the firmware's own error `0x31`, drive not ready |
 
 ## Reproducing any of this
 
