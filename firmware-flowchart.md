@@ -256,10 +256,17 @@ flowchart TD
 
 ## Disassembly Statistics
 
+Figures below cover the **v10 main-CPU tree** and are produced by
+`notes/syntax-convergence-probes/mnemonic_census.py --root v10/maincpu` in the
+disassembly repository. Re-run it rather than quoting these from memory.
+
 | Metric | Value |
 |--------|-------|
-| Total native instructions | 279,441 |
-| Assembly source files | 156 (.s) + 90 (.c) |
+| Instruction statements | 336,011 |
+| — of which use a native LLVM mnemonic | 278,296 |
+| — spelled with a tree-local synthetic name | 56,008 |
+| — emitted through a hand-written macro | 1,705 |
+| Assembly source files | 156 (.s) + 104 (.c) |
 | ROM byte match | byte-identical on all thirteen gated images |
 | Labeled symbols | 37,276 (0 opaque LABEL_XXXXXX) |
 | NAKA widget C structs | 29 files with typed fields |
