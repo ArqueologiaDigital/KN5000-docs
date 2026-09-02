@@ -64,22 +64,21 @@ stated. **Prefer `sub_XXXXXX` plus a stated gap over a plausible guess.**
 
 ## Coverage — and why the headline number is the smaller one
 
-Regenerate with `python3 scripts/analysis/source_coverage.py`; never retype it.
+Regenerate with `python3 wsa1/scripts/analysis/source_coverage.py`; never retype it.
 
 | source | image | substantive | verified filler | still `.incbin` | spans |
 |---|---|---:|---:|---:|---:|
-| `prom_a` | `wsa1_prom_a.ic12` | 429,545 | 48,437 | 46,306 | 84 |
-| `prom_b` | `wsa1_prom_b.ic13` | 420,510 | 62,966 | 40,812 | 417 |
+| `prom_a` | `wsa1_prom_a.ic12` | 457,503 | 63,115 | 3,670 | 71 |
+| `prom_b` | `wsa1_prom_b.ic13` | 442,246 | 71,304 | 10,738 | 345 |
 | `prom_c` | `wsa1_prom_c.ic28` | 395,072 | 129,216 | **0** | 32 |
 | `prom_d` | `wsa1_prom_d.bin` | 330,521 | 193,767 | **0** | 0 |
-| **total** | | **1,575,648 (75.1 %)** | 434,386 | 87,118 | |
+| **total** | | **1,625,342 (77.5 %)** | 457,402 | 14,408 | |
 
-*(Re-run 2026-09-01, after the reachability goal below was met — prom_a and
-prom_b both moved substantially, and `prom_b`'s span count went up because the
-remaining `.incbin` fragmented into more, smaller gaps as reachable code was
-carved out of it.)*
+*(prom_a and prom_b carry almost all of the remaining `.incbin`; `prom_b`'s span
+count is high because the remaining bytes are fragmented into many small gaps
+as reachable code gets carved out of them one span at a time.)*
 
-⚠ **Quote the substantive column, not the 95.8 % total.** Wave 3 converted
+⚠ **Quote the substantive column, not the 99.3 % total.** Wave 3 converted
 123,151 bytes of prom_c of which **118,298 were a verified run of `0x0E` pad
 emitted as `.fill`** — that moved the headline from 4.3 % to 27.7 % while adding
 under 5 KB of decoded content. The pad is real and checked rather than sampled,
