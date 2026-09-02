@@ -340,8 +340,8 @@ All remaining conversion is in `prom_a` and `prom_b`:
 
 | image | verbatim `.incbin` | source |
 |---|---:|---:|
-| `prom_a` | 15,722 B | 97.0% |
-| `prom_b` | 26,013 B | 95.0% |
+| `prom_a` | 3,670 B | 99.3% |
+| `prom_b` | 10,738 B | 98.0% |
 | `prom_c` | 0 | 100% |
 | `prom_d` | 0 | 100% |
 
