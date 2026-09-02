@@ -159,7 +159,7 @@ addresses are `PD = 0x30`, `PE = 0x38`, `PG = 0x40`, `PZ = 0x68`.
 | PD.6 | input | floppy disk-change (`Check_for_Floppy_Disk_Change`) — ⚠ also read into the pedal parameter block, see below |
 | PE.0 | input | extension board present. **0 = an HD-AE5000 is fitted**, 1 = the slot is empty |
 | PE.4 | input | MICSNS — latched every main loop; a change sends an 8-byte packet on the computer-interface port |
-| PE.5 | output per `PECR` | control-panel INTA. The panel routines proceed only while it reads low |
+| PE.5 | input | control-panel INTA. The panel routines proceed only while it reads low |
 | PG.2 | input | foot switch FS1 |
 | PG.3 | input | foot switch FS2 |
 | PG.4–PG.7 | input | foot controllers FC1–FC4 |
@@ -183,11 +183,23 @@ the region code is not 4 — it calls `HDAE5000_Parport_Setup`, which programs t
 PPI and makes the hard disk reachable. The boot programs `PECR = 0x20`, so PE.0 is an
 input and the strap is genuinely external.
 
-⚠ **Two port bits have a contradiction on the record that only the schematic can settle.**
-PE.5 is commented as an input (the panel's interrupt acknowledge) but the boot programs it
-as the port's only *output*; and PD.6 is read both as the floppy disk-change line and, three
-instructions after the two Port G reads above, into the pedal parameter block. Either PD.6
-is dual-purpose or one of the two readings is wrong.
+**Port E is programmed twice, and the second write is the operative one.** Early boot
+writes `PECR = 0x20`, which on its own would make PE.5 the port's only output. On the
+unconditional path that follows, `CPanel_InitHardware`
+(`v10/maincpu/ui/cpanel_routines.s:95-98`, reached from `kn5000_v10_program.s:584` through
+`CPanel_InitDispatchTable[0]`) writes `PEFC = 0x00` and then **`PECR = 0x46`** — outputs on
+PE.1, PE.2 and PE.6 only. PE.0 and PE.5 are therefore **inputs** in the running machine, and
+the same bytes appear in v7 and v9.
+
+⚠ Reading only the boot write gives the opposite answer for both bits. A port's direction is
+whatever the *last* write to its control register says, so a port census has to follow the
+whole initialisation path, not stop at the first `PECR`.
+
+⚠ **PD.6 has a contradiction that the ROM cannot settle.** It is read by two floppy routines
+and, three instructions after the two Port G reads above, into the pedal parameter block at
+`0x8EBE`. The schematic settles the *pin* — net FD.I/O, IC5 pin 17, with a 4.7 kΩ pull-up —
+but not its meaning: "disk change" is a routine name supplied by an earlier analysis pass,
+not ground truth. Either PD.6 is dual-purpose or one of the two readings is wrong.
 
 ## Sub CPU
 
