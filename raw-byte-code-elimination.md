@@ -6,8 +6,8 @@ permalink: /raw-byte-code-elimination/
 
 # Raw Byte Code Elimination Plan
 
-**Status: IN PROGRESS.** All 6 ROMs are 100% byte-perfect against their physical dumps, but
-that is a build-match guarantee, not a disassembly guarantee: a `.byte` run that spells real
+**Status: IN PROGRESS.** All thirteen gated images are byte-identical to their physical
+dumps, but that is a build-match guarantee, not a disassembly guarantee: a `.byte` run that spells real
 code reassembles to the same bytes as an `.incbin` of those bytes, and passes the gate
 identically either way. Measured code-as-`.byte` remains in the Main CPU and HDAE5000 ROMs;
 the Sub CPU Payload reached zero.
@@ -15,8 +15,8 @@ the Sub CPU Payload reached zero.
 
 ## Context
 
-All 6 ROMs achieve 100% byte-perfect match against their physical dumps. That is necessary
-for correct disassembly but not sufficient: a `.byte` run that spells real code, or a data
+All thirteen gated images rebuild byte-identically from source. That is necessary for
+correct disassembly but not sufficient: a `.byte` run that spells real code, or a data
 region disassembled into plausible-but-wrong instruction mnemonics, both reassemble to the
 same bytes and pass the gate cleanly. Whether a `.byte` run is undecoded code can only be
 settled by a per-byte disassembly attempt (Step 1's method, below), not by counting
@@ -38,7 +38,8 @@ and it equally rewards pushing legitimate data *into* `.byte` — respelling a v
 PNG-backed image as hex reduces the metric while destroying the better representation.
 Neither direction is progress.
 
-**Scope:** `.byte` sequences that encode native TLCS-900 CPU instructions across all 6 ROMs. Data tables, strings, bitmaps, firmware bytecode for software interpreters, and padding are out of scope (correct as-is).
+**Scope:** `.byte` sequences that encode native TLCS-900 CPU instructions across all
+thirteen gated images. Data tables, strings, bitmaps, firmware bytecode for software interpreters, and padding are out of scope (correct as-is).
 
 ## Current Status
 
@@ -53,6 +54,8 @@ Neither direction is progress.
 | Table Data | 1,678 | **0** | **Complete** |
 | Custom Data | 0 (data only) | **0** | **Complete** |
 | HDAE5000 | 502 | 11,783 B | **Not complete** |
+| SX-WSA1R `prom_a` / `prom_b` | — | **0** — byte runs audited and typed | **Complete** |
+| SX-WSA1R `prom_c` / `prom_d` | — | **0** — survived a falsification attack | **Complete** |
 
 The misframed islands in the Main CPU rows are left as `.byte` on purpose: fixing one means
 re-framing an instruction already present in a neighbouring converted region, not filling a

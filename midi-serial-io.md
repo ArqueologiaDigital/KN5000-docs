@@ -34,7 +34,7 @@ The baud rate generator uses `fc/4/N` where `fc` = 16 MHz and `N` = BR0CR value.
 
 ### COM SELECT Switch
 
-The KN5000 rear panel has a rotary switch read from Port G bits 7-4 (register 0x68, shifted right by 4). The switch selects between four communication modes:
+The KN5000 rear panel has a rotary switch read from **Port Z** bits 7-4 (SFR `0x68`, shifted right by 4). The switch positions are **active low** — one bit low selects the mode, and any other pattern is treated as MIDI. It selects between four communication modes:
 
 | Switch Position | Value | Mode | Protocol |
 |----------------|-------|------|----------|
@@ -43,7 +43,7 @@ The KN5000 rear panel has a rotary switch read from Port G bits 7-4 (register 0x
 | PC1 | `0x02` | PC serial mode 1 | (different baud/protocol) |
 | PC2 | `0x03` | PC serial mode 2 | (different baud/protocol) |
 
-`READ_COM_SELECT_SWITCH` (`0xFCF8F6`) reads the switch value via a 16-entry lookup table that handles debouncing (invalid switch states default to MIDI mode). The result is stored at DRAM address 47072.
+`READ_COM_SELECT_SWITCH` (`0xFCF8F6`) reads `PZ`, shifts the upper nibble down and indexes `MidiSerial_OffsetTable`, a 16-entry lookup that maps every bit pattern to one of the four modes; invalid switch states (more than one low bit) map to MIDI. The result is stored at DRAM `0xB7E0` (47072), the `COM_SELECT` byte.
 
 The TX dispatch (`MIDI_SC0_TX_DISPATCH`) checks this value: `0x00` uses the MIDI-specific TX path (`MIDI_SC0_ENABLE_TX`), all other values use an alternate serial handler.
 

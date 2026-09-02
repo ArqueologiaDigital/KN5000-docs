@@ -14,8 +14,9 @@ the same practices, including the same
 [LLVM TLCS-900 backend](https://github.com/felipesanches/llvm-project/tree/tlcs900_backend).
 
 > **Status.** All four images rebuild byte-identically from source, and that is
-> checked centrally after every commit. `prom_c` and `prom_d` carry **no
-> `.incbin` at all**; all remaining verbatim bytes are in `prom_a` and `prom_b`.
+> checked centrally after every commit. **None of the four carries a single
+> `.incbin` directive** — every byte of all 2,097,152 comes from real source,
+> so there is no verbatim debt anywhere in this product.
 > Recursive descent over the three code images finds essentially no
 > reachable-and-unconverted code left — the entire STRONG total is one span of
 > `prom_b`, and it is formally refused ([why](#the-reachability-column-and-what-is-still-on-it)).
@@ -84,11 +85,11 @@ Snapshot from the two commands above, 2026-09-02 (span counts are
 
 | source | image | substantive | verified filler | still `.incbin` | `.incbin` spans |
 |---|---|---:|---:|---:|---:|
-| `prom_a` | `wsa1_prom_a.ic12` | 458,630 | 63,116 | 2,542 | 6 |
-| `prom_b` | `wsa1_prom_b.ic13` | 442,320 | 71,304 | 10,664 | 71 |
+| `prom_a` | `wsa1_prom_a.ic12` | 461,172 | 63,116 | **0** | 0 |
+| `prom_b` | `wsa1_prom_b.ic13` | 452,984 | 71,304 | **0** | 0 |
 | `prom_c` | `wsa1_prom_c.ic28` | 395,072 | 129,216 | **0** | 0 |
 | `prom_d` | `wsa1_prom_d.bin` | 330,521 | 193,767 | **0** | 0 |
-| **total** | | **1,626,543 (77.6 %)** | 457,403 | 13,206 | |
+| **total** | | **1,639,749 (78.2 %)** | 457,403 | **0** | 0 |
 
 ⚠ **Quote substantive, not the ~99 % "incl. filler" total.** prom_c alone
 contributes a verified 118,298-byte run of `0x0E` pad; counting it as equal to
@@ -135,9 +136,8 @@ re-assembling a wrong interpretation reproduces the same bytes. That is why the
 grading exists and why the STRONG column is the only one converted on.
 
 What remains outside that column: the WEAK-only bytes, which need a byte-level
-audit before anything is converted; runs with no start evidence of any grade,
-which are refused until evidence appears; and the `.incbin` that nothing reaches
-at all, which is data — converting it adds territory, not coverage.
+audit before anything is converted; and runs with no start evidence of any
+grade, which are refused until evidence appears.
 
 ### ★ The number that measures meaning
 
@@ -364,23 +364,45 @@ not renames.**
 
 ## What is left
 
-`prom_c` and `prom_d` have **zero `.incbin`** — they are territorially complete.
-All remaining conversion is in `prom_a` and `prom_b`:
+**All four images are at zero verbatim debt.** None of them hands a byte back through an
+`.incbin`, and none carries a `.byte`-dressed remainder either — the byte runs are audited
+and typed, and `prom_c` and `prom_d` additionally survived a deliberate attack on the
+inverse hazard, code typed as data.
 
 | image | verbatim `.incbin` | source |
 |---|---:|---:|
-| `prom_a` | 2,542 B | 99.5% |
-| `prom_b` | 10,664 B | 98.0% |
+| `prom_a` | 0 | 100% |
+| `prom_b` | 0 | 100% |
 | `prom_c` | 0 | 100% |
 | `prom_d` | 0 | 100% |
 
 *(2026-09-02, `python3 scripts/analysis/kn5000_source_coverage.py`.)*
 
-Those are **verbatim** bytes — blobs with no generating source. Neither image
-carries a `.byte`-dressed remainder: their byte runs are audited and typed, so
-for these two the `.incbin` count *is* the debt. That is not true of the tree at
-large — see [the three kinds of debt]({{ site.baseurl }}/rom-reconstruction/) —
-but it is true here, and it was established by audit rather than assumed.
+⚠ **Zero verbatim debt is a statement about `.incbin`, not about understanding.** The
+per-range data census still grades 9,034 B of `prom_b`, 8,772 B of `prom_d` and 2,295 B of
+`prom_a` as UNKNOWN — a label with no explanatory header — and much more than that rests
+on a descriptive name alone. See
+[how much of the data is actually explained]({{ site.baseurl }}/rom-reconstruction/#how-much-of-the-data-is-actually-explained).
+
+★ The last spans to close were **not undecoded code**. Every one of `prom_b`'s final
+sixteen residual spans is data — display-list content named by pointers — and being data is
+exactly what made them writable as source. The instrument that unlocked most of them was
+that a display list is entered as `ld XIY,<start> / ld XIX,<end> / call 0xF417F0`, so a
+list's first byte and its exclusive end are **two 32-bit constants sitting in code the tree
+already disassembles**. Three findings outlive the bytes: *advance ≠ extent* (a length
+disagreeing with its handler can be a deliberate list terminator, not a misframe);
+*measure an object from the thing that names it*, never from an `.incbin` boundary cut by a
+superseded walk; and one region's layout came off the `djnz` loop that walks it, where
+entry 0 duplicates entry 1 because the loop counts down to 1 and never reads entry 0 — a
+property of the reader that is invisible in the data.
+(`wsa1/notes/FINDINGS-prom_b-last-481-bytes-RESOLVED.md`, script
+`wsa1/notes/prom_b_residue_481.py --selftest`.)
+
+⚠ **Anchor an `.incbin` count to the start of the line.** `grep -ac '\.incbin'` over
+`wsa1/prom_b/wsa1_prom_b.s` returns 322 — every one of them the word `.incbin` inside a
+*comment*, because each conversion documented what the region used to be. `grep -ac
+'^[[:space:]]*\.incbin'` returns 0. The unanchored form has already had a coverage tool
+double-counting hundreds of kilobytes of debt out of dead comments.
 
 `prom_d` contains **no code**. Flattened through the assembler it yields ten
 instruction encodings totalling 30 bytes, and every one is a verified data

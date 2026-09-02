@@ -72,14 +72,14 @@ All subsystem pages documented, no placeholders remain.
 
 ## Current Stats (Mar 16, 2026)
 - **Total issues:** 334 (328 closed, 6 open)
-- **ROM reconstruction:** 279,441 native instructions, 0 .byte fallbacks, 100% byte match on all 6 ROMs
-- **.byte code elimination:** ✅ COMPLETE — all executable code is native TLCS-900 instructions
+- **ROM reconstruction:** thirteen gated images rebuild byte-identically — the six KN5000 components, the v9 and v7 firmware versions, the recompressed sub-CPU payload, and the four SX-WSA1R EPROMs
+- **.byte code elimination:** in progress — zero in the sub-CPU payload, boot ROM, table data, custom data and all four SX-WSA1R images; 275,822 B remain in v7 and 11,783 B in HD-AE5000
 - **Data reversion fix:** 25 data regions across 10 files reverted from bogus instruction mnemonics back to .byte data
 - **LABEL_XXXXXX elimination:** ✅ COMPLETE (0 remaining across all ROMs)
 
 ## Recent Milestones (Mar 2026)
 - **Phase 2 CLOSED** — All core functionality sub-issues resolved.
-- **.byte code elimination COMPLETE** — Zero remaining .byte code fallbacks. 279,441 native instructions across all 6 ROMs.
+- **.byte code elimination** — closed on the sub-CPU payload, the sub-CPU boot ROM, table data, custom data and all four SX-WSA1R images; open on v7 and HD-AE5000.
 - **Data reversion fix** — 25 data regions across 10 files that had been incorrectly converted to instruction mnemonics were reverted to proper .byte data sequences.
 - **Playing-games tutorial** — New tutorial page added to the documentation website explaining how to play homebrew games on the KN5000 via MAME.
 - **Tone Generator device (IC303)** — kn5000_tonegen_device added to MAME. 64-voice PCM wavetable with register-indirect interface, waveform ROM reading, stereo 48kHz output.
@@ -90,7 +90,7 @@ All subsystem pages documented, no placeholders remain.
 - **App Loader (HDAE5000)** — Working end-to-end: FAT16 filesystem, menu UI, APP.BIN loading, Mines game launches from disk.
 
 ## Success Criteria
-1. ✅ All 6 ROMs 100% byte-match reconstruction
+1. ✅ All thirteen gated images rebuild byte-identically
 2. ✅ All subsystems documented (no placeholder pages)
 3. ✅ Homebrew SDK functional (App Loader + Mines game working)
 4. ⬜ MAME driver merged upstream (PR update pending — kn5000-f8gw)

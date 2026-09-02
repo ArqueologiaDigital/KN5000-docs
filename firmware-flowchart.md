@@ -258,9 +258,9 @@ flowchart TD
 
 | Metric | Value |
 |--------|-------|
-| Total native instructions | 279,441 (0 code .byte remaining) |
+| Total native instructions | 279,441 |
 | Assembly source files | 156 (.s) + 90 (.c) |
-| ROM byte match | 100% on all 6 ROMs |
+| ROM byte match | byte-identical on all thirteen gated images |
 | Labeled symbols | 37,276 (0 opaque LABEL_XXXXXX) |
 | NAKA widget C structs | 29 files with typed fields |
 

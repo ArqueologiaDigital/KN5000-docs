@@ -8,7 +8,7 @@ permalink: /help-wanted/
 
 This is a community reverse engineering project. Here's how you can contribute:
 
-**Current Progress:** All 6 ROMs at **100% byte-perfect match** (279,441 native instructions). Built with custom LLVM TLCS-900 backend. See the [Project Issues]({{ site.baseurl }}/issues/) page for remaining open tasks.
+**Current Progress:** thirteen ROM images — nine KN5000 and four SX-WSA1R — **rebuild byte-identically** from assembly source, built with a custom LLVM TLCS-900 backend. About 93.8 % of those 12.4 MB can also be explained (what the data represents, 95 % CI 86.7 – 96.6 %). See the [Project Issues]({{ site.baseurl }}/issues/) page for remaining open tasks.
 
 ## High Priority
 

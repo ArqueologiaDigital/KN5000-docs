@@ -12,7 +12,7 @@ This page catalogs all indirect call/jump dispatch tables found in the KN5000 RO
 
 ## Progress: 1583 / 1583 dispatch sites documented (100%)
 
-Every dispatch site (jp_dri, call(xreg), jp(xreg)) across all 6 ROMs is now within a semantically-labeled function.
+Every dispatch site (jp_dri, call(xreg), jp(xreg)) across the six KN5000 ROM components is within a semantically-labeled function.
 
 ### Coverage by ROM
 

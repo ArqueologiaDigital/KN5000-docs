@@ -147,6 +147,48 @@ in the disassembly repo. Instruction and reference counts move with every conver
 [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) for how the remaining debt is
 measured and by which script.
 
+### I/O ports
+
+The parallel ports are the main CPU's connection to the front panel's pedals, the
+extension slot and the flash devices. What each bit does is established from the
+firmware's own reads and from the direction registers the boot code programs; the SFR
+addresses are `PD = 0x30`, `PE = 0x38`, `PG = 0x40`, `PZ = 0x68`.
+
+| Port bit | Direction | Function |
+|---|---|---|
+| PD.6 | input | floppy disk-change (`Check_for_Floppy_Disk_Change`) — ⚠ also read into the pedal parameter block, see below |
+| PE.0 | input | extension board present. **0 = an HD-AE5000 is fitted**, 1 = the slot is empty |
+| PE.4 | input | MICSNS — latched every main loop; a change sends an 8-byte packet on the computer-interface port |
+| PE.5 | output per `PECR` | control-panel INTA. The panel routines proceed only while it reads low |
+| PG.2 | input | foot switch FS1 |
+| PG.3 | input | foot switch FS2 |
+| PG.4–PG.7 | input | foot controllers FC1–FC4 |
+| PZ.7–PZ.4 | input | COM SELECT rotary switch — MIDI / MAC / PC1 / PC2 |
+| P7.5 | input | flash ready/busy, polled before every flash command |
+
+**Port G is the pedal port, and its pins are active low.** `MIDI_ProcessVoiceAssignment`
+(`v10/maincpu/audio/audio_control_engine.s:1848`, reached from `Audio_PeriodicUpdate`)
+reads `PG` three times per periodic tick: bits 3:2 are shifted down and stored as the foot
+switch byte at DRAM `0x8EB6`, and bits 7:4 are shifted down and stored as the foot
+controller byte at `0x8EBA`. The polarity is not an inference — the firmware's own idle
+test is `cp a, 0xf` on the upper nibble, so **all four high means nothing is engaged**, and
+a released panel reads `0xFC`. When the test matches, the firmware arms a 500-count
+debounce at `0x8EC8` and skips the write. The routine's auto-generated name is misleading;
+its body is a foot-switch and foot-controller scan.
+
+**PE.0 gates the whole HD-AE5000 initialisation.** On the normal boot path,
+`Boot_FlashAndExtensions` (`v10/maincpu/kn5000_v10_program.s:571`) tests
+`bit_dd8 0, 0x38` and skips the extension entirely when it reads 1; when it reads 0 — and
+the region code is not 4 — it calls `HDAE5000_Parport_Setup`, which programs the uPD71055
+PPI and makes the hard disk reachable. The boot programs `PECR = 0x20`, so PE.0 is an
+input and the strap is genuinely external.
+
+⚠ **Two port bits have a contradiction on the record that only the schematic can settle.**
+PE.5 is commented as an input (the panel's interrupt acknowledge) but the boot programs it
+as the port's only *output*; and PD.6 is read both as the floppy disk-change line and, three
+instructions after the two Port G reads above, into the pedal parameter block. Either PD.6
+is dual-purpose or one of the two readings is wrong.
+
 ## Sub CPU
 
 ### Memory Map
@@ -251,7 +293,7 @@ See [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for full protoc
 
 ### Build System
 
-The project uses **LLVM** with a custom TLCS-900 backend as the authoritative build system for all 6 ROMs:
+The project uses **LLVM** with a custom TLCS-900 backend as the authoritative build system for all thirteen gated images:
 
 ```bash
 # Build all ROMs (from roms-disasm/)
@@ -263,7 +305,7 @@ ld.lld -T linker.ld output.o -o output.elf
 llvm-objcopy -O binary output.elf output.bin
 ```
 
-All 6 ROMs (Main CPU, Sub CPU boot, Sub CPU payload, Table Data, HDAE5000, Custom Data) achieve **100% byte-perfect match** against the original firmware dumps, totalling 279,441 native instructions across ~8MB of ROM data.
+All nine KN5000 images (Main CPU v10/v9/v7, Sub CPU boot, Sub CPU payload and its recompressed form, Table Data, HDAE5000, Custom Data) and the four SX-WSA1R EPROMs rebuild **byte-identically** against the original dumps — 12,386,304 bytes, checked by `make gate-all`.
 
 The ASL Macro Assembler (used historically) is archived in `archive/asl/`.
 

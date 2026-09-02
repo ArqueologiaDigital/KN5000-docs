@@ -25,9 +25,9 @@ protocols — as the physical hardware becomes scarce.
 | Instrument | Year | Main CPU | Documentation |
 |----------|------|----------|---------------|
 | **[Technics SX-WSA1]({{ site.baseurl }}/wsa1/)** | **1995** | Toshiba TLCS-900 (TMP95C061 ×2) | New — **the 61-key synthesizer**; the images are a redistributed set and running them in *both* variants rests on the uploader's testimony. **No service manual exists anywhere**, so its panel rests on the ROM alone |
-| **[Technics SX-WSA1R]({{ site.baseurl }}/wsa1/)** | **1995** | Toshiba TLCS-900 (TMP95C061 ×2) | New — **a synthesizer module, not an arranger**: rack-mount "acoustic modelling". Firmware images are second-hand, not our dumps; disassembly 67.7 % substantive; MAME driver reaches a UI, **no sound** |
+| **[Technics SX-WSA1R]({{ site.baseurl }}/wsa1/)** | **1995** | Toshiba TLCS-900 (TMP95C061 ×2) | New — **a synthesizer module, not an arranger**: rack-mount "acoustic modelling". Firmware images are second-hand, not our dumps; all four EPROM images rebuild byte-identically from source with no verbatim blobs; MAME driver reaches a UI, **no sound** |
 | **[Technics SX-KN1500]({{ site.baseurl }}/kn1500/)** | 1996 | Toshiba TLCS-900 (TMP95C061) | New — the KN5000's CPU lineage; program ROM unvalidated (BAD_DUMP, needs redump) but its LCD-panel SVG is preserved as a ROM asset; MAME skeleton |
-| **[Technics SX-KN5000](#technics-kn5000)** | 1997 | Toshiba TLCS-900/H2 (TMP94C241F) | Extensive — 6 ROMs reconstructed 100% byte-perfect, MAME driver, homebrew SDK |
+| **[Technics SX-KN5000](#technics-kn5000)** | 1997 | Toshiba TLCS-900/H2 (TMP94C241F) | Extensive — nine ROM images rebuild byte-identically from source, MAME driver, homebrew SDK |
 | **[Technics SX-KN2400 / KN2600]({{ site.baseurl }}/kn2400-kn2600/)** | 1998–2000 | Panasonic MN10300 | New — drivers built; the KN7000's closest sibling (one firmware serves KN2400/KN2600/PR54) |
 | **[Technics SX-KN6000]({{ site.baseurl }}/kn6000-hardware/)** | 2000 | Panasonic MN10300 | New — firmware extracted, hardware mapped from the service manual; ~85% code shared with KN7000 |
 | **[Technics SX-KN6500]({{ site.baseurl }}/kn6000-hardware/)** | 2001 | Panasonic MN10300 (MN103002A) | New — firmware extracted, hardware mapped from the service manual |
@@ -188,20 +188,31 @@ Choose based on your goal:
 
 ### ROM Reconstruction Progress
 
-**All 6 ROMs: 100% byte-perfect match.** Built with a custom [LLVM TLCS-900 backend](https://github.com/felipesanches/llvm-project/tree/tlcs900_backend) -- 279,441 native instructions, zero workaround macros.
+**Thirteen ROM images rebuild byte-identically from source** — nine KN5000 and four
+[SX-WSA1R]({{ site.baseurl }}/wsa1-disassembly/), 12,386,304 bytes, gated together by
+`make gate-all` after every commit. Built with a custom
+[LLVM TLCS-900 backend](https://github.com/felipesanches/llvm-project/tree/tlcs900_backend).
 
-| Component | Size | Match | Status |
+| Component | Size | Rebuild | Verbatim debt |
 |-----------|------|-------|--------|
-| Main CPU Program | 2MB | **100%** | 239,683 native instructions |
-| Sub CPU Payload | 192KB | **100%** | 35,721 native instructions |
-| Sub CPU Boot ROM | 128KB | **100%** | 1,357 native instructions |
-| Table Data | 2MB | **100%** | 1,678 native instructions + binary data |
-| Custom Data | 1MB | **100%** | Binary data (no code) |
-| HDAE5000 ROM | 512KB | **100%** | 502 native instructions |
+| Main CPU Program (v10, v9) | 2MB each | byte-identical | **0** |
+| Main CPU Program (v7) | 2MB | byte-identical | 120,666 B |
+| Sub CPU Payload | 192KB | byte-identical | **0** |
+| Sub CPU Boot ROM | 128KB | byte-identical | **0** |
+| Table Data | 2MB | byte-identical | **0** real (six genuine BMPs the tool counts) |
+| Custom Data | 1MB | byte-identical | **0** |
+| HDAE5000 ROM | 512KB | byte-identical | **0** |
+| SX-WSA1R `prom_a`–`prom_d` | 512KB each | byte-identical | **0** |
 
-*Byte-perfect means byte-identical to the dump files we hold. For the sub-CPU boot ROM
-that file is a `BAD_DUMP`: 89% of IC30 was never read and is present in the file as assumed
+*Byte-identical means identical to the dump files we hold. For the sub-CPU boot ROM that
+file is a `BAD_DUMP`: 89% of IC30 was never read and is present in the file as assumed
 `0xFF`. See [Sub-CPU Boot ROM (IC30)]({{ site.baseurl }}/subcpu-boot-rom/).*
+
+*Rebuilding is not the same as understanding. Of the same bytes, about **93.8 %** can be
+explained — what the data represents, not merely that it reproduces — with a 95 %
+confidence interval of 86.7 % – 96.6 %. Measured by
+`scripts/analysis/data_range_census.py`; see
+[how much of the data is actually explained]({{ site.baseurl }}/rom-reconstruction/#how-much-of-the-data-is-actually-explained).*
 
 ### Homebrew Development
 

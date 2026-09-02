@@ -126,6 +126,110 @@ inventory of current mnemonics.
 | `ldada` / `ldda8` / `stda8` | `ld` with direct addressing | ~200 | Complete |
 | `addm32_24` / `addmi16` / etc. | `add (addr), imm` | ~100 | Complete |
 
+## Assembly syntax: native LLVM mnemonics, with the form in the operand
+
+The tree's source language is **native LLVM TLCS-900 mnemonics, with whatever a
+form-selecting mnemonic used to encode moved into the operand** — the direction
+the direct-address width suffix already established. MAME's `unidasm` is kept as
+a second opinion, cited in trailing comments, and is never a source language.
+
+That is a decision about what can carry a byte-identity gate, and it is measured
+rather than argued. `unidasm`'s output renders more than one encoding with the
+same text, so it cannot be assembled back:
+
+| feeding unidasm's own text to this assembler | spellings | sites | share |
+|---|---:|---:|---:|
+| accepted, **correct** bytes | 36,280 | 701,697 | 66.9 % |
+| accepted, **wrong** bytes — silent | 25,553 | **246,622** | **23.5 %** |
+| rejected outright | 12,574 | 100,267 | 9.6 % |
+
+The 9.6 % is cheap: spellings a parser could learn. The 23.5 % is
+disqualifying, because nothing reports it. The direct proof is a count of
+distinct byte strings that print as the same text, measured with its own control:
+
+| notation | distinct texts | ambiguous texts | sites under them |
+|---|---:|---:|---:|
+| `unidasm` | 133,690 | **134** | 3,172 |
+| this tree's LLVM text | 89,904 | **0** | 0 |
+
+`ldirw` is both `93 11` and `95 11`; `ld W,0x00` is both `20 00` and
+`c8 03 00`; `ret GE` is both `b0 f9` and `b6 f9`. Zero ambiguity on the LLVM
+side is by design — the printer and the parser are one component and the byte
+gate depends on their being inverse.
+
+**The two decoders do not disagree about the machine.** Over 1,113,485
+instruction sites, `unidasm` and this backend consume the same bytes every time
+(`LEN_DIFFER = 0`, with a foil control that injects a one-byte lengthening every
+seventh record and is detected 5,763 times). The mnemonic *text* differs at
+333,866 sites — 30.0 % — and that difference is entirely notational.
+
+What the divergence is made of, from the census over all 547 tracked `.s` files:
+
+| bucket | sites | distinct names |
+|---|---:|---:|
+| a name `unidasm` also has | 1,034,935 | 71 |
+| a backend name `unidasm` does not have | 265,116 | 459 |
+| a `.macro` defined in this tree | 16,922 | 113 |
+
+Retiring the 459 synthetic names splits three ways, and the split is what makes
+the work stageable:
+
+1. **The name carries a form the operand can already express.** 81,858 sites
+   across 71 mnemonics (`ldb_d8`, `stdi8`, `stb_d8`, `ldw_d16`, `stda16`, …)
+   assemble to the ROM's exact bytes today under the native spelling plus a
+   width annotation, with no backend change. `incm` → `incw` (1,535 sites) and
+   `ldda32 xwa, 4160` → `ld xwa, (4160:16)` (4,991 sites) are done.
+2. **The name selects between two legal encodings.** 78,364 sites over nine
+   mnemonics. These cannot be renamed until the operand syntax can say which
+   form — see [the size/form families]({{ site.baseurl }}/tlcs900-instruction-encoding/#two-legal-encodings-one-operation-the-sizeform-families)
+   and the three backend features below.
+3. **Byte emitters wearing a mnemonic's name.** 98 names, 22,135 sites, whose
+   `$b0,$b1,$b2` operands are literal bytes rather than modelled operands
+   (`add_sril_rm xix, 7, 236, 232`). No rename reaches these; the operand has to
+   be modelled first, and the backend deliberately makes an unmodelled
+   `(xix+iz)` a **parse error** rather than guessing.
+
+### The three backend features that would retire the form selectors
+
+| feature | covers | what it adds |
+|---|---|---|
+| **A — immediate field width** | `cps`, `lds`, `lds32` — 52,064 sites | a `:3` / `:8` / `:16` / `:32` suffix on an *immediate*, exactly parallel to `(addr:16)` on a direct address: `cp a, 4:3` → `c9 dc`, `cp a, 4:8` → `c9 cf 04`. Also retires `lds8`/`lds`/`lds32` as three names for one operation, since the register class already carries the size |
+| **B — naming the alternative encoding** | `ldb`, `ldio`, `ldwio` — 19,603 sites | a suffix that names the *encoding* rather than a width, because both forms carry an immediate of the same width. Each family has exactly two legal encodings |
+| **C — a `PrevGR8` register class** | `stb_erp`, `ldb_erp` — 6,697 sites | the 8-bit counterpart of the existing `PrevGR16` (`QWA`–`QSP`), so the C7-prefix byte forms take a register name instead of a raw code byte. 42 and 45 distinct codes are in use; naming them also normalises the `0xFB` / `0xfb` / `251` spellings the sources currently mix |
+
+⚠ **Feature A's default must stay the long form.** 2,658 `cp Xrr, n` and 53
+`ld Xrr, n` sites in the tree have an immediate of 0–7 and use the long
+encoding anyway. An assembler rule of "pick the short form when it fits" would
+silently rewrite every one of them.
+
+⚠ **Feature B's suffix must not be defined as "the shortest form."** That is a
+derived property; the day a third encoding is added, every existing use silently
+means something else. It has to name an explicit per-instruction alternative
+recorded in the `.td`.
+
+Feature A would also retire the `(Xrr+0)` sentinel, in which a displacement
+written as **256** means "force the d8 form with displacement 0" — 1,132 sites
+carry it, spelled `256` (931), `0x0100` (200) and `0x100` (1), so a text match
+undercounts by 201. `(xix+0:8)` would say the same thing in the idiom the rest
+of the backend already uses.
+
+Sources for every figure above:
+`notes/ASSESSMENT-syntax-convergence-2026-09-02.md` and
+`notes/TRIAGE-size-form-mnemonics-2026-09-02.md` in the disassembly repository,
+with the scripts in `notes/syntax-convergence-probes/`
+(`mnemonic_census.py`, `oracle_ab.py`, `diff_causes.py`,
+`native_convergence.py`, `size_family_convert.py --triage`).
+
+### The printer still emits the retired names
+
+A conversion in the sources is only half a fix. `incm` and `ldda32` are gone
+from the `.s` files, but the disassembler still *prints* them, so any region
+disassembled from here on reintroduces the spellings — and the tree grows by
+disassembly. Two backend changes close it and neither can move a byte: giving
+`INC16m`'s `InstAlias` a zero emit priority (its own `AsmString` is already
+`incw`), and giving `LD32_da16` the `AsmString` `ld` with `AddrBytes = 2` set on
+the operand so the printer emits the `:16` it already knows how to print.
+
 ## Architecture
 
 The LLVM TLCS-900 backend lives at `/home/fsanches/compartilhado/llvm-project/llvm/lib/Target/TLCS900/`.
@@ -204,9 +308,10 @@ hand-picked example.
   two spellings of the same byte. To reproduce a raw disp8 byte `0x97` in
   the 2-byte encoding, write the signed form `-105`.
 
-See `llvm-project`'s `TOOLCHAIN_VERSION` file (pinned commit `6fe210fb0a81`)
-for the byte-level proofs and the `make gate-all` verification across the
-KN5000 and SX-WSA1R ROM sets.
+The pinned toolchain commit is recorded in the disassembly repository's
+`TOOLCHAIN_VERSION` file, which is the authority — read it rather than quoting a
+hash from here. It also carries the byte-level proofs and the `make gate-all`
+verification across all thirteen KN5000 and SX-WSA1R images.
 
 ## Process for Each Phase
 
@@ -214,8 +319,8 @@ KN5000 and SX-WSA1R ROM sets.
 2. **Add encoding case** in `MCCodeEmitter.cpp` (or reuse existing format)
 3. **Add decoding case** in `TLCS900Disassembler.cpp` to emit semantic mnemonic
 4. **Build LLVM:** `ninja -C /home/fsanches/compartilhado/llvm-project/build llc llvm-mc`
-5. **Update all `.s` files** in both v9 and v10 (Python script with binary I/O)
-6. **Rebuild ROMs:** verify 100% byte-match
+5. **Update all `.s` files** in every tree that uses the mnemonic — the three KN5000 maincpu versions, the sub-CPU, HD-AE5000 and the four SX-WSA1R images (Python script with binary I/O)
+6. **Rebuild ROMs:** `make gate-all` — all thirteen images byte-identical, or the change does not land
 7. **Run LLVM tests:** `build/bin/llvm-lit llvm/test/CodeGen/TLCS900/`
 
 ## See Also

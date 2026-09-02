@@ -187,12 +187,12 @@ The first byte encodes both operand size and addressing mode:
 | 0    | (R) register indirect | reg_byte, sub_opc |
 | 1    | (R+d8) reg indirect + 8-bit disp | reg_byte, d8, sub_opc |
 | 2    | (addr24) direct 24-bit address | addr_lo, addr_mid, addr_hi, sub_opc |
-
-**Address width is not a function of the address value.** The direct-memory prefix's low two bits select an 8-, 16-, or 24-bit address form independently of how large the address is — shipped firmware writes `set 7,(0x00008a)` as `F2 8A 00 00 BF`, the 24-bit form, for an address that fits in a single byte. The LLVM assembler cannot guess the intended width from the number, so it is requested explicitly with a suffix: `(0x8a:8)`, `(0x1234:16)`, `(0x123456:24)`. An operand with no suffix keeps the 24-bit default, which is also the only width a relocation (as opposed to a constant) can use.
 | 3    | (R+d16) reg indirect + 16-bit disp | reg_byte, d16_lo, d16_hi, sub_opc |
 | 4    | (−R) predecrement | reg_byte, sub_opc |
 | 5    | (R+) postincrement | reg_byte, sub_opc |
 | 7    | Previous bank (D7 only) | mode_byte, sub_opc [, imm...] |
+
+**Address width is not a function of the address value.** The direct-memory prefix's low two bits select an 8-, 16-, or 24-bit address form independently of how large the address is — shipped firmware writes `set 7,(0x00008a)` as `F2 8A 00 00 BF`, the 24-bit form, for an address that fits in a single byte. The LLVM assembler cannot guess the intended width from the number, so it is requested explicitly with a suffix: `(0x8a:8)`, `(0x1234:16)`, `(0x123456:24)`. An operand with no suffix keeps the 24-bit default, which is also the only width a relocation (as opposed to a constant) can use.
 
 **Register byte encoding** (for modes 0, 1, 3, 4, 5):
 ```
@@ -223,6 +223,89 @@ Mode byte encoding: `0xE0 + (reg_enc × 4) + 2`
 | 0xFE      | QSP       |
 
 Sub-opcode table same as register source prefix, plus additional formats for BIT/SET/RES, LD/CP with word immediate, and LDW/CPW.
+
+### 6b. The 8-bit previous-bank register codes
+
+The `0xD7` word forms above are one half of the previous-bank machinery. The
+byte forms sit behind the `0xC7` prefix and take a **register code byte** rather
+than a register operand: `c7 fb 89` is *"store `A` into previous-bank byte
+register `0xFB`"*, and `c7 fb 99` is the matching load. `0xFB` is the code for
+`QIZH` — the high byte of the previous bank's `IZ`.
+
+This is a real register class, not an address: the firmware uses **42 distinct
+code bytes** on the store side and **45** on the load side, concentrated in
+`0xE0-0xFF` with a small tail at `0x3C` and `0x60`. `0xFB` alone accounts for
+2,717 of the 6,697 sites in the two families. The 16-bit counterpart of the
+class (`QWA`-`QSP`, the table above) is the one the LLVM backend models; the
+8-bit codes are still carried as raw bytes, which is why they print as
+`stb_erp a, 0xFB` / `ldb_erp a, 0xFB` rather than under a register name.
+
+Counts from `notes/syntax-convergence-probes/size_family_convert.py --triage`
+in the disassembly repository.
+
+## Two legal encodings, one operation: the size/form families
+
+Several TLCS-900/H operations have **two encodings that differ in the shape of
+the opcode rather than in the width of any operand**, and a byte sequence in the
+ROM commits to one of them. This is the single most important fact about the
+instruction set for anyone re-assembling a dump: *the operands do not determine
+the encoding*, so an assembler that is told only "compare `A` with 4" cannot
+know which of the two byte sequences the ROM used.
+
+Two mechanisms produce the pairs.
+
+**A short immediate carried in the opcode's own 3-bit field.** LD and CP place
+an immediate of 0-7 directly in the sub-opcode byte (`prefix+r, 0xA8+imm` for
+LD, `prefix+r, 0xD8+imm` for CP), or use a trailing 8/16/32-bit immediate field.
+Both are legal for the same small value:
+
+| operation | short form | bytes | long form | bytes |
+|---|---|---|---|---|
+| compare `a` with 4 | 3-bit field | `c9 dc` | imm8 | `c9 cf 04` |
+| load `hl` with 0 | 3-bit field | `db a8` | imm16 | `db 03 00 00` |
+| load `xiz` with 0 | 3-bit field | `ee a8` | imm32 | `46 00 00 00 00` |
+
+**And the firmware does not always take the short one.** The KN5000 and
+SX-WSA1R sources contain **2,658 `cp Xrr, n` sites and 53 `ld Xrr, n` sites
+whose immediate is 0-7 and which nevertheless use the long encoding** — for
+example a 6-byte `cp xwa, 5`. "Pick the short form when the immediate fits" is
+therefore a rule that would silently rewrite thousands of real instructions.
+
+**A dedicated compact opcode alongside the general prefixed form.** Here both
+encodings carry an immediate of the same width; only the opcode shape differs:
+
+| operation | compact form | bytes | general form | bytes |
+|---|---|---|---|---|
+| load `d` with 4 | one-byte opcode `0x20+r`, imm8 | `24 04` | prefix `C8+r`, sub-op `0x03`, imm8 | `cc 03 04` |
+| store `0xFF` at `(0x07)` | dedicated `LD (n),n` | `08 07 ff` | direct-address form | `f0 07 00 ff` |
+| store `0x8E00` at `(237)` | dedicated word form | `0a ed 00 8e` | direct-address form | `f0 ed 02 00 8e` |
+
+The disassembly names each form with its own mnemonic — `cps`/`lds`/`lds32`,
+`ldb`, `ldio`/`ldwio`, `stb_erp`/`ldb_erp` — precisely because the operand
+syntax has nowhere to put the distinction. Eleven mnemonics in the tree were
+triaged against this question and **nine of them are genuine form selectors
+across 78,364 instruction sites**: renaming one to its native spelling assembles
+cleanly and emits different bytes, so a mechanical rename would produce wrong
+code with no diagnostic. The two that were only spellings — `incm`, an alias
+whose own definition prints as `incw`, and `ldda32`, whose `d`+`a`+`32` is fully
+expressible as `ld xwa, (4160:16)` — have been retired.
+
+⚠ The size suffix on a **memory** operand is load bearing for the same reason: a
+memory operand carries no size of its own. `incw 1, (xsp+4)` is `9f 04 61` and
+`inc 1, (xsp+4)` is `8f 04 61` — a one-nibble difference between a 16-bit and an
+8-bit read-modify-write.
+
+A third, smaller instance of the same design question is the `(Xrr)` /
+`(Xrr+0)` pair: `(xix)` is the 2-byte `94 60`, while `(xix+0x00)` is the 3-byte
+`9c 00 60` with the displacement field present and zero. The two are distinct
+encodings of the same effective address, and the source distinguishes them by
+writing a displacement of 256 as a sentinel meaning "force the d8 form with
+displacement 0" — 1,132 sites in the tree carry it.
+
+Evidence and per-family site counts:
+`notes/TRIAGE-size-form-mnemonics-2026-09-02.md` and its script
+`notes/syntax-convergence-probes/size_family_convert.py --triage`, both in the
+disassembly repository.
 
 ## LLVM Backend Support Status
 

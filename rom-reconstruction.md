@@ -362,29 +362,32 @@ happens to re-assemble to the right bytes (see the data-as-code note above), is 
 it. Outside the seven data-as-code-clean images above, every debt figure on this page is
 therefore a lower bound.
 
-**maincpu v10 and v9 are at zero verbatim debt: 100% source.** Nothing in either tree enters
-the build as an opaque blob — even the eight flash-update boot banners round-trip from
-committed PNGs (`python3 scripts/build/mono_images.py verify` reports `ROUND TRIP EXACT:
-all 8 banners x 2 revisions (9,856 B)`, the same 616-byte-each files shared byte-for-byte
-between the two firmware revisions). v9's confirmed-region backlog — the high-confidence
-code-as-`.byte` shape `v9_v10_undisassembled_census.py --judge` can find — is closed on both
-images: re-running it directly against v9 (not mirrored from v10, whose source has since
-drifted out of lockstep) finds zero confirmed hits beyond the same hand-audited DATA regions
-already on record. Zero verbatim debt also holds for subcpu v142, subcpu boot, custom data,
-HD-AE5000, and SX-WSA1R's `prom_c` and `prom_d`.
+**Eleven of the thirteen images are at zero verbatim debt: 100% source.** Nothing in
+maincpu v10 or v9, the sub-CPU payload v142, the sub-CPU boot ROM, custom data,
+HD-AE5000, or any of the four SX-WSA1R images enters the build as an opaque blob — even
+the eight flash-update boot banners round-trip from committed PNGs
+(`python3 scripts/build/mono_images.py verify` reports `ROUND TRIP EXACT: all 8 banners x
+2 revisions (9,856 B)`, the same 616-byte-each files shared byte-for-byte between the two
+firmware revisions). v9's confirmed-region backlog — the high-confidence code-as-`.byte`
+shape `v9_v10_undisassembled_census.py --judge` can find — is closed on both images:
+re-running it directly against v9 (not mirrored from v10, whose source has since drifted
+out of lockstep) finds zero confirmed hits beyond the same hand-audited DATA regions
+already on record.
 
-Where real verbatim debt remains (reproduce with the command above; these are current
-measurements, not the tool's raw total — see the note on table data below):
+The two remaining rows (reproduce with the command above; these are current measurements,
+not the tool's raw total — see the note on table data below):
 
 | Image | Verbatim debt | % source |
 |---|---:|---:|
 | `v7/maincpu` | 120,666 B | 94.2% |
-| `wsa1/prom_a` | 2,542 B | 99.5% |
-| `wsa1/prom_b` | 10,664 B | 98.0% |
 | `table_data` | 0 B real (318,468 B raw tool total) | see below |
 
-*(2026-09-02, from the command above. The three non-zero rows fall as conversion
-lanes land, sometimes within hours — re-run rather than quoting this table.)*
+**So the tree's only real remaining verbatim debt is v7's 120,666 B.** The whole-tree
+figure the tool prints, 439,134 B over 12,386,304 B (96.5% source), is that plus table
+data's BMPs.
+
+*(2026-09-02, from the command above. The v7 row falls as conversion lanes land, sometimes
+within hours — re-run rather than quoting this table.)*
 
 **Table data's real remaining debt is zero.** The tool's raw 318,468 B figure is entirely the
 six `FTBMP01-06.BMP` feature-demo slide images — genuine, uncompressed 8bpp Windows BMPs
@@ -397,6 +400,142 @@ table data — a 17,570 B stale remnant duplicating the live English/German help
 streams 0x8000 lower in the ROM — is now itself derived from those streams by a committed
 generator (`gen_stale_help_duplicate.py`) rather than stored as a raw blob, so it no longer
 counts as debt either: table data's unclassified, real conversion debt is 0 B.
+
+## How much of the data is actually explained
+
+Byte identity says the source reproduces the ROM. It says nothing about whether anybody
+can state what a given range of bytes *represents*. That is a separate measurement, and it
+is the one that decides whether "the ROMs are done" is true.
+
+**Of the 12,386,304 bytes across the twelve distinct images, about 93.8 % (≈11.61 MB) can
+be explained. The 95 % confidence interval is 86.7 % – 96.6 %.** Under the strictest
+reading — that a section header does not explain a 30 KB blob it happens to sit above — it
+falls to about 82 %. The raw census reports 99.78 %; that figure is wrong by construction
+and the corrections are itemised below.
+
+    python3 scripts/analysis/data_range_census.py --selftest
+    python3 scripts/analysis/data_range_census.py --json out.json --targets 60
+    python3 scripts/analysis/data_range_census.py --load out.json --sample 40 --grade KNOWN-B
+
+The run, target list and audit sample are committed in
+`notes/data-census-2026-09-02/`, with the full account in
+`notes/DATA-CENSUS-2026-09-02.md`.
+
+> The thirteenth gated image, `kn5000_subprogram_v142_compressed.rom`, is deliberately
+> outside the denominator: it is the v1.42 payload re-compressed, so its bytes are already
+> counted under `v142`. Counting it would inflate the total with a duplicate.
+
+### The instrument
+
+Each image's source tree is mirrored with a synthetic label inserted in front of every
+byte-emitting line, the mirror is assembled and **linked with the real linker script**, and
+the marker addresses come out of the ELF symbol table — so byte `[addr(n), addr(n+1))` is
+attributed to the source line marker *n* was written in front of. Two properties make it a
+measurement rather than a tally:
+
+- **Inertness.** A label emits no bytes, so the marked mirror must still *be* the dump.
+  Every image is objcopy'd to a raw binary and compared against `original_ROMs/`: **12 of
+  12 byte-identical.** A mirror that is not inert is refused rather than reported.
+- **Reconciliation.** Every byte lands in exactly one bucket and the per-image total must
+  equal the dump size; **the run aborts on a non-zero delta.**
+
+The CODE/DATA split is corroborated by a completely separate instrument,
+`scripts/analysis/l1_territory_map.py`, which flattens the maincpu images through
+`llvm-mc -show-encoding` and never sees a marker or a symbol table. The two agree to within
+9 bytes in 2 MB.
+
+### The buckets
+
+| image | CODE | KNOWN-A | KNOWN-B | UNKNOWN | FILLER |
+|---|---:|---:|---:|---:|---:|
+| v10 | 987,011 | 177,349 | 868,436 | 1,291 | 63,065 |
+| v9 | 1,013,313 | 157,943 | 860,586 | 1,277 | 64,033 |
+| v7 | 719,106 | 156,484 | 1,157,905 | 3,510 | 60,147 |
+| v142 sub-CPU | 127,464 | 47,291 | 21,797 | 8 | 48 |
+| sub-CPU boot | 3,604 | 868 | 37 | 0 | 126,563 |
+| table data | 18,676 | 716,439 | 1,164,976 | 0 | 197,061 |
+| custom data | 0 | 660,657 | 0 | 0 | 387,919 |
+| HD-AE5000 | 112,335 | 330,533 | 50,845 | 0 | 30,575 |
+| `prom_a` | 327,427 | 60,890 | 70,580 | 2,295 | 63,096 |
+| `prom_b` | 198,037 | 130,391 | 115,821 | 9,034 | 71,005 |
+| `prom_c` | 207,511 | 84,547 | 102,394 | 620 | 129,216 |
+| `prom_d` | 0 | 225,863 | 95,886 | 8,772 | 193,767 |
+| **total** | **3,714,484** | **2,749,255** | **4,509,263** | **26,807** | **1,386,495** |
+
+- **CODE** — instruction statements, 30.0 % of the tree.
+- **KNOWN-A** — the header states what the data represents **and** cites evidence: a
+  reader, a call site, a record layout, a field meaning, a findings file.
+- **KNOWN-B** — a descriptive, non-address-derived label, with or without a header
+  (`Font_Svc07_8x16`, `DrumKitNames`, `Wallpaper_0`). Real understanding, but resting on
+  somebody's naming judgement and nothing else.
+- **UNKNOWN** — an address-derived or absent label with no explanatory header, or a header
+  that admits the purpose is not established.
+- **FILLER** — a fill directive whose ROM bytes are **verified uniform**, run ≥ 16 bytes.
+
+**KNOWN-B is 36.4 % of the tree, and 4,151,831 B of it — 33.5 % of all 12.4 MB — is graded
+on a name with no header at all.** That is the honest weak point of any "we understand the
+ROMs" claim, and it is why the headline is corrected rather than quoted raw.
+
+### Why the corrected figure is 93.8 %, and its error bar
+
+The "known" figure is audited, not asserted. 40 regions were drawn from KNOWN-A ∪ KNOWN-B,
+size-weighted so every byte is equally likely to be drawn, seed 90902, reproducible with
+`--load … --sample 40 --seed 90902`. Each was read by hand against one test: *from the
+label and the header attached to it, can a reader say what these bytes represent?*
+
+**3 of 40 fail outright — 7.5 %, Wilson 95 % interval 2.6 % – 19.9 %.** A further 8 of 40
+(20 %) pass only at a coarse granularity: the label or section header explains the *blob*
+the range belongs to, not the range — for instance a 23,538 B region under a header that
+names a whole screen-widget source file.
+
+    explained by the raw census .......................... 12,359,497   99.78 %
+      minus  embedded-in-code counted as KNOWN (measured) .   -217,112
+      minus  7.5 % of the remaining 7,041,406 KNOWN bytes .   -528,105
+    corrected ............................................ 11,614,280   93.77 %
+
+      at the sample's 95 % upper bound (2.6 %) ........... 11,959,308   96.55 %
+      at the sample's 95 % lower bound (19.9 %) .......... 10,741,145   86.72 %
+      if the 8 coarse-granularity passes also fail (27.5 %) 10,205,998   82.40 %
+
+So the gap between the raw census and reality is roughly six points — about 772 KB — not
+the 0.2 % the raw figure suggests.
+
+### What the census structurally cannot see
+
+1. **It classifies by the source's own framing.** A byte inside a `.byte` directive is DATA
+   here even when it is a TLCS-900 instruction, and a byte inside an instruction is CODE
+   here even when it is a string. Both errors exist in this tree — see the three kinds of
+   debt above.
+2. **A region is only as explained as the one label and header attached to it.** A
+   C-compiled struct enters the ROM as a *single* `.incbin` of 150,888 B and the labels
+   around it are offsets into it, so a region can be vastly larger than the object its
+   label names. **133 regions of ≥ 8 KiB carry 3,413,250 B — 47.0 % of the whole explained
+   figure — and 23 regions of ≥ 32 KiB carry 1,609,518 B.**
+3. **A self-admitted open question is not the same as an unexplained region.** A header
+   asking why the firmware keeps two disjoint ideograph sets, about a font whose role,
+   metrics, cell count and loader address are all established, trips the flag anyway.
+4. **The FILLER rule is byte-verified but arbitrary at the edge**: uniform and ≥ 16 B.
+   Shorter uniform runs are graded as data.
+
+### Code that may be misclassified as data
+
+Three independent flags, reported as leads and not verdicts. Nothing is converted on the
+strength of them.
+
+| flag | regions | bytes | what it means |
+|---|---:|---:|---|
+| embedded-in-code | 34,999 | 222,810 | an undocumented data region with an *instruction* region on both sides in the same file |
+| code-shaped label | 26,853 | 542,405 | the label carries a routine token (`_Loop`, `_Prologue`, `_Dispatch`, `Initialize*`, …) |
+| code-suspect | 1,089 | 85,536 | a label at or inside the region is the target of a `call`/`jp`/`jr`/`jrl` somewhere in the tree |
+
+The name-based flag comes with its null, because without one it would be worthless: 47.2 %
+of regions the source itself frames as CODE carry such a name, against 4.7 % in the three
+pure-data images (`table_data`, `custom_data`, `prom_d`) where a hit can only be a false
+positive. A 10× separation, with an expected ~4.7 % false-positive floor by region count.
+
+The confirmed worked examples are all in v7, all plainly instruction bytes under routine
+names, and they are the same 275,822 B of code-as-`.byte` debt seen from another angle —
+which is why v7's evidence-cited share is the tree's worst.
 
 ### Disassembly status diagram
 
@@ -857,9 +996,11 @@ remaining in any ROM directory. All renames were verified with a full
 
 ### March 2026: raw-byte code elimination
 
-All executable code across the ROM set uses native TLCS-900 mnemonics; no code remains as
-`.byte` sequences. Remaining `.byte` directives are data — tables, strings, bitmaps,
-interpreter bytecode and padding. See
+Executable code is written as native TLCS-900 mnemonics wherever it has been identified as
+code. It is **not** true that no code remains as `.byte`: the sub-CPU payload, the sub-CPU
+boot ROM, table data, custom data and all four SX-WSA1R images are at zero, while v7 holds
+275,822 B and HD-AE5000 11,783 B of instructions still spelled as data. The per-image
+figures and the method that measures them are on
 [Raw Byte Code Elimination]({{ site.baseurl }}/raw-byte-code-elimination/).
 
 ### March 2026: C struct conversion, R+d16 addressing, waveform ROM

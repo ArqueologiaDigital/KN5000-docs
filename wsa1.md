@@ -19,8 +19,10 @@ literal machine code** with the [KN5000]({{ site.baseurl }}/system-overview/).
 > takes button presses. It makes **no sound at all** — the tone generator and the
 > three DSPs are not modelled, and **all six wave mask ROMs are undumped**. Since
 > 2026-09-01 the modelling window at `0x00104000` has a placeholder device that
-> models its register interface and synthesises nothing. A byte-exact disassembly of all four EPROM images exists and is
-> paused at **67.7 % substantive** coverage. See
+> models its register interface and synthesises nothing. A byte-exact disassembly of all four EPROM images exists;
+> every one rebuilds from source with **no `.incbin` at all**, and **78.2 %** of the
+> 2,097,152 bytes is substantive source, the remainder being verified uniform filler
+> (`wsa1/scripts/analysis/source_coverage.py`). See
 > [Emulation Status]({{ site.baseurl }}/wsa1-emulation/) and
 > [Disassembly]({{ site.baseurl }}/wsa1-disassembly/).
 
