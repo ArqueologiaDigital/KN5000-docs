@@ -226,7 +226,7 @@ Sub-opcode table same as register source prefix, plus additional formats for BIT
 
 ## LLVM Backend Support Status
 
-As of September 2026, the following summarizes what the custom LLVM TLCS-900 backend supports for assembly (llvm-mc):
+The following summarizes what the custom LLVM TLCS-900 backend supports for assembly (llvm-mc):
 
 ### Fully Supported
 
