@@ -197,12 +197,12 @@ The KN5000 supports 26 internal voice channels (0x00-0x19) mapped to 16 external
 
 ### Channel Lookup Functions
 
-**`VoiceData_LookupPtrByChannel`** (Main CPU, `file_io_engine.s`):
+**`VoiceData_LookupPtrByChannel`** (Main CPU, `audio/audio_control_engine.s`):
 - Input: A = MIDI channel (0x00-0x1F standard, 0x48 = drum)
 - Looks up pointer at `0xEDB264 + channel * 4`
 - Returns pointer in XHL (or 0xFFFFFFFF if not found)
 
-**`VoiceData_LookupPtrByIndex`** (Main CPU, `file_io_engine.s`):
+**`VoiceData_LookupPtrByIndex`** (Main CPU, `audio/audio_control_engine.s`):
 - Input: A = voice index
 - Looks up pointer at `0xEDAE64 + index * 4`
 - Returns pointer in XHL
@@ -219,12 +219,12 @@ The KN5000 supports 26 internal voice channels (0x00-0x19) mapped to 16 external
 - Routes to channel-specific handlers via jump table
 - Supports Note On/Off, CC, Program Change, Pitch Bend, Pressure
 
-**`MIDI_DispatchCC`** (`midi_voice_routing.s`):
+**`MIDI_DispatchCC`** (`midi/midi_dispatch_handlers.s`):
 - Dispatches Control Change by CC number
 - Jump table at `0xFD175E` (192 entries × 4 bytes for CC 0x00-0xBF)
 - CC > 0xBF rejected
 
-**`MIDI_DistributeParamToChannels`** (`file_io_engine.s`):
+**`MIDI_DistributeParamToChannels`** (`audio/audio_control_engine.s`):
 - Distributes a parameter update across all active channels
 - Input: A = channel (0x00-0x1F standard), C = parameter, E = value
 - Special case: channel 0x48 = drum channel (max 16 parameters)
@@ -290,11 +290,11 @@ The accompaniment engine has its own MIDI filter system:
 | Routine | File | Description |
 |---------|------|-------------|
 | `MIDI_CHANNEL_MESSAGE_DISPATCHER` | `midi_serial_routines.s` | External MIDI message dispatcher |
-| `MIDI_DispatchCC` | `midi_voice_routing.s` | CC dispatch via jump table at 0xFD175E |
-| `MidiChannel_ConfigureController` | `midi_voice_routing.s` | Configure MIDI controller for voice channel |
-| `MIDI_DistributeParamToChannels` | `file_io_engine.s` | Distribute param to all active channels |
-| `VoiceData_LookupPtrByChannel` | `file_io_engine.s` | Channel → voice data pointer (0xEDB264) |
-| `VoiceData_LookupPtrByIndex` | `file_io_engine.s` | Index → voice data pointer (0xEDAE64) |
+| `MIDI_DispatchCC` | `midi/midi_dispatch_handlers.s` | CC dispatch via jump table at 0xFD175E |
+| `MidiChannel_ConfigureController` | `midi/midi_dispatch_handlers.s` | Configure MIDI controller for voice channel |
+| `MIDI_DistributeParamToChannels` | `audio/audio_control_engine.s` | Distribute param to all active channels |
+| `VoiceData_LookupPtrByChannel` | `audio/audio_control_engine.s` | Channel → voice data pointer (0xEDB264) |
+| `VoiceData_LookupPtrByIndex` | `audio/audio_control_engine.s` | Index → voice data pointer (0xEDAE64) |
 | `NoteMap_LookupVoice` | `note_voice_mapping.s` | Find voice slot for note event |
 | `NoteMap_SetChannelParam` | `note_voice_mapping.s` | Set MIDI channel parameter in note map |
 | `Voice_DecodeNoteChannel` | `kn5000_v10_program.s` | Decode note channel to voice assignment |
