@@ -204,8 +204,8 @@ not what an archivist would want.
 | ADR2 | `0x84000814` | The `0x10`-byte header of the **PANEL MEMORY store**. |
 | ADR3 | `0x501A5920` | Record 0, field `+0x120`, of an 11-entry table of `0x8E0`-byte records at `0x501A5800` in work RAM. **Identity plausible only**: probably the sequencer song slots. |
 
-`0x44000000`, mirrored at `0x84000000`, is **not** generic work RAM — a point
-this project previously had wrong. The service RAM DEVICE TEST walks it from
+`0x44000000`, mirrored at `0x84000000`, is **not** generic work RAM. The service
+RAM DEVICE TEST walks it from
 `0x44000000` for `0x20000` iterations of two bytes each, i.e. exactly 256 KB,
 which fixes the extent of the battery-backed part; and the firmware checksums a
 header there and stores the result inside the same device, which is the classic
@@ -500,19 +500,16 @@ executed in MAME, and none should be attempted on an instrument holding an
 unpreserved image. Do not confuse any of them with the runtime chord on this
 page, which touches nothing.
 
-> **Two retractions, stacked.** An earlier pass concluded from a string sweep
-> that "no KN5000-style Flash Memory Update exists on the KN7000". That was
-> **wrong and is withdrawn** — on the KN5000, where we hold genuine chip dumps,
-> the updater's UI is *bitmaps*, so those ASCII strings are absent from a genuine
-> dump too. Absence from our bytes was never absence from the machine.
->
-> The replacement explanation — that the updater lives in the top `0x90FF` of the
-> program flash — is **also withdrawn, as of 2026-08-09**. That region is one
-> unbroken block of `0xFF` on real hardware. Where the updater actually lives is
-> **unresolved**; see
+> **Where the flash updater lives is unresolved** — see
 > [Where does the flash updater live?]({{ site.baseurl }}/kn7000-firmware-security/#45-where-does-the-flash-updater-live-unresolved).
-> Retracting it does not make the combinations in this table any less
-> destructive: the update path demonstrably runs.
+> Two things it is *not*: a string sweep finding no KN5000-style "Flash Memory
+> Update" text proves nothing, because the updater's UI is *bitmaps* — those ASCII
+> strings are absent from a genuine KN5000 dump too; and it is not in the top
+> `0x90FF` of the program flash, which is one unbroken block of `0xFF` on real
+> hardware.
+>
+> Not knowing where it lives does not make the combinations in this table any less
+> destructive. The update path demonstrably runs.
 
 ## Caveats
 
