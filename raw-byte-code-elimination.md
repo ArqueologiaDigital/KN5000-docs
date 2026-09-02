@@ -6,62 +6,59 @@ permalink: /raw-byte-code-elimination/
 
 # Raw Byte Code Elimination Plan
 
-**Status: COMPLETE** — All executable code across all 6 ROMs uses native TLCS-900 instructions (0 code `.byte` remaining).
+**Status: IN PROGRESS.** All 6 ROMs are 100% byte-perfect against their physical dumps, but
+that is a build-match guarantee, not a disassembly guarantee: a `.byte` run that spells real
+code reassembles to the same bytes as an `.incbin` of those bytes, and passes the gate
+identically either way. Measured code-as-`.byte` remains in the Main CPU, Sub CPU Payload
+and HDAE5000 ROMs.
 **Goal:** Convert all executable code currently represented as raw `.byte` sequences to native TLCS-900 assembly mnemonics.
 
 ## Context
 
-All 6 ROMs achieve 100% byte-perfect match. As of March 2026, all executable code uses native TLCS-900 instructions — the `.byte` code elimination goal is **complete**. The remaining `.byte` directives in the source are exclusively data (tables, strings, padding), not executable code.
+All 6 ROMs achieve 100% byte-perfect match against their physical dumps. That is necessary
+for correct disassembly but not sufficient: a `.byte` run that spells real code, or a data
+region disassembled into plausible-but-wrong instruction mnemonics, both reassemble to the
+same bytes and pass the gate cleanly. Whether a `.byte` run is undecoded code can only be
+settled by a per-byte disassembly attempt (Step 1's method, below), not by counting
+`.incbin` directives — the table under **Current Status** states what that measurement
+currently finds, ROM by ROM.
 
-> ⚠ **The March 2026 measurement missed real code, and the instrument was the problem.**
-> The Sub CPU Payload's "0 code `.byte` remaining" was originally established by checking for
-> leftover `.incbin` directives — but a `.byte` run is exactly as undisassembled as an
-> `.incbin` and passes that test just as cleanly. A 2026-09-01 audit of the sound subsystem
-> (`notes/sound/kn5000_sound_boundary.py`, written up in
-> `notes/sound/FINDINGS-kn5000-sound-coverage-2026-09-01.md`) found the v1.42 sub-CPU payload
-> still held on the order of 16,000 bytes of `.byte`, including two runs the source itself had
-> already annotated *"MISLABELLED, THIS IS CODE"* — roughly 8,500 bytes of that being
-> tone-generator/DSP register-write code. All of it has since been converted to native
-> instructions and re-verified against the committed MAME `unidasm` listing (10 conversion
-> rounds, `--unspellable` and `--misframes` both now 0 in both sub-CPU images). So the *sound
-> code* portion of the Sub CPU Payload genuinely reached 0 code `.byte` only on 2026-09-01, not
-> in March — directive-counting (no `.incbin` left) is not a completeness proof; only a
-> per-byte disassembly attempt (Step 1's actual method, below) is.
+**The sub-CPU payload is not at zero code-as-`.byte`.** About 976 bytes of code-shaped
+`.byte` remain, for a named toolchain reason rather than for lack of trying: the pinned
+LLVM backend can *decode* some addressing forms it cannot *encode*
+(`DSP_Bytecode_Op01/02/03`, 569 B — see [LLVM Semantic Instructions]({{ site.baseurl
+}}/llvm-semantic-instructions/) for the decoder fix that makes these convertible) and cannot
+re-parse some spellings its own disassembler emits (the `TaskEvent`/`FIFO`/`TaskSched`
+family; of the ~407 B there, 14 B has a diagnosed cause, the rest does not yet). Conversions
+in this image are proved by round trip: disassemble the run, re-assemble that exact text,
+require the original bytes back.
 
-> **Current state of the sub-CPU payload.** It is **not** at zero code-as-`.byte`.
-> About 976 bytes of code-shaped `.byte` remain, blocked by a specific toolchain
-> limit rather than by analysis: the pinned LLVM backend can *decode* addressing
-> forms it cannot *encode* (`DSP_Bytecode_Op01/02/03`, 569 B) and cannot re-parse
-> some spellings its own disassembler emits (~407 B in the TaskEvent/FIFO/
-> TaskSched family). Conversions in this image are proved by round trip:
-> disassemble the run, re-assemble that exact text, require the original bytes.
->
-> **Counting `.incbin` distorts in both directions.** It hides real debt written
-> as `.byte`, and it equally rewards pushing legitimate data *into* `.byte` —
-> respelling a viewable PNG-backed image as hex reduces the metric while
-> destroying the better representation. Neither direction is progress.
+**Counting `.incbin` distorts in both directions.** It hides real debt written as `.byte`,
+and it equally rewards pushing legitimate data *into* `.byte` — respelling a viewable
+PNG-backed image as hex reduces the metric while destroying the better representation.
+Neither direction is progress.
 
 **Scope:** `.byte` sequences that encode native TLCS-900 CPU instructions across all 6 ROMs. Data tables, strings, bitmaps, firmware bytecode for software interpreters, and padding are out of scope (correct as-is).
 
 ## Current Status
 
-### Completed (March 2026)
+### By ROM
 
-All executable code `.byte` sequences have been eliminated from the **Main CPU**, **Sub CPU**, and **Table Data** ROMs:
-
-⚠ The "Sub CPU Payload" row's March 2026 figures were measured by the flawed `.incbin`-absence
-test described above; see the warning box for what that method missed and when it was actually
-closed out (2026-09-01, for the sound-code portion).
-
-| ROM | Native Instructions | Code .byte Remaining | Status |
+| ROM | Native Instructions | Code `.byte` remaining | Status |
 |-----|-------------------|---------------------|--------|
-| Main CPU | 239,683 | **0** | **Complete** |
-| Sub CPU Payload | 35,721 | **0** | **Complete** |
+| Main CPU (v9 / v10, each) | 239,683 | 8,058 B confirmed + ~14,727 B misframed islands | **Not complete** |
+| Main CPU (v7) | — | 275,822 B (797 confirmed regions + 2,268 misframed islands) — the largest code-as-`.byte` debt in the project | **Not complete** |
+| Sub CPU Payload | 35,721 | ~976 B | **Not complete** |
 | Sub CPU Boot | 1,357 | **0** | **Complete** |
 | Table Data | 1,678 | **0** | **Complete** |
 | Custom Data | 0 (data only) | **0** | **Complete** |
-| HDAE5000 | 502 | **0** | **Complete** |
-| **Total** | **279,441** | **0 code .byte** | **Complete** |
+| HDAE5000 | 502 | 11,783 B | **Not complete** |
+
+The misframed islands in the Main CPU rows are left as `.byte` on purpose: fixing one means
+re-framing an instruction already present in a neighbouring converted region, not filling a
+gap, and this work requires a round-trip proof per region rather than a bulk relabel.
+`scripts/analysis/v9_v10_undisassembled_census.py` is the v9/v10 and v7 census;
+`hdae5000/tools/measure_debt.py` is the HDAE5000 one.
 
 ### LLVM Backend Encodings Added
 
@@ -80,9 +77,15 @@ All previously missing instruction encodings have been implemented in the LLVM T
 | ld (R+d16), A stores | `0xF3` | ~400 | **Implemented** |
 | Shifts/Rotates/MUL/DIV | various | 246 | **Implemented** |
 
-### HDAE5000: Complete
+### HDAE5000: not complete
 
-The HDAE5000 extension ROM's 502 native instructions cover all identified code regions. Remaining `.byte` directives (~15,900 lines) are exclusively **data tables** (custom-filesystem templates — the HD-AE5000 filesystem is *not* FAT16 — string constants, UI bitmaps, etc.) — not executable code.
+The HDAE5000 extension ROM's 502 native instructions do not cover all identified code
+regions. `hdae5000/tools/measure_debt.py` counts 11,783 B of undocumented `.byte`/`.word`
+operand bytes — overwhelmingly scattered single-byte numeric fields rather than one
+contiguous block — plus 3,793 B more that carries a decoding comment but has not been
+converted to real instructions. Most remaining `.byte` in the tree is genuine data (custom-
+filesystem templates — the HD-AE5000 filesystem is *not* FAT16 — string constants, UI
+bitmaps, etc.), but these figures are not yet zero.
 
 ## Original Audit Results (Historical)
 

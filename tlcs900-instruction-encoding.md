@@ -260,9 +260,12 @@ As of September 2026, the following summarizes what the custom LLVM TLCS-900 bac
 | Register-indexed load/store `(Xrr+Rn)` | `ld`/`st` forms for byte/word/long (`ldb_dri`/`ldw_dri`/`ldl_dri`, `stb_dri`/`stw_dri`/`stl_dri`), plus `cpib_ind` (register-indexed compare with immediate) |
 | ERP-byte (previous-bank) LD short-immediate and LD register | e.g. `ld QIZH,1` and `ld C,QIZH` |
 
-### Previously Unsupported (now all implemented)
+### Encoding gaps closed during the `.byte` code elimination effort
 
-As of March 2026, all instruction encodings needed for the KN5000 ROM disassembly at the time were implemented in the LLVM backend. The following were added during the `.byte` code elimination effort. (Further gaps — direct-memory address width, native mnemonics for several memory-operand forms, register-indexed load/store, and ERP-byte LD forms — were found and closed later, through September 2026; see the tables above and "Known Encoding Issues" below.)
+The backend can now *encode* every category below. This is the assembly
+(llvm-mc) direction only — see [Known Decoding Gaps](#known-decoding-gaps)
+below for two whole families the disassembler still cannot read back even
+though the encoder produces them correctly.
 
 | Category | Resolution |
 |----------|-----------|
@@ -287,6 +290,41 @@ As of March 2026, all instruction encodings needed for the KN5000 ROM disassembl
 5. **Fixed, but previously silent:** before a native memory form existed for them, `push (0x1234)` and `mul WA,(0x1234)` were accepted by the parser as if the parenthesised address were an *immediate operand* rather than a memory reference — `push (0x1234)` assembled to `[0x09,0x34]` (the address truncated to 8 bits) and `mul WA,(0x1234)` assembled to `[0xd8,0x08,0x34,0x12]` (multiplying by the address value itself, not by its contents). Both mnemonics now have proper memory forms and the syntax means what it says; no error was ever raised for the old, wrong reading, so any object code assembled before this fix should be treated as suspect.
 
 6. **`(Xrr+Rn)` register-indexed operand is now refused, not silently mis-encoded:** `(Xrr+Rn)` (e.g. `(xix+iz)`) is a distinct addressing mode from `(Xrr+d16)` and is not accepted through the displacement operand syntax. It used to fall through to the expression parser, which treated the index register name as an undefined symbol — `ld wa,(xix+iz)` assembled to `d3 f1 00 00 20` instead of the hardware's `d3 07 f0 f8 20`, and was diagnosed (if at all) only at link time. This is now a parse-time error. The register-indexed forms the KN5000/WSA1R firmware actually uses (`ld`/`st` byte/word/long via `(Xrr+Rn)`, and the register-indexed immediate compare) have their own dedicated mnemonics — see the Backend Support Status table above — rather than reusing the displacement syntax.
+
+### Known Decoding Gaps
+
+The encoder and disassembler are two separate hand-written implementations
+(`TLCS900MCCodeEmitter.cpp` and `TLCS900Disassembler.cpp`), and they are not
+symmetric: the assembler can produce bytes the disassembler cannot read back.
+
+- **The register-indexed `SriRR*` family has no decoder case at all.**
+  `st_rrb`, `ld_rr*`, `lda_rr` and the other forms in this family (encoder
+  mode bytes `0x07`/`0x03` behind the `0xC3`/`0xD3`/`0xE3`/`0xF3` prefixes)
+  assemble correctly but `TLCS900Disassembler.cpp` has no case for them —
+  `decodeSRIPrefix()` explicitly refuses this ModeType. This hid 312 B of
+  real code from every automated audit for months, and is why 33 of 34 v7
+  code slices fail a disassemble/re-assemble round trip. A
+  decoder-independent byte-pattern scan for this family's exact encoder
+  shape (`wsa1/notes/sound/prom_d_srirr_falsification.py`) finds 599 matches
+  in `wsa1/prom_a`, 1,261 in `prom_b` and 125 in `prom_c` — all three
+  confirmed code images — and 0 in `prom_d`, which corroborates `prom_d`
+  holding no SriRR-family code independently of the decoder gap that
+  produces the same "zero" symptom for any image.
+- **`decodeERPPrefix()` is a literal stub that always returns `Fail`**, for
+  about 20 previous-register-bank (Q-register) mnemonics the encoder
+  supports. Its encoding (`[prefix C7/D7/E7, bank_idx (any byte), subopc(+reg
+  /+imm)]`) has no structural byte shape a scan can key on, since `bank_idx`
+  is unconstrained — so unlike the SriRR family above, this gap has no
+  decoder-independent check and no bytes-hidden figure.
+
+**A latent encoder ambiguity was found while investigating the SriRR gap.**
+`ST_RRW` and `ST_RRL` are documented as encoding byte-identically to
+`ST_RRB` — the size adjustment in `TLCS900MCCodeEmitter.cpp` only applies
+when `Opcode < 0xF0`, and this family's prefix is fixed at `0xF3`. If that
+holds, the three sizes cannot be told apart from bytes alone: a decoder
+cannot be written without guessing, and the encoder may already be losing
+size information. This needs hardware-verified ground truth before a
+decoder for this specific form is attempted.
 
 ## Condition Codes
 

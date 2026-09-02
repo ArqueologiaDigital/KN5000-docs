@@ -16,14 +16,12 @@ Wrapper mnemonics like `st_dri3b L, 0xfd, 0xb8, 0x01` are unreadable. The same i
 
 ## Progress Summary
 
-⚠ **Updated 2026-09-01 — all five phases are now complete.** A search of the
-current backend and both KN5000 version trees found **zero remaining
-occurrences** of every wrapper mnemonic named below (`ld16_24`, `ldto_berp`,
-`st_dri3b`, and the rest of the Phase 2-5 lists) — the migration this page
-originally tracked as "In progress" / "Planned" has since finished. The
-per-phase instance counts below are the historical counts from when each
-phase was scoped, kept for context; they were not re-verified against the
-current tree, and no page here asserts new counts in their place.
+**All five phases are complete.** The current backend and both KN5000 version
+trees have zero remaining occurrences of every wrapper mnemonic named below
+(`ld16_24`, `ldto_berp`, `st_dri3b`, and the rest of the Phase 2-5 lists). The
+per-phase instance counts below are the counts from when each phase was
+scoped, kept for context; they have not been re-verified against the current
+tree, and no page here asserts new counts in their place.
 
 | Phase | Description | Instances (at time of scoping) | Status |
 |-------|-------------|-----------|--------|
@@ -167,9 +165,9 @@ already assembled before the suffix existed did not need to change.
 
 ## Silent miscompiles found and fixed in this backend
 
-Three encodings assembled to the **wrong bytes with no diagnostic** before
-being caught and fixed (LLVM `tlcs900_backend`, commits `e7a43c67fdca` and
-`95f7f2d40428`, both 2026-09-01):
+Five encodings assembled to the **wrong bytes with no diagnostic** before
+being caught and fixed. The first three (LLVM `tlcs900_backend`, commits
+`e7a43c67fdca` and `95f7f2d40428`, both 2026-09-01):
 
 - `push (0x1234)` emitted `09 34` — the address silently truncated to 8 bits.
 - `mul WA,(0x1234)` emitted `d8 08 34 12` — a multiply by the *address*, not
@@ -180,9 +178,28 @@ being caught and fixed (LLVM `tlcs900_backend`, commits `e7a43c67fdca` and
   had stayed green because all four call sites in the KN5000/WSA1 trees
   happened to name the wrong register to get the right byte.
 
-All three are now diagnosed or fixed rather than silently mis-encoded; see
-`llvm-project`'s `TOOLCHAIN_VERSION` file (UPDATE 8/9) for the full writeups
-and verification (`make gate-all` across the KN5000 and SX-WSA1R ROM sets).
+The other two are **decoder** bugs, found by round-tripping subcpu v142
+`.byte` runs through the disassembler and back through llvm-mc (commit
+`ad8129f59880`, 2026-09-02):
+
+- The dst-mem-prefix immediate-store sub-opcode `0x02` decoded as `LD16mi_dst`
+  (mnemonic `ldmi16`, real opcode `0x14`) instead of `LD16mi_dst_02` (mnemonic
+  `ldw`, real opcode `0x02`) — so re-assembling the disassembler's own output
+  for the ROM's `bf 04 02 01 00` produced `bf 04 14 01 00`, a different
+  instruction, with no diagnostic. This alone blocked all three
+  `DSP_Bytecode_Op0N` handlers (569 B) in the v1.42 sub-CPU payload from
+  round-tripping.
+- The direct-address ALU family (`addda16`/`subda16`/…/`cpda16` and the
+  `_da24`/mem-dest siblings) printed its register operand at 8/16-bit width
+  even though every one of those instructions' sole TableGen definition takes
+  a 32-bit GPR operand, so the disassembler's own output (e.g. `addda16 wa,
+  (4160)`) failed to re-parse; the 32-bit spelling (`addda16 xwa, (4160)`)
+  encodes byte-identically. The same routing check also caught CP's own base
+  opcode, printing its operands in the wrong order.
+
+All five are now diagnosed or fixed rather than silently mis-encoded; see
+`llvm-project`'s `TOOLCHAIN_VERSION` file for the full writeups and
+verification (`make gate-all` across the KN5000 and SX-WSA1R ROM sets).
 
 ## Process for Each Phase
 

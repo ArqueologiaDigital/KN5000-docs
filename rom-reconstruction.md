@@ -287,10 +287,17 @@ the single largest item left in the plan.
 
 Additional known-unfinished items:
 
-- **maincpu inline `.byte` regions have never been classified** — the audit puts it at
-  roughly 676 KB across the three trees (~460 KB in v7, ~108 KB in v9, the remainder in
-  v10). Some of it is labelled-but-undecoded tables, some is code stored as bytes, some is
-  v7 conversion residue. Separating the three is a whole wave of work on its own.
+- **Code hidden in maincpu `.byte` is measured, per tree, and it is uneven.** `v7` holds
+  275,822 B of it — 797 confirmed code-shaped regions (247,603 B) plus 2,268 shorter
+  misframed islands (28,219 B) — the single largest debt figure anywhere in the tree, more
+  than twice v7's own verbatim romslice debt. `v9` and `v10` each hold 8,058 B of confirmed
+  code-as-`.byte` plus about 14,727 B of shorter misframed islands; the islands are left
+  alone on purpose, since fixing one means re-framing an instruction already present rather
+  than filling a gap. This is a different, larger category than the `.incbin` verbatim debt
+  measured below: a long `.byte` run is exactly as undecoded as an `.incbin`, but it passes
+  every "no `.incbin`" check, so no tool that only scans for `.incbin` can see it.
+  `scripts/analysis/v9_v10_undisassembled_census.py` (v9/v10, and the same rule applied to
+  v7) is the census.
 - The sub-CPU boot ROM source still spells its blank region as **98,304 individual
   `.byte 0xff` lines**. Collapsing them to one `.fill` was proposed, drafted and then
   **withdrawn**: the change is byte-safe, but the region is undumped rather than known to be
@@ -312,6 +319,45 @@ regenerates it byte-for-byte (six `bootcode_*.bin` files remain because the ASL 
 `make audit-icons-blob`, which reports 126,674 bytes in thirteen labelled LLVM slices,
 615,350 bytes unreferenced by the LLVM build, and a 221,104-byte dead tail beyond file
 offset 0x7F2D8 that duplicates the source-built demo-preset region and is read by nothing.
+
+## Verbatim debt across all thirteen gated images
+
+`scripts/analysis/kn5000_source_coverage.py` measures **verbatim debt** — bytes that enter
+the build through an `.incbin` of a committed blob with no generating source — across all
+nine KN5000 images and the four SX-WSA1R images together (13 total, 12,386,304 B). This is
+a narrower question than "is this region understood": a `.byte` run that spells real code,
+or a wrong disassembly that happens to re-assemble to the right bytes, is invisible to it.
+There is currently no tool that measures the second kind (code spelled as `.byte`, tracked
+separately per image — see the maincpu figures above) or the third (data disassembled into
+plausible instruction mnemonics that re-assemble byte-exact — see
+[HD-AE5000]({{ site.baseurl }}/hdae5000/) for two confirmed instances). Every debt figure
+on this page is therefore a lower bound.
+
+**maincpu v10 and v9 are at zero verbatim debt: 100% source.** Nothing in either tree enters
+the build as an opaque blob — even the eight flash-update boot banners round-trip from
+committed PNGs (`python3 scripts/build/mono_images.py verify` reports `ROUND TRIP EXACT:
+all 8 banners x 2 revisions (9,856 B)`, the same 616-byte-each files shared byte-for-byte
+between the two firmware revisions). Zero verbatim debt also holds for subcpu v142, subcpu
+boot, custom data, HD-AE5000, and SX-WSA1R's `prom_c` and `prom_d`.
+
+Where real verbatim debt remains (reproduce with the command above; these are current
+measurements, not the tool's raw total — see the note on table data below):
+
+| Image | Verbatim debt | % source |
+|---|---:|---:|
+| `v7/maincpu` | 123,733 B | 94.1% |
+| `wsa1/prom_a` | 15,722 B | 97.0% |
+| `wsa1/prom_b` | 28,247 B | 94.6% |
+| `table_data` | 17,570 B real (336,038 B raw tool total) | see below |
+
+**Table data's raw 336,038 B figure overstates its debt by 318,468 B.** That amount is the
+six `FTBMP01-06.BMP` feature-demo slide images — genuine, uncompressed 8bpp Windows BMPs
+(`BM` magic, correct 40-byte DIB header, viewable in any image tool) that are already the
+shipped artefact in its best form. The tool counts them as debt because it classifies by
+*mechanism* (does a generator exist?) rather than by *what is understood*; giving them a
+round-trip PNG generator would add machinery for no viewability gain and would discard the
+genuine artefact Technics's own toolchain shipped. Table data's real remaining debt is the
+17,570 B left over once the six BMPs are excluded.
 
 ### Disassembly status diagram
 
