@@ -84,7 +84,7 @@ byte-identical disassembly found 220 ROM-address references, all in dumped windo
 in an undumped range, and the loaded v1.42 payload calls back into IC30 at only two
 addresses, both dumped; the one counter-example (`ROM_CHECKSUM` reading past the dumped
 window at `0xFE0000`) is content-independent and does not run in a normal boot. Against
-that, the adversarial re-verification that closed wave 6 graded the guess **UNDECIDED**:
+that, an adversarial re-verification grades the guess **UNDECIDED**:
 the enumeration it asks for — control-flow targets and vector entries taken out of a
 disassembly, not byte scans — has never been run as an auditable artifact, and raw byte
 scans do turn up candidate pointers into undumped space (most of them coincidences at this

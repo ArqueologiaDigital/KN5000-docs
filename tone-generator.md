@@ -370,12 +370,12 @@ The `kn5000_tonegen_device` (in `kn5000_tonegen.cpp`) implements:
 - 13 global configuration registers; voice control state machine (key on/off via group 0 bank 0)
 - Waveform ROM reading from the `waveform` region (IC304-IC307, 16 MB); stereo 48 kHz stream with linear interpolation
 
-### Sound-generation findings (July 2026)
+### Sound generation
 
-- **Real IC307 PCM is audible.** The "does this voice have sample data?" test originally checked only
-  the *first* sample byte; but real waveforms routinely start at a zero-crossing (IC307 index 0 is a
-  sine that begins at sample 0), so every such waveform was wrongly skipped → silence. Fixed by probing
-  a small window of samples. A keyed note now sounds from the real dumped bank.
+- **Real IC307 PCM is audible.** ⚠ A "does this voice have sample data?" test must probe a
+  *window* of samples, never the first byte alone: real waveforms routinely start at a
+  zero-crossing — IC307 index 0 is a sine beginning at sample 0 — so a first-byte test
+  rejects them and the voice falls silent.
 - **The software envelope is honored.** The KN5000 has **no hardware EG** — the envelope is a *per-note,
   multi-stage software* generator running in the SUB CPU (steppers `LABEL_026E5B`/`026EC3`), clocked by
   the audio tick, that rewrites the voice's amplitude every tick to group 0/bank 0 as `0xF000|magnitude`

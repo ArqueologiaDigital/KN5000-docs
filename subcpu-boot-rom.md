@@ -77,13 +77,13 @@ byte in the chip's code half. The dump does not cut the code off mid-structure a
 The disassembly (`subcpu/boot/subcpu_boot.ld`, and every `.org` in the source) and MAME
 both base the 128 KB image at sub-CPU `0xFE0000`, spanning `0xFE0000-0xFFFFFF`.
 
-Wave 6's adversarial re-verification argued from the chip-select registers that the
-decoded window may really be **64 KB at `0xFF0000-0xFFFFFF`**, which would put the lower
+⚠ **The mapping is contested.** An adversarial re-verification argued from the chip-select
+registers that the decoded window may really be **64 KB at `0xFF0000-0xFFFFFF`**, which would put the lower
 half of the image outside the sub-CPU's address space altogether and would restate the
 headline as "at most ~52 KB is both addressable and undumped". That rests on a
 memory-decode rule reconstructed from the firmware's own register writes rather than from
-a datasheet, and the same reviewer's standing warning is that *every* wave-6 address-range
-table should be read as interpretation. Treat it as an open question. What is not in
+a datasheet, and every address-range table derived that way is interpretation rather than
+measurement. Treat it as an open question. What is not in
 dispute: all 4,352 measured bytes lie in `0xFF8000-0xFFFFFF`, and the 2 KB read at
 `0xFE0000` came back entirely blank.
 

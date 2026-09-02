@@ -132,7 +132,8 @@ The SubCPU firmware writes waveform addresses to the tone generator via two per-
 
 The firmware computes: `velocity_volume = (vel^2 / 4) + 63` (range 63-4095) and OR's it into register +0x0080. The latch strobe protocol (write with bit 15 SET, then rewrite with bit 15 CLEAR) triggers the tone generator hardware to load and process the voice parameters.
 
-> **Note:** These registers were previously labeled "waveform pointer low/high" based on their position in the write sequence. Firmware analysis of `ToneGen_SetupPolyVoice` confirms they carry pitch and velocity data instead.
+> ⚠ **These are not waveform pointers**, despite where they sit in the write sequence.
+> `ToneGen_SetupPolyVoice` is what settles it: the pair carries pitch and velocity.
 
 ## Sample Rate
 
