@@ -12,7 +12,8 @@ permalink: /memory-map/
 |---------------|------|-------------|
 | `0x000000 - 0x0FFFFF` | 1MB | Internal RAM / SFRs |
 | `0x110000` | - | Floppy Disk Controller |
-| `0x120000` | - | Inter-CPU Communication Latches |
+| `0x120000` | - | Floppy DMA acknowledge window (**not** the inter-CPU latch — that is at `0x140000` on this bus) |
+| `0x140000` | - | Inter-CPU Communication Latches (IC22/IC23) |
 | `0x160000 - 0x160006` | 8B | HDAE5000 PPI (8255) |
 | `0x1703B0 - 0x1703DF` | - | VGA Registers (LCD Controller IC206 MN89304, memory-mapped at 0x170000 + VGA port) |
 | `0x1A0000 - 0x1DFFFF` | 256KB | Video RAM (IC207 M5M44265CJ8S, 512KB chip with 256KB mapped via A18 bank select) |
@@ -330,7 +331,7 @@ The sub CPU (tone generator controller) has its own memory map, documented from 
 | `0x0558` | 8B | `SERIAL_STATUS` - Serial communication status bytes |
 | `0x100000` | - | Audio Hardware Registers (DSP/DAC) |
 | `0x110000` | - | Keyboard/Control Panel Interface Latches |
-| `0x120000` | - | Inter-CPU Communication Latch (shared with main CPU) |
+| `0x120000` | - | Inter-CPU Communication Latch (the same pair of latches the main CPU reaches at `0x140000`) |
 | `0x130000` | - | Tone Generator Registers |
 | `0xFE0000 - 0xFFFFFF` | 128KB | Boot ROM |
 
@@ -420,13 +421,19 @@ labelled tables in August 2026. All addresses are sub-CPU addresses.
 
 ## Inter-CPU Communication
 
-The main CPU and sub CPU communicate via latches at `0x120000`.
+The main CPU and sub CPU communicate through **one pair of 8-bit latches (IC22 and IC23)
+that each CPU sees at a different address**: `0x140000` on the main CPU's bus and `0x120000`
+on the sub CPU's. Both firmwares name the address they use — `INTER_CPU_COMM_LATCHES` is
+`0x140000` in `v10/maincpu/kn5000_v10_program.s` and `0x120000` in
+`v142/subcpu/subcpu_vectors.s`. ⚠ On the **main** CPU's bus `0x120000` is the floppy
+controller's DMA-acknowledge window and has nothing to do with the latches.
 
-### Latch Address
+### Latch Addresses
 
-| Address | Access | Description |
-|---------|--------|-------------|
-| `0x120000` | R/W | Inter-CPU Communication Latch |
+| Bus | Address | Access | Description |
+|---|---------|--------|-------------|
+| Sub CPU | `0x120000` | R/W | Inter-CPU Communication Latch |
+| Main CPU | `0x140000` | R/W | the same latch pair |
 
 The sub CPU boot ROM configures DMA to use this address for bidirectional communication with the main CPU.
 
@@ -464,7 +471,7 @@ as `CMD_DISPATCH_TABLE` at `0x00F46C`
 **Main CPU → Sub CPU (Command):**
 
 ```
-1. Main CPU writes command byte to 0x120000
+1. Main CPU writes command byte to the latch (`0x140000` on its bus)
 2. Sub CPU InterCPU_RX_Handler triggered
 3. Sub CPU reads command, initiates DMA for data bytes
 4. DMA transfers remaining data to RAM buffer
@@ -474,7 +481,7 @@ as `CMD_DISPATCH_TABLE` at `0x00F46C`
 **Sub CPU → Main CPU (Response):**
 
 ```
-1. Sub CPU writes response to 0x120000
+1. Sub CPU writes response to the latch (`0x120000` on its bus)
 2. Sub CPU sets appropriate flag bits in VAR_04FE
 3. Main CPU polls or receives interrupt
 4. Main CPU reads response from latch

@@ -26,8 +26,8 @@ This page provides a high-level view of the Technics KN5000 keyboard architectur
                                         │  │ Subsystem Handlers:             │ │
 ┌─────────────────┐       Latch         │  │  ├─ UI/Menu System              │ │
 │    SUB CPU      │<───────────────────>│  │  ├─ MIDI Processing             │ │
-│   TMP94C241F    │     @ 0x120000      │  │  ├─ Sequencer                   │ │
-│                 │                     │  │  ├─ FDC Controller              │ │
+│   TMP94C241F    │  sub 0x120000 /     │  │  ├─ Sequencer                   │ │
+│                 │  main 0x140000      │  │  ├─ FDC Controller              │ │
 │  Boot: 128KB    │                     │  │  └─ HDAE5000 (if present)       │ │
 │  Payload: 192KB │                     │  └─────────────────────────────────┘ │
 │                 │                     └──────────────────────────────────────┘
@@ -148,7 +148,8 @@ See [Boot Sequence]({{ site.baseurl }}/boot-sequence/) for detailed analysis, in
 
 ### Inter-CPU Communication
 
-The Main CPU and Sub CPU communicate via a memory-mapped latch at 0x120000:
+The Main CPU and Sub CPU communicate through one pair of memory-mapped latches (IC22/IC23),
+which the Main CPU addresses at 0x140000 and the Sub CPU at 0x120000:
 
 | Direction | Mechanism | Purpose |
 |-----------|-----------|---------|
@@ -164,7 +165,7 @@ See [Inter-CPU Protocol]({{ site.baseurl }}/inter-cpu-protocol/) for details.
 | 0x000000-0x001FFF | 8KB | Internal RAM (Main CPU) |
 | 0x100000-0x10FFFF | 64KB | Audio/DAC Interface |
 | 0x110000-0x11FFFF | 64KB | Floppy Disk Controller |
-| 0x120000-0x12FFFF | 64KB | Inter-CPU Communication Latch |
+| 0x140000-0x14FFFF | 64KB | Inter-CPU Communication Latch (0x120000 on the Sub CPU's bus) |
 | 0x130010-0x130020 | 16B | HDAE5000 ATA Registers |
 | 0x160000-0x160007 | 8B | HDAE5000 PPI (Parallel Port) |
 | 0x170000-0x17FFFF | 64KB | VGA/LCD Controller |

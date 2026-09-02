@@ -29,7 +29,7 @@ Detailed hardware documentation extracted from the service manual schematics.
 │                          MAIN PCB                              │
 │                                                                │
 │  ┌─────────┐    Latch     ┌─────────┐                         │
-│  │  IC5    │◄──0x120000──►│  IC27   │                         │
+│  │  IC5    │◄──0x140000──►│  IC27   │                         │
 │  │Main CPU │              │ Sub CPU │                         │
 │  │TLCS-900 │              │TLCS-900 │                         │
 │  └────┬────┘              └─┬──┬──┬─┘                         │
@@ -50,7 +50,7 @@ Detailed hardware documentation extracted from the service manual schematics.
 └───────────────────────────────────────────────────────────────┘
 ```
 
-**Signal flow:** Main CPU handles UI, sequencing, and high-level music control. It sends MIDI-like commands to the Sub CPU via the inter-CPU latch at 0x120000. The Sub CPU translates these into low-level register writes for the tone generator (IC303) and DSP chips (IC310, IC311). Waveform data is stored in four mask ROMs, IC304-IC307; only **IC307 is dumped**. Audio output goes through the DSPs for effects processing and mixing before reaching the DAC.
+**Signal flow:** Main CPU handles UI, sequencing, and high-level music control. It sends MIDI-like commands to the Sub CPU through a pair of latches (IC22/IC23) that it addresses at 0x140000 and the Sub CPU addresses at 0x120000. The Sub CPU translates these into low-level register writes for the tone generator (IC303) and DSP chips (IC310, IC311). Waveform data is stored in four mask ROMs, IC304-IC307; only **IC307 is dumped**. Audio output goes through the DSPs for effects processing and mixing before reaching the DAC.
 
 ## Control Panel MCUs
 
@@ -142,7 +142,7 @@ Detailed hardware documentation extracted from the service manual schematics.
 - Multiple GPIO ports (P0-PB, PE, PF)
 - DRAM controller with refresh
 
-**Role:** Controls tone generator at 0x130000, handles audio synthesis, and communicates with main CPU via latch at 0x120000. Receives 192KB payload from main CPU at boot.
+**Role:** Controls tone generator at 0x130000, handles audio synthesis, and communicates with main CPU via the latch pair, which sits at 0x120000 on *this* bus and 0x140000 on the main CPU's. Receives 192KB payload from main CPU at boot.
 
 ### Memory
 

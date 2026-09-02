@@ -43,7 +43,8 @@ The KN5000 uses a dual-CPU architecture with two identical TMP94C241F processors
 └─────────────────────────────────┘     └──────────────────────────────────────┘
                     │                                     ^
                     │         Communication Latch         │
-                    └───────────> @ 0x120000 <────────────┘
+                    │      main 0x140000 / sub 0x120000    │
+                    └─────────────────────────────────────┘
 ```
 
 ## TMP94C241F Specifications
@@ -55,7 +56,7 @@ The TMP94C241F is a Toshiba 32-bit microcontroller from the TLCS-900/H2 family.
 | Feature | Specification |
 |---------|---------------|
 | CPU Core | TLCS-900/H2 (32-bit) |
-| Clock | 25MHz (typical for KN5000) |
+| Clock | main CPU 8 MHz crystal, sub CPU 10 MHz, each with the part's internal clock doubler — 16 MHz and 20 MHz respectively (`TMP94C241(config, m_maincpu, 2 * 8_MHz_XTAL)` / `2 * 10_MHz_XTAL` in `kn5000.cpp`) |
 | Address Bus | 24-bit (16MB address space) |
 | Data Bus | 16-bit external |
 | Registers | 8 general purpose (32-bit each) |
@@ -65,7 +66,7 @@ The TMP94C241F is a Toshiba 32-bit microcontroller from the TLCS-900/H2 family.
 
 | Peripheral | Description |
 |------------|-------------|
-| RAM | 8KB internal SRAM |
+| RAM | 2 KB on-chip, at `0x000400-0x000BFF` |
 | Timers | 8x 16-bit timers |
 | Serial | 2x UART, 1x SIO |
 | DMA | 4-channel MicroDMA |
@@ -101,16 +102,20 @@ The TMP94C241F is a Toshiba 32-bit microcontroller from the TLCS-900/H2 family.
 
 | Address Range | Size | Description |
 |---------------|------|-------------|
-| 0x000000-0x001FFF | 8KB | Internal RAM |
+| 0x000000-0x0003FF | 1KB | Special Function Registers |
+| 0x000400-0x000BFF | 2KB | On-chip RAM (takes priority over the external DRAM below) |
+| 0x000000-0x0FFFFF | 1MB | Work DRAM — 2 × 4 Mbit at IC9/IC10 on CS3, **volatile** |
 | 0x100000-0x10FFFF | 64KB | Audio/DAC Interface |
 | 0x110000-0x11FFFF | 64KB | Floppy Disk Controller |
-| 0x120000-0x12FFFF | 64KB | Inter-CPU Latch |
+| 0x120000-0x12FFFF | 64KB | Floppy DMA acknowledge (**not** the inter-CPU latch) |
+| 0x140000-0x14FFFF | 64KB | Inter-CPU Latch (IC22/IC23) |
 | 0x130010-0x130020 | 16B | HDAE5000 ATA |
 | 0x160000-0x160007 | 8B | HDAE5000 PPI |
 | 0x170000-0x17FFFF | 64KB | VGA Controller |
-| 0x200000-0x27FFFF | 512KB | External RAM |
+| 0x1E0000-0x1FFFFF | 128KB | Battery-backed SRAM (1 Mbit, IC21) — the only persistent RAM |
 | 0x280000-0x2FFFFF | 512KB | HDAE5000 ROM |
-| 0x300000-0x3FFFFF | 1MB | Custom Data Flash |
+| 0x300000-0x3FFFFF | 1MB | Custom Data Flash (IC19) |
+| 0x400000-0x7FFFFF | 4MB | Rhythm Data ROM (IC14) |
 | 0x800000-0x9FFFFF | 2MB | Table Data ROM |
 | 0xE00000-0xFFFFFF | 2MB | Program ROM |
 
@@ -136,13 +141,11 @@ The 2MB Main CPU ROM is organized as:
 
 ### Reconstruction Status
 
-| Metric | Value |
-|--------|-------|
-| ROM Size | 2MB (2,097,152 bytes) |
-| Match | 100% byte-perfect |
-| Native Instructions | 239,683 |
-| Symbolic `.long` References | 15,683 |
-| Build System | LLVM (`llvm-mc` + `ld.lld` + `llvm-objcopy`) |
+The 2 MB image (2,097,152 bytes) rebuilds **byte-identically** from assembly source under
+the LLVM TLCS-900 backend (`llvm-mc` + `ld.lld` + `llvm-objcopy`), checked by `make gate`
+in the disassembly repo. Instruction and reference counts move with every conversion; see
+[ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) for how the remaining debt is
+measured and by which script.
 
 ## Sub CPU
 
@@ -150,11 +153,12 @@ The 2MB Main CPU ROM is organized as:
 
 | Address Range | Size | Description |
 |---------------|------|-------------|
-| 0x000000-0x000FFF | 4KB | Internal CPU RAM (on-chip, bypasses external bus) |
+| 0x000400-0x000BFF | 2KB | On-chip CPU RAM (bypasses the external bus) |
+| 0x000000-0x0FFFFF | 1MB | Work DRAM — 2 × 4 Mbit at IC28/IC29 |
 | 0x002B00-0x002B1F | 32B | Ring buffer control (MIDI message queue from Main CPU) |
 | 0x002000-0x031FFF | 192KB | Payload RAM (loaded from Main CPU at boot) |
 | 0x100000-0x10FFFF | 64KB | Tone Generator hardware registers |
-| 0x120000 | 1B | Inter-CPU communication latch |
+| 0x120000 | 1B | Inter-CPU communication latch (`0x140000` on the main CPU's bus) |
 | 0x130000-0x130002 | 4B | DSP registers (uPD6383GF-3BA: address + data) |
 | 0xFE0000-0xFFFFFF | 128KB | Boot ROM |
 
@@ -169,10 +173,18 @@ The 2MB Main CPU ROM is organized as:
 
 ### Firmware Components
 
-| Component | Size | Status | Native Instructions |
-|-----------|------|--------|-------------------|
-| Boot ROM | 128KB | 100% byte-match | 1,357 |
-| Payload | 192KB | 100% byte-match | 35,721 |
+| Component | Size | Status |
+|-----------|------|--------|
+| Boot ROM (IC30) | 128KB | 100% byte-match, and zero verbatim debt. ⚠ **Only 4,352 of the chip's 131,072 bytes have ever been read** — the rest of the file is `0xFF` standing in for undumped content, so "100% covered" is true over a 3.3% denominator |
+| Payload (v1.42) | 192KB | 100% byte-match, zero verbatim debt |
+
+### The RTOS is not bespoke
+
+Both KN5000 processors run the same multitasking kernel as the **SX-WSA1R's** two
+TMP95C061s — one kernel source, four processors, two products. The KN5000 builds are
+separate builds rather than copies, so the match is structural (decoded token sequences,
+graded against a foil) and not a byte match. See
+[Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/#-one-kernel-four-processors-two-products).
 
 ### Audio Processing Architecture
 
