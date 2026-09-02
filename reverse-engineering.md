@@ -1290,6 +1290,13 @@ Expected widget types based on typical presentation systems:
 
 ### ASL Macro Design
 
+⚠ **Superseded.** This macro-based plan was never built; `feature_demo.inc` does
+not exist. The demo slide data was disassembled directly into real source
+instead — `v10/maincpu/demo/demo_routines.s` and `table_data/kn5000_table_data.s`
+— which is what the [Feature Demo]({{ site.baseurl }}/feature-demo/) page
+documents. The sketch below is kept for the widget-parameter shapes it records,
+not as an open task.
+
 Goal: Replace raw data bytes with human-readable macros.
 
 **Slide macros:**
@@ -2055,19 +2062,18 @@ Level 2 (0xEF0DA5): 16 sub-states for detailed UI handling
 
 ---
 
-## Undocumented Data Structures
+## Formerly Undocumented Data Structures
 
-Large binary includes that need analysis:
-
-| Address Range | Size | File | Status |
-|---------------|------|------|--------|
-| 0xE0176C-0xE01F7F | 2.1 KB | `e0176c_e01f7f.bin` | Unknown structure |
-| 0xE02510-0xE06BAF | 18 KB | `e02510_e06baf.bin` | Unknown structure |
-| 0xE06F30-0xE0ADCF | 16 KB | `e06f30_e0adcf.bin` | Unknown structure |
-| 0xE0B250-0xE0BA60 | 2.1 KB | `e0b250_e0ba60.bin` | Unknown structure |
-| 0xE0BB90-0xE0E974 | 12 KB | `e0bb90_e0e974.bin` | Unknown structure |
-
-**Total undocumented binary data: ~50 KB** requiring structural analysis.
+The roughly 50 KB spanning 0xE0176C-0xE0E974 that once sat as five untyped binary
+includes is now named, typed source. `0xE0176C-0xE01F7F` is
+`v10/maincpu/sequencer/ssf_gate_states.s`; the rest is the instrument sound-data
+family under `v10/maincpu/audio/` (`sound_data_guitar.{s,c}`,
+`sound_data_strings_vocal.{s,c}`, `sound_data_flute.{s,c}`,
+`sound_data_sax_reed.{s,c}`, `sound_data_mallet_orch_perc.{s,c}`,
+`sound_data_orchestral_pad.{s,c}`, `sound_data_piano.{s,c}`, `sound_data_brass.s`,
+and the other per-instrument-category files alongside them) — each range was split
+into per-instrument slices before conversion, so no single binary file now
+corresponds to any one of the five address ranges above.
 
 ---
 
