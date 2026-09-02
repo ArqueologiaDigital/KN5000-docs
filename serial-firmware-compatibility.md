@@ -1,22 +1,21 @@
 ---
 layout: page
-title: "Serial Firmware Compatibility: Debugging Report"
+title: "Serial Firmware Compatibility"
 permalink: /serial-firmware-compatibility/
 ---
 
-# Making the MAME Serial Driver Compatible with the Original KN5000 Firmware
+# Driving the Control-Panel Serial Link from Firmware
 
-*February 2026 — RESOLVED*
+The MAME KN5000 driver runs the **original KN5000 program ROM** and the **Another World VM**
+custom ROM over the same emulated serial hardware. Both boot without the "ERROR in CPU data
+transmission" dialog, and all control-panel buttons on both panel boards produce the correct LED
+and menu responses.
 
-> **Status: FULLY WORKING.** As of February 15, 2026, the original KN5000 firmware boots without errors and all control panel buttons (both left and right panels) produce correct LED and menu responses. The Another World VM also works with the same driver.
+The two firmwares drive the link in completely different ways, and the driver has to satisfy
+both. This page states what each one does and what the emulation must therefore provide. The
+line-level timing rules are in [Control-Panel Serial Timing]({{ site.baseurl }}/serial-debugging/).
 
-This report documents the effort to fix the MAME KN5000 driver's serial communication so the **original KN5000 program ROM** boots without the "ERROR in CPU data transmission" dialog. All fixes simultaneously support the Another World VM custom ROM that uses the same serial hardware.
-
-## Background
-
-The [first round of serial debugging]({{ site.baseurl }}/serial-debugging/) (January 2026) got individual bytes transmitting correctly between the CPU serial device and the control panel HLE. The [compatibility review](https://github.com/felipesanches/custom-kn5000-roms/blob/main/anotherworld/docs/serial-cpanel-compatibility-2026-02-11.md) (February 11) fixed three additional bugs that made the AW VM's polled serial work.
-
-But the original firmware uses a fundamentally different serial approach than the AW VM, and it was still broken:
+## Two Ways to Drive the Same Link
 
 | Feature | AW VM | Original Firmware |
 |---------|-------|-------------------|
@@ -194,151 +193,62 @@ Time    CPU Firmware                  MAME Serial Device    Control Panel HLE
 ~70 ms  Init complete, enter main loop
 ```
 
-## Attempts Log
+## What the Emulation Must Provide
 
-### Attempt 1: Phantom byte signaling via tx_start (commit f3e0eb7)
+Sixteen behaviours are load-bearing. Removing any one of them reintroduces a visible failure.
 
-**Approach:** Instead of gating SCLK on PFFC (which causes clock desync), signal PFFC state through `tx_start_cb`. Cpanel skips phantom bytes.
+### CPU serial device (`tmp94c241_serial.cpp`)
 
-**Changes:**
-- `serial.cpp sioclk()`: Always forward sclk_out_cb (no PFFC gating)
-- `serial.cpp scNbuf_w()`: Pass PFFC state via `tx_start_cb(pffc ? 1 : 0)`
-- `serial.cpp timer_callback()`: Added `(m_serial_mode & 3) != 1` early return (only drive SCLK in baud rate mode)
-- `kn5000_cpanel.cpp`: Added `m_accept_next_byte` flag, skip phantom bytes
+| Behaviour | Why |
+|---|---|
+| The clock keeps running while **either** a TX or an RX byte is incomplete | Bytes complete correctly |
+| A trailing rising edge is owed after TX's last falling edge | Bit 7 is sampled before INTTX1 fires |
+| RXD is captured **before** the clock is forwarded | No sampling race |
+| `IOC` is **bit 0** of `SCxCR`, and only gates the timer in TO2 mode (`SC1MOD & 3 == 0`) | The AW VM sets IOC=1 in baud-rate mode; gating on IOC alone would stop its clock |
+| TO2 trigger drives SCLK only during active transfers | Idle detection can fire |
+| PFFC state is passed to the panel through `tx_start`, and the internal shift register runs regardless | Phantom bytes reach neither the panel nor a stalled TX state machine |
+| INTRX1 is flagged when RX completes | The firmware is told a byte arrived |
+| Writing `SC1MOD` does **not** raise INTTX | The firmware writes SC1MOD at the start of every TX sequence; a spurious INTTX advances the state machine a byte early and corrupts LED state |
+| Writing `SCxCR` does **not** abort an in-progress RX byte | The INTRX1 ISR rewrites SC1CR between bytes |
+| `SC1BUF` residue is cleared on `scNcr_w` | A stale byte otherwise starts a phantom reception and desynchronises the button state arrays |
 
-**Result:** AW VM works. Firmware shows ERROR, LEDs off.
+### Control-panel HLE (`kn5000_cpanel.cpp`)
 
-**Root cause:** The `(m_serial_mode & 3) != 1` check disabled the baud rate timer for the firmware (which uses TO2 mode, SC1MOD=0x00). But the firmware also configures BR1CR, and on this hardware the baud rate timer is the primary 250 kHz SCLK source regardless of SC1MOD.
+| Behaviour | Why |
+|---|---|
+| INTA assert, idle detect, then panel self-clocking | The bidirectional half of the protocol |
+| `accept_next_byte`, set only by `tx_start(1)` and consumed after one byte | Phantom bytes are assembled and discarded rather than parsed |
+| `tx_start` flags are applied at byte boundaries, not when they arrive | MAME's synchronous execution fires `tx_start` for byte N+1 before byte N's last rising edge |
+| `rx_waiting_for_start` ignores orphan clock edges after a completed byte | No byte-boundary desync |
+| The idle-detect window slides: every `sioclk()` edge retriggers the 50 µs timer | It fires after the **last** byte of a burst, phantoms included |
+| LED commands generate no response | The firmware batches LED writes; an INTA during the next TX sets IOC=1 and deadlocks the baud-rate timer |
+| Left-panel headers are `0xC0 \| segment`, right-panel `segment` | See below |
+| A segment change must be stable for **2 consecutive scans** (14 ms) before it is reported | MAME input ports momentarily return single-bit values that revert within one scan interval; a plain 100 ms debounce turns each glitch into a full press-release cycle |
 
-### Attempt 2: TO2_trigger IOC fix + activity gate (commit ffb8110)
+### The Header Lookup Table
 
-**Approach:** Fix the IOC bit check (was checking bit 1 / SCLKS instead of bit 0 / IOC). Add activity gate to TO2_trigger so it only drives SCLK during active transfers.
-
-**Changes:**
-- `serial.cpp TO2_trigger()`: `BIT(m_serial_control, 1)` → `BIT(m_serial_control, 0)` for IOC
-- `serial.cpp TO2_trigger()`: Activity gate: only call `sioclk()` when `tx_clock_count > 0 || tx_skip_first_falling || rx_clock_count != 8`
-
-**Result:** Firmware still shows ERROR, LEDs off.
-
-**Root cause:** Baud rate timer still disabled by the SC1MOD check from attempt 1. The IOC and activity gate fixes were correct but insufficient alone.
-
-### Attempt 3: timer_callback IOC-only check (commit 22dc3e4)
-
-**Approach:** Replace the SC1MOD check with an IOC-only check. Idea: don't drive SCLK in slave mode (IOC=1).
-
-**Changes:**
-- `serial.cpp timer_callback()`: `BIT(m_serial_control, 0)` — return early when IOC=1
-
-**Result:** AW VM has very bad performance. Firmware shows ERROR but **LEDs eventually turn on** (partial success!).
-
-**Root cause:** AW VM sets SC1CR=0x01 (IOC=1) even in baud rate mode. The IOC check blocked the AW VM's clock. Firmware improvement: serial communication partially works, confirming the IOC/activity gate fixes help.
-
-### Attempt 4: Refined timer_callback — only check IOC in TO2 mode (commit a86b906)
-
-**Approach:** Only check IOC in TO2 trigger mode. In baud rate mode, the timer always drives.
-
-**Changes:**
-- `serial.cpp timer_callback()`: `(m_serial_mode & 3) == 0 && BIT(m_serial_control, 0)` — only block in TO2 slave mode
-
-**Result:** Not tested (user provided policy clarification instead).
-
-### Attempt 5: Remove idle_detect retrigger, one-shot accept (commit 35c38a1)
-
-**Approach:** Fix three interconnected issues in the cpanel HLE:
-
-1. **Remove idle_detect retrigger from sioclk()** — Continuous TO2 edges at 12.5 kHz retriggered the 250 µs timer on every edge, preventing it from ever firing. Now only `process_command()` starts the timer.
-
-2. **Cancel idle_detect from tx_start()** — When the CPU sends more bytes, cancel pending idle detection.
-
-3. **One-shot accept_next_byte** — Default false, set true only by `tx_start(1)`, consumed after accepting one byte. Rejects stale bytes from continuous clock edges.
-
-**Result:** Firmware still shows ERROR, LEDs turn on correctly.
-
-**Root cause discovered:** The unconditional cancel in `tx_start()` killed the timer for phantom bytes too. The firmware sends SM_TXDelay2 (phantom) AFTER SM_SendByteN (real), and tx_start(0) from the phantom cancelled the idle_detect that process_command() had just started.
-
-### Attempt 6: Only cancel idle_detect for real bytes (commit 9d786d3)
-
-**Approach:** Phantom bytes (tx_start state=0) should NOT cancel idle_detect. Only real bytes (state=1) cancel it.
-
-**Changes:**
-- `kn5000_cpanel.cpp tx_start()`: `if (state != 0) m_idle_detect_timer->reset(attotime::never);`
-
-**Rationale:** The firmware's TX sequence: phantom → phantom → REAL → phantom → REAL → phantom. The idle_detect timer starts when process_command() fires (after the 2nd real byte). The subsequent phantom (SM_TXDelay2) must NOT cancel it. The AW VM sends real dummy bytes, which correctly cancel the timer.
-
-**Result:** Partial success — phantom byte cancellation still an issue (see later attempts).
-
-### Attempts 7-27: Iterative Serial Fixes (not individually documented)
-
-Multiple rounds of fixes addressed interconnected timing issues:
-- **Deferred tx_start flags:** MAME's synchronous execution model causes `tx_start` for byte N+1 to fire before byte N's last rising edge. Solution: pending values applied at byte boundaries.
-- **rx_waiting_for_start:** After completing a byte, orphan clock edges (from baud rate timer's internal RX completion) must be ignored until the next `tx_start` signals a new byte.
-- **Sliding idle_detect window:** Instead of starting/cancelling idle_detect in `tx_start`, retrigger the 50 µs timer on every `sioclk()` edge. This creates a sliding window that fires only after the LAST edge (including phantom bytes).
-- **LED commands must not generate responses:** Firmware sends LED data in rapid batches via the TX state machine. Queuing sync responses causes INTA delivery during the next TX command, setting IOC=1 and deadlocking the baud rate timer.
-
-### Attempt 41: Right Panel Button State Desynchronization
-
-**Problem:** Right panel buttons sometimes triggered the wrong LED.
-
-**Root cause:** A residual byte left in `SC1BUF` from a previous serial operation caused the firmware's `scNcr_w()` to start a phantom reception. The stale byte was treated as a valid response, desynchronizing the button state arrays.
-
-**Fix:** Cleared residual bytes in `scNcr_w()` and added timestamp-based debounce to the cpanel HLE.
-
-### Attempt 42: INTRX1 Missing from Compiled Binary
-
-**Problem:** Left panel buttons delivered bytes correctly via INTA self-clocking, but the firmware never processed them.
-
-**Root cause:** The compiled MAME binary had an older version of `tmp94c241_serial.cpp` that logged "RX byte received" (line 182) but was missing the `INTRX1` interrupt flagging code (line 187) — both in the same `if (m_rx_clock_count == 0)` block. The source was correct; the binary was stale.
-
-**Evidence:** 3,523 "RX byte received" log entries vs 0 "INTRX pending set" entries.
-
-**Fix:** Rebuild MAME with current source.
-
-### Attempt 43: Left Panel Header Encoding + Ghost Toggle Fix (FINAL FIX)
-
-**Problem 1 — Ghost button toggles:** MAME input ports momentarily return single-bit non-zero values that revert within one scan interval (7 ms). The global 100 ms debounce converted each glitch into a full press-release cycle, flooding the event queue with phantom events. Log analysis found 110 left panel events + 50 right panel events, ALL ghost toggles, ZERO real presses.
-
-**Fix 1:** Per-segment confirmation — state change must be stable for 2 consecutive scans (14 ms) before being reported.
-
-**Problem 2 — Left panel header encoding (ROOT CAUSE):** The button packet header for left panel used `0x40 | segment` (bits 7:6=01), which falls in a dead zone of the firmware's ROM lookup table at `0xEDA03C`. All left panel events mapped to index 0x1F (> 0x15), bypassing LED dispatch entirely.
+The firmware maps a packet header byte to a record index through a ROM table at `0xEDA03C`
+(v7-v10; `0xED9F28` on v5 and `0xED9F40` on v6, with byte-identical content). Only two of the
+four `bits 7:6` encodings are live:
 
 ```
-ROM lookup table at 0xEDA03C:
-[0x00-0x0A]: 0B 0C 0D 0E 0F 10 11 12 13 14 15   → right (bits 7:6=00) ✓
-[0x20-0x2A]: all 1F                                → DEAD ZONE (bits 7:6=01) ✗
-[0x60-0x6A]: 00 01 02 03 04 05 06 07 08 09 0A     → left (bits 7:6=11) ✓
+[0x00-0x0A]: 0B 0C 0D 0E 0F 10 11 12 13 14 15   -> right panel (bits 7:6 = 00)
+[0x20-0x2A]: all 1F                              -> DEAD ZONE   (bits 7:6 = 01)
+[0x60-0x6A]: 00 01 02 03 04 05 06 07 08 09 0A   -> left panel  (bits 7:6 = 11)
 ```
 
-**Fix 2:** Changed left panel header from `0x40 | segment` to `0xC0 | segment`. Right panel kept at `segment` (already working).
+A left-panel header of `0x40 | segment` lands in the dead zone: every event resolves to index
+`0x1F`, which is past the table's `0x15` limit, and LED dispatch is skipped entirely. The left
+panel must use `0xC0 | segment`.
 
-**Result:** Both panels fully working. Left panel buttons produce correct LED reactions. Right panel unchanged.
+This is the same table that resolves the data wheel's `0xD7` header to record `0x19`; see
+[Data Wheel]({{ site.baseurl }}/data-wheel-investigation/).
 
-## Remaining Minor Issues
+## Known Deviation From Hardware
 
-### Baud Rate Half Speed
-The baud rate timer fires at `m_hz` but toggles SCLK, so the effective bit rate is `m_hz / 2`. At BR1CR=0x14 (250 kHz nominal), the actual SCLK frequency is 125 kHz. This doesn't break correctness but makes serial communication 2x slower than real hardware.
+### Baud rate runs at half speed
 
-## Resolution Summary
-
-The complete set of fixes required to make the original firmware's control panel fully functional in MAME:
-
-| Layer | Fix | Impact |
-|-------|-----|--------|
-| **CPU Serial** | Timer checks both TX and RX clock counts | Bytes complete correctly |
-| **CPU Serial** | Defer TX bit 0 output to next falling edge | No last-bit corruption |
-| **CPU Serial** | Capture RXD before forwarding clock | No race condition |
-| **CPU Serial** | Gate SCLK output on PFFC state | No phantom bytes to cpanel |
-| **CPU Serial** | Fix IOC bit check (bit 0, not bit 1) | Correct slave mode detection |
-| **CPU Serial** | Refined timer_callback gate | 250 kHz clock works in all modes |
-| **CPU Serial** | Gate TO2_trigger on TX/RX activity | Idle detection works |
-| **CPU Serial** | INTRX1 interrupt flag set on RX complete | Firmware gets RX notifications |
-| **CPanel HLE** | INTA mechanism with idle detect + self-clock | Bidirectional serial protocol |
-| **CPanel HLE** | Phantom byte filtering via tx_start | Command parser not corrupted |
-| **CPanel HLE** | Deferred tx_start flags at byte boundaries | No mid-byte flag application |
-| **CPanel HLE** | rx_waiting_for_start (orphan edge filter) | No byte boundary desync |
-| **CPanel HLE** | Sliding idle_detect window (50 µs retrigger) | Fires after last phantom byte |
-| **CPanel HLE** | LED commands produce no response | No INTA during TX batches |
-| **CPanel HLE** | Left panel header 0xC0 (not 0x40) | ROM lookup table valid zone |
-| **CPanel HLE** | Per-segment confirmation (14 ms) | Ghost toggles filtered |
+The baud rate timer fires at `m_hz` but toggles SCLK, so the effective bit rate is `m_hz / 2`. At BR1CR=0x14 (250 kHz nominal), the actual SCLK frequency is 125 kHz. This does not break correctness; it makes the link twice as slow as real hardware.
 
 ## Key Delay Calculations
 
@@ -364,11 +274,11 @@ Loop timing: DEC 1, WA (2) + CP WA, 0 (2) + JR Z (2) + JR T (4) = ~10 cycles = 6
 - `src/mame/matsushita/kn5000.cpp` — Main driver wiring
 
 **Firmware reference (read only):**
-- `maincpu/cpanel_routines.asm` — State machine, CPanel_WaitTXReady, INTA handler
-- `shared/sfr_tmp94c241.asm` — SFR register addresses
+- `v10/maincpu/ui/cpanel_routines.s` — TX state machine, `CPanel_WaitTXReady`, INTA handler
+- `v10/maincpu/shared/sfr_tmp94c241.s` — SFR register addresses
 
 **Related documentation:**
-- [Serial Debugging Journey (Jan 2026)]({{ site.baseurl }}/serial-debugging/) — First round of bit-level timing fixes
+- [Control-Panel Serial Timing]({{ site.baseurl }}/serial-debugging/) — edge roles, byte-boundary sync, phantom bytes
 - [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) — Command format, button segments, LED commands
 
 ---
