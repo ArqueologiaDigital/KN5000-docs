@@ -8,7 +8,7 @@ permalink: /floppy-security-analysis/
 
 Security analysis of the KN5000 v10 Program ROM's floppy handling code, examining whether bugs could be exploited to inject arbitrary code from a crafted floppy disc.
 
-**Target:** Program ROM v10 (`kn5000_v10_program.asm`, 442,668 lines)
+**Target:** Program ROM v10, as disassembled in `v10/maincpu/` (156 `.s` files)
 **Scope:** All floppy-related code paths — update handlers, LZSS decompression, normal file I/O
 
 ---

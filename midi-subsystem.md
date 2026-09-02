@@ -267,7 +267,7 @@ The accompaniment engine has its own MIDI filter system:
 
 ## Code References
 
-### Sub CPU (`subcpu/kn5000_subprogram_v142.asm`)
+### Sub CPU (`v142/subcpu/kn5000_subprogram_v142.s`)
 
 | Routine | Address | Description |
 |---------|---------|-------------|
