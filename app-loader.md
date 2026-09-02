@@ -433,7 +433,8 @@ mame kn5000 \
 The App Loader activates when the firmware sends the DISK MENU event (`0x01C00008`). In MAME:
 
 1. Wait for the keyboard to boot (~30 seconds)
-2. Press the **DISK** button on the front panel (top-right area)
+2. Press the **`MENU: DISK`** button (`CPR_SEG10` `0x20`) — that is the name it carries in
+   MAME's input list
 3. The App Loader menu should appear on the LCD
 
 For automated testing via Lua scripts, you can force activation by writing directly to the loader's active flag:
@@ -447,12 +448,15 @@ mem:write_u8(0x200000, 1)
 
 ### Menu Navigation
 
-| Button | Action |
-|--------|--------|
-| **RIGHT UP** (CPR SEG4, bit 1) | Move selection up |
-| **RIGHT DOWN** (CPR SEG4, bit 5) | Move selection down |
-| **LEFT ENTER** (CPL SEG4, bit 0) | Launch selected app |
-| **LEFT EXIT** (CPL SEG7, bit 3) | Exit App Loader |
+The loader reads the panel's raw scan bytes, so the keys it watches are named after their
+matrix position rather than after the function they serve here:
+
+| Bit read by the loader | Panel button in MAME | Action |
+|---|---|---|
+| `CPR_SEG4` `0x02` | `RIGHT 2` (PART SELECT) | Move selection up |
+| `CPR_SEG4` `0x20` | `CONDUCTOR: RIGHT 2` | Move selection down |
+| `CPL_SEG4` `0x01` | `VARIATION 1` | Launch the selected app |
+| `CPL_SEG7` `0x08` | `EXIT` | Leave the App Loader |
 
 ### Disk Image Format
 
@@ -465,7 +469,7 @@ Mines (Minesweeper) is a full application that runs under the App Loader. It is 
 ### 1. Build the Mines disk binary
 
 ```bash
-cd Mines/platforms/kn5000
+cd Mines/platforms/kn5000   # branch kn5000_port
 make disk
 # Produces: build/mines_disk.bin (14KB)
 ```
