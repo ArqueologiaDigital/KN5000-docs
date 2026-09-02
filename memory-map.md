@@ -10,13 +10,16 @@ permalink: /memory-map/
 
 | Address Range | Size | Description |
 |---------------|------|-------------|
-| `0x000000 - 0x0FFFFF` | 1MB | Internal RAM / SFRs |
+| `0x000000 - 0x0003FF` | 1KB | Special Function Registers (on-chip) |
+| `0x000400 - 0x000BFF` | 2KB | On-chip RAM (decoded inside the CPU, so it wins over the DRAM below) |
+| `0x000000 - 0x0FFFFF` | 1MB | Work DRAM, 2 × 4 Mbit at IC9/IC10 on CS3 — **volatile**, not battery backed |
 | `0x110000` | - | Floppy Disk Controller |
 | `0x120000` | - | Floppy DMA acknowledge window (**not** the inter-CPU latch — that is at `0x140000` on this bus) |
 | `0x140000` | - | Inter-CPU Communication Latches (IC22/IC23) |
 | `0x160000 - 0x160006` | 8B | HDAE5000 PPI (8255) |
 | `0x1703B0 - 0x1703DF` | - | VGA Registers (LCD Controller IC206 MN89304, memory-mapped at 0x170000 + VGA port) |
 | `0x1A0000 - 0x1DFFFF` | 256KB | Video RAM (IC207 M5M44265CJ8S, 512KB chip with 256KB mapped via A18 bank select) |
+| `0x1E0000 - 0x1FFFFF` | 128KB | Battery-backed SRAM (1 Mbit, IC21) — the machine's only persistent RAM |
 | `0x280000` | 512KB | HDAE5000 ROM |
 | `0x300000 - 0x3FFFFF` | 1MB | Custom Data Flash (User Storage) - see [Boot Sequence]({{ site.baseurl }}/boot-sequence/#lzss-preset-data-handling) for 0x3E0000 usage |
 | `0x400000` | - | Rhythm Data ROM |
