@@ -13,12 +13,12 @@ There are **two** FDC drivers in the machine, and they are different code:
 | driver | where | status |
 |--------|-------|--------|
 | runtime driver | Program ROM 0xF96B13-0xF97E80, `v10/maincpu/storage/fdc_routines.s` | partly symbolic; several routines are still emitted as raw bytes with inline-label comments |
-| first-stage bootloader driver | Table Data ROM 0x9FD8A5-0x9FEA9C, `table_data/boot_fdc_driver.s` | **fully labelled** since August 2026 (commit `65c79cb`); 84 labels, byte-matching rebuild |
+| first-stage bootloader driver | Table Data ROM 0x9FD8A5-0x9FEA9C, `table_data/boot_fdc_driver.s` | **fully labelled**: 84 labels, byte-matching rebuild |
 
 The bootloader driver is a compact port of the runtime one, and each of its routine
-headers names its runtime twin. That correspondence turned out to be the most useful
-thing about it: it settles what several of the runtime driver's guessed names actually
-do — see [What the boot twin corrects](#what-the-boot-twin-corrects).
+headers names its runtime twin. That correspondence is what makes it valuable: it
+settles what several of the runtime driver's guessed names actually do — see
+[What the boot twin corrects](#what-the-boot-twin-corrects).
 
 ---
 
@@ -535,9 +535,8 @@ The runtime driver dispatches through the 12-entry `u16` offset table
 `FDC_HANDLER_OFFSETS` at **0xEA98CA**, whose entries are relative to
 `FDC_HANDLER_DISPATCH_BASE` at 0xF97D8D. The offsets in the ROM are
 `0, 5, 13, 21, 29, 37, 45, 50, 55, 60, 65, 70`, which gives the handler entry points
-below. (The addresses in earlier revisions of this page were off by 1-14 bytes; these
-are the offsets read out of `kn5000_v10_program.rom` and they agree with
-`symbols/maincpu_symbols_reference.txt`.)
+below. These are the offsets read out of `kn5000_v10_program.rom`, and they agree with
+`symbols/maincpu_symbols_reference.txt`.
 
 The index is the **command number** of the request — the same numbering the bootloader
 driver uses, which is how the "Command" column below is known:
@@ -578,10 +577,9 @@ by command) settles them:
 | `FDC_CMD_DISPATCH_SUB` (0xF96D95) | controller reset | `FDC_CmdControllerReset` |
 | `FDC_INTERRUPT_HANDLER` (0xF97C7C) | sense drive status | `FDC_CmdSenseDriveStatus` |
 
-The old names are still in the maincpu source as of this writing — renaming them
-repo-wide is a recorded follow-up, not yet done, so the disassembly and the tables
-earlier on this page still use them. `FDC_SeekRecalibrate` was already renamed to
-`FDC_CmdRecalibrate` (commit `274b343`).
+The maincpu source still carries the old names, and so do the tables earlier on this
+page; renaming them repo-wide is an open follow-up. `FDC_SeekRecalibrate` is already
+`FDC_CmdRecalibrate`.
 
 ---
 
@@ -589,10 +587,9 @@ earlier on this page still use them. `FDC_SeekRecalibrate` was already renamed t
 
 4,600 bytes in the Table Data ROM, running at the boot-time alias 0xFFD8A5-0xFFEA9C
 (at reset the Table Data ROM is mapped at 0xE00000-0xFFFFFF, so boot address = ROM
-address + 0x600000). It was carried in the build as `bootcode_flash_handlers.bin` and
-labelled "Flash Update Type Handlers / Type 1..8 disk types" — **that label was wrong**.
-It is the complete command layer of the bootloader's floppy driver for the uPD72068 at
-IC208. Source: `table_data/boot_fdc_driver.s`.
+address + 0x600000). It is the complete command layer of the bootloader's floppy driver for the uPD72068 at
+IC208 — **not** the "Flash Update Type Handlers / Type 1..8 disk types" its old build
+name `bootcode_flash_handlers.bin` suggests. Source: `table_data/boot_fdc_driver.s`.
 
 ### Hardware interfaces
 
@@ -778,9 +775,9 @@ of `Check_for_Floppy_Disk_Change` and reads the same active-low Port D bit 6.
 | DMA data port | **Working** | 0x120000 for software DMA channel 3 |
 | IRQ routing | **Working** | INT4 (command complete), INT5 (DRQ) |
 | Floppy connector | **Working** | 3.5" HD (1.44MB, default) and DD (720K), MFI format supported |
-| TC signal | **NOT IMPLEMENTED** | Timer 0 output (TO0) should pulse FDC TC, but TMP94C241 CPU core lacks timer output callbacks. Transfers hang without TC. |
+| TC signal | **Working** | Timer 0 match output pulses FDC Terminal Count: `m_maincpu->to0_callback().set(m_fdc, FUNC(upd72067_device::tc_line_w))` |
 | Disk images | **Available** | v5-v10 firmware update disks from [archive.org](https://archive.org/details/technics-kn5000-system-update-disks) |
-| Disk change detect | **Fixed** | Port D bit 6 — dskchg_r() inverted for active-low hardware signal |
+| Disk change detect | **Working** | Port D bit 6 — `dskchg_r()` inverted for the active-low hardware signal |
 
 **Test command:** `mame kn5000 -flop <disk_image.mfi>`
 
@@ -788,7 +785,16 @@ of `Check_for_Floppy_Disk_Change` and reads the same active-low Port D bit 6.
 
 The firmware's `Check_for_Floppy_Disk_Change` (at 0xEF4F5E) reads Port D bit 6 before issuing any FDC commands. This signal is active-low on the hardware (low = disk change detected). MAME's `floppy_image_device::dskchg_r()` returns active-high (1 = change detected), so the signal must be inverted: `(!floppy->dskchg_r()) << 6`. Without this inversion, the firmware always shows "ERROR 02! There is no disk in the disk drive."
 
-The TC (Terminal Count) signal terminates multi-sector FDC transfers. It should be wired from the Main CPU Timer 0 output (TO0) to the FDC TC input. **STATUS: NOT IMPLEMENTED** — the TMP94C241 MAME CPU core does not expose timer output callbacks (no `to0_write` devcb). Without TC, FDC Read Data commands hang indefinitely because `upd765::tc_done` is never set. Implementing this requires adding timer output callback support to the TMP94C241 CPU device, then wiring `m_maincpu->to0_write().set(m_fdc, FUNC(upd72067_device::tc_line_w))` in the machine configuration.
+### Terminal Count (TC)
+
+TC terminates a multi-sector FDC transfer. Without it, an FDC Read Data command never completes,
+because `upd765::tc_done` is never set. The Main CPU's Timer 0 match output drives it: the
+TMP94C241 device exposes `to0_callback()`, and the driver binds it to the FDC's TC input:
+
+```cpp
+// TC0: FDCTC — Timer 0 match output pulses FDC Terminal Count
+m_maincpu->to0_callback().set(m_fdc, FUNC(upd72067_device::tc_line_w));
+```
 
 ---
 
