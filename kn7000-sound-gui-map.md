@@ -25,7 +25,7 @@ flowchart TD
     HOME -->|SOUND GROUP button| SEL["SOUND select<br/>(per part, 1236 sounds)"]
     HOME -->|SOUND EXPLORER| EXPL["SOUND EXPLORER<br/>category/alphabet browser"]
     HOME -->|DIGITAL DRAWBAR| DRAW["DIGITAL DRAWBAR<br/>9 drawbars + rotary"]
-    HOME -->|ORGAN TABS| TABS["TAB ORGAN<br/>USA/European/Theatre"]
+    HOME -->|TAB ORGAN| TABS["TAB ORGAN<br/>USA/European/Theatre"]
     HOME -->|ACCORDION REGISTER| ACC["ACCORDION REGISTER"]
     HOME -->|hold TECHNI-CHORD| TC["TECHNI-CHORD<br/>harmony styles"]
 
@@ -44,7 +44,7 @@ flowchart TD
 
     %% --- APC / Chord Finder ---
     HOME -->|APC MODE| APC["APC SELECT<br/>BASIC/FINGERED/PIANIST"]
-    APC -->|CHORD FINDER<br/>LCD RIGHT 5| CF["CHORD FINDER<br/>ear button = sound the chord"]
+    APC -->|CHORD FINDER| CF["CHORD FINDER<br/>ear button = sound the chord"]
 
     %% --- PROGRAM MENUS hub ---
     HOME -->|PROGRAM MENUS| PM["PROGRAM MENUS"]
@@ -84,10 +84,16 @@ flowchart TD
   (which voice, pitch, level) and load the patch's default effects.
 - **SOUND DSP / REVERB / CHORUS / MULTI / MIC / EQUALIZER** all drive the
   [effects DSP]({{ site.baseurl }}/kn7000-effects-dsp/): selecting a type downloads that effect's
-  SHARC microprogram into the corresponding effect unit (unit 9 = Reverb, 7 =
-  Chorus, 8 = Equalizer, 0 = Enhancer, 1–6 = Multi/Sound-DSP inserts), and the
-  parameter tables adjust its coefficients.
-- **CHORD FINDER**'s ear button sounds the displayed chord without the rhythm
+  SHARC microprogram into the corresponding effect unit, and the parameter tables
+  adjust its coefficients. The unit map is fixed-function:
+
+  | Unit | Role | | Unit | Role |
+  |---|---|---|---|---|
+  | u0 | **REVERB** | | u7 | **MIC REVERB** |
+  | u1 | **MULTI** | | u8 | **EQUALIZER** |
+  | u2–u6 | per-part Sound-DSP / Digital-Effect insert pool | | u9 | **CHORUS** |
+- **CHORD FINDER** is reached from the APC screen; which LCD soft-key opens it is
+  not yet confirmed. Its ear button sounds the displayed chord without the rhythm
   engine — a clean, repeatable note trigger useful for probing the note path.
 - **SOUND EDIT** reaches inside a patch (up to four tones, envelopes, filters,
   LFOs), i.e. the deepest tone-generator parameter surface.
