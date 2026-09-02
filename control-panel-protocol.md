@@ -803,48 +803,69 @@ void kn5000_cpanel_device::process_analog_input(int encoder_id, uint8_t adc_valu
 
 ### Data Wheel (Jog Dial)
 
-The data wheel (large rotary dial next to LCD) uses the left panel MCU's ROTA/ROTB quadrature encoder inputs. Unlike the analog controllers above, it does **not** use Type 2 encoder packets. The Type 2 encoder dispatch table at 0xEDA0BC has no entry for the data wheel — all IDs except modwheel(2), volume(5), breath(25), foot(26), expression(27), and passthrough(31) return a constant 1.
+The data wheel is the large rotary encoder below the LCD, labelled TEMPO/PROGRAM. The service
+manual puts **SW101 "ENCODER SWITCH" (QSRGT002AA)** on the CPL board, wired to the ROTA/ROTB
+quadrature inputs of that board's `M37471M2196S` MCU. The MCU counts detents; the main CPU never
+sees the quadrature.
 
-#### Boot-time Detection (Segment 0x0B)
+The wheel travels the **same serial link, interrupt and parser as the button segments**, as a
+two-byte frame:
 
-During boot only, `CPanel_PollStartup` / `CPanel_ButtonPollLoop` (cpanel_routines.s:505-549) sends command `0x20 0x0B` to the left panel MCU and reads the response into DRAM[0x8E55]:
+```
+[0xD7] [signed detent count]
+```
 
-| Bit | Direction | Mode |
+`0xD7` = `0xC0 | 0x17`: bits 7:6 = `11` select the left panel, as in a button packet, and `0x17`
+is the encoder sub-address. The second byte is a **count** of detents accumulated since the last
+report, not a direction. The header becomes a record index via `((A & 0xC0) >> 1) | (A & 0x1F)`,
+so `0xD7` maps to index `0x77`, where the translation table holds record `0x19`. Only `0xD7` and
+`0xF7` reach that index.
+
+The translation table's address moves between revisions (`0xED9F28` on v5, `0xED9F40` on v6,
+`0xEDA03C` on v7-v10) but its content is byte-identical in all six.
+
+The wheel does **not** use Type 2 encoder packets. The Type 2 dispatch table at `0xEDA0BC` has no
+data-wheel entry — every ID except modwheel(2), volume(5), breath(25), foot(26), expression(27)
+and passthrough(31) returns a constant 1.
+
+#### Segment 0x0B: a boot-time settling register
+
+During boot only, `CPanel_PollStartup` / `CPanel_ButtonPollLoop` (`cpanel_routines.s:504-549`)
+sends `0x20 0x0B` to the left panel MCU and stores the reply at DRAM[0x8E55]:
+
+| Bit | Direction | Derived state at DRAM[0x8E6A] |
 |-----|-----------|------|
-| 7   | Clockwise (UP)   | 0xD |
-| 6   | Counter-clockwise (DOWN) | 0xE |
-| neither | Neutral | 0xC |
+| 7   | Clockwise   | 0x0D |
+| 6   | Counter-clockwise | 0x0E |
+| neither | Neutral | 0x0C |
 
-`CPanel_EncoderCheck` (line 533) edge-detects mode transitions and loops back to re-poll until the encoder stabilizes. This is used **only during boot initialization** — the startup routine exits when the encoder state becomes stable.
+`CPanel_EncoderCheck` re-polls until the value repeats on two consecutive reads, then returns.
+Steady state never sends `0x20 0x0B` again and never reads DRAM[0x8E55]; the only steady-state
+poll command is `E0 13` (right panel segment 3 with flag 0x10). This register is a startup
+settling check, not the rotation path.
 
-#### Steady-state Mechanism (UNSOLVED)
+#### Event chain
 
-In steady state, the firmware **never** sends `0x20 0x0B` and **never** checks DRAM[0x8E55]. The only steady-state command is `E0 13` (right panel segment 3 with flag 0x10).
+```
+detent -> panel MCU count -> [0xD7, count] -> record 0x19
+  -> SwbtWr event: payload 0x21 at DRAM[0xC07D], count at DRAM[0xC07E]
+  -> CtrlPanel_HandleSerialPort (main_title_ctrl_panel.s:300)
+  -> acceleration curve -> event 0x1C0001F
+  -> GroupBox_HandleCursorNav (ui_control_panel.s:3302)
+```
 
-The data wheel event ultimately reaches the UI through this chain:
+`CtrlPanel_HandleSerialPort` requires DRAM[0xC07D] == 0x21 and a non-zero count at DRAM[0xC07E].
+It deletes any pending `0x1C0001F`, computes `sext8(count + 0x10)`, indexes a **32-entry table of
+signed longs** (`0xEA98E2` on v10, `0xEA97CE` on v5) and posts `0x1C0001F` with the entry as its
+parameter. The table is an acceleration curve running monotonically from `+7` at index 0 to `-7`
+at index 31, so a **clockwise turn must be reported as a negative count** to raise the value, and
+a larger magnitude moves the value further per detent.
 
-1. **SwbtWr event type 0x21** is written to DRAM[0xC07D] (address 49277) by `SwbtWr_DispatchLoop_ExecuteCallback` (dsp_config_sysex.s:917, PC=0xFDB36B)
-2. **`CtrlPanel_HandleSerialPort`** (main_title_ctrl_panel.s:300-316) checks DRAM[0xC07D] for value 33 (0x21). When found, it:
-   - Deletes any pending 0x1C0001F events
-   - Reads direction data from DRAM[0xC07E] (address 49278)
-   - Adds 0x10 to the data and indexes into a button event table at ROM 0xEA98E2
-   - Posts event **0x1C0001F** with the table entry as parameter
-3. **`GroupBox_HandleCursorNav`** (ui_control_panel.s:3302) receives the 0x1C0001F event and navigates the UI
+> ⚠ The index is computed with no bounds check, so only wire magnitudes **-16..+15** are legal.
+> Clamping is the panel's responsibility.
 
-The **missing link** is what produces the SwbtWr type 0x21 event. This event is generated by the NAKA widget system when a registered type 0x21 widget detects a state change. There are 6 type 0x21 widgets in the registered object table (DRAM 0x27ED2):
-
-| Entry | Parent Type | Descriptor ROM Address | Proc Address |
-|-------|-------------|----------------------|--------------|
-| 184   | 0x10        | 0xE1B786             | 0xE192EA     |
-| 190   | 0x10        | 0xE1B926             | 0xE1A292     |
-| 326   | 0x03        | 0xE0D72E             | 0xF03802     |
-| 952   | 0x0F        | 0xE1C0E0             | 0xE1C1CA     |
-| 958   | 0x0F        | 0xE1C410             | 0xE1C530     |
-| 1094  | 0x03        | 0xE0D7B6             | 0xE0DA4A     |
-
-The NAKA type 0x21 widget types include: AcFuncEditSw, PsPageBox, AcTitleMenu, and AcPanicEditSw (defined in naka_block_012.c and naka_sequencer_exit.c). These are UI elements (function edit switches, page selectors, title menus) that respond to focus and activation events.
-
-**What is unknown:** How the physical encoder rotation triggers one of these NAKA type 0x21 widgets. The widgets monitor addresses within the NAKA descriptor hierarchy (ROM pointers), not DRAM[0x8E55] directly. The mapping between encoder hardware state and NAKA widget activation requires further reverse engineering — specifically, tracing what code queues type 0x21 events into the SwbtWr event queue.
+Full derivation, per-revision tables and the reproducing probes: see
+[Data Wheel (TEMPO/PROGRAM Encoder)]({{ site.baseurl }}/data-wheel-investigation/).
 
 #### Dial Callback System (RAM at 0x3EF50-0x3EF6A)
 
@@ -872,19 +893,11 @@ Once the 0x1C0001F event is posted, it reaches the focused widget through the NA
 
 #### Two Polling Modes
 
-The firmware has two completely separate polling loops:
+The firmware has two separate polling loops:
 
-1. **Startup mode** (`CPanel_PollStartup` + `CPanel_ButtonPollLoop`, lines 505-549): Sends `0x20 0x0B`, checks encoder, runs only during boot until encoder stabilizes.
-2. **Steady-state mode** (`CPanel_InterruptPoll_MainLoop`, lines 1057-1174): Sends `E0 13` periodically, updates LEDs, handles INTA packets. **No encoder polling** — encoder data must arrive via INTA or be piggybacked on poll responses.
+1. **Startup mode** (`CPanel_PollStartup` + `CPanel_ButtonPollLoop`, lines 504-549): sends `0x20 0x0B`, settles the encoder register, runs only during boot.
+2. **Steady-state mode** (`CPanel_InterruptPoll_MainLoop`, lines 1057-1174): sends `E0 13` periodically, updates LEDs, handles INTA packets. There is no encoder poll here — the wheel pushes its `[0xD7, count]` frames over INTA like any other panel change.
 
-#### Attempted HLE Approaches (Not Yet Working)
-
-The following approaches were tried in the MAME HLE and did not produce the 0x1C0001F event:
-
-1. **INTA delivery of segment 0x0B packets**: Data reaches DRAM[0x8E55] (confirmed via write tap at PC=FC49C5), but the NAKA widget system does not generate a type 0x21 SwbtWr event from it. Additionally, frequent INTA packets prevent the firmware's main loop from running.
-2. **Piggybacking segment 0x0B onto E0 13 response**: Same result — data reaches DRAM but no type 0x21 event generated.
-3. **Type 2 encoder packets with various IDs**: Encoder IDs 0 and 2 tested; firmware processes the packets but they route through the MIDI encoder dispatch, not the data wheel path.
-4. **Rate-limited INTA delivery**: Spacing packets 50ms apart allows the main loop to run, but type 0x21 events still don't appear.
 
 ### MIDI Parameter Delta Processing
 
