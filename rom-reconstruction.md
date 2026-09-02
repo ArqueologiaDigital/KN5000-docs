@@ -290,14 +290,19 @@ Additional known-unfinished items:
 - **Code hidden in maincpu `.byte` is measured, per tree, and it is uneven.** `v7` holds
   275,822 B of it — 797 confirmed code-shaped regions (247,603 B) plus 2,268 shorter
   misframed islands (28,219 B) — the single largest debt figure anywhere in the tree, more
-  than twice v7's own verbatim romslice debt. `v9` and `v10` each hold 8,058 B of confirmed
-  code-as-`.byte` plus about 14,727 B of shorter misframed islands; the islands are left
-  alone on purpose, since fixing one means re-framing an instruction already present rather
-  than filling a gap. This is a different, larger category than the `.incbin` verbatim debt
-  measured below: a long `.byte` run is exactly as undecoded as an `.incbin`, but it passes
-  every "no `.incbin`" check, so no tool that only scans for `.incbin` can see it.
-  `scripts/analysis/v9_v10_undisassembled_census.py` (v9/v10, and the same rule applied to
-  v7) is the census.
+  than twice v7's own verbatim romslice debt. `v9` and `v10`'s high-confidence
+  confirmed-region backlog — the shape `v9_v10_undisassembled_census.py --judge` can find and
+  hand-audit — is at **0 B on both images**, re-confirmed independently for each; the
+  remaining debt in this shape is shorter misframed islands (real instructions run past a
+  flanking `.byte` run, so fixing one means re-framing an instruction already present rather
+  than filling a gap), which stood at about 14,727 B per image before this push and has
+  since been partly converted on both. Converting a region creates new islands at its
+  boundary, so an island count is only valid against the exact commit it was measured at —
+  quote a fresh run, not this page. This is a different, larger category than the `.incbin`
+  verbatim debt measured below: a long `.byte` run is exactly as undecoded as an `.incbin`,
+  but it passes every "no `.incbin`" check, so no tool that only scans for `.incbin` can see
+  it. `scripts/analysis/v9_v10_undisassembled_census.py` (v9/v10, and the same rule applied
+  to v7) is the census.
 - The sub-CPU boot ROM source still spells its blank region as **98,304 individual
   `.byte 0xff` lines**. Collapsing them to one `.fill` was proposed, drafted and then
   **withdrawn**: the change is byte-safe, but the region is undumped rather than known to be

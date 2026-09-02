@@ -46,7 +46,7 @@ Neither direction is progress.
 
 | ROM | Native Instructions | Code `.byte` remaining | Status |
 |-----|-------------------|---------------------|--------|
-| Main CPU (v9 / v10, each) | 239,683 | 8,058 B confirmed + ~14,727 B misframed islands | **Not complete** |
+| Main CPU (v9 / v10, each) | 239,683 | confirmed-region backlog 0 B + misframed islands (partly converted; not a fixed pool — see below) | **Not complete** |
 | Main CPU (v7) | — | 275,822 B (797 confirmed regions + 2,268 misframed islands) — the largest code-as-`.byte` debt in the project | **Not complete** |
 | Sub CPU Payload | 35,721 | **0** | **Complete** |
 | Sub CPU Boot | 1,357 | **0** | **Complete** |
@@ -57,7 +57,10 @@ Neither direction is progress.
 The misframed islands in the Main CPU rows are left as `.byte` on purpose: fixing one means
 re-framing an instruction already present in a neighbouring converted region, not filling a
 gap, and this work requires a round-trip proof per region rather than a bulk relabel.
-`scripts/analysis/v9_v10_undisassembled_census.py` is the v9/v10 and v7 census;
+Converting a confirmed region creates new islands at its boundary, so the island count is
+not a fixed pool — it moves with the tree state and should be re-measured, not quoted from
+this page, before being used for planning. `scripts/analysis/v9_v10_undisassembled_census.py`
+is the v9/v10 and v7 census;
 `hdae5000/tools/measure_debt.py` is the HDAE5000 one.
 
 ### LLVM Backend Encodings Added
