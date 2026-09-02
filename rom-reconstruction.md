@@ -378,10 +378,13 @@ measurements, not the tool's raw total — see the note on table data below):
 
 | Image | Verbatim debt | % source |
 |---|---:|---:|
-| `v7/maincpu` | 123,733 B | 94.1% |
-| `wsa1/prom_a` | 3,670 B | 99.3% |
-| `wsa1/prom_b` | 10,738 B | 98.0% |
+| `v7/maincpu` | 120,666 B | 94.2% |
+| `wsa1/prom_a` | 2,542 B | 99.5% |
+| `wsa1/prom_b` | 10,664 B | 98.0% |
 | `table_data` | 0 B real (318,468 B raw tool total) | see below |
+
+*(2026-09-02, from the command above. The three non-zero rows fall as conversion
+lanes land, sometimes within hours — re-run rather than quoting this table.)*
 
 **Table data's real remaining debt is zero.** The tool's raw 318,468 B figure is entirely the
 six `FTBMP01-06.BMP` feature-demo slide images — genuine, uncompressed 8bpp Windows BMPs
@@ -581,27 +584,32 @@ make verify-help-databases            # 6/6
 make audit-icons-blob                 # coverage report for icons_to_strings.bin
 ```
 
-**History:** the project originally used ASL (Alfred Arnold's Macro Assembler), which only
-supported TMP96C141 — requiring 110+ workaround macros for TMP94C241F-specific
-instructions. The LLVM backend was developed to encode all TLCS-900/H2 instructions
-natively. ASL sources are archived in `archive/asl/` and are still built and verified.
+**Two toolchains, and the LLVM one is authoritative.** The LLVM TLCS-900 backend encodes
+the TLCS-900/H2 instruction set natively. A second set of sources for ASL (Alfred Arnold's
+Macro Assembler) is archived in `archive/asl/` and is still built and verified; ASL supports
+only the TMP96C141, so those sources carry 110+ workaround macros for the TMP94C241F's own
+instructions — which is why they are the archived set and not the primary one.
 
 ## Source Organisation
 
 Each firmware version has its own tree (`v7/`, `v9/`, `v10/` for the maincpu; `v142/` for
-the sub-CPU payload), with `shared/` modules included by more than one ROM. Current
-measured sizes:
+the sub-CPU payload), with `shared/` modules included by more than one ROM.
 
-| Tree | `.s` files | Lines | Symbols in reference file |
-|------|-----------:|------:|--------------------------:|
-| `v10/maincpu` | 155 | 467,833 | 39,449 |
-| `v9/maincpu` | 155 | 467,825 | *(shares the maincpu reference)* |
-| `v7/maincpu` | 155 | 337,289 | *(shares the maincpu reference)* |
-| `v142/subcpu` | 5 | 69,520 | 4,338 |
-| `subcpu/boot` | 1 | 101,124 | 63 |
-| `hdae5000` | 8 | 75,226 | 532 |
-| `table_data` | 26 | 79,230 | 4,161 |
-| `custom_data` | 1 | 146 | — |
+**The three maincpu trees are split by subsystem, not monolithic:** each is about 156 `.s`
+files across roughly twenty directories, and the three carry the same file layout so a
+routine sits at the same path in all of them. The remaining images are far smaller and are
+not split that way — `v142/subcpu` is 5 files, `hdae5000` 8, `table_data` 26, and the
+sub-CPU boot ROM and custom-data flash are a single file each.
+
+Symbol names live outside the sources, in `symbols/*_symbols_reference.txt`; the three
+maincpu trees share `maincpu_symbols_reference.txt` and each also has a per-version file.
+
+File and line counts move with every conversion; measure them rather than quoting one:
+
+```
+find v10/maincpu -name '*.s' | wc -l
+find v10/maincpu -name '*.s' -exec cat {} + | wc -l
+```
 
 The per-file breakdown lives on the [Source Code Map]({{ site.baseurl }}/source-map/) page.
 
