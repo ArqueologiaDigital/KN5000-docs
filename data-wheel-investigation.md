@@ -1,225 +1,219 @@
 ---
 layout: default
-title: Data Wheel Investigation
+title: Data Wheel (TEMPO/PROGRAM Encoder)
 nav_order: 25
 ---
 
-# Data Wheel (TEMPO/PROGRAM Encoder) Investigation
+# Data Wheel (TEMPO/PROGRAM Encoder)
 
 ## Overview
 
-The KN5000 has a large rotary encoder (data wheel) near the LCD, labeled TEMPO/PROGRAM. This page documents the forensic analysis of how the firmware processes data wheel input, separating confirmed findings from hypotheses still under investigation.
+The KN5000 has a large rotary encoder below the LCD, labelled TEMPO/PROGRAM. It is the
+control used to change whatever numeric value the focused on-screen widget owns. This page
+describes the whole path, from the detent to the UI event.
 
-## Confirmed: Transport Mechanism
+The wheel is a **control-panel serial input**, carried on the same link, the same interrupt
+and the same parser as the button segments. It is *not* one of the Type 2 analog-encoder
+controls, and it is *not* delivered by poking main-CPU DRAM.
 
-### Segment 0x0B Encoding
+## Hardware
 
-The data wheel state is communicated from the control panel MCU to the main CPU via **segment 0x0B button packets** — the same packet type used for regular buttons, NOT the Type 2 encoder packets used for analog controllers (modwheel, volume, etc.).
+The service manual puts **SW101 "ENCODER SWITCH" (QSRGT002AA)** on the **CPL** (left) control
+panel board, wired to the ROTA/ROTB quadrature inputs of that board's `M37471M2196S` MCU. The
+panel MCU counts detents and reports them; the main CPU never sees the quadrature.
 
-**Source:** `cpanel_routines.s:524-536` (`CPanel_ButtonPollLoop`)
+## Wire Format
+
+The panel sends a two-byte frame:
+
+```
+[0xD7] [signed detent count]
+```
+
+- `0xD7` = `0xC0 | 0x17`. Bits 7:6 = `11` select the **left** panel, exactly as button packets
+  encode it, and `0x17` is the encoder sub-address. (The KN7000 panel uses the same `0x17`
+  index for its own TEMPO/PROGRAM knob.)
+- The second byte is a **count** of detents accumulated since the previous report, not a
+  direction. Sending a larger magnitude is how a fast spin is expressed.
+
+The firmware turns a header byte into a record index with `((A & 0xC0) >> 1) | (A & 0x1F)`,
+so `0xD7` maps to index `0x77`. The translation table holds `0x19` there — the data-wheel
+record. Only `0xD7` and `0xF7` reach that index.
+
+The translation table sits at a different address in each firmware revision but its **content
+is byte-identical across all six** (`sha1 48d964b1…`):
+
+| Revision | Translation table |
+|---|---|
+| v5 | `0xED9F28` |
+| v6 | `0xED9F40` |
+| v7, v8, v9, v10 | `0xEDA03C` |
+
+The encoding is a constant of the machine; the addresses are not. This is why the wheel must
+be implemented at the wire and not by writing a firmware data structure at a hardcoded address.
+
+Regenerate the table above with `notes/kn5000-wheel-probes/tblid.py` in the MAME tree.
+
+## Acceleration Curve
+
+`CtrlPanel_HandleSerialPort` (`main_title_ctrl_panel.s:300`) is the consumer:
 
 ```asm
-ldda8 a, 36437     ; Read byte at DRAM[0x8E55] (segment 0x0B)
-ldb w, 0xD         ; Default: 0x0D (clockwise)
-bit 7, a           ; Test bit 7
-jr nz, CPanel_EncoderCheck   ; If set → CW (0x0D)
-ldb w, 0xE         ; 0x0E (counterclockwise)
-bit 6, a           ; Test bit 6
-jr nz, CPanel_EncoderCheck   ; If set → CCW (0x0E)
-ldb w, 0xC         ; 0x0C (idle)
+CtrlPanel_HandleSerialPort:
+	cpdi8 (0xc07d), 33      ; SwbtWr event type 0x21 = data wheel?
+	jrl nz, UIEvent_Epilogue
+	cpdi8 (0xc07e), 0       ; zero count = nothing to do
+	jrl z, UIEvent_Epilogue
+	ld xwa, 0xffffffff
+	ld xbc, 0x1c0001f
+	call DeleteEvent        ; drop any pending navigation event
+	ldb_d8 a, (0xc07e)      ; the signed detent count
+	add a, 0x10
+	exts wa
+	sla wa, 2               ; x4: table of 32 signed longs
+	...                     ; posts event 0x1C0001F with the table entry
 ```
 
-The raw byte at DRAM[0x8E55] encodes:
-- **Bit 7 set** → clockwise rotation → derived state `0x0D`
-- **Bit 6 set** → counterclockwise rotation → derived state `0x0E`
-- **Neither set** → idle → derived state `0x0C`
+The table indexed by `sext8(count + 0x10)` is a **32-entry signed acceleration curve**
+(`0xEA98E2` on v10, `0xEA97CE` on v5). It runs monotonically **decreasing**, from `+7` at
+index 0 down to `-7` at index 31:
 
-### Boot-Time Initialization
+| wire count | -16..-12 | -11..-9 | -8..-6 | -5,-4 | -3 | -2 | -1 | 0 | +1 | +2 | +3 | +4,+5 | +6..+8 | +9..+11 | +12..+15 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **UI step** | +7 | +6 | +5 | +4 | +3 | +2 | +1 | 0 | -1 | -2 | -3 | -4 | -5 | -6 | -7 |
 
-During boot, the firmware explicitly polls the data wheel:
+Because the curve is decreasing, **clockwise rotation must be reported as a negative count**
+to raise the on-screen value.
 
-1. Sends command `20 0B` (query left panel, segment 0x0B)
-2. MCU responds with a button-type packet (header `0x0B`, no panel flag)
-3. Firmware stores the raw byte at **DRAM[0x8E55]** (button state array offset 0x0B)
-4. Derives state (0x0C/0x0D/0x0E) from bits 7-6, stores at **DRAM[0x8E6A]**
-5. Loops until state stabilizes (same value on two consecutive reads)
+> ⚠ **The index is not bounds-checked.** The firmware computes `sext8(count + 0x10)` and
+> indexes a 32-entry table with no clamp, so the only legal wire magnitudes are **-16..+15**.
+> Keeping within that range is the panel's job; nothing in the firmware will catch a violation.
 
-### Packet Reception
+Regenerate the curve with `notes/kn5000-wheel-probes/curve.py`.
 
-`CPanel_RX_ButtonPacket` (cpanel_routines.s:1230-1265) processes incoming button packets. The instruction `ex (xhl), a` (opcode `0x83 0x31`) **atomically swaps** the new data into the button state array and returns the old value, enabling XOR-based change detection.
-
-For a segment 0x0B packet with header byte `0x0B`:
-- Packet type bits 5:3 = `001` → routes to `CPanel_RX_ButtonPacket` ✓
-- Header masked to offset: stored at `0x8E4A + 0x0B = 0x8E55` ✓
-
-## Confirmed: SwbtWr Event Structure
-
-### Event Layout
-
-SwbtWr events are 4-byte structures in a queue at **DRAM[0xBD3C]**:
+## Event Chain
 
 ```
-Byte 0 (E): Event type
-Byte 1 (D): Payload byte 1  → dispatched to DRAM[0xC07D]
-Byte 2 (A): Payload byte 2  → dispatched to DRAM[0xC07E]
-Byte 3 (W): Payload byte 3  → dispatched to DRAM[0xC07F]
-Sentinel:   0xFF (marks end of queue)
+detent on SW101 (CPL board, ROTA/ROTB)
+  -> panel MCU accumulates a signed count
+  -> CP serial frame [0xD7, count]
+  -> header 0xD7 -> record index 0x77 -> translation table -> record 0x19
+  -> SwbtWr event: type 0x21 at DRAM[0xC07D], count at DRAM[0xC07E]
+  -> CtrlPanel_HandleSerialPort: index the acceleration curve, post event 0x1C0001F
+  -> GroupBox_HandleCursorNav (ui_control_panel.s:3302) navigates the focused widget
 ```
 
-Events are queued via `SwbtWr_QueueMainEvent(DE, WA)` (dsp_config_sysex.s:966-977).
+## The Type 2 Encoder System Is a Different Thing
 
-### Dispatch
-
-`SwbtWr_DispatchLoop` (dsp_config_sysex.s:891-948):
-1. Reads event type (byte 0) → stored to **DRAM[0xC080]**
-2. Uses type as index into a callback handler table (×4 for 32-bit pointers)
-3. Stores payload bytes 1-2 to **DRAM[0xC07D]** (`stda16 49277, xwa`)
-4. Stores payload byte 3 to **DRAM[0xC07F]**
-5. Calls registered callback handler
-
-**Important:** DRAM[0xC07D] contains the **event payload**, not the event type. The type goes to DRAM[0xC080].
-
-### Data Wheel Detection
-
-`CtrlPanel_HandleSerialPort` (main_title_ctrl_panel.s:300) checks:
-```asm
-cpdi8 49277, 33    ; DRAM[0xC07D] == 0x21 (payload byte 1)
-```
-
-This means a SwbtWr event must be queued with **D register = 0x21** (which becomes payload byte 1 at 0xC07D) for the data wheel to be detected. When matched, it posts event **0x1C0001F** for UI navigation.
-
-## Confirmed: Two Separate Encoder Systems
-
-The firmware has two independent encoder dispatch systems:
-
-### System A: Type 2 Analog Encoders
-
-Used for potentiometers and analog wheels. Dispatched by `CPanel_EncoderDispatch` (midi_encoder_routines.s:33) via handler jump table at **ROM 0xEDA0BC**:
+The Type 2 analog-encoder packets carry absolute 8-bit ADC values for the potentiometers and
+wheels. They are dispatched by `CPanel_EncoderDispatch` (`midi_encoder_routines.s:33`) through
+a jump table at ROM `0xEDA0BC`:
 
 | Index | ID | Handler | Controller |
 |-------|----|---------|------------|
-| 2 | 0x02 | Encoder_ProcessModwheel | Modulation wheel |
-| 5 | 0x05 | Encoder_ProcessVolume | Volume slider |
-| 25 | 0xC1 | Encoder_ProcessBreath | Breath controller |
-| 26 | 0xC2 | Encoder_ProcessFoot | Foot controller |
-| 27 | 0xC3 | Encoder_ProcessExpression | Expression pedal |
+| 2 | 0x02 | `Encoder_ProcessModwheel` | Modulation wheel |
+| 5 | 0x05 | `Encoder_ProcessVolume` | Volume slider |
+| 25 | 0xC1 | `Encoder_ProcessBreath` | Breath controller |
+| 26 | 0xC2 | `Encoder_ProcessFoot` | Foot controller |
+| 27 | 0xC3 | `Encoder_ProcessExpression` | Expression pedal |
 
-### System B: Encoder_ValueScanAndSync
+That table has **no data-wheel entry**; every other ID returns a constant 1. The data wheel
+does not travel through this system.
 
-A periodic scan-table-based system (tonegen_fileio_handlers.s:1242). Reads 3-byte entries from **DRAM[0x8E78]**, dispatches via callback tables at **ROM 0xED9C1E** (primary) or **ROM 0xED9C9E** (alternate). Entry 25 in the primary table contains params `[A9 21 00 FF]`.
+## Segment 0x0B Is a Boot-Time Status Register, Not the Wheel
 
-### The Data Wheel
+Segment `0x0B` sits in the gap between the right-panel scan columns (0–10) and the left-panel
+ones. During boot only, `CPanel_PollStartup` / `CPanel_ButtonPollLoop`
+(`cpanel_routines.s:504-549`) sends `20 0B`, stores the reply at DRAM[0x8E55], and derives a
+three-valued state from bits 7 and 6:
 
-The data wheel uses **neither** of these systems for its transport — it uses segment 0x0B button packets (a third mechanism). The relationship between segment 0x0B data and these encoder systems is **unverified** (see Hypotheses below).
+| Bit set | Derived state at DRAM[0x8E6A] |
+|---|---|
+| 7 | `0x0D` |
+| 6 | `0x0E` |
+| neither | `0x0C` |
 
-## Hypotheses (Unverified)
-
-### H1: How does DRAM[0x8E55] lead to SwbtWr payload 0x21?
-
-After `CPanel_RX_ButtonPacket` updates DRAM[0x8E55] with the new segment 0x0B data, something must queue a SwbtWr event with D=0x21. The exact code path is unknown. Candidates:
-
-- **Path A (NAKA widgets):** The button event's changed bits go into the CPanel event queue. A NAKA widget handler registered for the data wheel area receives the event and calls `SwbtWr_QueueMainEvent` with D=0x21.
-- **Path B (Encoder scan table):** `Encoder_ValueScanAndSync` reads the scan table at 0x8E78, which may reference DRAM[0x8E55]. If entry index 25 is active, it dispatches to callback table entry 25 (params `[A9 21 00 FF]`), generating the SwbtWr event.
-- **Path C (Direct event processing):** Some main loop code between `CPanel_RX_ProcessOrInit` and `SwbtWr_ProcessAll` directly processes the button event queue and generates SwbtWr events.
-
-**To verify:** Set watchpoint `wpset 0xC07D,1,w` in MAME debugger. When it triggers with value 0x21, the PC will reveal which code path writes it.
-
-### H2: Does the scan table at 0x8E78 reference DRAM[0x8E55]?
-
-The scan table format is 3-byte entries. If one entry contains a pointer to 0x8E55 (the data wheel byte), then System B (Encoder_ValueScanAndSync) would be the link. If not, the path must go through NAKA widgets or another mechanism.
-
-**To verify:** Dump scan table after boot: `d 0x8E78,0x30`
-
-### H3: Callback table entry 25 and the data wheel
-
-Entry 25 in the primary callback table (ROM 0xED9C1E) contains `[A9 21 00 FF]`. The `0x21` here MAY be the SwbtWr payload value that ends up at DRAM[0xC07D]. But entry 25 in the handler jump table (ROM 0xEDA0BC) is labeled `Encoder_ProcessBreath` — a different controller. These tables serve different systems, and index 25 may be coincidental.
-
-**To verify:** Breakpoint on callback table entry 25's handler address. Does it fire when the data wheel rotates?
-
-## Main Loop Call Chain
-
-```
-MainLoop (system_handlers.s:1121)
-  ├─ MidiParam_ProcessDeltas       (encoder parameter debounce)
-  ├─ CPanel_RX_ProcessOrInit       (serial RX → updates DRAM[0x8E55])
-  ├─ Encoder_TimingAndOutput       (encoder timing/throttle)
-  ├─ ...
-  ├─ Encoder_ValueScanAndSync      (scan table at 0x8E78 → callbacks)
-  ├─ SwbtWr_ProcessAll             (merges post-events into main queue)
-  ├─ [SwbtWr dispatch]             (via InitBank → DispatchLoop)
-  │     └─ writes payload to DRAM[0xC07D]
-  └─ MainTitle_PrepareAndDispatch
-        └─ CtrlPanel_HandleSerialPort
-              └─ checks DRAM[0xC07D] == 0x21 → posts event 0x1C0001F
-```
+The loop re-polls until the value is stable on two consecutive reads, then returns. Steady-state
+operation never sends `20 0B` again and never reads DRAM[0x8E55]. This register is a settling
+check at startup; it is not how rotation reaches the UI.
 
 ## Key DRAM Addresses
 
 | Address | Decimal | Name | Purpose |
 |---------|---------|------|---------|
-| 0x8E4A | 36426 | STATE_OF_CPANEL_BUTTONS | Button state array base |
-| 0x8E55 | 36437 | Data wheel raw byte | Segment 0x0B data from MCU |
-| 0x8E6A | 36458 | Derived encoder state | 0x0C=idle, 0x0D=CW, 0x0E=CCW |
-| 0x8E78 | 36472 | Encoder scan table | 3-byte entries, 0xFF terminated |
-| 0xBD3C | — | SwbtWr main event queue | 4-byte events + 0xFF sentinel |
-| 0xC07D | 49277 | SwbtWr payload byte 1 | Written during dispatch (D register) |
-| 0xC07E | 49278 | SwbtWr payload byte 2 | Written during dispatch (A register) |
-| 0xC07F | 49279 | SwbtWr payload byte 3 | Written during dispatch (W register) |
-| 0xC080 | 49280 | SwbtWr event type | Written during dispatch (type byte) |
+| 0x8E4A | 36426 | `STATE_OF_CPANEL_BUTTONS` | Button state array base |
+| 0x8E55 | 36437 | Segment 0x0B status byte | Boot-time settling check only |
+| 0x8E6A | 36458 | Derived boot state | 0x0C / 0x0D / 0x0E |
+| 0xBD3C | — | SwbtWr main event queue | 4-byte events, 0xFF sentinel |
+| 0xC07D | 49277 | SwbtWr payload byte 1 | `0x21` identifies the data wheel |
+| 0xC07E | 49278 | SwbtWr payload byte 2 | The signed detent count |
+| 0xC07F | 49279 | SwbtWr payload byte 3 | — |
+| 0xC080 | 49280 | SwbtWr event type | Written during dispatch |
+
+SwbtWr events are 4-byte structures queued by `SwbtWr_QueueMainEvent(DE, WA)`
+(`dsp_config_sysex.s:966-977`) and dispatched by `SwbtWr_DispatchLoop`
+(`dsp_config_sysex.s:891-948`), which stores the type at DRAM[0xC080] and the three payload
+bytes at DRAM[0xC07D-F] before calling the registered callback. Note that DRAM[0xC07D] holds
+the **payload**, not the event type.
+
+## Dial Callback Table (RAM 0x3EF50-0x3EF6A)
+
+Once event `0x1C0001F` is posted it reaches the focused widget through the NAKA dispatch:
+
+| Address | Field | Description |
+|---------|-------|-------------|
+| 0x3EF50 | Dial Enable | Enable flag (word) |
+| 0x3EF52 | `SetDialUp` callback | XWA component (clockwise) |
+| 0x3EF56 | `SetDialDown` callback | XWA component (counter-clockwise) |
+| 0x3EF5A | `SetDialUp` event | XBC component (event code 0x1C00007) |
+| 0x3EF5E | `SetDialDown` event | XBC component |
+| 0x3EF62 | `SetDialUp` param | XDE component |
+| 0x3EF66 | `SetDialDown` param | XDE component |
+| 0x3EF6A | Dial Focus | Currently focused UI object (32-bit) |
+
+`SetDialUp` / `SetDialDown` (`presentation_sound_nav.s:375-385`) are **setup** functions: they
+register workspace, event code and parameter into this table. The callbacks themselves fire
+when `0x1C0001F` reaches `GroupBox_HandleCursorNav`.
+
+Related NAKA widget events: `0x1E0006F` GroupBox_DialEnable, `0x1E00070` GroupBox_DialDown,
+`0x1E00071` GroupBox_DialUp, `0x1E00087` GroupBox_SetDialFocus, `0x1E00088`
+GroupBox_GetDialFocus. The accompaniment engine posts `0x1E00070` / `0x1E00071` for its own
+sequencer parameter changes.
 
 ## MAME Implementation
 
-### Approach
+The wheel is emulated in `kn5000_cpanel.cpp` on the `main` branch. It is driven by two input
+ports whose detent deltas are **summed** each scan, so keys and mouse both work and either may
+move between two scans:
 
-The data wheel is implemented as an `IPT_DIAL` input with an interactive rotating knob in the layout. The HLE converts dial position deltas into segment 0x0B button packets delivered via INTA.
+| Port | Type | Notes |
+|---|---|---|
+| `ENCODER` | `IPT_POSITIONAL`, 24 positions, `PORT_WRAPS`, sensitivity 20, key delta 1 | Keys `[` and `]`; `PORT_FULL_TURN_COUNT(24)` |
+| `ENCODER_DRAG` | `PORT_ADJUSTER(50)` | Written by the layout's Lua script as the knob is dragged in a circle |
 
-### Input
+Because the wheel is an *infinite relative* encoder, the absolute value of either control is
+meaningless to the firmware — only the change between scans matters. `encoder_delta()` is
+wrap-aware (a jump of more than half a full turn is a wrap, not a move) and its first call
+adopts the startup position silently, so a restored save state or a persisted adjuster cannot
+inject a phantom detent.
 
-- **Mouse:** Click and drag the knob in the layout
-- **Keyboard:** Default MAME dial keys
-- **Input type:** `IPT_DIAL` with sensitivity 25, key delta 5
+The panel scan timer runs every 7 ms (~143 Hz). When the summed delta is non-zero the device
+negates it, clamps to -16..+15, and sends `[0xD7, count]` through `send_encoder_packet()` —
+deliberately **not** through `send_button_packet()`, which masks the sub-address to four bits
+and so cannot carry `0x17`. Delivery is then triggered by the same INTA path as a button change.
 
-### HLE Mechanism
+Enable `LOG_ENCODER` on the panel device to trace each report.
 
-1. **Delta detection:** Button scan timer (~143 Hz) reads dial position, computes delta
-2. **Direction latch:** Delta > 0 → `0x80` (CW bit 7); delta < 0 → `0x40` (CCW bit 6)
-3. **Packet delivery:** Sends segment 0x0B button packet (header `0x0B`, no panel flag) via INTA
-4. **Idle transition:** When encoder stops, sends `0x00` (neutral) for firmware to see idle state
-5. **Boot query:** `20 0B` command returns current latch value
+## Reproducibility
 
-### Layout
+The static evidence lives in `notes/kn5000-wheel-probes/` in the MAME tree; each script names
+the question it answers in that directory's README. `tblid.py` and `curve.py` produced the two
+tables on this page. Related rigs: `tools/rigs/kn5000_wheel_bios_sweep.py` (cross-revision
+verdict), `tools/rigs/kn5000_wheel_rate_test.lua` (detent-loss measurement) and
+`tools/rigs/kn5000_wheel_idle.lua` (the negative control: record `0x19` never appears at idle).
 
-Lua script rotates the encoder finger grip based on the `ENCODER` port value, providing visual feedback.
+## Related Pages
 
-### Debug write tap
-
-A write tap on DRAM[0xC07D] logs all writes with PC address, helping identify which code path generates the 0x21 payload at runtime.
-
-### Branch
-
-`kn5000_research_datawheel` (research branch)
-
-## Verification Steps (Need MAME Debugger)
-
-```
-# 1. Watch for SwbtWr payload 0x21 — reveals which PC writes it
-wpset 0xC07D,1,w
-
-# 2. Dump encoder scan table — reveals if it references 0x8E55
-d 0x8E78,0x30
-
-# 3. Watch data wheel raw state — confirms packets arrive
-wpset 0x8E55,1,w
-
-# 4. Watch derived encoder state — confirms firmware processes bits 7-6
-wpset 0x8E6A,1,w
-
-# 5. Watch SwbtWr event type — see what type accompanies payload 0x21
-wpset 0xC080,1,w
-```
-
-## Previous Approaches (Failed)
-
-1. **Type 2 encoder packets** — Sent analog encoder packets with various IDs. Firmware processed them for MIDI CC but not as data wheel events. Wrong system entirely.
-2. **Piggybacking on E0 13** — Appended encoder data to right panel poll responses. Wrong delivery mechanism.
-3. **Segment 0x0B via INTA (current)** — Correct transport mechanism based on boot code analysis. Whether the firmware's steady-state processing generates SwbtWr 0x21 from this input is the open question.
+- [Control Panel Protocol]({{ site.baseurl }}/control-panel-protocol/) — the serial link the
+  wheel shares with the buttons and LEDs
+- [Event Codes]({{ site.baseurl }}/event-codes/) — the firmware event dispatch system
