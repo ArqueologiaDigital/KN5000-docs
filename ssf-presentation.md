@@ -1703,10 +1703,9 @@ The infrastructure was built (XML parser, event system, tag vocabulary, `EXEC` c
 ---
 
 ## Related Pages
-
-- [Feature Demo]({{ site.baseurl }}/feature-demo/) -- Full investigation history, Lua trace logs, timer bug details
-- [Feature Demo Investigation Log]({{ site.baseurl }}/feature-demo-investigation-2026-03-09/) -- Detailed research log from March 2026
-- [Feature Demo Timer Bug]({{ site.baseurl }}/feature-demo-timer-bug-2026-03-09/) -- INTTR5 timer bug analysis
+- [Feature Demo & Presentation System]({{ site.baseurl }}/feature-demo/) -- activation paths, assets and MAME status
+- [Feature Demo Timer Behaviour]({{ site.baseurl }}/feature-demo-investigation-2026-03-09/) -- the demo timer, the SwbtWr stall and the song pointer table
+- [Timer 4/5 and the Sequencer Clock]({{ site.baseurl }}/feature-demo-timer-bug-2026-03-09/) -- how INTTR5 paces the sequencer
 - [UI Framework]({{ site.baseurl }}/ui-framework/) -- Widget system and event handling
 - [UI Widget Types]({{ site.baseurl }}/ui-widget-types/) -- NAKA widget descriptor format
 - [Display Subsystem]({{ site.baseurl }}/display-subsystem/) -- LCD controller, VRAM, and display architecture

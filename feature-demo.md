@@ -41,7 +41,7 @@ The script defines 27 sequential actions, each referencing a named UI object. Ob
 
 ## XML Tag Vocabulary
 
-The firmware contains a complete XML tag name table at approximately line 87475 of the Program ROM disassembly (`kn5000_v10_program.asm`):
+The firmware carries a complete XML tag name table in the Program ROM. (The tag strings sit in a data region that the split disassembly emits as raw bytes, so there is no source line to cite.)
 
 ### Structure Tags
 
@@ -350,7 +350,7 @@ The gate table entry for state `0xE4` (FEATURE PRESENTATION sub-menu) contains t
 
 ## MAME Emulation Status
 
-**Current status (March 2026):** **Partially working.** The Demo Timer System (song cycling) works correctly in MAME — the timer counts down, songs cycle, and `PlaySong` returns after ~16 seconds of SwbtWr buffer processing. The SSF Visual Presentation (FTBMP bitmap rendering) does not trigger because the automated demo path uses workspace tags (`0x82xx`) that fail the `0xB80A` check in `AcPresentCtrl_CheckSSFStart`.
+**Partially working.** The Demo Timer System (song cycling) works correctly in MAME — the timer counts down, songs cycle, and `PlaySong` returns after ~16 seconds of SwbtWr buffer processing. The SSF Visual Presentation (FTBMP bitmap rendering) does not trigger because the automated demo path uses workspace tags (`0x82xx`) that fail the `0xB80A` check in `AcPresentCtrl_CheckSSFStart`.
 
 **Root cause summary:**
 - The automated demo sequencer (`DemoMenu_BuildItemWorkspace`) creates workspaces with `0x82xx` tags
@@ -362,7 +362,10 @@ The gate table entry for state `0xE4` (FEATURE PRESENTATION sub-menu) contains t
 1. **Song cycling stuck:** Sequencer parts never complete without waveform ROMs, preventing the timer from resetting for the next song
 2. **SSF never triggers in automated mode:** The automated path fundamentally cannot produce the correct workspace tag; only the manual button-press path through `GroupBoxProc_StartSSFPresentation` creates tag `0xB80A`
 
-**Reference Lua script:** `/tmp/ftdemo_v3.lua` — automated navigation from boot to Feature Demo activation.
+> ⚠ The Lua script that produced the traces below (`ftdemo_v3.lua`, automated navigation from
+> boot to Feature Demo activation) was never committed and no longer exists. Anyone re-running
+> this analysis has to rebuild it; the instrumentation constraints it hit are recorded under
+> *Instrumentation pitfalls* below so that rebuild does not repeat them.
 
 ---
 
@@ -385,11 +388,9 @@ Because workspaces are allocated from a pool in DRAM and may be reused, it is cr
 
 ---
 
-## Investigation History: How the Solution Was Found
+## The Two Paths in Detail
 
-### Two paths for event 0x1C0001C
-
-Deep investigation (Feb 2026, Lua trace scripts + ROM disassembly analysis) identified that there are **two completely different code paths** that send event `0x1C0001C` to `AcPresentationControlProc`:
+Two different code paths send event `0x1C0001C` to `AcPresentationControlProc`:
 
 #### Path 1 — `DemoMenu_BuildItemWorkspace` (0xF83CEA) — QUEUED, WRONG TAG
 
@@ -452,8 +453,6 @@ Expected (but missing in MAME):
 
 ### Why GroupBoxProc doesn't receive 0x1C00038 in MAME
 
-**Confirmed root cause** (March 2026, MAME Lua trace investigation):
-
 `UIState_KeyScan_Dispatch` IS called during boot initialization — approximately 900+ times — but all calls occur when DRAM `0x8D38 = 0x00`. This maps to ROM table entry[0] at `0xE014CE`, which contains the sentinel array `{0xFFFF}` (immediately terminating). Every boot-time call returns immediately with no event sent.
 
 The dispatcher mechanism consists of:
@@ -468,7 +467,7 @@ After boot stabilizes (`8D38` changes to `0x01`), the event buffer at `0xBD3C` d
 
 **The real hardware** presumably triggers FDB3D1 via user button presses or directional encoder navigation, which posts events to the `0xBD3C` buffer. In MAME's automated Feature Demo test mode, no such input is simulated. The Feature Demo would work on real hardware if a user navigated to it with actual button input.
 
-### Previously investigated (and ruled out) blocking points
+### Ruled out as blocking points
 
 | Issue | Ruling |
 |-------|--------|
@@ -477,13 +476,12 @@ After boot stabilizes (`8D38` changes to `0x01`), the event buffer at `0xBD3C` d
 | XML parser state | SSF parser never starts because `0x1C00006` is never sent |
 | `DemoMode_Main_Operation` loop | Expected behaviour (`jp Seq_StartMainControl`); not a hang |
 
-### MAME floppy disk type bug (separate issue)
+### Floppy drive type
 
-The MAME driver previously registered only a `"35dd"` (720 KB double-density) floppy connector in `kn5000_floppies`. The real hardware uses **1.44 MB HD (high-density)** drives — confirmed by:
-- FDC format configuration supporting 1440K (18 sectors/track, 80 tracks)
-- `update_disc.img` analysis: FAT12, OEM-ID `"Technics"`, 2880 sectors, 18 sectors/track, 2 heads
-
-This has been fixed in the MAME driver. It is a separate issue from the Feature Demo image display failure.
+The real hardware uses **1.44 MB HD (high-density)** drives, confirmed by the FDC's format
+configuration (1440K, 18 sectors/track, 80 tracks) and by `update_disc.img`: FAT12, OEM-ID
+`"Technics"`, 2880 sectors, 18 sectors/track, 2 heads. The driver's `kn5000_floppies` slot
+offers `35hd` and `35dd`, and `fdc:0` defaults to **`35hd`**.
 
 ### How event 0x1C00038 is generated — detailed analysis
 
@@ -521,35 +519,30 @@ For GroupBoxProc to receive the queued `0x1C00038`, it must either:
 - Be the current "active" widget receiving events from the queue, OR
 - Have registered via some dispatch mechanism that routes `0x1C00038` to it specifically
 
-### Lua trace investigation findings (March 2026)
+### Instrumentation pitfalls
 
-Investigation used MAME Lua autoboot scripts to monitor `UIState_KeyScan_Dispatch`, `FA9945`, and `GroupBoxProc_StartSSFPresentation` during MAME runs. Key findings:
+Anything that instruments this path with MAME Lua autoboot scripts hits the same four traps.
 
-**MAME Lua API constraints discovered:**
+**MAME Lua API constraints:**
 - `install_read_tap` requires **word-aligned ranges** (even→odd address pair, e.g., `0xF98696-0xF98697`)
 - Notifier handles from `add_machine_frame_notifier` / `add_machine_stop_notifier` must be **saved to outer-scope variables** to prevent garbage collection — otherwise callbacks silently stop
 - **Critical conflict:** `emu.add_machine_frame_notifier` + `install_read_tap` are mutually exclusive — when both are active, read taps stop firing entirely
 
-**Early trace results (pre-solution):**
-| Monitor | Count | Observations |
-|---------|-------|-------------|
-| `UIState_KeyScan_Dispatch` tap (0xF98696-0xF98697) | 900+ calls | All during boot init; all with `8D38=0x00` (empty table); C080 sweeps `0x00→0x9A`, C07D cycles `0x01..0x17` |
-| `FA9945` for XBC=0x1C00038 | 0 calls | Never fired — F98697 always returned early |
-| `GroupBoxProc_StartSSFPresentation` | 0 real calls | One false positive (tap at F9A272 fires from 3rd word fetch of `call 0xfa9660` instruction at F9A26F) |
-| DRAM `0x8D38` at ~12s, ~25s, ~37s | 0x00, 0xEF, 0x01 | Transitions from boot init → stable post-boot |
+**The `0xF9A272` false positive.** A read tap placed at `0xF9A272-0xF9A273` to catch
+`GroupBoxProc_StartSSFPresentation` fires on **every** call to `0xFA9660` instead. The
+instruction at `0xF9A26F` is `call 0xfa9660`, encoded `1D 60 96 FA`; its third word occupies
+`0xF9A272-0xF9A273`, so the tap sees an instruction fetch, not an execution of the SSF entry
+point. A conclusion that "the Feature Demo works" drawn from hits on that tap is an artefact.
+The accompanying "FTBMP01.BMP in VRAM" sighting comes from boot initialisation, not the demo.
 
-**False positive explained:** The "SSF START" tap at `0xF9A272-0xF9A273` fires from the instruction `call 0xfa9660` at `0xF9A26F` (a 4-byte instruction encoding `1D 60 96 FA`). Its 3rd word occupies `0xF9A272-0xF9A273`, triggering the tap on every call to `0xFA9660` (the direct SendEvent dispatcher), not from `GroupBoxProc_StartSSFPresentation` actually executing.
+**What the instrumented path actually shows.** `UIState_KeyScan_Dispatch` is entered around 900
+times, all during boot with `8D38 = 0x00`, and the `0xEF0797` pre-condition (bit 7 of DRAM
+`0x0406`) blocks every one of them in the emulation context. `FA9945` never dispatches
+`0x1C00038`. DRAM `0x8D38` reads `0x00` at ~12 s, `0xEF` at ~25 s and `0x01` at ~37 s.
 
-**ftdemo_v3.lua results (REVISED — originally misinterpreted):**
-| Monitor | Count | Observations |
-|---------|-------|-------------|
-| `UIState_KeyScan_Dispatch` | 994 calls | Called but EF0797 pre-condition blocked all (internal RAM 0x0406 bit 7 not set in emulation context) |
-| `FA9945` for 0x1C00038 | 0 calls | Event `0x1C00038` was never dispatched |
-| `GroupBoxProc_StartSSFPresentation` tap | 9 hits | **FALSE POSITIVE** — tap at `0xF9A272-0xF9A273` fires from `call 0xFA9660` encoding, not from actual SSF execution |
+### Observed behaviour
 
-**Correction (March 9):** The original conclusion that "the Feature Demo works correctly" was **wrong**. The 9 "SSF START" hits were false positives caused by the ROM read tap overlapping with the instruction encoding of `call 0xFA9660` at address `0xF9A26F`. The "FTBMP01.BMP in VRAM" observation was likely from boot initialization, not from the demo.
-
-**Current status:** Pressing DEMO in state `0xE4` transitions directly to `0x01` (normal mode), exiting the demo menu entirely. It does NOT trigger SSF. Pressing LEFT 2 starts the demo timer (song cycling) but does NOT trigger SSF visual presentation. The `demo_state` at DRAM `0x0251D8` remains `0x0000` throughout — the visual state machine never advances because sequencer parts never complete (`DRAM[0x10420] = 0xFFFF` without waveform ROMs).
+Pressing DEMO in state `0xE4` transitions directly to `0x01` (normal mode), exiting the demo menu entirely. It does NOT trigger SSF. Pressing LEFT 2 starts the demo timer (song cycling) but does NOT trigger SSF visual presentation. The `demo_state` at DRAM `0x0251D8` remains `0x0000` throughout — the visual state machine never advances because sequencer parts never complete (`DRAM[0x10420] = 0xFFFF` without waveform ROMs).
 
 **Two independent bugs remain:**
 1. **Song cycling stuck:** Sequencer parts (`DRAM[0x10420]=0xFFFF`) never complete without waveform ROMs, preventing the timer from resetting for the next song
@@ -595,7 +588,7 @@ SSF_PresentationGateTable:
 
 The gate table ensures the Feature Demo can only be activated from specific UI states. During boot (`0x8D38 = 0x00`), `entry[0]` points to `{0xFFFF}` — immediately terminating, blocking any SSF events. After boot stabilizes and the user navigates to the DEMONSTRATION menu, `0x8D38` transitions to values whose table entries contain valid state arrays.
 
-However, as documented in the MAME investigation above, the actual Feature Demo activation in practice bypasses this table entirely: pressing DEMO in the FEATURE PRESENTATION sub-menu (state `0xE4`) triggers `GroupBoxProc_StartSSFPresentation` directly through the soft-button event path, not through `GroupBoxNotify_SendSSFEvent`.
+In practice the activation bypasses this table: pressing DEMO in the FEATURE PRESENTATION sub-menu (state `0xE4`) reaches `GroupBoxProc_StartSSFPresentation` directly through the soft-button event path, not through `GroupBoxNotify_SendSSFEvent`.
 
 The gate table's primary role appears to be **gating hardware button events** — when the event buffer dispatcher (`0xFDB328`) processes button presses from the key scanner, it invokes `GroupBoxNotify_SendSSFEvent` as part of widget handler chains. The table then determines whether those hardware button events should propagate as SSF trigger events based on the current UI mode.
 
