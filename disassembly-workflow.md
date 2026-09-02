@@ -6,43 +6,51 @@ permalink: /disassembly-workflow/
 
 # Disassembly Workflow
 
-Between 6 and 8 August 2026 the disassembly repository absorbed thirty-three conversion
-packages across five integration rounds — the tone database, the bootloader's FDC and
-CP-serial drivers, the Music Stylist and Panel Memory factory data, the fonts and UI
-bitmaps, the help databases, the sub-CPU DSP data zones, the sub-CPU boot ROM's data
-region, the HD-AE5000 object and string tables — and the byte-match gate never once
-dropped below 100.00%.
-
-That is not luck, and the process is worth writing down because it is reusable. This page
-describes it, including the two places where the gate itself nearly failed silently.
+Conversion work on the disassembly is organised in **waves**: a batch of independent
+packages, worked by read-only agents in parallel, integrated serially by a single writer,
+each package gated on the ROMs still rebuilding byte-identically. This page describes that
+process and the traps that make a green gate untrustworthy if you take a shortcut.
 
 ## The invariant
 
 > ```
-> make clean-all && make all && make asl-all && python3 scripts/build/compare_roms.py
+> make gate            # the nine KN5000 images
+> make gate-all        # all thirteen: 9 KN5000 + 4 SX-WSA1R
 > ```
-> **100.00% on all fifteen sections, after every merge.**
+> **Byte-identical, or the package does not land.**
 
-Everything else in the workflow exists to protect that one line. A package that cannot
-demonstrate it does not land — it is reverted, and the reason is recorded rather than
+`make gate` depends on `all`, so it rebuilds before it compares, and it runs
+`scripts/analysis/assert_byte_identical.py`, which **compares bytes and exits non-zero on
+any difference**. Everything else in the workflow exists to protect that one line. A
+package that cannot demonstrate it is reverted, and the reason is recorded rather than
 argued away.
 
-### The gate command is part of the gate
+### ⚠ Never gate on a percentage
 
-The invariant used to be written as "`make all` + `compare_roms.py`". That short form is
-**unsafe**, and a Wave 3b integration manager found out the hard way. Three facts combine:
+`scripts/build/compare_roms.py` prints `Similarity: 100.00%`, rounded to two decimals. In a
+2,097,152-byte ROM that rounding covers **up to 104 differing bytes**. It does append
+`(N incorrect bytes)`, but a check written as `grep -c "Similarity: 100.00%"` matches the
+failing line too, because it is a prefix. That is why the gate is a byte comparison with an
+exit status and not a printed figure — the reasoning is written into
+`assert_byte_identical.py`'s own docstring, and both shortcuts (a percentage, and
+`--no-build` on a tree that was not just built) have cost this project real retractions.
 
-- `make all` builds only the primary LLVM targets — the rule is literally `all: llvm-all`,
-  followed by the comparison. It never invokes `asl-all`.
+### The ASL mirror is a second, separate build
+
+The sources are maintained twice: the primary LLVM build and an archived ASL mirror. Three
+facts about that combine into a trap:
+
+- `make all` builds only the primary LLVM targets — the rule is literally `all: llvm-all`.
+  It never invokes `asl-all`.
 - `make clean-all` is `clean` + `clean-asl`, and `clean-asl` deletes the six
-  `rebuilt_ROMs/*.rebuilt.rom` files that the archived ASL mirror build produces.
+  `rebuilt_ROMs/*.rebuilt.rom` files the ASL mirror build produces.
 - `compare_roms.py` **skips a section whose built file is missing**, silently: each of its
   fifteen table entries is guarded by `if not os.path.exists(...): continue`. There is no
   warning, and the exit status does not change.
 
 So `make clean-all && make all && python3 scripts/build/compare_roms.py` prints **nine**
-sections instead of fifteen, every one of them reading `100.00%` — and a manager who is
-reading percentages has just passed a gate that never assembled the ASL mirror at all.
+sections instead of fifteen, every one reading `100.00%`, having assembled nothing of the
+mirror at all.
 
 > **Count the sections, not the percentages.** Fifteen is the number: nine from the primary
 > LLVM build, six from the ASL mirror. A run that prints nine has tested nothing about the
@@ -55,7 +63,7 @@ that file `.include`s dozens of others:
 | Object file | Prerequisites declared in the Makefile | `.s` files in that tree |
 |---|---|---|
 | `hd-ae5000_v2_06i.llvm.o` | `hdae5000/hd-ae5000_v2_06i.s` | 8 |
-| `kn5000_v10_program.llvm.o` | `v10/maincpu/kn5000_v10_program.s`, the original ROM, `$(C_DATA_BINS)` | 155 |
+| `kn5000_v10_program.llvm.o` | `v10/maincpu/kn5000_v10_program.s`, the original ROM, `$(C_DATA_BINS)` | 156 |
 | `kn5000_table_data.llvm.o` | seven of the tree's `.s` files, plus the generated payloads | 26 |
 | `kn5000_subcpu_boot.llvm.o` | `subcpu/boot/kn5000_subcpu_boot.s` | 1 |
 
@@ -279,37 +287,33 @@ Some of these look like bureaucracy until you notice what each one prevents.
   finished.
 - **Nothing is pushed** during an autonomous run.
 
-## What went wrong (and what that cost)
+## The failure modes this shape is built against
 
-Thirty-five packages were launched and thirty-three landed. **Neither of the two that did
-not land was a byte-match failure**, and one whole wave survived being cut in half:
+Two are structural and cost nothing when they happen; the third is the one that matters.
 
-- One worker stalled and returned nothing. Because workers cannot write to the repository,
-  the cost was exactly one package's delay: it was re-run in the next wave and landed.
-- A session usage limit interrupted a wave mid-flight, after three workers had finished but
-  before the manager ran. Nothing had been integrated, so the repository was untouched; the
-  run resumed later, replaying the finished workers from cache and running the rest live.
-  All eight of that wave's packages landed.
-- One package was **withdrawn on evidence**. `subcpu-fill` was to collapse 98,304 lines of
-  `.byte 0xff` in the sub-CPU boot ROM source into a single `.fill`. The change is
-  byte-safe, and the worker returned scratch files byte-identical to the live ones — but
-  the audit had described that region as erased flash, and it is not: it is **undumped**.
-  Only 4,352 of the chip's 131,072 bytes were ever read. Writing one `.fill` directive
-  would have stated something about the physical part that the dump does not support, so
-  the region keeps all 98,304 of its per-byte lines and the plan carries the correction
-  instead.
+- **A worker stalls and returns nothing.** Workers cannot write to the repository, so the
+  cost is exactly one package's delay and the tree is untouched.
+- **A run is interrupted mid-wave.** Nothing is integrated until the manager runs, so an
+  interrupted wave leaves the repository exactly as it was; finished workers replay from
+  cache.
+- **A byte-safe change whose *comment* would be a false claim.** The sub-CPU boot ROM's
+  source carries 98,304 lines of `.byte 0xff`, which collapse to a single `.fill` with no
+  byte changing. That change is **refused**: the region is not erased flash, it is
+  **undumped** — only 4,352 of the chip's 131,072 bytes have ever been read — and one
+  `.fill` directive would state something about the physical part that the dump does not
+  support.
 
-Rejecting a byte-safe change because its *comment* would be a false claim is the healthiest
-thing that happened in these waves. The gate protects the bytes; only the reviewer protects
-the meaning.
+**The gate protects the bytes; only the reviewer protects the meaning.** Rejecting a
+byte-safe change on the strength of what its comment would claim is the standard here, not
+an exception to it.
 
-## Why the byte-match never broke
+## Why the byte-match holds
 
 Three properties, in order of importance:
 
-1. **The acceptance criterion cannot be argued with.** Fifteen sections at 100.00%, or
-   revert. No reviewer judgement is involved, so no reviewer fatigue can erode it — provided
-   the section count is checked, which is the whole point of the trap above.
+1. **The acceptance criterion cannot be argued with.** Byte-identical, or revert. No
+   reviewer judgement is involved, so no reviewer fatigue can erode it — provided the
+   command is the gate and not a percentage, which is the whole point of the traps above.
 2. **Verification happens twice, in different places** — once by the worker against a ROM
    slice, once by the manager against the whole ROM set. The first catches almost
    everything; the second catches interactions between packages.
@@ -341,18 +345,24 @@ self-check reliable.
 
 ## Remaining work
 
-The conversion is not finished, and the parts that are left are the large ones.
+The conversion is not finished, and **what is left is not one kind of thing**. Three kinds
+of debt exist and they are counted by different instruments — quoting one as the total is
+the mistake this tree has shipped twice:
 
-- **The v7 maincpu tree** (Wave 4, not started) is the biggest single item. Its
-  `includes/generated/` directory is populated at build time by a script that `dd`-slices
-  the v7 ROM, so hundreds of kilobytes of undocumented binary hide behind a "generated"
-  path — including 858,438 bytes that silently *overwrite* C-compile output whenever a
-  50%-similarity heuristic fires.
-- **The maincpu inline `.byte` regions** have still never been classified — roughly 676 KB
-  across the three trees.
-- **A final completeness re-audit** against `findings.json`, plus the deferred backlog the
-  ledger has accumulated (the HD-AE5000 UI descriptor pool at 0x29DC12–0x2A5D2B is the next
-  honest-data package; several extraction and naming follow-ups are listed behind it).
+* **verbatim** — bytes entering the build through an `.incbin` of a blob with no generating
+  source. Counted by `scripts/analysis/kn5000_source_coverage.py`.
+* **code-as-`.byte`** — real instructions spelled as data directives. Invisible to the
+  column above, counted by per-image census tools.
+* **data-as-code** — data disassembled into plausible instruction mnemonics. Invisible to
+  *both*, and invisible to the byte gate as well, because re-assembling a wrong
+  interpretation reproduces the same bytes. It needs a per-image detector and a null.
 
-Current status per ROM is on the [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/)
-page.
+The largest concentration of the first two is the **v7 maincpu tree**, whose
+`includes/romslices/` holds live-referenced ROM transplants — `.bin` slices reproduced by no
+source at all, itemised by `scripts/analysis/v7_no_source_bytes.py`. v9 and v10 are at zero
+verbatim debt.
+
+Per-image figures move within hours while lanes convert; take them from a live run of the
+coverage script, and take the debt taxonomy and the per-image detectors from
+`notes/DEBT-INVENTORY-2026-09-02.md` in the disassembly repo. Current status per ROM is
+summarised on the [ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) page.
