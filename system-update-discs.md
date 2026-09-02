@@ -192,11 +192,9 @@ The firmware update is triggered at boot when the firmware version byte at `0xFF
 2. IC19 sectors `0x3E0000` and `0x3F0000` are erased and stream 2 (the compressed
    **sub-CPU payload**) is written there **verbatim**, exactly `0x20000` bytes.
 
-> **Correction (August 2026).** This page previously said that type 7 stages the
-> *compressed program ROM* at `0x3E0000` and that a later boot programs the program flash
-> from it. That is wrong on both counts. `0x3E0000` holds the compressed **sub-CPU
-> payload**, it is a permanent staging area read on **every** boot by
-> `SubCPU_Send_Payload`, and the main program is programmed during the install itself.
+> ⚠ `0x3E0000` is **not** a staging area for the program ROM. It holds the compressed
+> **sub-CPU payload**, permanently, and `SubCPU_Send_Payload` reads it on **every** boot.
+> The main program is programmed during the install itself, not by a later boot.
 > See [Sub-CPU Payload Provenance]({{ site.baseurl }}/subcpu-payload-provenance/).
 
 Note that the `0x800000` window is the target for both program and table images. Which

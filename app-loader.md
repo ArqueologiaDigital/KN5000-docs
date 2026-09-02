@@ -460,7 +460,10 @@ matrix position rather than after the function they serve here:
 
 ### Disk Image Format
 
-The App Loader requires a **raw disk image** with `.hd` extension. CHD (Compressed Hunks of Data) format does not work correctly with the HDAE5000 ATA device -- MAME returns raw CHD header bytes instead of decompressed sector data. Always use raw images.
+Use a **raw disk image** with a `.hd` extension. That is what the build and every test here
+exercise; CHD through the HDAE5000 ATA path is untested. (An older note claimed MAME returns raw
+CHD header bytes instead of sector data — that is not what `harddisk_image_device` does, so treat
+CHD as unverified rather than as known-broken.)
 
 ## Worked Example: Mines Game
 
