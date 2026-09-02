@@ -178,6 +178,8 @@ two markers). SHARC DRC, `-debug` itself, `set_perfect_quantum` and `-sound none
 all ruled out as causes. The full FORMAT navigation path is mapped and works —
 all ten LCD soft-keys are bound.
 
+⚠ **ERROR 08 identifies no decision point.** It is `FmmFormatFunc`'s *default* message number — any result code absent from the dispatch table at `0x00EA067C` produces it, and the format worker's own `-6` maps to 8 as well. The code means "the format returned failure", nothing more. Reasoning that treats 8 as naming a particular branch is unsound; several earlier notes did.
+
 ## Relationship to the KN5000
 
 The floppy/FAT layer and the FMM screen design are **shared with the KN5000**
