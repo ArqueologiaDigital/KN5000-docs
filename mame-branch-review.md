@@ -6,25 +6,21 @@ permalink: /mame-branch-review/
 
 # MAME Branch Review & Roadmap
 
-*Last updated: March 30, 2026*
+This page lists the KN5000-related branches in the local MAME clone, what is already upstream,
+and what the remaining branches would become as pull requests. See also
+[MAME Pull Requests]({{ site.baseurl }}/mame-pull-requests/) for PRs 1--5 in detail.
 
-This page documents the current state of all KN5000-related MAME branches, the results of a comprehensive branch review and cleanup, and the roadmap for future upstream pull requests.
+## Upstream
 
-> **Context**: Following the merge of [PR #15143](https://github.com/mamedev/mame/pull/15143) (interactive control panel), all five initial PRs are now upstream. A full branch review was conducted to identify remaining unmerged work, archive superseded branches, and rebase active branches onto `upstream/master` for future PR preparation.
->
-> **See Also**: [MAME Pull Requests]({{ site.baseurl }}/mame-pull-requests/) for the original PR 1--5 documentation.
-
-## Merged PRs (Complete)
-
-All five foundation PRs have been merged into upstream MAME:
-
-| PR | Topic | Upstream | Merged |
-|----|-------|----------|--------|
-| PR 1 | LDC CR mapping for TMP94C241 DMA registers | [#14970](https://github.com/mamedev/mame/pull/14970) | Yes |
-| PR 2 | EI/RETI interrupt acceptance shadow | [#14995](https://github.com/mamedev/mame/pull/14995) | Yes |
-| PR 3 | TMP94C241 DMA subsystem (HDMA + DMAR) + port reads | [#15003](https://github.com/mamedev/mame/pull/15003) | Yes |
-| PR 4 | TMP94C241 serial port sub-device | [#15015](https://github.com/mamedev/mame/pull/15015) | Yes |
-| PR 5 | KN5000 driver: control panel HLE, subcpu payload, keybed | [#15143](https://github.com/mamedev/mame/pull/15143) | Yes |
+| Topic | Upstream PR | Local branch |
+|----|-------|----------|
+| LDC CR mapping for TMP94C241 DMA registers | [#14970](https://github.com/mamedev/mame/pull/14970) | `MERGED_kn5000_pr1_ldc_cr_mapping` |
+| EI/RETI interrupt acceptance shadow | [#14995](https://github.com/mamedev/mame/pull/14995) | `MERGED_kn5000_pr2_irq_inhibit` |
+| TMP94C241 DMA subsystem (HDMA + DMAR) + port reads | [#15003](https://github.com/mamedev/mame/pull/15003) | `MERGED_kn5000_pr3_dma_and_port` |
+| TMP94C241 serial port sub-device | [#15015](https://github.com/mamedev/mame/pull/15015) | `MERGED_kn5000_pr4_serial` |
+| KN5000 driver: control panel HLE, subcpu payload, keybed | [#15143](https://github.com/mamedev/mame/pull/15143) | `MERGED_kn5000_pr5_driver_v2` |
+| Feature presentation demo: 16-bit timer fix, IC21 backup SRAM as NVRAM, IC14 dump correction, INT0 vs micro-DMA | [#15878](https://github.com/mamedev/mame/pull/15878) | `MERGED_kn5000_feature_presentation_demo_PR15878` |
+| TEMPO/PROGRAM data wheel | [#15919](https://github.com/mamedev/mame/pull/15919) | `MERGED_kn5000_tempo_program_wheel_PR15919` |
 
 ## Active Branches (Rebased on upstream/master)
 
@@ -49,8 +45,8 @@ The most complete active branch, containing the next major batch of driver impro
 
 **Future PR candidates from this branch:**
 
-- **PR 6: Tone generator device** --- The tone generator, FDC wiring, UART, MIDI output, and DSP1 stub could be submitted as one cohesive "bring the rest of the peripherals online" PR.
-- **PR 7: SNS NMI / NVRAM** --- The payload checksum emulation for persistent NVRAM across sessions. May be combined with PR 6 or submitted separately.
+- **Tone generator device** --- The tone generator, FDC wiring, UART, MIDI output, and DSP1 stub could be submitted as one cohesive "bring the rest of the peripherals online" PR.
+- **SNS NMI / NVRAM** --- The payload checksum emulation for persistent NVRAM across sessions. May be combined with the peripherals PR or submitted separately.
 
 ### `kn5000_research_tonegen` --- 26 commits (superset of PR6)
 
@@ -69,16 +65,24 @@ Research branch extending PR6 with experimental tone generator and Feature Demo 
 
 **Status**: Research branch. Contains confirmed fixes (ATA INTRQ, voice timing, DSP1 ready) that should be cherry-picked onto PR6 when preparing the upstream submission.
 
-### `kn5000_research_datawheel` --- 2 commits
+### `kn5000_research_datawheel` --- 2 commits, superseded
 
-Data wheel rotary encoder research:
+Two commits: "Add Program data wheel encoder input" and "Fix data wheel to use segment 0x0B
+button packets". The second is **wrong** — the wheel is a `[0xD7, signed detent count]` frame on
+sub-address `0x17`, not a segment `0x0B` button packet
+([Data Wheel]({{ site.baseurl }}/data-wheel-investigation/)). What shipped upstream as
+[#15919](https://github.com/mamedev/mame/pull/15919) is the wire-level implementation, so this
+branch has no remaining PR value.
 
-| Feature | Commits | Status |
-|---------|---------|--------|
-| Data wheel encoder input | 1 | Program data wheel as MAME input |
-| Segment 0x0B fix | 1 | Correct button packet segment for data wheel |
+### Other local branches
 
-**Status**: Research branch. Small, focused. Could become part of a future control panel improvements PR.
+| Branch | Commits ahead | Content |
+|---|---|---|
+| `kn5000_pr6_hdae5000` | 1 | HDAE5000 extension work on top of PR6 |
+| `kn5000_pr6_on_kn7000base` | 26 | PR6 rebased onto the KN7000 base |
+| `kn5000_research_techmanager` | 9 | TechManager5000: HDAE5000 parallel-port null cable, PC LPT PS/2 bidirectional mode, KN5000↔PC signal path via PPI taps |
+| `kn5000_minimal_tonegen` | 5 | Reduced tone-generator variant |
+| `kn5000_tonegen_pcm`, `kn5000_tonegen_combined` | — | Tone-generator experiments |
 
 ### `kn5000_power_off_nmi` --- 2 commits
 
@@ -91,9 +95,9 @@ Power-off sequence emulation (alternative approach to PR6's boot-time write tap)
 
 **Status**: This adds a core MAME machine phase (`MACHINE_NOTIFY_POWER_OFF`), which is a more invasive change than PR6's write-tap approach. The write-tap in PR6 achieves the same NVRAM persistence result without modifying core MAME infrastructure. This branch is kept as a reference for the "proper" approach if the core change is ever deemed acceptable upstream.
 
-## Archived Branches
+## Retired Branches
 
-These branches have been superseded and are kept only for historical reference:
+Kept only for reference:
 
 | Branch | Original Purpose | Reason Archived |
 |--------|-----------------|-----------------|
@@ -115,12 +119,14 @@ These branches have been superseded and are kept only for historical reference:
 | `ARCHIVED_kn5000_squash_attempt_2025_08_14` | Early squash attempt | Superseded by PR branches |
 | `ARCHIVED_kn5000_research_tonegen_pre_rebase` | Pre-rebase snapshot | Replaced by rebased branch |
 | `ARCHIVED_kn5000_research_datawheel_pre_rebase` | Pre-rebase snapshot | Replaced by rebased branch |
+| `MERGED_kn5000_feature_presentation_demo_PR15878` | Feature presentation demo | Merged upstream as #15878 |
+| `MERGED_kn5000_tempo_program_wheel_PR15919` | TEMPO/PROGRAM data wheel | Merged upstream as #15919 |
 
 ## Roadmap: Future PR Candidates
 
 Based on the branch review, the following PRs are planned:
 
-### PR 6: KN5000 Peripherals (Tone Gen, FDC, UART, MIDI, DSP1)
+### KN5000 Peripherals (Tone Gen, FDC, UART, MIDI, DSP1)
 
 **Source**: `kn5000_pr6` + cherry-picks from `kn5000_research_tonegen`
 
@@ -138,16 +144,6 @@ Based on the branch review, the following PRs are planned:
 2. Squash/rewrite commits for clean history (one topic per commit)
 3. Remove AI attribution from commit messages
 4. Build-test on current `upstream/master`
-
-### PR 7: Data Wheel Encoder
-
-**Source**: `kn5000_research_datawheel`
-
-**Scope**: Add rotary encoder input for the KN5000's Program data wheel, enabling parameter editing in the emulator.
-
-**Preparation needed**:
-1. Verify the 2 commits apply cleanly on top of PR 6
-2. Test with current firmware
 
 ### SHARC core contributions (from the KN7000 work)
 
