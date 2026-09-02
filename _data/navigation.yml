@@ -286,11 +286,11 @@
     - title: Issues
       url: /issues/
 
-- title: KN5000 · Research Logs
+- title: KN5000 · Timing and Serial
   pages:
-    - title: Feature Demo Investigation
+    - title: Feature Demo Timer Behaviour
       url: /feature-demo-investigation-2026-03-09/
-    - title: Feature Demo Timer Bug
+    - title: Timer 4/5 and the Sequencer Clock
       url: /feature-demo-timer-bug-2026-03-09/
     - title: Control-Panel Serial Timing
       url: /serial-debugging/
