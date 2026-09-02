@@ -47,9 +47,9 @@ fact of this roadmap and it shapes every proposal below.
 | KN6500 | `SMCKPV1.INF` | `0x157ED142` | 15/15 |
 | KN2400 | `SMCKPR1.INF` | `0x16DA58C4` | 15/15 |
 
-> The KN6000/KN6500/KN2400 oracles sit **inside the self-extracting `.exe`**, not at the top level
-> of the `.zip`. They were missed for a long time for exactly that reason — and both this site's
-> tooling and its notes carried "no `.INF` oracle shipped" as a statement of fact until 2026-08-02.
+> ⚠ The KN6000/KN6500/KN2400 oracles sit **inside the self-extracting `.exe`**, not at the top
+> level of the `.zip`. A tool that reads only the archive's top level finds none and will report
+> that no `.INF` oracle shipped with those models. It did.
 
 **Custom-data flash — KN7000, KN6000, KN6500.** Not chip reads, but the exact bytes the firmware
 writes: the Initial Data Disk payload is inflated and written **verbatim to flash offset
@@ -98,9 +98,9 @@ KN6500 comes with it. KN6500-only:
 | IC14 | `C3FBMD000068` | 2 MB | **flash** | table / font |
 | IC209 · IC210 | `QSIGX3C64020` · `QSIGX3C64019` | 8 MB each | mask ROM | wave (extra pair) |
 
-> Note the KN6500 uses **flash** where the KN6000 uses mask ROM for table/font. This site
-> previously described both as mask ROM; that was a gap, corrected once the pinout was checked
-> (`RESET#`, `RY/BY#`, `VPP` are present).
+> Note the KN6500 uses **flash** where the KN6000 uses mask ROM for table/font — the pinout
+> settles it (`RESET#`, `RY/BY#`, `VPP` are present). The two models' table/font parts are not
+> interchangeable evidence for each other.
 
 ### SX-KN2400 / SX-KN2600 — 3 and 4 devices, 24 / 24.5 MB
 
@@ -152,7 +152,7 @@ the CPU bus. On the **KN7000 the wave ROMs also qualify** (see Method B′); on 
 
 ### Method B′ — read the KN7000 wave ROMs through the tone-generator port *(no desoldering, no harness)*
 
-The KN7000 wave ROMs were long assumed CPU-invisible. They are not: the tone generators expose a
+The KN7000's wave ROMs are reachable from the CPU: the tone generators expose a
 **wave-memory read port**, and the service-mode §8.9 WAVE ROM test already sweeps the full 16 MiB of
 each part through it. The read loop (checksum core `0x484839A1`) is simply:
 
@@ -244,7 +244,10 @@ instruments that agree byte-for-byte are strong evidence against a bad read.
    verifiable.
 3. **Method E** on the sub-CPU flash — pure firmware work, no hardware access needed.
 4. **A dead donor KN6000** — five of its devices also serve the KN6500, the best ratio available.
-5. **Wave ROMs** — the bulk of the missing data, and the only category with no non-invasive route.
+5. **Method B′** on the KN7000's four wave ROMs — 64 MB, no hardware work, and verifiable against
+   the firmware's own golden checksums before anyone opens a case.
+6. **The remaining wave ROMs** (KN5000, KN6xxx, KN2400) — the bulk of the missing data, and the
+   only devices with no non-invasive route at all.
 
 ---
 
