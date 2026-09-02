@@ -384,11 +384,12 @@ All ROMs are built with `make all` from the repository root:
 llvm-mc -triple=tlcs900  →  ld.lld  →  llvm-objcopy  →  raw binary
 ```
 
-Each ROM is verified against the original dump using `python3 scripts/build/compare_roms.py`,
-which reports byte-level similarity per **verification section**. The target is 100.00% on
-all **fifteen** sections — nine from the primary LLVM build and six from the archived ASL
-mirror, over nine distinct ROM images. Run the full gate
-(`make clean-all && make all && make asl-all`) before believing the figure: the script
-silently skips any section whose built file is missing, so a short build prints nine
-sections that all read 100.00%. See
+Each ROM is verified against the original dump by **`make gate`** (`make gate-all` to
+include the four SX-WSA1R images), which rebuilds and then runs
+`scripts/analysis/assert_byte_identical.py` — a byte comparison with a non-zero exit status
+on any difference. ⚠ **Do not gate on `compare_roms.py`'s percentage**: `100.00%` is rounded
+to two decimals and covers up to 104 differing bytes in a 2 MB image. That script remains
+the way to see the archived ASL mirror, which has six of its fifteen sections; it silently
+skips a section whose built file is missing, so a short build prints nine sections that all
+read `100.00%` having assembled none of the mirror. See
 [Disassembly Workflow]({{ site.baseurl }}/disassembly-workflow/).
