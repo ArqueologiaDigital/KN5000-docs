@@ -262,10 +262,10 @@ As of September 2026, the following summarizes what the custom LLVM TLCS-900 bac
 
 ### Encoding gaps closed during the `.byte` code elimination effort
 
-The backend can now *encode* every category below. This is the assembly
-(llvm-mc) direction only — see [Known Decoding Gaps](#known-decoding-gaps)
-below for two whole families the disassembler still cannot read back even
-though the encoder produces them correctly.
+The backend can now *encode* every category below. The disassembler has
+since gained matching decoder support for the two families that used to
+lag behind the encoder — see [Register-indexed and extended-register-pair
+decoding](#register-indexed-and-extended-register-pair-decoding) below.
 
 | Category | Resolution |
 |----------|-----------|
@@ -291,40 +291,36 @@ though the encoder produces them correctly.
 
 6. **`(Xrr+Rn)` register-indexed operand is now refused, not silently mis-encoded:** `(Xrr+Rn)` (e.g. `(xix+iz)`) is a distinct addressing mode from `(Xrr+d16)` and is not accepted through the displacement operand syntax. It used to fall through to the expression parser, which treated the index register name as an undefined symbol — `ld wa,(xix+iz)` assembled to `d3 f1 00 00 20` instead of the hardware's `d3 07 f0 f8 20`, and was diagnosed (if at all) only at link time. This is now a parse-time error. The register-indexed forms the KN5000/WSA1R firmware actually uses (`ld`/`st` byte/word/long via `(Xrr+Rn)`, and the register-indexed immediate compare) have their own dedicated mnemonics — see the Backend Support Status table above — rather than reusing the displacement syntax.
 
-### Known Decoding Gaps
+### Register-indexed and extended-register-pair decoding
 
 The encoder and disassembler are two separate hand-written implementations
-(`TLCS900MCCodeEmitter.cpp` and `TLCS900Disassembler.cpp`), and they are not
-symmetric: the assembler can produce bytes the disassembler cannot read back.
+(`TLCS900MCCodeEmitter.cpp` and `TLCS900Disassembler.cpp`); they were not
+always symmetric, but the two families where the assembler could produce
+bytes the disassembler could not read back are now both decoded.
 
-- **The register-indexed `SriRR*` family has no decoder case at all.**
-  `st_rrb`, `ld_rr*`, `lda_rr` and the other forms in this family (encoder
-  mode bytes `0x07`/`0x03` behind the `0xC3`/`0xD3`/`0xE3`/`0xF3` prefixes)
-  assemble correctly but `TLCS900Disassembler.cpp` has no case for them —
-  `decodeSRIPrefix()` explicitly refuses this ModeType. This hid 312 B of
-  real code from every automated audit for months, and is why 33 of 34 v7
-  code slices fail a disassemble/re-assemble round trip. A
-  decoder-independent byte-pattern scan for this family's exact encoder
-  shape (`wsa1/notes/sound/prom_d_srirr_falsification.py`) finds 599 matches
-  in `wsa1/prom_a`, 1,261 in `prom_b` and 125 in `prom_c` — all three
-  confirmed code images — and 0 in `prom_d`, which corroborates `prom_d`
-  holding no SriRR-family code independently of the decoder gap that
-  produces the same "zero" symptom for any image.
-- **`decodeERPPrefix()` is a literal stub that always returns `Fail`**, for
-  about 20 previous-register-bank (Q-register) mnemonics the encoder
-  supports. Its encoding (`[prefix C7/D7/E7, bank_idx (any byte), subopc(+reg
-  /+imm)]`) has no structural byte shape a scan can key on, since `bank_idx`
-  is unconstrained — so unlike the SriRR family above, this gap has no
-  decoder-independent check and no bytes-hidden figure.
+- **The register-indexed `SriRR*` family** — `st_rrb`, `ld_rr*`, `lda_rr`,
+  `jp_rr`, `call_rr` and the other forms behind the `0xC3`/`0xD3`/`0xE3`/`0xF3`
+  prefixes with encoder mode bytes `0x07`/`0x03` — is decoded by
+  `decodeSriRRPrefix()`, reached from `decodeSRIPrefix()` once it recognises
+  either mode byte. Before this existed the gap hid 312 B of real code from
+  every automated audit for months, and was why 33 of 34 v7 code slices
+  failed a disassemble/re-assemble round trip.
+- **`decodeERPPrefix()`** decodes the previous-register-bank (Q-register)
+  forms behind the `0xC7`/`0xE7` prefixes, replacing what used to be a
+  literal stub that always returned `Fail`.
 
-**A latent encoder ambiguity was found while investigating the SriRR gap.**
-`ST_RRW` and `ST_RRL` are documented as encoding byte-identically to
-`ST_RRB` — the size adjustment in `TLCS900MCCodeEmitter.cpp` only applies
-when `Opcode < 0xF0`, and this family's prefix is fixed at `0xF3`. If that
-holds, the three sizes cannot be told apart from bytes alone: a decoder
-cannot be written without guessing, and the encoder may already be losing
-size information. This needs hardware-verified ground truth before a
-decoder for this specific form is attempted.
+Both are exercised by the regression suite against literal bytes pulled
+from `kn5000_v10_program.rom` and `wsa1/original_ROMs/wsa1_prom_a.ic12`, and
+re-assembling the printed mnemonic reproduces the exact consumed bytes in
+each case.
+
+**`ST_RRB`, `ST_RRW` and `ST_RRL` encode distinctly, not ambiguously.**
+Each ends in its own trailing byte — `0x41`, `0x50`, `0x60` respectively —
+confirmed with `llvm-mc --show-encoding`; the three sizes are not
+collapsed by the `Opcode < 0xF0` size-adjustment guard, which only ever
+applies to formats below `0xF0` and does not gate this family's fixed
+`0xF3` prefix. A full audit of all 22 call sites of that guard found no
+instance where it loses size information.
 
 ## Condition Codes
 
