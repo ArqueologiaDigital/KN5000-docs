@@ -1,117 +1,94 @@
 ---
 layout: page
-title: "Mapping the KN7000 Front Panel — with the keyboard's own help system"
+title: "Determining KN7000 Panel Bindings"
 permalink: /kn7000-panel-mapping/
 ---
 
-# Mapping the KN7000 Front Panel
+# Determining KN7000 Panel Bindings
 
-*July 2026*
+The SX-KN7000 has over a hundred front-panel buttons. The scan matrix that carries them says
+nothing about which position is which button, so every binding in the
+[MAME driver]({{ site.baseurl }}/kn7000-roadmap/) has to be established by evidence. This page
+describes the methods that produce that evidence and the rules that keep them honest. The
+resulting map is on the [Control Panel Protocol]({{ site.baseurl }}/kn7000-control-panel/) page.
 
-The Technics SX-KN7000 has a *lot* of front-panel buttons — well over a hundred, spread across
-rhythm styles, sound groups, performance pads, effects, transport controls, part mixers, and a
-cluster of system keys around the LCD. For the [work-in-progress MAME driver]({{ site.baseurl }}/kn7000-roadmap/)
-to feel like a real KN7000, every one of those buttons has to send the right signal to the
-emulated firmware. This post is the story of how we got most of the way there — including a few
-wrong turns that are worth telling.
+## What Has to Be Determined
 
-## The problem: 250 bits, no labels
+The panel HLE declares **33 normalised scan segments** (`num_segs()` returns `0x21`) of eight
+bits each. Of those, **22 are exposed as MAME input ports** — `CP{board}_SEG{col}` for CPL,
+CPC and CPR — carrying **152 declared buttons**. A binding is one (port, mask) pair tied to one
+silk-screened button, and it is only correct if pressing it makes the firmware do what that
+button does on the instrument.
 
-The panel is a scanned switch matrix. From the driver's point of view it's ~30 "segments" of 8
-bits each — roughly 250 individual switch positions — and *nothing* says which position is which
-button. Early on we guessed the wiring from the firmware's descriptor tables, but guesses have a
-way of being confidently wrong. The genre buttons, for instance, were mapped one way in the
-layout and turned out to be somewhere else entirely.
+## Method 1: The HELP Oracle
 
-What changed everything was a feedback loop with the instrument's owner. They ran the published
-emulator build and sent back precise reports: *"pressing the button labelled CUSTOM opens the
-ENTERTAINER screen"*, *"MUTE 1 actually triggers MUTE 7"*, and so on. Each of those is a hard
-data point. Combined with snapshot probing in the emulator — press a bit, capture the LCD, read
-what screen it opened — we rebuilt the RHYTHM GROUP genre map from scratch and got it verified:
-the 16 genres live on segments SEG00/SEG01/SEG02, bits b2–b7, in order.
+The KN7000 names its own buttons. Press **HELP**, then press any other button, and the display
+shows an info page titled `HELP : <BUTTON NAME>`.
 
-## The breakthrough: the keyboard names its own buttons
+This is a per-button oracle built into the firmware. Enter HELP mode, press a candidate bit,
+and read the title strip. Because a no-op leaves the previous title on screen, consecutive
+identical strips are de-duplicated and the distinct ones stacked into one tall image, so a
+single run and a single screenshot reveal a whole segment's worth of names.
 
-Snapshot probing works for buttons that open a distinctive screen, but many buttons don't — they
-toggle a mode, nudge a value, or mute a part. Progress was slow until the owner passed along a
-tip that turned out to be the key to the whole panel:
+> ⚠ **One candidate per boot.** HELP is a toggle — pressing it again turns help off — and some
+> buttons navigate away instead of showing info. A multi-press sweep in one boot silently
+> contaminates itself after the first such press. The reliable form is: boot, enter HELP, press
+> exactly one bit, screenshot, check the result.
 
-> **Press the HELP button, then press any other button, and the screen tells you what that button
-> does** — a little info page titled *"HELP : &lt;BUTTON NAME&gt;"*.
+The oracle is silent for buttons with no info page, which is most of the part-mute matrix.
 
-That's a built-in, per-button oracle. Pressing a candidate bit in HELP mode makes the KN7000
-*itself* tell us the button's name. We automated it: enter HELP mode once, press each bit in a
-segment, and grab just the LCD's title strip. Because a no-op leaves the previous title on screen,
-we de-duplicate consecutive identical strips and stack the distinct ones into a single tall image
-— so one emulator run and one screenshot reveal a whole segment's worth of button names at once.
+## Method 2: Snapshot Probing
 
-One sweep of segments SEG0F–SEG13 handed us **twenty buttons** in a single shot: SOUND DSP, SPLIT
-POINT, VARIATION & MSA, PART SELECT, SOLO, FADE IN/OUT, FILL IN, CONDUCTOR, TECHNI-CHORD, INTRO &
-ENDING, TAP TEMPO, START/STOP, PROGRAM MENU, DISK, TRANSPOSE, R1/R2 OCTAVE, REVERB, MIC REVERB &
-EFFECT… The map even **validated itself**: DISK and PROGRAM MENUS were already bound and confirmed
-working by the owner, and the sweep landed on exactly those bits.
+For any button that opens a distinctive screen, press the bit and capture the LCD. This
+identifies sound families, rhythm genres, menu keys and transport keys directly.
 
-## The EXIT saga (a cautionary tale)
+> ⚠ **Never decide a screen changed from a hash of the whole frame.** The title bar carries a
+> live tempo readout; a tick from ♩=120 to ♩=121 registers as a change and will attribute a
+> screen close, or a screen open, to a button that did nothing of the sort. Compare the screen
+> *body*, and read the actual image before believing an automated verdict.
 
-Not every hunt went smoothly. We spent an embarrassing amount of effort chasing the EXIT button.
-A first "confident" identification bound EXIT to a bit that, in a modal HELP screen, *seemed* to
-close it. It didn't — that bit is actually a **tempo control**, and our screen-change detector had
-been fooled by the tempo digit ticking from ♩=120 to ♩=121 in the title bar. Lesson filed: verify
-a screen *close* by its body, not by a hash that includes a live-updating number, and always read
-the actual screen before believing an automated verdict.
+## Method 3: Press-Count Encoding (the mute matrix)
 
-The HELP sweeps also fought us here: HELP is a toggle (pressing it again turns help *off*), and a
-few buttons navigate away instead of showing info, so a single-boot sweep silently contaminates
-after the first such press. The reliable method turned out to be a **clean fresh-boot test per
-candidate**: boot, enter HELP, press exactly one bit, screenshot, check for the home screen. EXIT
-is the bit that turns HELP off and returns home — and it finally fell out as **SEG08 0x20**,
-completing the tidy set of LCD-corner keys: OTHER PARTS (0x04), HELP (0x08), DISPLAY HOLD (0x10),
-EXIT (0x20).
+The sixteen `MUTE UP` / `MUTE DOWN` buttons have no HELP pages and open no screens; each press
+nudges one part's mixer level by one step. That is enough to identify them in bulk: press the
+first candidate 5 times, the second 10, the third 15, and so on, then take **one** snapshot of
+the PT1–16 mixer. Each affected part sits at a distinct level, and the level decodes which
+button drove it — a whole segment per screenshot.
 
-## Peeking at the firmware's own table
+The mute matrix as currently bound: `CPC_SEG5` bits 4–7 are parts 1–2, `CPC_SEG8` parts 3–6,
+`CPC_SEG9` parts 7–10, `CPC_SEG10` parts 11–14, and `CPC_SEG11` bits 0–3 parts 15–16.
 
-In parallel we found the firmware's master dispatch table (at `0x48614978`): for every switch it
-records an event code, so genres show up as one event class, part-mutes as on/off pairs, and a
-distinct `0x1xxx` class marks the system keys. It's a gorgeous artifact and a strong lead — the
-catch is that the firmware's internal segment numbering doesn't line up cleanly with the layout's
-segment numbering yet, so we can't blindly transcribe it.
+## Method 4: Owner Reports
 
-> **Update.** `0x48614978` turned out to be a red herring of a specific kind: it is a real,
-> fully-decoded dispatch table, but it is the **inactive half**. A RAM flag at `0x5006BE94`
-> selects between two complete panel interpretations shared with the KN5000 codebase — flag 0
-> uses `PanelWireNormTable` (`0x486135A0`) and dispatch `0x48614978`; the KN7000 runs with the
-> flag set to **1**, which selects a different normalize table (`0x48613620`) and a different
-> dispatch table, `0x486149FC`. The remap *has* since been pinned — the ADDR→normSeg formula and
-> the ioport map are in `kn7000_mame/notes/panel-board-decode.md` — and the mute-matrix
-> cross-check above holds either way, because both tables agree on the mute part IDs.
+Reports from the instrument's owner running the published build — *"the button labelled CUSTOM
+opens the ENTERTAINER screen"*, *"MUTE 1 triggers MUTE 7"* — are hard data points and outrank
+any inference from the firmware tables.
 
-## Cracking the MUTE matrix by counting presses
+## The Firmware Dispatch Table Is a Lead, Not Gospel
 
-The one place the HELP oracle goes quiet is the sixteen **MUTE UP / MUTE DOWN** buttons under the
-LCD — press them in HELP mode and nothing happens; they have no info pages. They're really per-part
-*volume* nudges: one press drops a part's mixer level by one. That subtlety turned out to be the
-key to a neat trick. Instead of pressing one button and reading the screen, we **encode each
-button's identity in the number of presses**: press the first candidate 5 times, the second 10,
-the third 15, and so on. Then a single snapshot of the PT1–16 mixer shows each affected part
-sitting at a distinct level — the part at 95 was the 5-press button, 90 the 10-press button, and so
-on. One screenshot decodes a whole segment's worth of buttons at once.
+The firmware records an event code for every switch, which groups the panel usefully: genres
+form one event class, part mutes appear as on/off pairs, and a `0x1xxx` class marks the system
+keys.
 
-The result was beautifully regular: **SEG04 = parts 1–4, SEG05 = parts 5–8, SEG06 = parts 9–12,
-SEG07 = parts 13–16**, with each segment's four up/down pairs driving four consecutive parts.
-Sixteen parts, thirty-two buttons, all mapped in a handful of runs.
+There are **two complete panel interpretations** in the shared MN10300 codebase, and a RAM flag
+at `0x5006BE94` selects between them:
 
-It also caught a subtle bug. The "AUTO PLAY CHORD ON/OFF" button had been guessed from the
-firmware's dispatch table — but that table indexes the firmware's *internal* segment numbering,
-which doesn't match the layout's, and the bit we'd assigned to APC is physically a part-10 mute.
-A good reminder that the static table is a lead, not gospel, until a live test confirms it.
+| Flag | Normalise table | Dispatch table |
+|---|---|---|
+| 0 | `PanelWireNormTable` (`0x486135A0`) | `0x48614978` |
+| **1 — what the KN7000 runs** | `0x48613620` | `0x486149FC` |
 
-## Where things stand
+`0x48614978` is a real, fully decoded dispatch table, but it is the **inactive half** on this
+model. Both tables agree on the mute part IDs, so the mute cross-check holds either way. The
+ADDR→normSeg formula and the ioport map are in `notes/panel-board-decode.md`.
 
-Between the owner's testing, snapshot probing, and the HELP-name sweeps, the great majority of the
-KN7000 front panel is now correctly wired in the emulator — genres, sound groups, effects,
-transport, performance pads, the LCD soft-keys, and the system corner keys. It's a good example of
-how emulation and reverse engineering feed each other: a working (if incomplete) emulator became
-the instrument that helped map the very hardware it emulates.
+The table also indexes the firmware's internal segment numbering, which is not the layout's.
+A binding read straight out of it can land on a physically different switch: an "AUTO PLAY
+CHORD ON/OFF" binding taken from the table sat on a bit that is physically a part-10 mute.
+Confirm every table-derived binding with a live test.
 
-*The button map lives in `notes/panel-button-map.md` in the driver overlay repo; the running
-tally is on the [KN7000 roadmap]({{ site.baseurl }}/kn7000-roadmap/).*
+## Where the Map Lives
+
+The button map is `notes/panel-button-map.md` in the driver overlay repository. The current
+bindings, as declared by `kn7000_cpanel_device`, are listed on the
+[Control Panel Protocol]({{ site.baseurl }}/kn7000-control-panel/) page.
