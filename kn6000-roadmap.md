@@ -109,11 +109,13 @@ them as a parallel corpus and cross-reference constantly:
 
 ## Phased plan
 
-**Phase 0 — repos & scaffolding.** Mirror the KN7000 layout: a `kn6000_extraction`
-(SLD/table decoders), a `kn6000_mame` overlay repo (fork `kn7000_mame`: reuse
-`src/devices/cpu/mn10300/*` verbatim, add `src/mame/matsushita/kn6000.cpp` +
-`kn6500.cpp`), a `kn6000_disassembly`, and KN6000/6500 pages on this docs site. Keep
-`make verify` byte-exact and Jekyll building, as for KN7000.
+**Phase 0 — repos & scaffolding.** No KN6000/6500-specific repos were forked. The
+KN7000 tooling is reused in place instead: `kn7000_extraction`'s decoders (including
+the new `name_extract_nul.py`) run directly against the KN6000/KN6500 images, and
+`kn6000`/`kn6500` are `SYST()` variants registered inside the existing
+`src/mame/matsushita/kn7000.cpp`, reusing `kn7000_state` and the MN10300 core
+verbatim — see the transfer table above and the status update below. `make verify`
+stays byte-exact and Jekyll keeps building, as for KN7000.
 
 **Phase 1 — extraction & ROM reconstruction.** Decode `IK*.SLD`/`IKV*.SLD`
 (done → 4 flash images); verify the `SMCK*.INF` block checksums; run the table-ROM

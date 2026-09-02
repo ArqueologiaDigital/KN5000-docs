@@ -204,7 +204,7 @@ Time    CPU Firmware                  MAME Serial Device    Control Panel HLE
 - `serial.cpp sioclk()`: Always forward sclk_out_cb (no PFFC gating)
 - `serial.cpp scNbuf_w()`: Pass PFFC state via `tx_start_cb(pffc ? 1 : 0)`
 - `serial.cpp timer_callback()`: Added `(m_serial_mode & 3) != 1` early return (only drive SCLK in baud rate mode)
-- `cpanel.cpp`: Added `m_accept_next_byte` flag, skip phantom bytes
+- `kn5000_cpanel.cpp`: Added `m_accept_next_byte` flag, skip phantom bytes
 
 **Result:** AW VM works. Firmware shows ERROR, LEDs off.
 
@@ -261,7 +261,7 @@ Time    CPU Firmware                  MAME Serial Device    Control Panel HLE
 **Approach:** Phantom bytes (tx_start state=0) should NOT cancel idle_detect. Only real bytes (state=1) cancel it.
 
 **Changes:**
-- `cpanel.cpp tx_start()`: `if (state != 0) m_idle_detect_timer->reset(attotime::never);`
+- `kn5000_cpanel.cpp tx_start()`: `if (state != 0) m_idle_detect_timer->reset(attotime::never);`
 
 **Rationale:** The firmware's TX sequence: phantom → phantom → REAL → phantom → REAL → phantom. The idle_detect timer starts when process_command() fires (after the 2nd real byte). The subsequent phantom (SM_TXDelay2) must NOT cancel it. The AW VM sends real dummy bytes, which correctly cancel the timer.
 

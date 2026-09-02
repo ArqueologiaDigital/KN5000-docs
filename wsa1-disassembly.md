@@ -19,7 +19,7 @@ the same practices, including the same
 > **STRONG 17 bytes** still reachable-and-unconverted (all formally refused —
 > see below), down from 17,558 at that goal's start. Raw substantive coverage —
 > which counts territory, not reachability, and so is a smaller number by
-> design — stands at **1,575,648 bytes — 75.1 %.**
+> design — stands at **1,625,342 bytes — 77.5 %.**
 
 ## The gate is the only thing that certifies this tree
 
