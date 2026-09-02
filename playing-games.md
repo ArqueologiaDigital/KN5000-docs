@@ -16,16 +16,11 @@ This guide walks you through running homebrew games on the Technics KN5000 using
 | **Original KN5000 ROM dumps** | Dump from your own KN5000 keyboard (see [Help Wanted]({{ site.baseurl }}/help-wanted/)) |
 | **Game source code** | See individual game sections below |
 
-> **Correction (2026-09).** This page used to say the KN5000 driver was not yet in upstream
-> MAME and had to be built from a `kn5000_pr5_driver` branch. That branch has since been
-> **merged** (the KN5000 driver has been in upstream `mamedev/mame` since PR #12649, with
-> continued updates on `master` since, e.g. #15878 and #15919) — that branch name no longer
-> exists as an active branch. **Plain upstream MAME now has the base KN5000 driver.** Some of
-> what this page walks through (Another World, Mines, the App Loader — all of which rely on
-> custom homebrew ROM images and the HDAE5000 extension slot, not on driver features per se)
-> has not been re-verified against current upstream MAME as part of this review; if something
-> below doesn't work against a plain upstream checkout, the actively developed driver overlay
-> (not a stale personal-fork branch) is the thing to check next.
+> **Which MAME.** The base KN5000 driver is in upstream `mamedev/mame`, so a plain upstream
+> checkout has it. The homebrew walkthroughs below (Another World, Mines, the App Loader) rely
+> on custom ROM images and the HDAE5000 extension slot rather than on driver features, but they
+> are developed against the driver overlay repository, which is ahead of upstream. If something
+> here does not work against a plain upstream checkout, check it against the overlay.
 
 ## Building MAME
 
@@ -163,7 +158,8 @@ make
 
 After MAME boots the firmware:
 
-1. Press the **DISK** button (top-right area of the control panel)
+1. Press the **`MENU: DISK`** button (top-right area of the control panel — that is the name
+   it carries in MAME's input list)
 2. Navigate the DISK MENU — look for the **Mines Game** entry with a mine icon
 3. Select it to launch the game
 
@@ -220,16 +216,25 @@ After the firmware boots and the DISK MENU loads the App Loader:
 
 The KN5000 has no joystick or D-pad — games use the soft buttons along the edges of the LCD screen. In MAME, these map to keyboard keys.
 
-| Button | Location | MAME Key |
-|--------|----------|----------|
-| LEFT 1-2 | Left of LCD (top) | See MAME input config |
-| LEFT 3-5 | Left of LCD (bottom) | See MAME input config |
-| RIGHT 1-3 | Right of LCD (top) | See MAME input config |
-| RIGHT 4-5 | Right of LCD (bottom) | See MAME input config |
-| DISK | Top-right panel | See MAME input config |
-| DEMO | Top-left panel | See MAME input config |
+To see or change key bindings, press **Tab** in MAME and go to **Input (This Machine)**. The
+soft keys are listed there under these exact names, on these ports:
 
-To see or change key bindings, press **Tab** in MAME and navigate to **Input (This Machine)**.
+| Name in MAME | Port · mask |
+|---|---|
+| `LEFT 1` | `CPL_SEG10` `0x02` |
+| `LEFT 2` | `CPL_SEG10` `0x01` |
+| `LEFT 3` | `CPL_SEG9` `0x04` |
+| `LEFT 4` | `CPL_SEG9` `0x02` |
+| `LEFT 5` | `CPL_SEG9` `0x01` |
+| `RIGHT 1` | `CPL_SEG8` `0x04` |
+| `RIGHT 2` | `CPL_SEG8` `0x02` |
+| `RIGHT 3` | `CPL_SEG8` `0x01` |
+| `RIGHT 4` | `CPL_SEG7` `0x02` |
+| `RIGHT 5` | `CPL_SEG7` `0x01` |
+| `EXIT` | `CPL_SEG7` `0x08` |
+| `MENU: DISK` | `CPR_SEG10` `0x20` |
+
+None of these has a default key assignment, so assign the ones you need before playing.
 
 ---
 
@@ -256,8 +261,10 @@ If you're using custom ROMs (Another World, Mines), MAME will report checksum mi
 ### Game doesn't appear in DISK MENU
 
 - Make sure you passed `-extension hdae5000` to MAME
-- The HDAE5000 extension ROM must be in the ROM set as `hd-ae5000.ic4`
-- Press the **DISK** button to enter the DISK MENU
+- The HDAE5000 extension ROM must be in the ROM set under one of the four names the device
+  knows: `hd-ae5000_v1_10i.ic4`, `hd-ae5000_v1_15i.ic4`, `hd-ae5000_v2_01i.ic4` or
+  `hd-ae5000_v2_06i.ic4` (the default BIOS selection is v2.06i)
+- Press the **`MENU: DISK`** button to enter the DISK MENU
 
 ---
 
