@@ -607,6 +607,40 @@ removes both single-fact dependencies, and finds `SCALE`.
   wave mask ROMs are dumped, a device here emits into nothing. The right first
   device is a register file with a decoded, inspectable parameter view.
 
+## Where this lives in the disassembly
+
+The register blocks are `.equ` symbols in the driver's own header, so the source
+reads in the same vocabulary as this page rather than in bare numbers:
+
+| symbol | block | |
+|---|---|---|
+| `DEV104_BASE` | `0x00104000` | `+0x00` select, `+0x02` data |
+| `DEV104_MAIN_TUNE` / `DEV104_SUB_TUNE` | `0x0040` / `0x0080` | KEY SHIFT + TUNE |
+| `DEV104_POSITION` | `0x00C0` | the log-domain period |
+| `DEV104_MAIN_FITTING_DECAY` / `_SUB_` | `0x0140` / `0x0180` | |
+| `DEV104_MAIN_FITTING_RISE` / `_SUB_` | `0x01C0` / `0x0200` | |
+| `DEV104_SUB_GAIN` | `0x0280` | |
+| `DEV104_MAIN_MUTING_Q13` / `_SUB_` | `0x0340` / `0x0380` | |
+| `DEV104_MAIN_MUTING_Q16` / `_SUB_` | `0x0400` / `0x0440` | the bilinear cutoff |
+| `DEV104_BLK_0000`, `_0100`, `_0240`, `_02C0`, `_0300`, `_03C0`, `_0480`, `_0800` | | **named by block number on purpose** — their meaning is unidentified or only weakly supported, and a symbol that guessed would be believed |
+
+The curve tables carry the same vocabulary — `Curve_Muting_Cutoff_Q16_128`,
+`Curve_Muting_Cutoff_Q13_128`, `Curve_Position_Log2Period_251`,
+`Curve_Fitting_Exp2Decay_256`, `Curve_Fitting_Exp2Rise_128`,
+`Table_Muting_CutoffFloor_ByKeyZone_256`, and the four `LinCoef_*_KeyRamp_Q5_128`
+key ramps — each documented above its definition with its fit, endpoints, unit
+and grade.
+
+| file | what is in it |
+|---|---|
+| `wsa1/prom_c/devices/dev10c_dev104_drivers.s` | the driver, the symbol definitions, and the full register map |
+| `wsa1/prom_c/data_tables/tail_data_zone.s` | the curve tables and the key ramps |
+| `wsa1/prom_c/field_accessors.s` | the packers that compute each register's value |
+
+⚠ Note that `dev10c_dev104_drivers.s` holds the drivers for **two** devices. The
+four routines in it that are still `sub_XXXXXX` drive `0x0010C000`, the tone
+generator's register file, not this chip — their block numbers merely overlap.
+
 ## Reproducing every number on this page
 
 Each script reads the ROM images and no `.s` file, and each carries a
