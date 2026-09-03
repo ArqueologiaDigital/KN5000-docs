@@ -342,7 +342,7 @@ integer law on every entry.
 
 ★ `LinCoef_FE0196`'s slope is 1/64 of a Q5 unit per key and its destination is in
 semitones of cutoff, so **a depth byte of 64 is exactly 100% key follow**, and the
-signed byte's ±127 range is ±198%. The same holds for the four-byte key-scaling
+signed byte's ±127 range is ±198%. The same holds for the four-byte TOUCH-scaling
 stage in the record, whose slope byte is a Q5 where **32 = 100%**.
 
 `Table_FDFF96` — 256 bytes, 27 distinct values `0x22..0x3C`, indexed by the key
@@ -627,14 +627,15 @@ reads in the same vocabulary as this page rather than in bare numbers:
 The curve tables carry the same vocabulary — `Curve_Muting_Cutoff_Q16_128`,
 `Curve_Muting_Cutoff_Q13_128`, `Curve_Position_Log2Period_251`,
 `Curve_Fitting_Exp2Decay_256`, `Curve_Fitting_Exp2Rise_128`,
-`Table_Muting_CutoffFloor_ByKeyZone_256`, and the four `LinCoef_*_KeyRamp_Q5_128`
-key ramps — each documented above its definition with its fit, endpoints, unit
+`Table_Muting_CutoffFloor_ByKeyZone_256`, and the four `LinCoef_*_TouchRamp_Q5_128`
+touch ramps — indexed by VELOCITY, not by key: their index is `voice[+0x0C] & 0x7F`,
+and the voice record holds the note separately at `+0x05` as `note|0x80` — each documented above its definition with its fit, endpoints, unit
 and grade.
 
 | file | what is in it |
 |---|---|
 | `wsa1/prom_c/devices/dev10c_dev104_drivers.s` | the driver, the symbol definitions, and the full register map |
-| `wsa1/prom_c/data_tables/tail_data_zone.s` | the curve tables and the key ramps |
+| `wsa1/prom_c/data_tables/tail_data_zone.s` | the curve tables and the touch ramps |
 | `wsa1/prom_c/field_accessors.s` | the packers that compute each register's value |
 
 ⚠ Note that `dev10c_dev104_drivers.s` holds the drivers for **two** devices. The
