@@ -27,13 +27,30 @@ generator on request. The sample player is the *other* chip.
 
 ## ⚠ Two limits that do not move
 
-**1. That this device *is* the acoustic-modelling section is a declared
-inference.** No WSA1R ROM names any part. The service manual names IC3 and puts
-the `WFICS` decode on it; what is not established is that `0x104000` decodes to
-that part. What *is* established, and it is the whole of the argument: **it is
-the only per-channel synthesis device CPU 2 commands that has no counterpart in
-the PCM sibling, the KN5000.** That, and no more. The disassembly's own labels
-say `Dev104_` for exactly this reason.
+**1. The part identity is settled by the schematic, not inferred.** No WSA1R ROM
+names any part — but the service manual closes the chain in two steps. IC27, a
+D74HC139GS, decodes CPU 2's `SCS0` with `SA14`/`SA15` into four selects, and
+`1Y1` is **`WFICS` = `0x104000`** (its siblings being `SMIF` = `0x100000`, the
+link; `KSCS` = `0x108000`, the keybed; and `SGCS` = `0x10C000`, the tone
+generator — all four in the order the disassembly derived them). IC3's host port
+then takes **`NSGCE ← WFICS`**, and IC3 is labelled **`L7A1429 MODELING LSI`**.
+
+The interface matches the one read off the instruction stream, pin for pin:
+**`NAD ← SA1`** means a single address line selects address-versus-data, which
+*is* the driver's `+0 = select, +2 = data`.
+
+⚠ What remains inference is the **internal signal path** — a vocabulary and a
+coefficient set are not a block diagram. See
+[What is not known](#what-is-not-known).
+
+**1b. Its output is not audio — it feeds the tone generator.** IC3's `RQWFI` and
+`IOWFI(0..12)` outputs are the nets `RQWFI` and `DWFI0..DWFI12` arriving on
+**IC4's pins 25-40**: a 13-bit stream with a request line. IC4 is
+`TC183C230002`, the sheet's own spelling being "TONE GENELATOR LSI", and its
+crystal `X4` runs at 33.8688 MHz = 768 x 44100, which is where this page's
+44.1 kHz sample rate comes from. So the modelling LSI and the tone generator are
+**two stages of one signal path**, not two independent voice engines — which
+settles a question the firmware alone could not.
 
 **2. "No executable payload crosses this device" is a claim about the BUS, not
 about the silicon.** The whole 2 MB image holds nine `0x00104000` literals, none
@@ -617,4 +634,4 @@ describes, in `wsa1/prom_c/devices/dev10c_dev104_drivers.s`.
 | [Emulation Status]({{ site.baseurl }}/wsa1-emulation/) | The MAME driver, what is modelled and what is not |
 | [Disassembly]({{ site.baseurl }}/wsa1-disassembly/) | The byte-exact reassembly the register decode comes out of |
 | [Control Panel & Switch Matrix]({{ site.baseurl }}/wsa1-panel/) | The panel the tone editor is driven from |
-| [KN5000 Tone Generator]({{ site.baseurl }}/tone-generator/) | The PCM sibling — the device this one has no counterpart in |
+| [KN5000 Tone Generator]({{ site.baseurl }}/tone-generator/) | The PCM sibling: the KN5000 commands no such per-channel modelling device |
