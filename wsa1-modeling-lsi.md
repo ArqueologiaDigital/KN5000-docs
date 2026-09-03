@@ -507,7 +507,7 @@ receiver.
 
 **Writing it overwrites bytes 13..42 of the record — every coefficient in the
 table above — from a preset.** And in the factory set the byte reads `ORIGINAL`
-in **133 of 133** clean melodic records. `ORIGINAL` means "no family — these are
+in **455 of 459** records over the whole factory set. ⚠ A figure of "133 of 133" appears in the working notes for this: it is correct, but it is taken over a filtered subset that — for reasons to do with element blocks — excludes every tone using `RESO MODE`, which lives in bits 6:7 of **this same byte**. Four records do carry a non-zero resonator type (1, 14, 32 and 63), and 28 carry a non-zero `RESO MODE`. The conclusion is unaffected — it rests on the packer, not on the count — but the honest denominator is 459. `ORIGINAL` means "no family — these are
 the record's own coefficients".
 
 > **An emulation must implement the coefficients, not the families.** There is no
