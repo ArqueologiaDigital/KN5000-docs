@@ -470,5 +470,6 @@ from that map is not evidence that a device does not exist.
 |------|-------------|
 | [SX-WSA1 / SX-WSA1R Overview]({{ site.baseurl }}/wsa1/) | The machine, the hardware, the memory maps, the model strap |
 | [Emulation Status]({{ site.baseurl }}/wsa1-emulation/) | The MAME driver the disassembly feeds, and which feeds it back |
+| [Acoustic Modelling LSI (L7A1429)]({{ site.baseurl }}/wsa1-modeling-lsi/) | What the CPU 2 device drivers in this tree turned out to be driving |
 | [Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/) | Where this machine's code meets the KN5000's and the KN7000's |
 | [KN5000 ROM Reconstruction]({{ site.baseurl }}/rom-reconstruction/) | The sibling project, and where these practices come from |

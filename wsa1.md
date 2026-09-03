@@ -167,7 +167,7 @@ readings are recorded; where a designator is derived rather than read, it says s
 |-----|------|------|
 | **IC1** | **TMP95C061AF** | Toshiba TLCS-900/H, *"MICROCOMPUTER (MAIN)"* |
 | **IC2** | **TMP95C061AF** | Toshiba TLCS-900/H, *"MICROCOMPUTER (SUB)"* |
-| **IC3** | **L7A1429** | *"MODELING LSI"* — the engine the machine is named after. A **placeholder** MAME device (`l7a1429_device`) models the register interface at `0x00104000`; it synthesises nothing. ⚠ That `0x104000` decodes to *this part* is an inference — no ROM names a part number — so the disassembly still calls it `Dev104_`. |
+| **IC3** | **L7A1429** | *"MODELING LSI"* — the engine the machine is named after: **64 channels of coupled linear resonators**, nineteen 16-bit parameter registers each. A MAME device (`l7a1429_device`) models the register interface at `0x00104000`; it synthesises nothing. ⚠ That `0x104000` decodes to *this part* is an inference — no ROM names a part number — so the disassembly still calls it `Dev104_`. Full account: [Acoustic Modelling LSI]({{ site.baseurl }}/wsa1-modeling-lsi/). |
 | **IC4** | **TC183C230002** | *"TONE GENELATOR LSI"* [sic] |
 | IC30 (+ two more) | **NEC uPD6383GF-3BA** | three digital signal processors — **the same part as the KN5000's IC311**. ⚠ Only the IC30 designator prints cleanly; the other two schematic instances read as IC5 and IC6, and the block diagram shows three DSP blocks, so three is the count used |
 | **IC7** | **SED1330FBA** | LCD controller for the 320 × 240 dot panel |
@@ -317,7 +317,7 @@ deliberately left unmapped.
 | `0x000080-0x01007F` | work DRAM cleared at boot (lower bound); kernel stack `0x00FFF0`, later moved to `0x00FA00` | established |
 | `0x010000-0x01FFFF` | **flash staging buffer** — one whole 64 KiB sector held in RAM; block writers address it as `flash − 0x00E70000` | established |
 | `0x100000` | inter-processor link port | established |
-| `0x104000` (+0 select / +2 data) | **64 channels × 19 parameter registers.** Role **not** established — the labels deliberately say `Dev104_` | shape established |
+| `0x104000` (+0 select / +2 data) | **64 channels × 19 parameter registers** — the [acoustic modelling LSI]({{ site.baseurl }}/wsa1-modeling-lsi/): a pair of coupled resonators per channel, twelve registers named from the tone editor’s own captions, six with an exact closed form. That the window decodes to IC3 stays an inference, so the labels still say `Dev104_` | shape established; twelve registers named, six units derived |
 | `0x108000` (+0 event / +2 status) | **key-scan port** for the 61-key keybed; +0 is one 16-bit event, low byte `bit7 note-on \| bits6..0 key`, high byte a touch measurement | established |
 | `0x10C000` (+0/+2/+4) | **64 channels × ~22 registers**, three per-channel gate registers pulsed bit-15 set→clear. CPU 2's busiest device by 5× (102 pointer loads against 20). Role **not** established — labels say `Dev10C_` | shape established; four registers decoded |
 | `0xC00000` | **expansion board**, header at +0x18/+0x31, signature `WSA1 EXTBD` | established |
@@ -507,6 +507,7 @@ Two things it also settles for the KN work:
 | Page | Description |
 |------|-------------|
 | [Control Panel & Switch Matrix]({{ site.baseurl }}/wsa1-panel/) | The rack's 58 switches traced from the CP1/CP2 schematics, with a second witness in the ROM; lamps; the service chords; what the keyboard's panel is not known to be |
+| [Acoustic Modelling LSI (L7A1429)]({{ site.baseurl }}/wsa1-modeling-lsi/) | The engine at `0x00104000`: the resonator topology, the nineteen-register map, the filter-cutoff and position units, the write sequencing, and what is still unknown |
 | [Emulation Status]({{ site.baseurl }}/wsa1-emulation/) | The MAME driver, the boot walkthrough, the four TLCS-900 core defects it exposed, and exactly what is and is not modelled |
 | [Disassembly]({{ site.baseurl }}/wsa1-disassembly/) | The byte-exact reassembly project, its gate, its coverage, and the rule the gate cannot enforce |
 | [Shared Codebase Map]({{ site.baseurl }}/technics-shared-codebase/) | Where the WSA1, the KN5000 and the KN7000 firmwares match |

@@ -26,7 +26,9 @@ and both were recovered from the firmware images rather than from a databook.
 > numbered `block * 0x40 + channel` — and synthesises nothing. Its value is that
 > the register traffic is now captured and inspectable rather than discarded, and
 > that its header carries what is established about the device beside what is
-> merely inferred.
+> merely inferred. What the traffic *means* — the resonator topology, the
+> nineteen-register map, the filter cutoffs and the position units — is on
+> [Acoustic Modelling LSI]({{ site.baseurl }}/wsa1-modeling-lsi/).
 
 ### What crosses that bus is parameters, not code
 
@@ -63,6 +65,13 @@ synthesis device CPU 2 drives that has no counterpart in the KN5000's PCM
 sibling, and its register file is a different shape from the tone generator's
 (19 contiguous blocks against 22 sparse). The disassembly still calls it
 `Dev104_` for that reason.
+
+Beyond the discriminant, the register file is decoded and not merely captured:
+twelve of the nineteen registers carry the tone editor's own names, the
+filter-coefficient tables have an exact closed form whose index is a MIDI note,
+and there is no key-off register at all — see
+[Acoustic Modelling LSI]({{ site.baseurl }}/wsa1-modeling-lsi/), which is also
+where the two limits above are stated in full.
 
 ## ⚠ The driver is not upstream, and there are deliberately two of it
 
@@ -350,7 +359,7 @@ not the inter-processor link.
 | **The AM29F400T flash** | not modelled; its data-poll and erase-verify loops are unbounded and will spin if reached |
 | **MIDI** | serial channel 0 is a register stub — `sc0buf_r()` returns 0 and `sc0buf_w()` only fakes transmit completion — so there is no engine for a `midiin`/`midiout` to attach to |
 | **The panel MCU's mask ROM** | not dumped, and no ROM region is declared for it — the manual does not give its capacity, and guessing one would be worse than leaving it out |
-| **`0x104000` and `0x10C000`** | shapes established, **roles not**. The labels deliberately read `Dev104_` and `Dev10C_` rather than anything that would imply a function |
+| **`0x104000` and `0x10C000`** | shapes established; the labels deliberately read `Dev104_` and `Dev10C_` rather than anything that would imply a function. For `0x104000` most of the register *meanings* are recovered — twelve names, six exact units, [the whole map]({{ site.baseurl }}/wsa1-modeling-lsi/) — but nothing in the driver acts on them, and the internal signal path is unknown |
 | **The drive motor line** | the firmware **does** drive CPU 1's PA bit 3 — four writes, the only bit of PA it changes after RESET, and it *clears* the bit (`res 3,(0x1E)` at `0xFE18EF`) before a 307 ms spin-up delay. The driver still declines to wire it to the drive's motor, because *what the pin does* is not claimed — a drive-motor or drive-select line is only the obvious reading. The consequence is stated rather than papered over: with no motor modelled, an attached image never becomes READY, and a read reports the firmware's own error `0x31`, drive not ready |
 
 ## Reproducing any of this
