@@ -725,6 +725,25 @@ where `RESO SCALE` would reach the coefficients, and the reader of `0x00E093`.
   wave mask ROMs are dumped, a device here emits into nothing. The right first
   device is a register file with a decoded, inspectable parameter view.
 
+## The resonator coupling
+
+The two resonators interact, and **not through a register** — there is none. Three routines fill a
+68-byte argument block whenever layers are grouped, and a solver evaluates the loop characteristic
+function of the grouped resonators, converting the phase error into a pitch offset:
+
+    D = -3072 * log2(1 - dphi / 2pi)        in 1/256 semitone
+
+which is added to the MAIN and SUB tuning words before they reach `chan+0x0040` and `chan+0x0080`.
+Its constants are Q11 renderings of named quantities — `0x555` = 2/3, `0x1922` = π, `0x3244` = 2π,
+`0x146` = 1/2π — and `INTERACTION GAIN` sets the solver's pole radius through the same curve that
+feeds register `0x0300`.
+
+★ **So an emulation faithful to `chan+0x0040` and `chan+0x0080` already models the interaction.**
+The offset is quantised to 13.28 cents per index step and bounded to +1146 / −675 cents; it is
+exactly zero when `INTERACTION GAIN` is zero, and when every grouped resonator shares one tuning
+word. Derivation and controls: `wsa1/notes/FINDINGS-l7a1429-e093-block.md`, probe
+`wsa1/notes/w24_e093_coupling_solver.py`.
+
 ## Where this lives in the disassembly
 
 The register blocks are `.equ` symbols in the driver's own header, so the source
